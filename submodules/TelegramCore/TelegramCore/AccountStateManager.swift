@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private enum AccountStateManagerOperationContent {
     case pollDifference(AccountFinalStateEvents)
     case collectUpdateGroups([UpdateGroup], Double)

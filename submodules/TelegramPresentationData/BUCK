@@ -14,6 +14,7 @@ static_library(
     ], exclude = ["Sources/TelegramPresentationData.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Postbox:Postbox#shared",
 	    "//submodules/Display:Display#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",

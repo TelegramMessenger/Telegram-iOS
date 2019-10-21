@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public struct PeerCommand: Hashable {
     public let peer: Peer
     public let command: BotCommand

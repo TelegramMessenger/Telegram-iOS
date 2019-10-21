@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private func localIdForResource(_ resource: MediaResource) -> Int64? {
     if let resource = resource as? LocalFileMediaResource {
         return resource.fileId

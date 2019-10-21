@@ -1,4 +1,5 @@
 import Foundation
+import SyncCore
 
 public enum CloudMediaResourceLocation: Equatable {
     case photo(id: Int64, accessHash: Int64, fileReference: Data, thumbSize: String)

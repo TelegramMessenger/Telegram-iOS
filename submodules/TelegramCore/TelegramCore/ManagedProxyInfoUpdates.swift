@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 func managedProxyInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let queue = Queue()

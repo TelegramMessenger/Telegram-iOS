@@ -3,6 +3,7 @@ import AnimatedStickerNode
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import MediaResources
 import StickerResources
 

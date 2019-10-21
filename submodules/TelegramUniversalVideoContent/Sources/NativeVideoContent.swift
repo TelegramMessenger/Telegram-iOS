@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext

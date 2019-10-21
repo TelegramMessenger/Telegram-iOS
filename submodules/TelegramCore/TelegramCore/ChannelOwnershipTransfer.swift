@@ -9,6 +9,7 @@ import Postbox
 import TelegramApi
 #endif
 
+import SyncCore
 
 public enum ChannelOwnershipTransferError {
     case generic

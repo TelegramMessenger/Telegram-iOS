@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 private enum MessagePreParsingError: Error {
     case invalidChatState
     case malformedData

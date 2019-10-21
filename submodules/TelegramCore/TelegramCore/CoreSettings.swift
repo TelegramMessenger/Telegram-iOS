@@ -13,6 +13,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public final class CoreSettings: PreferencesEntry, Equatable {
     public let fastForward: Bool
     

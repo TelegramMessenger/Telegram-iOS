@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getDialogUnreadMarks())
     |> map(Optional.init)

@@ -8,6 +8,7 @@ static_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/Display:Display#shared",
     	"//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",

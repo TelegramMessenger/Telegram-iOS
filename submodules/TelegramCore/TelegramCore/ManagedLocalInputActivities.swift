@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 struct PeerInputActivityRecord: Equatable {
     let activity: PeerInputActivity
     let updateId: Int32

@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AvatarNode
 import AccountContext

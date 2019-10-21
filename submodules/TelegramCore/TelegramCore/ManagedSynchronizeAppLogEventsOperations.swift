@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private final class ManagedSynchronizeAppLogEventsOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     

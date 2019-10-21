@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public struct ChangeAccountPhoneNumberData: Equatable {
     public let type: SentAuthorizationCodeType
     public let hash: String

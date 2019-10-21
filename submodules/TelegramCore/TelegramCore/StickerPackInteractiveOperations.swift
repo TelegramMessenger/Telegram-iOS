@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func addStickerPackInteractively(postbox: Postbox, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let namespace: SynchronizeInstalledStickerPacksOperationNamespace?

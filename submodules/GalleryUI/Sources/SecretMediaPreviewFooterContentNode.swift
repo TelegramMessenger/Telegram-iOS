@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 
 private let textFont = Font.regular(16.0)

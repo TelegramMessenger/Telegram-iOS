@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import Display
 import AccountContext
 import ContextUI

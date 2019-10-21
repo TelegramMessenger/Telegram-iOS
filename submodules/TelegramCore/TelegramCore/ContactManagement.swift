@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private func md5(_ data: Data) -> Data {
     return data.withUnsafeBytes { bytes -> Data in
         return CryptoMD5(bytes, Int32(data.count))

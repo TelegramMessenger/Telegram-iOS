@@ -4,6 +4,7 @@ import AccountContext
 import TelegramPresentationData
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import MergeLists
 import ItemListPeerItem

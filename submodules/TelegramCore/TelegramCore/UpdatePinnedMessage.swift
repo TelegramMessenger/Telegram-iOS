@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum UpdatePinnedMessageError {
     case generic
 }

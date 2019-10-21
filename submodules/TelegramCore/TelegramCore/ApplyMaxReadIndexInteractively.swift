@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         applyMaxReadIndexInteractively(transaction: transaction, stateManager: stateManager, index: index)

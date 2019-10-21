@@ -14,6 +14,8 @@
     #endif
 #endif
 
+import SyncCore
+
 public typealias AdminLogEventId = Int64
 
 public struct AdminLogEvent: Comparable {

@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private func searchLocalGroupMembers(postbox: Postbox, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
     return peerParticipants(postbox: postbox, id: peerId)
     |> map { peers -> [Peer] in

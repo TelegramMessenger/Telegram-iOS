@@ -9,6 +9,8 @@ import Postbox
 import TelegramApi
 #endif
 
+import SyncCore
+
 public final class NotificationExceptionsList: Equatable {
     public let peers: [PeerId: Peer]
     public let settings: [PeerId: TelegramPeerNotificationSettings]

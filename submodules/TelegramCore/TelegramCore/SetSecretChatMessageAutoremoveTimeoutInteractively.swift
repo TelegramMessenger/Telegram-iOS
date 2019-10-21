@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account, peerId: PeerId, timeout: Int32?) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if let peer = transaction.getPeer(peerId) as? TelegramSecretChat, let state = transaction.getPeerChatState(peerId) as? SecretChatState {

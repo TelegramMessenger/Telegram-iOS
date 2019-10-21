@@ -16,6 +16,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public struct TelegramPeerPhoto {
     public let image: TelegramMediaImage
     public let date: Int32

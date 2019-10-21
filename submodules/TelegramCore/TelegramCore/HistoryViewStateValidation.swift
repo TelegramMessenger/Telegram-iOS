@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private final class HistoryStateValidationBatch {
     private let disposable: Disposable
     let invalidatedState: HistoryState?

@@ -11,6 +11,7 @@ static_library(
         "//submodules/Display:Display#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/GalleryUI:GalleryUI",

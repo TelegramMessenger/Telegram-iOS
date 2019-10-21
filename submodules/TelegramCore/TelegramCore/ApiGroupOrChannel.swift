@@ -8,6 +8,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {

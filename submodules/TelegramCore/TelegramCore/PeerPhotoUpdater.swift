@@ -16,6 +16,8 @@ import Foundation
     import UIKit
 #endif
 
+import SyncCore
+
 public enum UpdatePeerPhotoStatus {
     case progress(Float)
     case complete([TelegramMediaImageRepresentation])

@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
     return network.request(Api.functions.help.getConfig())
         |> retryRequest
@@ -42,22 +44,6 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
             let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
             return SuggestedLocalizationInfo(languageCode: languageCode, extractedEntries: entries, availableLocalizations: infos)
         }
-}
-
-final class CachedLocalizationInfos: PostboxCoding {
-    let list: [LocalizationInfo]
-    
-    init(list: [LocalizationInfo]) {
-        self.list = list
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.list = decoder.decodeObjectArrayWithDecoderForKey("l")
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.list, forKey: "l")
-    }
 }
 
 public func availableLocalizations(postbox: Postbox, network: Network, allowCached: Bool) -> Signal<[LocalizationInfo], NoError> {

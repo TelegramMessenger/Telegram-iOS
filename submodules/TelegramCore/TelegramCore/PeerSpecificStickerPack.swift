@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private struct WrappedStickerPackCollectionInfo: Equatable {
     let info: StickerPackCollectionInfo?
     

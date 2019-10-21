@@ -2,6 +2,7 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import SyncCore
 import UserNotifications
 import Intents
 import HockeySDK
@@ -14,6 +15,7 @@ import TelegramPresentationData
 import TelegramCallsUI
 import TelegramVoip
 import BuildConfig
+import BuildConfigExtra
 import DeviceCheck
 import AccountContext
 import OverlayStatusController
@@ -379,13 +381,14 @@ final class SharedApplicationContext {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        let signatureDict = BuildConfigExtra.signatureDict()
         
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
         let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
         |> map { token in
-            let data = buildConfig.bundleData(withAppToken: token)
+            let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
             if let data = data, let jsonString = String(data: data, encoding: .utf8) {
                 //Logger.shared.log("data", "\(jsonString)")
             } else {

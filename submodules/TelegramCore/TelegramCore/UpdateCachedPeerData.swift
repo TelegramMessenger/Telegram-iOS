@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         guard let rawPeer = transaction.getPeer(rawPeerId) else {

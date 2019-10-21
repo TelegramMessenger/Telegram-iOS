@@ -1,4 +1,5 @@
 import Foundation
+import SyncCore
 
 public struct SecureIdBankStatementValue: Equatable {
     public var verificationDocuments: [SecureIdVerificationDocumentReference]

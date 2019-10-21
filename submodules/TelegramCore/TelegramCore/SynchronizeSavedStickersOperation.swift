@@ -9,67 +9,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private enum SynchronizeSavedStickersOperationContentType: Int32 {
-    case add
-    case remove
-    case sync
-}
-
-enum SynchronizeSavedStickersOperationContent: PostboxCoding {
-    case add(id: Int64, accessHash: Int64, fileReference: FileMediaReference?)
-    case remove(id: Int64, accessHash: Int64)
-    case sync
-    
-    init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("r", orElse: 0) {
-            case SynchronizeSavedStickersOperationContentType.add.rawValue:
-                self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0), fileReference: decoder.decodeAnyObjectForKey("fr", decoder: { FileMediaReference(decoder: $0) }) as? FileMediaReference)
-            case SynchronizeSavedStickersOperationContentType.remove.rawValue:
-                self = .remove(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
-            case SynchronizeSavedStickersOperationContentType.sync.rawValue:
-                self = .sync
-            default:
-                assertionFailure()
-                self = .sync
-        }
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        switch self {
-            case let .add(id, accessHash, fileReference):
-                encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.add.rawValue, forKey: "r")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt64(accessHash, forKey: "h")
-                if let fileReference = fileReference {
-                    encoder.encodeObjectWithEncoder(fileReference, encoder: fileReference.encode, forKey: "fr")
-                } else {
-                    encoder.encodeNil(forKey: "fr")
-                }
-            case let .remove(id, accessHash):
-                encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.remove.rawValue, forKey: "r")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt64(accessHash, forKey: "h")
-            case .sync:
-                encoder.encodeInt32(SynchronizeSavedStickersOperationContentType.sync.rawValue, forKey: "r")
-        }
-    }
-}
-
-final class SynchronizeSavedStickersOperation: PostboxCoding {
-    let content: SynchronizeSavedStickersOperationContent
-    
-    init(content: SynchronizeSavedStickersOperationContent) {
-        self.content = content
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.content = decoder.decodeObjectForKey("c", decoder: { SynchronizeSavedStickersOperationContent(decoder: $0) }) as! SynchronizeSavedStickersOperationContent
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.content, forKey: "c")
-    }
-}
+import SyncCore
 
 func addSynchronizeSavedStickersOperation(transaction: Transaction, operation: SynchronizeSavedStickersOperationContent) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedStickers

@@ -11,6 +11,7 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
 import EncryptionProvider
 
 private let keyUseCountThreshold: Int32 = 100

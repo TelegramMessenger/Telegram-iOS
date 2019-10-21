@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.help.getConfig())

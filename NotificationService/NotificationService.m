@@ -12,6 +12,8 @@
 #import "Api.h"
 #import "FetchImage.h"
 
+#import "NotificationService-Bridging-Header.h"
+
 static NSData * _Nullable parseBase64(NSString *string) {
     string = [string stringByReplacingOccurrencesOfString:@"-" withString:@"+"];
     string = [string stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
@@ -32,12 +34,38 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     return (((int64_t)(namespace)) << 32) | ((int64_t)((uint64_t)((uint32_t)value)));
 }
 
+@interface ParsedNotificationMessage : NSObject
+
+@property (nonatomic, readonly) int64_t accountId;
+@property (nonatomic, readonly) int64_t peerId;
+@property (nonatomic, readonly) int32_t messageId;
+
+@end
+
+@implementation ParsedNotificationMessage
+
+- (instancetype)initWithAccountId:(int64_t)accountId peerId:(int64_t)peerId messageId:(int64_t)messageId {
+    self = [super init];
+    if (self != nil) {
+        _accountId = accountId;
+        _peerId = peerId;
+        _messageId = messageId;
+    }
+    return self;
+}
+
+@end
+
 @interface NotificationService () {
     NSString * _Nullable _rootPath;
     NSString * _Nullable _baseAppBundleId;
     void (^_contentHandler)(UNNotificationContent *);
     UNMutableNotificationContent * _Nullable _bestAttemptContent;
     void (^_cancelFetch)(void);
+    
+    ParsedNotificationMessage * _Nullable _parsedMessage;
+    NSNumber * _Nullable _updatedUnreadCount;
+    bool _contentReady;
 }
 
 @end
@@ -67,7 +95,21 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     return self;
 }
 
-- (void)completeWithContent:(UNNotificationContent * _Nonnull)content {
+- (void)completeWithBestAttemptContent {
+    _contentReady = true;
+    if (_contentReady && _updatedUnreadCount) {
+        [self _internalComplete];
+    }
+}
+
+- (void)updateUnreadCount:(int32_t)unreadCount {
+    _updatedUnreadCount = @(unreadCount);
+    if (_contentReady && _updatedUnreadCount) {
+        [self _internalComplete];
+    }
+}
+ 
+- (void)_internalComplete {
     #ifdef __IPHONE_13_0
     if (_baseAppBundleId != nil) {
         BGAppRefreshTaskRequest *request = [[BGAppRefreshTaskRequest alloc] initWithIdentifier:[_baseAppBundleId stringByAppendingString:@".refresh"]];
@@ -80,14 +122,21 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     }
     #endif
     
-    if (_contentHandler) {
-        _contentHandler(content);
+    if (_bestAttemptContent && _contentHandler) {
+        if (_updatedUnreadCount != nil) {
+            int32_t unreadCount = (int32_t)[_updatedUnreadCount intValue];
+            if (unreadCount > 0) {
+                _bestAttemptContent.badge = @(unreadCount);
+            }
+        }
+        _contentHandler(_bestAttemptContent);
     }
 }
 
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler {
     if (_rootPath == nil) {
-        [self completeWithContent:request.content];
+        _bestAttemptContent = request.content;
+        [self completeWithBestAttemptContent];
         return;
     }
     
@@ -143,6 +192,17 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
             userInfo[@"channel_id"] = channelIdString;
             peerId = makePeerId(PeerNamespaceCloudChannel, [channelIdString intValue]);
         }
+        
+        _parsedMessage = [[ParsedNotificationMessage alloc] initWithAccountId:account.accountId peerId:peerId messageId:messageId];
+        
+        __weak NotificationService *weakSelf = self;
+        [self addUnreadMessage:_rootPath accountId:account.accountId encryptionParameters:nil peerId:peerId messageId:messageId completion:^(int32_t badge) {
+            __strong NotificationService *strongSelf = weakSelf;
+            if (strongSelf == nil) {
+                return;
+            }
+            [strongSelf updateUnreadCount:badge];
+        }];
         
         NSString *silentString = decryptedPayload[@"silent"];
         if ([silentString isKindOfClass:[NSString class]]) {
@@ -311,9 +371,7 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
                         _bestAttemptContent.attachments = @[attachment];
                     }
                 }
-                if (_bestAttemptContent != nil) {
-                    [self completeWithContent:_bestAttemptContent];
-                }
+                [self completeWithBestAttemptContent];
             } else {
                 BuildConfig *buildConfig = [[BuildConfig alloc] initWithBaseAppBundleId:_baseAppBundleId];
                 
@@ -343,23 +401,16 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
                                     }
                                 }
                             }
-                            
-                            if (strongSelf->_bestAttemptContent != nil) {
-                                [strongSelf completeWithContent:strongSelf->_bestAttemptContent];
-                            }
+                            [strongSelf completeWithBestAttemptContent];
                         }
                     });
                 });
             }
         } else {
-            if (_bestAttemptContent != nil) {
-                [self completeWithContent:_bestAttemptContent];
-            }
+            [self completeWithBestAttemptContent];
         }
     } else {
-        if (_bestAttemptContent != nil) {
-            [self completeWithContent:_bestAttemptContent];
-        }
+        [self completeWithBestAttemptContent];
     }
 }
 
@@ -371,10 +422,19 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     
     if (_contentHandler) {
         if(_bestAttemptContent) {
-            [self completeWithContent:_bestAttemptContent];
-            _bestAttemptContent = nil;
+            if (_updatedUnreadCount == nil) {
+                _updatedUnreadCount = @(-1);
+            }
+            [self completeWithBestAttemptContent];
         }
         _contentHandler = nil;
+    }
+}
+
+- (void)addUnreadMessage:(NSString * _Nonnull)rootPath accountId:(int64_t)accountId encryptionParameters:(DeviceSpecificEncryptionParameters * _Nonnull)encryptionParameters peerId:(int64_t)peerId messageId:(int32_t)messageId completion:(void (^)(int32_t))completion {
+    
+    if (completion) {
+        completion(-1);
     }
 }
 

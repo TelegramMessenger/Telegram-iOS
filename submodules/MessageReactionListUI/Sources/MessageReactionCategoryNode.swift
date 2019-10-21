@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import TelegramCore
+import SyncCore
 
 final class MessageReactionCategoryNode: ASDisplayNode {
     let category: MessageReactionListCategory

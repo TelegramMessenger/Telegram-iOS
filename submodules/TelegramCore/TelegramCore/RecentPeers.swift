@@ -9,34 +9,11 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum RecentPeers {
     case peers([Peer])
     case disabled
-}
-
-final class CachedRecentPeers: PostboxCoding {
-    let enabled: Bool
-    let ids: [PeerId]
-    
-    init(enabled: Bool, ids: [PeerId]) {
-        self.enabled = enabled
-        self.ids = ids
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.enabled = decoder.decodeInt32ForKey("enabled", orElse: 0) != 0
-        self.ids = decoder.decodeInt64ArrayForKey("ids").map(PeerId.init)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "enabled")
-        encoder.encodeInt64Array(self.ids.map({ $0.toInt64() }), forKey: "ids")
-    }
-    
-    static func cacheKey() -> ValueBoxKey {
-        let key = ValueBoxKey(length: 0)
-        return key
-    }
 }
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1)

@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public final class FoundStickerItem: Equatable {
     public let file: TelegramMediaFile
     public let stringRepresentations: [String]
@@ -46,31 +48,6 @@ extension Sequence {
         var result = Array(self)
         result.shuffle()
         return result
-    }
-}
-
-final class CachedStickerQueryResult: PostboxCoding {
-    let items: [TelegramMediaFile]
-    let hash: Int32
-    
-    init(items: [TelegramMediaFile], hash: Int32) {
-        self.items = items
-        self.hash = hash
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! TelegramMediaFile }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.items, forKey: "it")
-        encoder.encodeInt32(self.hash, forKey: "h")
-    }
-    
-    static func cacheKey(_ query: String) -> ValueBoxKey {
-        let key = ValueBoxKey(query)
-        return key
     }
 }
 

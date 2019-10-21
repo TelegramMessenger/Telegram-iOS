@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum ChatContextResultMessage: PostboxCoding, Equatable {
     case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)

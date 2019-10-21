@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private struct RecentHashtagItemId {
     public let rawValue: MemoryBuffer
     
@@ -24,17 +26,6 @@ private struct RecentHashtagItemId {
         } else {
             return nil
         }
-    }
-}
-
-final class RecentHashtagItem: OrderedItemListEntryContents {
-    init() {
-    }
-    
-    public init(decoder: PostboxDecoder) {
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
     }
 }
 

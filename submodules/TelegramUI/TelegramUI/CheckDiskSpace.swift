@@ -1,6 +1,7 @@
 import Foundation
 import Display
 import TelegramCore
+import SyncCore
 import AccountContext
 import AlertUI
 import PresentationDataUtils

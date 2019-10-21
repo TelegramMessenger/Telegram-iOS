@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum ChannelMembersCategoryFilter {
     case all
     case search(String)

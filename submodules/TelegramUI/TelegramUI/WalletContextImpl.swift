@@ -4,6 +4,7 @@ import Display
 import WalletUI
 import Postbox
 import TelegramCore
+import SyncCore
 import AccountContext
 import SwiftSignalKit
 import TelegramPresentationData

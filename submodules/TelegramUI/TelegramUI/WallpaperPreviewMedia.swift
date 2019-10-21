@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 
 enum WallpaperPreviewMediaContent: Equatable {
     case file(TelegramMediaFile, UIColor?, Bool, Bool)

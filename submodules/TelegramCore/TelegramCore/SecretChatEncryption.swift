@@ -11,6 +11,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: SecretChatEncryptionMode) -> (aesKey: Data, aesIv: Data) {
     switch mode {
         case .v1:

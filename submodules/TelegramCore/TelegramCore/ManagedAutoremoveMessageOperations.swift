@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 #if os(macOS)
     private typealias SignalKitTimer = SwiftSignalKitMac.Timer
 #else

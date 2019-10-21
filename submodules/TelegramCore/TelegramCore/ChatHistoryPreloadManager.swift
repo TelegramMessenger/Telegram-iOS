@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public struct HistoryPreloadIndex: Comparable {
     public let index: ChatListIndex?
     public let hasUnread: Bool

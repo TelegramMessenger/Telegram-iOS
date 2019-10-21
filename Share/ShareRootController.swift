@@ -35,7 +35,7 @@ class ShareRootController: UIViewController {
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            self.impl = ShareRootControllerImpl(initializationData: ShareRootControllerInitializationData(appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData(withAppToken: nil)), getExtensionContext: { [weak self] in
+            self.impl = ShareRootControllerImpl(initializationData: ShareRootControllerInitializationData(appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), getExtensionContext: { [weak self] in
                 return self?.extensionContext
             })
         }

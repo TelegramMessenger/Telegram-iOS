@@ -16,6 +16,7 @@ import Foundation
     import CloudData
 #endif
 
+import SyncCore
 import EncryptionProvider
 
 public enum ConnectionStatus: Equatable {

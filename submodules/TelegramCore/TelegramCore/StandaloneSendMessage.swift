@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum StandaloneMedia {
     case image(Data)
     case file(data: Data, mimeType: String, attributes: [TelegramMediaFileAttribute])

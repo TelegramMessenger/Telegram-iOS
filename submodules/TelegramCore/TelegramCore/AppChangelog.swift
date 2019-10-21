@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 func managedAppChangelog(postbox: Postbox, network: Network, stateManager: AccountStateManager, appVersion: String) -> Signal<Void, NoError> {
     return stateManager.pollStateUpdateCompletion()
     |> take(1)

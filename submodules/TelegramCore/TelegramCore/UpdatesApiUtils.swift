@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
     switch photo {
         case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):

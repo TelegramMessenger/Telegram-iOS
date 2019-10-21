@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum PeerCacheUsageCategory: Int32 {
     case image = 0
     case video

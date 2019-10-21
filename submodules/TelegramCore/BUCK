@@ -21,6 +21,7 @@ framework(
     	"//submodules/MtProtoKit:MtProtoKit#shared",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/Postbox:Postbox#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/CloudData:CloudData",
         "//submodules/EncryptionProvider:EncryptionProvider",
     ],

@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
+import SyncCore
 import FFMpeg
 
 private struct StreamContext {

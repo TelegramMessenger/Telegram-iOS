@@ -5,6 +5,7 @@ import ContextUI
 import AccountContext
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import TelegramUIPreferences
 import OverlayStatusController

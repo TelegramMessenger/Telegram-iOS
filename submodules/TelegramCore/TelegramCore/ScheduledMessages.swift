@@ -9,24 +9,7 @@ import Foundation
     import TelegramApi
 #endif
 
-final class SendScheduledMessageImmediatelyAction: PendingMessageActionData {
-    init() {
-    }
-    
-    init(decoder: PostboxDecoder) {
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-    }
-    
-    func isEqual(to: PendingMessageActionData) -> Bool {
-        if let _ = to as? SendScheduledMessageImmediatelyAction {
-            return true
-        } else {
-            return false
-        }
-    }
-}
+import SyncCore
 
 public func sendScheduledMessageNowInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in

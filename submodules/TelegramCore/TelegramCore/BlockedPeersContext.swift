@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 public struct BlockedPeersContextState: Equatable {
     public var isLoadingMore: Bool
     public var canLoadMore: Bool

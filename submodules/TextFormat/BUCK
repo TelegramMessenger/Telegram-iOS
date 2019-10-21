@@ -6,8 +6,9 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/TelegramCore:TelegramCore#dynamic",
-        "//submodules/Display:Display#dynamic",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/Display:Display#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Markdown:Markdown",
     ],

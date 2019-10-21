@@ -15,6 +15,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32
     

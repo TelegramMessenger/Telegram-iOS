@@ -42,6 +42,13 @@ public final class Transaction {
         }
     }
     
+    public func countIncomingMessage(id: MessageId) {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            postbox.countIncomingMessage(id: id)
+        }
+    }
+    
     public func addHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
         assert(!self.disposed)
         self.postbox?.addHole(peerId: peerId, namespace: namespace, space: space, range: range)
@@ -1479,6 +1486,16 @@ public final class Postbox {
         }
         
         return addResult
+    }
+    
+    fileprivate func countIncomingMessage(id: MessageId) {
+        let (combinedState, _) = self.readStateTable.addIncomingMessages(id.peerId, indices: Set([MessageIndex(id: id, timestamp: 1)]))
+        if self.currentOperationsByPeerId[id.peerId] == nil {
+            self.currentOperationsByPeerId[id.peerId] = []
+        }
+        if let combinedState = combinedState {
+        self.currentOperationsByPeerId[id.peerId]!.append(.UpdateReadState(id.peerId, combinedState))
+        }
     }
     
     fileprivate func addHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {

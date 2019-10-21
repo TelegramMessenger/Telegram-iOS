@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 public enum RequestMessageSelectPollOptionError {
     case generic
 }

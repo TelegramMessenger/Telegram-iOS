@@ -8,6 +8,8 @@ import TelegramApi
 import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum UpdateChannelSlowModeError {
     case generic
 }

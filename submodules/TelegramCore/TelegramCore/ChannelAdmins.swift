@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func channelAdmins(account: Account, peerId: PeerId) -> Signal<[RenderedChannelParticipant], NoError> {
     return account.postbox.transaction { transaction -> Signal<[RenderedChannelParticipant], NoError> in
         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {

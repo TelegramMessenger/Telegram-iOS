@@ -5,6 +5,8 @@ import Foundation
     import Postbox
 #endif
 
+import SyncCore
+
 public func canSendMessagesToPeer(_ peer: Peer) -> Bool {
     if peer is TelegramUser || peer is TelegramGroup {
         return !peer.isDeleted

@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 private final class ManagedSynchronizeRecentlyUsedMediaOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     

@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import DeviceAccess
 import AccountContext
 import AlertUI

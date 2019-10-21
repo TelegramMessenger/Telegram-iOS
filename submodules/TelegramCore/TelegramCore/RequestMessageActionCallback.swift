@@ -15,6 +15,9 @@ import Foundation
     #endif
 #endif
 
+
+import SyncCore
+
 public enum MessageActionCallbackResult {
     case none
     case alert(String)

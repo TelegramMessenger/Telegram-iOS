@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public struct PendingMessageStatus: Equatable {
     public let isRunning: Bool
     public let progress: Float

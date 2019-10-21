@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 enum FetchChatListLocation {
     case general
     case group(PeerGroupId)

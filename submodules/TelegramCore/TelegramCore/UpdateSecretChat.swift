@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 struct SecretChatRequestData {
     let g: Int32
     let p: MemoryBuffer

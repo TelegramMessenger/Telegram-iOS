@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public struct WebAuthorization : Equatable {
     public let hash: Int64
     public let botId: PeerId

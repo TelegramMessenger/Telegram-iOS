@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32, forceRootGroupIfNotExists: Bool) {
     let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?

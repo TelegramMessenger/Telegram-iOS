@@ -9,6 +9,8 @@ import SwiftSignalKit
 import TelegramApi
 #endif
 
+import SyncCore
+
 public func clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getAllDrafts())
     |> retryRequest

@@ -37,6 +37,7 @@ framework_dependencies = [
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     "//submodules/Postbox:Postbox",
     "//submodules/TelegramApi:TelegramApi",
+    "//submodules/SyncCore:SyncCore",
     "//submodules/TelegramCore:TelegramCore",
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     "//submodules/Display:Display",
@@ -313,10 +314,12 @@ apple_binary(
     name = "NotificationServiceBinary",
     srcs = glob([
         "NotificationService/**/*.m",
+        "NotificationService/**/*.swift",
     ]),
     headers = glob([
        "NotificationService/**/*.h", 
     ]),
+    bridging_header = "NotificationService/NotificationService-Bridging-Header.h",
     configs = notification_service_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
@@ -336,7 +339,10 @@ apple_binary(
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit#shared",
-        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/sqlcipher:sqlcipher",
+        #"//submodules/Postbox:Postbox#shared",
+        #"//submodules/SyncCore:SyncCore#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
@@ -382,6 +388,7 @@ apple_binary(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramApi:TelegramApi#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",

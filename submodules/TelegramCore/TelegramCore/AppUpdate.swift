@@ -15,6 +15,8 @@ import Foundation
         #endif
 #endif
 
+import SyncCore
+
 public struct AppUpdateInfo: Equatable {
     public let blocking: Bool
     public let version: String

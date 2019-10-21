@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ChatListUI

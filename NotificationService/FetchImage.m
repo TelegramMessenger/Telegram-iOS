@@ -1,9 +1,33 @@
 #import "FetchImage.h"
 
 #import <MTProtoKit/MTProtoKit.h>
-#import <OpenSSLEncryptionProvider/OpenSSLEncryptionProvider.h>
+#import <EncryptionProvider/EncryptionProvider.h>
 
 #import "Serialization.h"
+
+@interface EmptyEncryptionProvider: NSObject <EncryptionProvider>
+
+@end
+
+@implementation EmptyEncryptionProvider
+
+- (id<MTBignumContext>)createBignumContext {
+    return nil;
+}
+
+- (NSData * _Nullable)rsaEncryptWithPublicKey:(NSString *)publicKey data:(NSData *)data {
+    return nil;
+}
+
+- (NSData * _Nullable)rsaEncryptPKCS1OAEPWithPublicKey:(NSString *)publicKey data:(NSData *)data {
+    return nil;
+}
+
+- (id<MTRsaPublicKey>)parseRSAPublicKey:(NSString *)publicKey {
+    return nil;
+}
+
+@end
 
 @interface InMemoryKeychain : NSObject <MTKeychain> {
     NSMutableDictionary *_dict;
@@ -84,7 +108,7 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
         apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:[[MTSocksProxySettings alloc] initWithIp:proxyConnection.host port:(uint16_t)proxyConnection.port username:proxyConnection.username password:proxyConnection.password secret:proxyConnection.secret]];
     }
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:serialization encryptionProvider:[[OpenSSLEncryptionProvider alloc] init] apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:false];
+    MTContext *context = [[MTContext alloc] initWithSerialization:serialization encryptionProvider:[[EmptyEncryptionProvider alloc] init] apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:false];
     
     NSDictionary *seedAddressList = @{};
     

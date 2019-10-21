@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private final class ManagedConsumePersonalMessagesActionsHelper {
     var operationDisposables: [MessageId: Disposable] = [:]
     var validateDisposables: [InvalidatedMessageHistoryTagsSummaryEntry: Disposable] = [:]

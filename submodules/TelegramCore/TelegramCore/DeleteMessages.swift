@@ -7,6 +7,8 @@ import Postbox
 import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private func removeMessageMedia(message: Message, mediaBox: MediaBox) {
     for media in message.media {
         if let image = media as? TelegramMediaImage {

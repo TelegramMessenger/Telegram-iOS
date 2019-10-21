@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func toggleShouldChannelMessagesSignatures(account:Account, peerId:PeerId, enabled: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(peer) {

@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0
     

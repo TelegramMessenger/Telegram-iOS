@@ -7,44 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class CachedStickerPack: PostboxCoding {
-    let info: StickerPackCollectionInfo?
-    let items: [StickerPackItem]
-    let hash: Int32
-    
-    init(info: StickerPackCollectionInfo?, items: [StickerPackItem], hash: Int32) {
-        self.info = info
-        self.items = items
-        self.hash = hash
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.info = decoder.decodeObjectForKey("in", decoder: { StickerPackCollectionInfo(decoder: $0) }) as? StickerPackCollectionInfo
-        self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! StickerPackItem }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        if let info = self.info {
-            encoder.encodeObject(info, forKey: "in")
-        } else {
-            encoder.encodeNil(forKey: "in")
-        }
-        encoder.encodeObjectArray(self.items, forKey: "it")
-        encoder.encodeInt32(self.hash, forKey: "h")
-    }
-    
-    static func cacheKey(_ id: ItemCollectionId) -> ValueBoxKey {
-        let key = ValueBoxKey(length: 4 + 8)
-        key.setInt32(0, value: id.namespace)
-        key.setInt64(4, value: id.id)
-        return key
-    }
-    
-    static func cacheKey(shortName: String) -> ValueBoxKey {
-        return ValueBoxKey(shortName)
-    }
-}
+import SyncCore
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 

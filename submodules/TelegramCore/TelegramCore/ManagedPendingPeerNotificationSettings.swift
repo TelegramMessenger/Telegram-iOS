@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private final class ManagedPendingPeerNotificationSettingsHelper {
     var operationDisposables: [PeerId: (PeerNotificationSettings, Disposable)] = [:]
     

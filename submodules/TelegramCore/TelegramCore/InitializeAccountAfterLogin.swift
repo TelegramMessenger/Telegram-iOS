@@ -7,6 +7,8 @@ import SwiftSignalKit
 import Postbox
 #endif
 
+import SyncCore
+
 func initializedAppSettingsAfterLogin(transaction: Transaction, appVersion: String, syncContacts: Bool) {
     updateAppChangelogState(transaction: transaction, { state in
         var state = state

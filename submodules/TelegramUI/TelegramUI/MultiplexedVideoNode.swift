@@ -5,6 +5,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import AVFoundation
 
 private final class MultiplexedVideoTrackingNode: ASDisplayNode {

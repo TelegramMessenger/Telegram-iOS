@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 
 enum ChatListSelectionReadOption: Equatable {
     case all(enabled: Bool)

@@ -7,6 +7,8 @@ import Postbox
 import TelegramApi
 #endif
 
+import SyncCore
+
 func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
     let updatedMessageIndices = transaction.updateMedia(id, update: media)
     for index in updatedMessageIndices {

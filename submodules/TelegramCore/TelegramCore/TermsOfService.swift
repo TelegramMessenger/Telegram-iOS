@@ -15,6 +15,8 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
+
 public struct TermsOfServiceUpdate: Equatable {
     public let id: String
     public let text: String

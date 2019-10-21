@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 public final class SelectivePrivacyPeer: Equatable {
     public let peer: Peer
     public let participantCount: Int32?

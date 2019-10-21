@@ -9,6 +9,8 @@ import Postbox
 import TelegramApi
 #endif
 
+import SyncCore
+
 #if os(macOS)
 private typealias SignalKitTimer = SwiftSignalKitMac.Timer
 #else

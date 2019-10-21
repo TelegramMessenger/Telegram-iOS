@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum GetMessagesStrategy  {
     case local
     case cloud

@@ -15,6 +15,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum SecureIdPreparePhoneVerificationError {
     case generic
     case flood

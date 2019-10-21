@@ -9,6 +9,8 @@ import SwiftSignalKit
 import Photos
 #endif
 
+import SyncCore
+
 private final class MediaResourceDataCopyFile : MediaResourceDataFetchCopyLocalItem {
     let path: String
     init(path: String) {

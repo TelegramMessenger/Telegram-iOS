@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import TelegramUIPreferences
 import AccountContext

@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f: @escaping (GlobalNotificationSettingsSet) -> GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in

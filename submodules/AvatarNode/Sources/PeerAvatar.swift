@@ -5,6 +5,7 @@ import Postbox
 import Display
 import ImageIO
 import TelegramCore
+import SyncCore
 
 private let roundCorners = { () -> UIImage in
     let diameter: CGFloat = 60.0

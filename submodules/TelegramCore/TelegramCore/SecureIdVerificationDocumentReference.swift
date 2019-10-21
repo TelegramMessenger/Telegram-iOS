@@ -1,4 +1,5 @@
 import Foundation
+import SyncCore
 
 public enum SecureIdVerificationDocumentReference: Equatable {
     case remote(SecureIdFileReference)

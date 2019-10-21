@@ -8,6 +8,8 @@
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Signal<Peer, NoError> {
     return postbox.transaction { transaction -> Signal<Peer, NoError> in
         var signal: Signal<Peer, NoError>

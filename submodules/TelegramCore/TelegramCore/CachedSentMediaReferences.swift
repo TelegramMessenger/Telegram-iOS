@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private let cachedSentMediaCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10000, highWaterItemCount: 20000)
 
 enum CachedSentMediaReferenceKey {

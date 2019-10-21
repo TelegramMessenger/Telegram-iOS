@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import SyncCore
 
 public func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Bool {
     if message.containsSecretMedia {

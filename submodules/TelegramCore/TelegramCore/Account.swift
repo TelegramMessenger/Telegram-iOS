@@ -15,99 +15,9 @@ import Foundation
     #endif
     import UIKit
 #endif
+
+import SyncCore
 import EncryptionProvider
-
-public protocol AccountState: PostboxCoding {
-    func equalsTo(_ other: AccountState) -> Bool
-}
-
-public func ==(lhs: AccountState, rhs: AccountState) -> Bool {
-    return lhs.equalsTo(rhs)
-}
-
-public class AuthorizedAccountState: AccountState {
-    public final class State: PostboxCoding, Equatable, CustomStringConvertible {
-        let pts: Int32
-        let qts: Int32
-        let date: Int32
-        let seq: Int32
-        
-        init(pts: Int32, qts: Int32, date: Int32, seq: Int32) {
-            self.pts = pts
-            self.qts = qts
-            self.date = date
-            self.seq = seq
-        }
-        
-        public init(decoder: PostboxDecoder) {
-            self.pts = decoder.decodeInt32ForKey("pts", orElse: 0)
-            self.qts = decoder.decodeInt32ForKey("qts", orElse: 0)
-            self.date = decoder.decodeInt32ForKey("date", orElse: 0)
-            self.seq = decoder.decodeInt32ForKey("seq", orElse: 0)
-        }
-        
-        public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeInt32(self.pts, forKey: "pts")
-            encoder.encodeInt32(self.qts, forKey: "qts")
-            encoder.encodeInt32(self.date, forKey: "date")
-            encoder.encodeInt32(self.seq, forKey: "seq")
-        }
-        
-        public var description: String {
-            return "(pts: \(pts), qts: \(qts), seq: \(seq), date: \(date))"
-        }
-    }
-    
-    let isTestingEnvironment: Bool
-    let masterDatacenterId: Int32
-    let peerId: PeerId
-    
-    let state: State?
-    
-    public required init(decoder: PostboxDecoder) {
-        self.isTestingEnvironment = decoder.decodeInt32ForKey("isTestingEnvironment", orElse: 0) != 0
-        self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId", orElse: 0)
-        self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
-        self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.isTestingEnvironment ? 1 : 0, forKey: "isTestingEnvironment")
-        encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
-        encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
-        if let state = self.state {
-            encoder.encodeObject(state, forKey: "state")
-        }
-    }
-    
-    public init(isTestingEnvironment: Bool, masterDatacenterId: Int32, peerId: PeerId, state: State?) {
-        self.isTestingEnvironment = isTestingEnvironment
-        self.masterDatacenterId = masterDatacenterId
-        self.peerId = peerId
-        self.state = state
-    }
-    
-    func changedState(_ state: State) -> AuthorizedAccountState {
-        return AuthorizedAccountState(isTestingEnvironment: self.isTestingEnvironment, masterDatacenterId: self.masterDatacenterId, peerId: self.peerId, state: state)
-    }
-    
-    public func equalsTo(_ other: AccountState) -> Bool {
-        if let other = other as? AuthorizedAccountState {
-            return self.isTestingEnvironment == other.isTestingEnvironment && self.masterDatacenterId == other.masterDatacenterId &&
-                self.peerId == other.peerId &&
-                self.state == other.state
-        } else {
-            return false
-        }
-    }
-}
-
-public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.State) -> Bool {
-    return lhs.pts == rhs.pts &&
-        lhs.qts == rhs.qts &&
-        lhs.date == rhs.date &&
-        lhs.seq == rhs.seq
-}
 
 private let accountRecordToActiveKeychainId = Atomic<[AccountRecordId: Int]>(value: [:])
 
@@ -243,37 +153,6 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-let telegramPostboxSeedConfiguration: SeedConfiguration = {
-    var messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [:]
-    for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
-        messageHoles[peerNamespace] = [
-            Namespaces.Message.Cloud: Set(MessageTags.all)
-        ]
-    }
-    
-    var globalMessageIdsPeerIdNamespaces = Set<GlobalMessageIdsNamespace>()
-    for peerIdNamespace in [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup] {
-        globalMessageIdsPeerIdNamespaces.insert(GlobalMessageIdsNamespace(peerIdNamespace: peerIdNamespace, messageIdNamespace: Namespaces.Message.Cloud))
-    }
-    
-    return SeedConfiguration(globalMessageIdsPeerIdNamespaces: globalMessageIdsPeerIdNamespaces, initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1))), messageHoles: messageHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
-        if let peer = peer as? TelegramChannel {
-            switch peer.info {
-                case .group:
-                    if let addressName = peer.addressName, !addressName.isEmpty {
-                        return [.publicGroups]
-                    } else {
-                        return [.regularChatsAndPrivateGroups]
-                    }
-                case .broadcast:
-                    return [.channels]
-            }
-        } else {
-            return [.regularChatsAndPrivateGroups]
-        }
-    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud], defaultMessageNamespaceReadStates: [Namespaces.Message.Local: .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false)], chatMessagesNamespaces: Set([Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]))
-}()
-
 public enum AccountPreferenceEntriesResult {
     case progress(Float)
     case result(String, [ValueBoxKey: PreferencesEntry])
@@ -339,20 +218,6 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
                 return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
                     return .result(transaction.legacyGetAccessChallengeData())
                 }
-        }
-    }
-}
-
-public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
-    return postbox
-    |> mapToSignal { value -> Signal<T, NoError> in
-        switch value {
-            case let .postbox(postbox):
-                return postbox.transaction(transaction)
-            default:
-                return .complete()
         }
     }
 }
@@ -926,43 +791,6 @@ public func decryptedNotificationPayload(account: Account, data: Data) -> Signal
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
     |> map { secret -> Data? in
         return decryptedNotificationPayload(key: secret, data: data)
-    }
-}
-
-public struct AccountBackupData: Codable, Equatable {
-    public var masterDatacenterId: Int32
-    public var peerId: Int64
-    public var masterDatacenterKey: Data
-    public var masterDatacenterKeyId: Int64
-}
-
-public final class AccountBackupDataAttribute: AccountRecordAttribute, Equatable {
-    public let data: AccountBackupData?
-    
-    public init(data: AccountBackupData?) {
-        self.data = data
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.data = try? JSONDecoder().decode(AccountBackupData.self, from: decoder.decodeDataForKey("data") ?? Data())
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        if let data = self.data, let serializedData = try? JSONEncoder().encode(data) {
-            encoder.encodeData(serializedData, forKey: "data")
-        }
-    }
-    
-    public static func ==(lhs: AccountBackupDataAttribute, rhs: AccountBackupDataAttribute) -> Bool {
-        return lhs.data == rhs.data
-    }
-    
-    public func isEqual(to: AccountRecordAttribute) -> Bool {
-        if let to = to as? AccountBackupDataAttribute {
-            return self == to
-        } else {
-            return false
-        }
     }
 }
 

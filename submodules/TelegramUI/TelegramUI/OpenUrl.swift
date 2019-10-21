@@ -2,6 +2,7 @@ import Foundation
 import Display
 import SafariServices
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 #if BUCK

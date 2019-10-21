@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<Peer?, NoError> {
     return account.postbox.transaction { transaction -> Signal<Peer?, NoError> in
         if let peer = transaction.getPeer(peerId) {

@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 extension StickerPackReference {
     init(_ stickerPackInfo: StickerPackCollectionInfo) {
         self = .id(id: stickerPackInfo.id.id, accessHash: stickerPackInfo.accessHash)

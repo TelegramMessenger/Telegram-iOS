@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 enum PendingMessageUploadedContent {
     case text(String)
     case media(Api.InputMedia, String)

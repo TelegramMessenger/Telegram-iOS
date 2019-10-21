@@ -5,6 +5,8 @@ import PostboxMac
 import Postbox
 #endif
 
+import SyncCore
+
 public protocol SplitTestEvent: RawRepresentable where RawValue == String {
 }
 

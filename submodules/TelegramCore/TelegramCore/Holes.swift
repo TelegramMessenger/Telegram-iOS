@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .photoOrVideo {
         return Api.MessagesFilter.inputMessagesFilterPhotoVideo

@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public struct FoundPeer: Equatable {
     public let peer: Peer
     public let subscribers: Int32?

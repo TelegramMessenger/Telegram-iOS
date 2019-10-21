@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private struct LocalChatListEntryRange {
     var entries: [ChatListNamespaceEntry]
     var upperBound: ChatListIndex?

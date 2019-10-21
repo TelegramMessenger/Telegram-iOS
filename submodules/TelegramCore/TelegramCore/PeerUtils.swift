@@ -5,6 +5,8 @@ import PostboxMac
 import Postbox
 #endif
 
+import SyncCore
+
 public extension Peer {
     var debugDisplayTitle: String {
         switch self {

@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func updateAccountPeerName(account: Account, firstName: String, lastName: String) -> Signal<Void, NoError> {
     return account.network.request(Api.functions.account.updateProfile(flags: (1 << 0) | (1 << 1), firstName: firstName, lastName: lastName, about: nil))
         |> map { result -> Api.User? in

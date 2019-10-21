@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant
     public let peer: Peer

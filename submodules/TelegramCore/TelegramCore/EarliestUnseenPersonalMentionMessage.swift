@@ -13,6 +13,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum EarliestUnseenPersonalMentionMessageResult: Equatable {
     case loading
     case result(MessageId?)

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 
 private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, day: Bool, preview: Bool) -> PresentationTheme {

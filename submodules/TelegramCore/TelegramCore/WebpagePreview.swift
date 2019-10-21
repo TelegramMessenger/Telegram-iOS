@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func webpagePreview(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<TelegramMediaWebpage?, NoError> {
     return webpagePreviewWithProgress(account: account, url: url)
     |> mapToSignal { next -> Signal<TelegramMediaWebpage?, NoError> in

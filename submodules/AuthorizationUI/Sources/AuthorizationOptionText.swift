@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import SyncCore
 import Display
 import TelegramPresentationData
 import TextFormat

@@ -1,27 +1,5 @@
-import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
-
-final class SynchronizeConsumeMessageContentsOperation: PostboxCoding {
-    let messageIds: [MessageId]
-    
-    init(messageIds: [MessageId]) {
-        self.messageIds = messageIds
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.messageIds = MessageId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("i")!)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        let buffer = WriteBuffer()
-        MessageId.encodeArrayToBuffer(self.messageIds, buffer: buffer)
-        encoder.encodeBytes(buffer, forKey: "i")
-    }
-}
+import Postbox
+import SyncCore
 
 func addSynchronizeConsumeMessageContentsOperation(transaction: Transaction, messageIds: [MessageId]) {
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(messageIds)) {

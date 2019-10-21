@@ -11,6 +11,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public enum ProxyServerStatus: Equatable {
     case checking
     case notAvailable

@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import WatchCommon
 import SSignalKit
 import TelegramUIPreferences

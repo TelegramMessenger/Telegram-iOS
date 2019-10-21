@@ -9,6 +9,8 @@ import Postbox
 import TelegramApi
 #endif
 
+import SyncCore
+
 public enum NotificationTokenType {
     case aps(encrypt: Bool)
     case voip

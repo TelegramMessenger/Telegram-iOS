@@ -14,6 +14,8 @@
     #endif
 #endif
 
+import SyncCore
+
 public enum JoinLinkError {
     case generic
     case tooMuchJoined

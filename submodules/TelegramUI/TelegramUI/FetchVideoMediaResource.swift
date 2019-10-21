@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import FFMpeg
 import LocalMediaResources

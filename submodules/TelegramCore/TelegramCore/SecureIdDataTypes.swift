@@ -5,6 +5,8 @@ import TelegramApiMac
 import TelegramApi
 #endif
 
+import SyncCore
+
 public struct SecureIdPersonName: Equatable {
     public let firstName: String
     public let lastName: String
@@ -36,16 +38,6 @@ public struct SecureIdDate: Equatable {
 public enum SecureIdGender {
     case male
     case female
-}
-
-public struct SecureIdFileReference: Equatable {
-    public let id: Int64
-    let accessHash: Int64
-    let size: Int32
-    let datacenterId: Int32
-    public let timestamp: Int32
-    public let fileHash: Data
-    let encryptedSecret: Data
 }
 
 extension SecureIdFileReference {

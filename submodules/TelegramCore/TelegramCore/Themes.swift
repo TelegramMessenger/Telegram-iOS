@@ -9,21 +9,7 @@ import Foundation
     import TelegramApi
 #endif
 
-final class CachedThemesConfiguration: PostboxCoding {
-    let hash: Int32
-    
-    init(hash: Int32) {
-        self.hash = hash
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.hash = decoder.decodeInt32ForKey("hash", orElse: 0)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.hash, forKey: "hash")
-    }
-}
+import SyncCore
 
 #if os(macOS)
 let telegramThemeFormat = "macos"
@@ -431,38 +417,6 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
                 return .fail(.generic)
             }
         }
-    }
-}
-
-public final class ThemeSettings: PreferencesEntry, Equatable {
-    public let currentTheme: TelegramTheme?
- 
-    public init(currentTheme: TelegramTheme?) {
-        self.currentTheme = currentTheme
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.currentTheme = decoder.decodeObjectForKey("t", decoder: { TelegramTheme(decoder: $0) }) as? TelegramTheme
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        if let currentTheme = currentTheme {
-            encoder.encodeObject(currentTheme, forKey: "t")
-        } else {
-            encoder.encodeNil(forKey: "t")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ThemeSettings {
-            return self == to
-        } else {
-            return false
-        }
-    }
-    
-    public static func ==(lhs: ThemeSettings, rhs: ThemeSettings) -> Bool {
-        return lhs.currentTheme == rhs.currentTheme
     }
 }
 

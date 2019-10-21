@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 #if BUCK
 import MtProtoKit
 #else

@@ -16,6 +16,7 @@ import Foundation
     import UIKit
 #endif
 
+import SyncCore
 
 func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
     var updatedState = state

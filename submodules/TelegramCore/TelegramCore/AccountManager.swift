@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private enum AccountKind {
     case authorized
     case unauthorized

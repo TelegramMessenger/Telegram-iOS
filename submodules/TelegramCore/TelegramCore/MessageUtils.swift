@@ -5,6 +5,8 @@ import Foundation
     import Postbox
 #endif
 
+import SyncCore
+
 public extension MessageFlags {
     var isSending: Bool {
         return (self.contains(.Unsent) || self.contains(.Sending)) && !self.contains(.Failed)
@@ -200,3 +202,52 @@ public extension Message {
         }
     }
 }
+
+public extension Message {
+    var secretMediaDuration: Int32? {
+        var found = false
+        for attribute in self.attributes {
+            if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
+                found = true
+                break
+            }
+        }
+        
+        if !found {
+            return nil
+        }
+        
+        for media in self.media {
+            switch media {
+            case _ as TelegramMediaImage:
+                return nil
+            case let file as TelegramMediaFile:
+                return file.duration
+            default:
+                break
+            }
+        }
+        
+        return nil
+    }
+}
+
+public extension Message {
+    var isSentOrAcknowledged: Bool {
+        if self.flags.contains(.Failed) {
+            return false
+        } else if self.flags.isSending {
+            for attribute in self.attributes {
+                if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                    if attribute.acknowledged {
+                        return true
+                    }
+                }
+            }
+            return false
+        } else {
+            return true
+        }
+    }
+}
+

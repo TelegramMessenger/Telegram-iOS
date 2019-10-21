@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum EnqueueMessageGrouping {
     case none
     case auto

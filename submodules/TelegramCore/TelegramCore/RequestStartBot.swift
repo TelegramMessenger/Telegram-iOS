@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func requestStartBot(account: Account, botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
     if let payload = payload, !payload.isEmpty {
         return account.postbox.loadedPeerWithId(botPeerId)

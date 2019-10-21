@@ -16,6 +16,8 @@ import SwiftSignalKit
 #endif
 
 
+import SyncCore
+
 private let minLayer: Int32 = 65
 
 public enum CallSessionError: Equatable {

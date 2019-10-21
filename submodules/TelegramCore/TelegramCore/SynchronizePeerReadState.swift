@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private enum VerifyReadStateError {
     case Abort
     case Retry

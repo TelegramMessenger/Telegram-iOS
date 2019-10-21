@@ -7,6 +7,8 @@ import SwiftSignalKit
 import TelegramApi
 #endif
 
+import SyncCore
+
 public struct DeepLinkInfo {
     public let message: String
     public let entities: [MessageTextEntity]

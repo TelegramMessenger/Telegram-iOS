@@ -10,6 +10,8 @@ import Foundation
     import UIKit
 #endif
 
+import SyncCore
+
 func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)

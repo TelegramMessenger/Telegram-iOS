@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private enum ChannelBlacklistFilter {
     case restricted
     case banned

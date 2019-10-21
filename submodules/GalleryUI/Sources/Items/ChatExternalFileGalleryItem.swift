@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import WebKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode

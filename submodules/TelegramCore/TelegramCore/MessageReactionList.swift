@@ -15,6 +15,8 @@ import MtProtoKitDynamic
 #endif
 #endif
 
+import SyncCore
+
 public enum MessageReactionListCategory: Hashable {
     case all
     case reaction(String)

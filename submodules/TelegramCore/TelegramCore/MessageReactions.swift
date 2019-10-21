@@ -15,24 +15,7 @@ import MtProtoKitDynamic
 #endif
 #endif
 
-final class UpdateMessageReactionsAction: PendingMessageActionData {
-    init() {
-    }
-    
-    init(decoder: PostboxDecoder) {
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-    }
-    
-    func isEqual(to: PendingMessageActionData) -> Bool {
-        if let _ = to as? UpdateMessageReactionsAction {
-            return true
-        } else {
-            return false
-        }
-    }
-}
+import SyncCore
 
 public func updateMessageReactionsInteractively(postbox: Postbox, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in

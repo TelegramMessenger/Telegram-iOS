@@ -8,6 +8,8 @@ import Foundation
     import UIKit
 #endif
 
+import SyncCore
+
 private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
     let scale = min(to.width / max(1.0, size.width), to.height / max(1.0, size.height))
     return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))

@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 private enum ChannelParticipantValue: Int32 {
     case member = 0
     case creator = 1

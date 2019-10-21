@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import CoreTelephony
 import TelegramPresentationData
 import PhoneInputNode

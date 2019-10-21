@@ -8,6 +8,8 @@
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum ChannelHistoryAvailabilityError {
     case generic
     case hasNotPermissions

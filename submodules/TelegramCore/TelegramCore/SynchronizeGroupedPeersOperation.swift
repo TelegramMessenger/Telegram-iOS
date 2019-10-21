@@ -7,25 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class SynchronizeGroupedPeersOperation: PostboxCoding {
-    let peerId: PeerId
-    let groupId: PeerGroupId
-    
-    init(peerId: PeerId, groupId: PeerGroupId) {
-        self.peerId = peerId
-        self.groupId = groupId
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.peerId = PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0))
-        self.groupId = PeerGroupId.init(rawValue: decoder.decodeInt32ForKey("groupId", orElse: 0))
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
-        encoder.encodeInt32(self.groupId.rawValue, forKey: "groupId")
-    }
-}
+import SyncCore
 
 public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, groupId: PeerGroupId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in

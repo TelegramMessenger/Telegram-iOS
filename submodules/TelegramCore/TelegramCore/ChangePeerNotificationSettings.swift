@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if let peer = transaction.getPeer(peerId) {

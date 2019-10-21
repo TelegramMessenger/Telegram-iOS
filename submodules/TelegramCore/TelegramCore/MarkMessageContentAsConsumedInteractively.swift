@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {

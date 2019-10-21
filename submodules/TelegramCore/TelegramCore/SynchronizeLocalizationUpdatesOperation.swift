@@ -7,16 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class SynchronizeLocalizationUpdatesOperation: PostboxCoding {
-    init() {
-    }
-    
-    init(decoder: PostboxDecoder) {
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-    }
-}
+import SyncCore
 
 func addSynchronizeLocalizationUpdatesOperation(transaction: Transaction) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeLocalizationUpdates

@@ -5,6 +5,7 @@ import Intents
 import AVFoundation
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import AppBundle
 

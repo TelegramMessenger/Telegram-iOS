@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 
 private func decodeColor<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key) throws -> UIColor {

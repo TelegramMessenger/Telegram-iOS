@@ -9,46 +9,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-final class CachedResolvedByNamePeer: PostboxCoding {
-    let peerId: PeerId?
-    let timestamp: Int32
-    
-    static func key(name: String) -> ValueBoxKey {
-        let key: ValueBoxKey
-        if let nameData = name.data(using: .utf8) {
-            key = ValueBoxKey(length: nameData.count)
-            nameData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-                memcpy(key.memory, bytes, nameData.count)
-            }
-        } else {
-            key = ValueBoxKey(length: 0)
-        }
-        return key
-    }
-    
-    init(peerId: PeerId?, timestamp: Int32) {
-        self.peerId = peerId
-        self.timestamp = timestamp
-    }
-    
-    init(decoder: PostboxDecoder) {
-        if let peerId = decoder.decodeOptionalInt64ForKey("p") {
-            self.peerId = PeerId(peerId)
-        } else {
-            self.peerId = nil
-        }
-        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        if let peerId = self.peerId {
-            encoder.encodeInt64(peerId.toInt64(), forKey: "p")
-        } else {
-            encoder.encodeNil(forKey: "p")
-        }
-        encoder.encodeInt32(self.timestamp, forKey: "t")
-    }
-}
+import SyncCore
 
 private let resolvedByNamePeersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 150, highWaterItemCount: 200)
 

@@ -15,10 +15,7 @@ import Foundation
     #endif
 #endif
 
-public enum InteractiveMessagesDeletionType: Int32 {
-    case forLocalPeer = 0
-    case forEveryone = 1
-}
+import SyncCore
 
 public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMessageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
@@ -78,12 +75,6 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMess
         }
         deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: messageIds)
     }
-}
-
-public enum InteractiveHistoryClearingType: Int32 {
-    case forLocalPeer = 0
-    case forEveryone = 1
-    case scheduledMessages = 2
 }
 
 public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: InteractiveHistoryClearingType) -> Signal<Void, NoError> {

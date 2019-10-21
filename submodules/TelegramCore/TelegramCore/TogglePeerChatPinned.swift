@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public enum TogglePeerChatPinnedResult {
     case done
     case limitExceeded(Int)

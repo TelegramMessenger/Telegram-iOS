@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private struct PeerParticipants: Equatable {
     let peers: [Peer]
     

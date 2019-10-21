@@ -9,6 +9,8 @@ import SwiftSignalKit
 import TelegramApi
 #endif
 
+import SyncCore
+
 private func normalizedPhoneNumber(_ value: String) -> String {
     var result = ""
     for c in value {

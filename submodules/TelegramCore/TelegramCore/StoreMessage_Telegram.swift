@@ -7,6 +7,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import SyncCore
+
 public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
     var isUnconsumedPersonalMention = false

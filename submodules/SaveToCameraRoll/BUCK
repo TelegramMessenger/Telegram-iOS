@@ -9,6 +9,7 @@ static_library(
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Display:Display#shared",
         "//submodules/AccountContext:AccountContext",
         "//submodules/DeviceAccess:DeviceAccess",

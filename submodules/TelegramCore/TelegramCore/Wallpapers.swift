@@ -9,21 +9,7 @@ import SwiftSignalKit
 import TelegramApi
 #endif
 
-final class CachedWallpapersConfiguration: PostboxCoding {
-    let hash: Int32
-    
-    init(hash: Int32) {
-        self.hash = hash
-    }
-    
-    init(decoder: PostboxDecoder) {
-        self.hash = decoder.decodeInt32ForKey("hash", orElse: 0)
-    }
-    
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.hash, forKey: "hash")
-    }
-}
+import SyncCore
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
     let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in

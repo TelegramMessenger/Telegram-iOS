@@ -10,6 +10,7 @@ import Foundation
     import UIKit
 #endif
 
+import SyncCore
 
 public enum StandaloneUploadMediaError {
     case generic

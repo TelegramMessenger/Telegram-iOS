@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     

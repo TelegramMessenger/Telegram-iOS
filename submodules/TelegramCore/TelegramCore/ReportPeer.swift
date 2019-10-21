@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {

@@ -6,8 +6,9 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/TelegramCore:TelegramCore#dynamic",
-        "//submodules/Postbox:Postbox#dynamic",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",

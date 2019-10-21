@@ -10,6 +10,7 @@ static_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ActivityIndicator:ActivityIndicator",

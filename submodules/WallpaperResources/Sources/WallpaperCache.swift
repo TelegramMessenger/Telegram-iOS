@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 import PersistentStringHash
 

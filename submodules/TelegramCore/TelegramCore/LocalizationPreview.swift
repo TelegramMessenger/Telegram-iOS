@@ -14,6 +14,7 @@ import SwiftSignalKit
     #endif
 #endif
 
+import SyncCore
 
 public enum RequestLocalizationPreviewError {
     case generic

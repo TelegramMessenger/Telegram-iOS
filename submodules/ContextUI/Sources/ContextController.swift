@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TextSelectionNode
 import ReactionSelectionNode
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 
 private let animationDurationFactor: Double = 1.0

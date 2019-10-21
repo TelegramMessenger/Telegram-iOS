@@ -9,6 +9,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Disposable {
     return postbox.installStoreMessageAction(peerId: peerId, { messages, transaction in
         var consumeMessageIds: [MessageId] = []

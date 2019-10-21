@@ -6,6 +6,7 @@ import Display
 import AVFoundation
 import ImageIO
 import TelegramCore
+import SyncCore
 #if BUCK
 import WebPImage
 #else

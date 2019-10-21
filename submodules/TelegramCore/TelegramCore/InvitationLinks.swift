@@ -15,6 +15,8 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
+
 public func ensuredExistingPeerExportedInvitation(account: Account, peerId: PeerId, revokeExisted: Bool = false) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {

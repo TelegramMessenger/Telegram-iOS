@@ -15,6 +15,7 @@ import Foundation
     #endif
 #endif
 
+import SyncCore
 
 public func singleMessageView(account: Account, messageId: MessageId, loadIfNotExists: Bool) -> Signal<MessageView, NoError> {
     return Signal { subscriber in

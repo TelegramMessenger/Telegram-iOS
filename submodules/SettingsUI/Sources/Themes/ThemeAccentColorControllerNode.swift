@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ChatListUI

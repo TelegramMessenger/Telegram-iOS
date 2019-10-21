@@ -7,6 +7,8 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+import SyncCore
+
 private let topSupportedLayer: SecretChatSequenceBasedLayer = .layer101
 
 func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBasedLayer {

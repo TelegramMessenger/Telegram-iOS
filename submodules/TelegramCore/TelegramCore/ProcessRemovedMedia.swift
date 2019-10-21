@@ -5,6 +5,8 @@ import PostboxMac
 import Postbox
 #endif
 
+import SyncCore
+
 func processRemovedMedia(_ mediaBox: MediaBox, _ media: Media) {
     if let image = media as? TelegramMediaImage {
         let _ = mediaBox.removeCachedResources(Set(image.representations.map({ WrappedMediaResourceId($0.resource.id) }))).start()

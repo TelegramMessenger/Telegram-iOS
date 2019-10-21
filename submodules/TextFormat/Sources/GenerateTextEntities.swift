@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 private let dataAndPhoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber]).rawValue)
