@@ -77,6 +77,16 @@ public struct PeerGroupUnreadCountersCombinedSummary: PostboxCoding, Equatable {
     }
 }
 
+public enum ChatListTotalUnreadStateCategory: Int32 {
+    case filtered = 0
+    case raw = 1
+}
+
+public enum ChatListTotalUnreadStateStats: Int32 {
+    case messages = 0
+    case chats = 1
+}
+
 public struct ChatListTotalUnreadState: PostboxCoding, Equatable {
     public var absoluteCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]
     public var filteredCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]

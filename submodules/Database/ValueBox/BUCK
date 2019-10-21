@@ -1,0 +1,16 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ValueBox",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/sqlcipher:sqlcipher",
+        "//submodules/Database/Buffers:Buffers",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

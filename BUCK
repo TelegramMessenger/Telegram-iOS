@@ -339,10 +339,13 @@ apple_binary(
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/Database/ValueBox:ValueBox",
+        "//submodules/Database/PostboxDataTypes:PostboxDataTypes",
+        "//submodules/Database/MessageHistoryReadStateTable:MessageHistoryReadStateTable",
+        "//submodules/Database/MessageHistoryMetadataTable:MessageHistoryMetadataTable",
         "//submodules/sqlcipher:sqlcipher",
-        #"//submodules/Postbox:Postbox#shared",
-        #"//submodules/SyncCore:SyncCore#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

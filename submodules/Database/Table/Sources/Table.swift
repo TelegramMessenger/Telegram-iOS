@@ -1,4 +1,5 @@
 import Foundation
+import ValueBox
 
 open class Table {
     public final let valueBox: ValueBox

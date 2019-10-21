@@ -1,4 +1,9 @@
 import Foundation
+import ValueBox
+import Table
+import PostboxCoding
+import PostboxDataTypes
+import Buffers
 
 private enum MetadataPrefix: Int8 {
     case ChatListInitialized = 0
@@ -12,40 +17,30 @@ private enum MetadataPrefix: Int8 {
     case PeerHistoryInitialized = 9
 }
 
-public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
-    public var messageCount: Int32
-    public var chatCount: Int32
-    
-    public init(messageCount: Int32, chatCount: Int32) {
-        self.messageCount = messageCount
-        self.chatCount = chatCount
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.messageCount = decoder.decodeInt32ForKey("m", orElse: 0)
-        self.chatCount = decoder.decodeInt32ForKey("c", orElse: 0)
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.messageCount, forKey: "m")
-        encoder.encodeInt32(self.chatCount, forKey: "c")
-    }
+public enum ChatListTotalUnreadStateCategory: Int32 {
+    case filtered = 0
+    case raw = 1
+}
+
+public enum ChatListTotalUnreadStateStats: Int32 {
+    case messages = 0
+    case chats = 1
 }
 
 private struct InitializedChatListKey: Hashable {
     let groupId: PeerGroupId
 }
 
-final class MessageHistoryMetadataTable: Table {
-    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+public final class MessageHistoryMetadataTable: Table {
+    public static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
-    let sharedGroupFeedIndexInitializedKey = ValueBoxKey(length: 4 + 1)
-    let sharedChatListGroupHistoryInitializedKey = ValueBoxKey(length: 4 + 1)
-    let sharedPeerNextMessageIdByNamespaceKey = ValueBoxKey(length: 8 + 1 + 4)
-    let sharedBuffer = WriteBuffer()
+    private let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
+    private let sharedGroupFeedIndexInitializedKey = ValueBoxKey(length: 4 + 1)
+    private let sharedChatListGroupHistoryInitializedKey = ValueBoxKey(length: 4 + 1)
+    private let sharedPeerNextMessageIdByNamespaceKey = ValueBoxKey(length: 8 + 1 + 4)
+    private let sharedBuffer = WriteBuffer()
     
     private var initializedChatList = Set<InitializedChatListKey>()
     private var initializedHistoryPeerIds = Set<PeerId>()
@@ -98,41 +93,41 @@ final class MessageHistoryMetadataTable: Table {
         return key
     }
     
-    func setInitializedChatList(groupId: PeerGroupId) {
+    public func setInitializedChatList(groupId: PeerGroupId) {
         switch groupId {
-            case .root:
-                self.valueBox.set(self.table, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
-            case .group:
-                self.valueBox.set(self.table, key: self.chatListGroupInitializedKey(InitializedChatListKey(groupId: groupId)), value: MemoryBuffer())
+        case .root:
+            self.valueBox.set(self.table, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
+        case .group:
+            self.valueBox.set(self.table, key: self.chatListGroupInitializedKey(InitializedChatListKey(groupId: groupId)), value: MemoryBuffer())
         }
         self.initializedChatList.insert(InitializedChatListKey(groupId: groupId))
     }
     
-    func isInitializedChatList(groupId: PeerGroupId) -> Bool {
+    public func isInitializedChatList(groupId: PeerGroupId) -> Bool {
         let key = InitializedChatListKey(groupId: groupId)
         if self.initializedChatList.contains(key) {
             return true
         } else {
             switch groupId {
-                case .root:
-                    if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ChatListInitialized)) {
-                        self.initializedChatList.insert(key)
-                        return true
-                    } else {
-                        return false
-                    }
-                case .group:
-                    if self.valueBox.exists(self.table, key: self.chatListGroupInitializedKey(key)) {
-                        self.initializedChatList.insert(key)
-                        return true
-                    } else {
-                        return false
-                    }
+            case .root:
+                if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ChatListInitialized)) {
+                    self.initializedChatList.insert(key)
+                    return true
+                } else {
+                    return false
+                }
+            case .group:
+                if self.valueBox.exists(self.table, key: self.chatListGroupInitializedKey(key)) {
+                    self.initializedChatList.insert(key)
+                    return true
+                } else {
+                    return false
+                }
             }
         }
     }
     
-    func setShouldReindexUnreadCounts(value: Bool) {
+    public func setShouldReindexUnreadCounts(value: Bool) {
         if value {
             self.valueBox.set(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), value: MemoryBuffer())
         } else {
@@ -140,7 +135,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func shouldReindexUnreadCounts() -> Bool {
+    public func shouldReindexUnreadCounts() -> Bool {
         if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts)) {
             return true
         } else {
@@ -148,13 +143,13 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func setInitialized(_ peerId: PeerId) {
+    public func setInitialized(_ peerId: PeerId) {
         self.initializedHistoryPeerIds.insert(peerId)
         self.sharedBuffer.reset()
         self.valueBox.set(self.table, key: self.peerHistoryInitializedKey(peerId), value: self.sharedBuffer)
     }
     
-    func isInitialized(_ peerId: PeerId) -> Bool {
+    public func isInitialized(_ peerId: PeerId) -> Bool {
         if self.initializedHistoryPeerIds.contains(peerId) {
             return true
         } else {
@@ -167,13 +162,13 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func setGroupFeedIndexInitialized(_ groupId: PeerGroupId) {
+    public func setGroupFeedIndexInitialized(_ groupId: PeerGroupId) {
         self.initializedGroupFeedIndexIds.insert(groupId)
         self.sharedBuffer.reset()
         self.valueBox.set(self.table, key: self.groupFeedIndexInitializedKey(groupId), value: self.sharedBuffer)
     }
     
-    func isGroupFeedIndexInitialized(_ groupId: PeerGroupId) -> Bool {
+    public func isGroupFeedIndexInitialized(_ groupId: PeerGroupId) -> Bool {
         if self.initializedGroupFeedIndexIds.contains(groupId) {
             return true
         } else {
@@ -186,7 +181,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getNextMessageIdAndIncrement(_ peerId: PeerId, namespace: MessageId.Namespace) -> MessageId {
+    public func getNextMessageIdAndIncrement(_ peerId: PeerId, namespace: MessageId.Namespace) -> MessageId {
         if let messageIdByNamespace = self.peerNextMessageIdByNamespace[peerId] {
             if let nextId = messageIdByNamespace[namespace] {
                 self.peerNextMessageIdByNamespace[peerId]![namespace] = nextId + 1
@@ -225,7 +220,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getNextStableMessageIndexId() -> UInt32 {
+    public func getNextStableMessageIndexId() -> UInt32 {
         if let nextId = self.nextMessageStableId {
             self.nextMessageStableId = nextId + 1
             self.nextMessageStableIdUpdated = true
@@ -246,7 +241,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getNextPeerOperationLogIndex() -> UInt32 {
+    public func getNextPeerOperationLogIndex() -> UInt32 {
         if let nextId = self.nextPeerOperationLogIndex {
             self.nextPeerOperationLogIndex = nextId + 1
             self.nextPeerOperationLogIndexUpdated = true
@@ -267,7 +262,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getChatListTotalUnreadState() -> ChatListTotalUnreadState {
+    public func getChatListTotalUnreadState() -> ChatListTotalUnreadState {
         if let cached = self.chatListTotalUnreadState {
             return cached
         } else {
@@ -284,7 +279,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func setChatListTotalUnreadState(_ state: ChatListTotalUnreadState) {
+    public func setChatListTotalUnreadState(_ state: ChatListTotalUnreadState) {
         let current = self.getChatListTotalUnreadState()
         if current != state {
             self.chatListTotalUnreadState = state
@@ -292,7 +287,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    override func clearMemoryCache() {
+    override public func clearMemoryCache() {
         self.initializedChatList.removeAll()
         self.initializedHistoryPeerIds.removeAll()
         self.peerNextMessageIdByNamespace.removeAll()
@@ -303,7 +298,7 @@ final class MessageHistoryMetadataTable: Table {
         self.chatListTotalUnreadStateUpdated = false
     }
     
-    override func beforeCommit() {
+    override public func beforeCommit() {
         let sharedBuffer = WriteBuffer()
         for (peerId, namespaces) in self.updatedPeerNextMessageIdByNamespace {
             for namespace in namespaces {

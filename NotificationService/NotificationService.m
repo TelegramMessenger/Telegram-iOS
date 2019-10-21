@@ -1,5 +1,7 @@
 #import "NotificationService.h"
 
+#import <mach/mach.h>
+
 #import <UIKit/UIKit.h>
 #import <BuildConfig/BuildConfig.h>
 
@@ -34,47 +36,43 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     return (((int64_t)(namespace)) << 32) | ((int64_t)((uint64_t)((uint32_t)value)));
 }
 
-@interface ParsedNotificationMessage : NSObject
-
-@property (nonatomic, readonly) int64_t accountId;
-@property (nonatomic, readonly) int64_t peerId;
-@property (nonatomic, readonly) int32_t messageId;
-
-@end
-
-@implementation ParsedNotificationMessage
-
-- (instancetype)initWithAccountId:(int64_t)accountId peerId:(int64_t)peerId messageId:(int64_t)messageId {
-    self = [super init];
-    if (self != nil) {
-        _accountId = accountId;
-        _peerId = peerId;
-        _messageId = messageId;
+static void reportMemory() {
+    struct task_basic_info info;
+    mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;
+    kern_return_t kerr = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&info, &size);
+    if (kerr == KERN_SUCCESS) {
+        NSLog(@"Memory in use (in bytes): %lu", info.resident_size);
+        NSLog(@"Memory in use (in MiB): %f", ((CGFloat)info.resident_size / 1048576));
+    } else {
+        NSLog(@"Error with task_info(): %s", mach_error_string(kerr));
     }
-    return self;
 }
 
-@end
-
-@interface NotificationService () {
+@interface NotificationServiceImpl () {
+    void (^_countIncomingMessage)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t);
+    
     NSString * _Nullable _rootPath;
+    DeviceSpecificEncryptionParameters * _Nullable _deviceSpecificEncryptionParameters;
     NSString * _Nullable _baseAppBundleId;
     void (^_contentHandler)(UNNotificationContent *);
     UNMutableNotificationContent * _Nullable _bestAttemptContent;
     void (^_cancelFetch)(void);
     
-    ParsedNotificationMessage * _Nullable _parsedMessage;
     NSNumber * _Nullable _updatedUnreadCount;
     bool _contentReady;
 }
 
 @end
 
-@implementation NotificationService
+@implementation NotificationServiceImpl
 
-- (instancetype)init {
+- (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage {
     self = [super init];
     if (self != nil) {
+        reportMemory();
+        
+        _countIncomingMessage = [countIncomingMessage copy];
+        
         NSString *appBundleIdentifier = [NSBundle mainBundle].bundleIdentifier;
         NSRange lastDotRange = [appBundleIdentifier rangeOfString:@"." options:NSBackwardsSearch];
         if (lastDotRange.location != NSNotFound) {
@@ -85,6 +83,9 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
             if (appGroupUrl != nil) {
                 NSString *rootPath = [[appGroupUrl path] stringByAppendingPathComponent:@"telegram-data"];
                 _rootPath = rootPath;
+                if (rootPath != nil) {
+                    _deviceSpecificEncryptionParameters = [BuildConfig deviceSpecificEncryptionParameters:rootPath baseAppBundleId:_baseAppBundleId];
+                }
             } else {
                 NSAssert(false, @"appGroupUrl == nil");
             }
@@ -97,6 +98,7 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
 
 - (void)completeWithBestAttemptContent {
     _contentReady = true;
+    //_updatedUnreadCount = @(-1);
     if (_contentReady && _updatedUnreadCount) {
         [self _internalComplete];
     }
@@ -110,6 +112,8 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
 }
  
 - (void)_internalComplete {
+    reportMemory();
+    
     #ifdef __IPHONE_13_0
     if (_baseAppBundleId != nil) {
         BGAppRefreshTaskRequest *request = [[BGAppRefreshTaskRequest alloc] initWithIdentifier:[_baseAppBundleId stringByAppendingString:@".refresh"]];
@@ -193,16 +197,9 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
             peerId = makePeerId(PeerNamespaceCloudChannel, [channelIdString intValue]);
         }
         
-        _parsedMessage = [[ParsedNotificationMessage alloc] initWithAccountId:account.accountId peerId:peerId messageId:messageId];
-        
-        __weak NotificationService *weakSelf = self;
-        [self addUnreadMessage:_rootPath accountId:account.accountId encryptionParameters:nil peerId:peerId messageId:messageId completion:^(int32_t badge) {
-            __strong NotificationService *strongSelf = weakSelf;
-            if (strongSelf == nil) {
-                return;
-            }
-            [strongSelf updateUnreadCount:badge];
-        }];
+        if (_countIncomingMessage && _deviceSpecificEncryptionParameters) {
+            _countIncomingMessage(_rootPath, account.accountId, _deviceSpecificEncryptionParameters, peerId, messageId);
+        }
         
         NSString *silentString = decryptedPayload[@"silent"];
         if ([silentString isKindOfClass:[NSString class]]) {
@@ -375,10 +372,10 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
             } else {
                 BuildConfig *buildConfig = [[BuildConfig alloc] initWithBaseAppBundleId:_baseAppBundleId];
                 
-                __weak NotificationService *weakSelf = self;
+                __weak typeof(self) weakSelf = self;
                 _cancelFetch = fetchImage(buildConfig, accountInfos.proxy, account, inputFileLocation, fileDatacenterId, ^(NSData * _Nullable data) {
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        __strong NotificationService *strongSelf = weakSelf;
+                        __strong typeof(weakSelf) strongSelf = weakSelf;
                         if (strongSelf == nil) {
                             return;
                         }
@@ -428,13 +425,6 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
             [self completeWithBestAttemptContent];
         }
         _contentHandler = nil;
-    }
-}
-
-- (void)addUnreadMessage:(NSString * _Nonnull)rootPath accountId:(int64_t)accountId encryptionParameters:(DeviceSpecificEncryptionParameters * _Nonnull)encryptionParameters peerId:(int64_t)peerId messageId:(int32_t)messageId completion:(void (^)(int32_t))completion {
-    
-    if (completion) {
-        completion(-1);
     }
 }
 
