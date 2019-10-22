@@ -339,13 +339,22 @@ else
 	EXECUTABLE_NAME="Telegram"
 fi
 
+XCODE_PATH="$(xcode-select -p)"
+TOOLCHAIN_PATH="$XCODE_PATH/Toolchains/XcodeDefault.xctoolchain"
+
+if [ -f "$TOOLCHAIN_PATH/usr/lib/swift/iphoneos/libswiftCore.dylib" ]; then
+	SOURCE_LIBRARIES_PATH="$TOOLCHAIN_PATH/usr/lib/swift/iphoneos"
+else
+	SOURCE_LIBRARIES_PATH="$TOOLCHAIN_PATH/usr/lib/swift-5.0/iphoneos"
+fi
+
 echo "Copying swift support files..."
 xcrun swift-stdlib-tool \
 	--copy \
 	--strip-bitcode \
 	--platform iphoneos \
-	--toolchain "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain" \
-	--source-libraries "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos" \
+	--toolchain "$TOOLCHAIN_PATH" \
+	--source-libraries "$SOURCE_LIBRARIES_PATH" \
 	--scan-executable "$APP_PATH/$EXECUTABLE_NAME" \
 	--scan-folder "$APP_PATH/Frameworks" \
 	--scan-folder "$APP_PATH/PlugIns" \
