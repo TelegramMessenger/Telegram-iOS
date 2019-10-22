@@ -335,8 +335,8 @@ typedef enum {
                 return;
             } else if (response.object->get_id() == tonlib_api::updateSyncState::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::updateSyncState>(response.object);
-                if (result.sync_state_->get_id() == tonlib_api::syncStateInProgress::ID) {
-                    auto syncStateInProgress = tonlib_api::move_object_as<tonlib_api::syncStateInProgress>(result.sync_state_);
+                if (result->sync_state_->get_id() == tonlib_api::syncStateInProgress::ID) {
+                    auto syncStateInProgress = tonlib_api::move_object_as<tonlib_api::syncStateInProgress>(result->sync_state_);
                     int32_t currentDelta = syncStateInProgress->current_seqno_ - syncStateInProgress->from_seqno_;
                     int32_t fullDelta = syncStateInProgress->to_seqno_ - syncStateInProgress->from_seqno_;
                     if (currentDelta > 0 && fullDelta > 0) {
@@ -345,10 +345,10 @@ typedef enum {
                     } else {
                         syncStateUpdated(0.0f);
                     }
-                } else if (result.sync_state_->get_id() == tonlib_api::syncStateDone::ID) {
+                } else if (result->sync_state_->get_id() == tonlib_api::syncStateDone::ID) {
                     syncStateUpdated(1.0f);
                 }
-                return
+                return;
             }
             NSNumber *requestId = @(response.id);
             [requestHandlersLock lock];
@@ -425,12 +425,17 @@ typedef enum {
             }
         }];
         
+        bool ignoreCache = false;
+        #if DEBUG
+        ignoreCache = true;
+        #endif
+        
         auto query = make_object<tonlib_api::init>(make_object<tonlib_api::options>(
             make_object<tonlib_api::config>(
                 configString.UTF8String,
                 blockchainName.UTF8String,
                 enableExternalRequests,
-                false
+                ignoreCache
             ),
             make_object<tonlib_api::keyStoreTypeDirectory>(
                 keystoreDirectory.UTF8String

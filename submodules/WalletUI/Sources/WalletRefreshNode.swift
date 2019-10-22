@@ -123,6 +123,8 @@ final class WalletRefreshNode: ASDisplayNode {
     
     private var state: WalletRefreshState?
     
+    var refreshProgress: Float = 0.0
+    
     private let animator: ConstantDisplayLinkAnimator
     
     init(strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) {
@@ -212,10 +214,15 @@ final class WalletRefreshNode: ASDisplayNode {
         }
     }
     
+    private var cachedProgress: Float = 0.0
+    
     func update(state: WalletRefreshState) {
-        if self.state == state {
+        if self.state == state && self.cachedProgress == self.refreshProgress {
             return
         }
+        let ignoreProgressValue = self.refreshProgress == 0.0 || (self.cachedProgress == 0.0 && self.refreshProgress == 1.0)
+        self.cachedProgress = self.refreshProgress
+        
         let previousState = self.state
         self.state = state
         
@@ -227,7 +234,12 @@ final class WalletRefreshNode: ASDisplayNode {
             title = lastUpdateTimestampString(strings: self.strings, dateTimeFormat: dateTimeFormat, statusTimestamp: ts, relativeTo: Int32(Date().timeIntervalSince1970))
             pullProgress = progress
         case .refreshing:
-            title = self.strings.Wallet_Info_Updating
+            if ignoreProgressValue {
+                title = self.strings.Wallet_Info_Updating
+            } else {
+                let percent = Int(self.refreshProgress * 100.0)
+                title = self.strings.Wallet_Info_Updating + " \(percent)%"
+            }
         }
         
         if let previousState = previousState {

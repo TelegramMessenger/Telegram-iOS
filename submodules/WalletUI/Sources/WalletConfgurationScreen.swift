@@ -10,14 +10,22 @@ import WalletCore
 private final class WalletConfigurationScreenArguments {
     let updateState: ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void
     let dismissInput: () -> Void
+    let updateSelectedMode: (WalletConfigurationScreenMode) -> Void
     
-    init(updateState: @escaping ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void, dismissInput: @escaping () -> Void) {
+    init(updateState: @escaping ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void, dismissInput: @escaping () -> Void, updateSelectedMode: @escaping (WalletConfigurationScreenMode) -> Void) {
         self.updateState = updateState
         self.dismissInput = dismissInput
+        self.updateSelectedMode = updateSelectedMode
     }
 }
 
+private enum WalletConfigurationScreenMode {
+    case `default`
+    case customString
+}
+
 private enum WalletConfigurationScreenSection: Int32 {
+    case mode
     case configString
 }
 
@@ -34,10 +42,14 @@ private enum WalletConfigurationScreenEntryTag: ItemListItemTag {
 }
 
 private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
+    case modeDefault(WalletTheme, String, Bool)
+    case modeCustomString(WalletTheme, String, Bool)
     case configString(WalletTheme, String, String)
    
     var section: ItemListSectionId {
         switch self {
+        case .modeDefault, .modeCustomString:
+            return WalletConfigurationScreenSection.mode.rawValue
         case .configString:
             return WalletConfigurationScreenSection.configString.rawValue
         }
@@ -45,8 +57,12 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
     
     var stableId: Int32 {
         switch self {
-        case .configString:
+        case .modeDefault:
             return 0
+        case .modeCustomString:
+            return 1
+        case .configString:
+            return 2
         }
     }
     
@@ -57,6 +73,14 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! WalletConfigurationScreenArguments
         switch self {
+        case let .modeDefault(theme, text, isSelected):
+            return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.updateSelectedMode(.default)
+            })
+        case let .modeCustomString(theme, text, isSelected):
+            return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.updateSelectedMode(.customString)
+            })
         case let .configString(theme, placeholder, text):
             return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, capitalization: false, autocorrection: false, returnKeyType: .done, minimalHeight: nil, textUpdated: { value in
                 arguments.updateState { state in
@@ -72,17 +96,31 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
 }
 
 private struct WalletConfigurationScreenState: Equatable {
+    var mode: WalletConfigurationScreenMode
     var configString: String
     
     var isEmpty: Bool {
-        return self.configString.isEmpty
+        switch self.mode {
+        case .default:
+            return false
+        case .customString:
+            return self.configString.isEmpty
+        }
     }
 }
 
 private func walletConfigurationScreenEntries(presentationData: WalletPresentationData, state: WalletConfigurationScreenState) -> [WalletConfigurationScreenEntry] {
     var entries: [WalletConfigurationScreenEntry] = []
+   
+    entries.append(.modeDefault(presentationData.theme, "Default", state.mode == .default))
+    entries.append(.modeCustomString(presentationData.theme, "Custom", state.mode == .customString))
     
-    entries.append(.configString(presentationData.theme, "", state.configString))
+    switch state.mode {
+    case .default:
+        break
+    case .customString:
+        entries.append(.configString(presentationData.theme, "", state.configString))
+    }
     
     return entries
 }
@@ -104,7 +142,7 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Cus
             configString = string
         }
     }
-    let initialState = WalletConfigurationScreenState(configString: configString)
+    let initialState = WalletConfigurationScreenState(mode: currentConfiguration == nil ? .default : .customString, configString: configString)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void = { f in
@@ -122,17 +160,31 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Cus
         updateState(f)
     }, dismissInput: {
         dismissInputImpl?()
+    }, updateSelectedMode: { mode in
+        updateState { state in
+            var state = state
+            state.mode = mode
+            return state
+        }
     })
     
     let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Navigation_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Configuration_Apply), style: .bold, enabled: !state.isEmpty, action: {
             let state = stateValue.with { $0 }
             let configuration: CustomWalletConfiguration?
-            if state.configString.isEmpty {
+            switch state.mode {
+            case .default:
                 configuration = nil
-            } else {
-                configuration = .string(state.configString)
+            case .customString:
+                if state.configString.isEmpty {
+                    configuration = nil
+                } else {
+                    configuration = .string(state.configString)
+                }
             }
             context.storage.updateCustomWalletConfiguration(configuration)
             dismissImpl?()
@@ -145,6 +197,7 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Cus
     }
     
     let controller = WalletConfigurationScreenImpl(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
+    controller.navigationPresentation = .modal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.experimentalSnapScrollToItem = true
     controller.didAppear = { _ in

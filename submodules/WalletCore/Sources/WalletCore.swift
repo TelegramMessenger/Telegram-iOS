@@ -55,7 +55,7 @@ private final class TonInstanceImpl {
     private let blockchainName: String
     private let proxy: TonNetworkProxy?
     private var instance: TON?
-    private let syncStateProgress = ValuePromise<Float>(0.0)
+    fileprivate let syncStateProgress = ValuePromise<Float>(0.0)
     
     init(queue: Queue, basePath: String, config: String, blockchainName: String, proxy: TonNetworkProxy?) {
         self.queue = queue
@@ -97,6 +97,18 @@ private final class TonInstanceImpl {
 public final class TonInstance {
     private let queue: Queue
     private let impl: QueueLocalObject<TonInstanceImpl>
+    
+    public var syncProgress: Signal<Float, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.syncStateProgress.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
     
     public init(basePath: String, config: String, blockchainName: String, proxy: TonNetworkProxy?) {
         self.queue = .mainQueue()

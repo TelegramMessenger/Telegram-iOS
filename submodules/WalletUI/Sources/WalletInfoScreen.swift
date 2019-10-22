@@ -233,7 +233,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let hasActions: Bool
     
     let balanceNode: WalletInfoBalanceNode
-    private let refreshNode: WalletRefreshNode
+    let refreshNode: WalletRefreshNode
     private let balanceSubtitleNode: ImmediateTextNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let receiveGramsButtonNode: SolidRoundedButtonNode
@@ -552,6 +552,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private var pollCombinedStateDisposable: Disposable?
     private var watchCombinedStateDisposable: Disposable?
+    private var refreshProgressDisposable: Disposable?
     
     init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo?, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
@@ -690,6 +691,17 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         
         self.pollCombinedStateDisposable = (pollCombinedState
         |> deliverOnMainQueue).start()
+        
+        self.refreshProgressDisposable = (context.tonInstance.syncProgress
+        |> deliverOnMainQueue).start(next: { [weak self] progress in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.headerNode.refreshNode.refreshProgress = progress
+            if strongSelf.headerNode.isRefreshing, strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.headerNode.refreshNode.update(state: .refreshing)
+            }
+        })
     }
     
     deinit {
@@ -698,6 +710,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.updateTimestampTimer?.invalidate()
         self.pollCombinedStateDisposable?.dispose()
         self.watchCombinedStateDisposable?.dispose()
+        self.refreshProgressDisposable?.dispose()
     }
     
     func scrollToHideHeader() {
@@ -775,6 +788,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.reloadingState = true
         
         self.headerNode.isRefreshing = true
+        self.headerNode.refreshNode.refreshProgress = 0.0
         
         let subject: CombinedWalletStateSubject
         if let walletInfo = self.walletInfo {

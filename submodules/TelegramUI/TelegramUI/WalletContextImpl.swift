@@ -93,6 +93,13 @@ final class WalletStorageInterfaceImpl: WalletStorageInterface {
             return updatedRecords
         }
     }
+    
+    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError> {
+        return .single(nil)
+    }
+    
+    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?) {
+    }
 }
 
 final class WalletContextImpl: WalletContext {
@@ -102,6 +109,8 @@ final class WalletContextImpl: WalletContext {
     let tonInstance: TonInstance
     let keychain: TonKeychain
     let presentationData: WalletPresentationData
+    
+    let supportsCustomConfigurations: Bool = false
     
     var inForeground: Signal<Bool, NoError> {
         return self.context.sharedContext.applicationBindings.applicationInForeground
