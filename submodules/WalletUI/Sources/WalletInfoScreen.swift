@@ -94,7 +94,7 @@ public final class WalletInfoScreen: ViewController {
     
     @objc private func settingsPressed() {
         if let walletInfo = self.walletInfo {
-        self.push(walletSettingsController(context: self.context, walletInfo: walletInfo))
+            self.push(walletSettingsController(context: self.context, walletInfo: walletInfo))
         }
     }
     

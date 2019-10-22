@@ -42,8 +42,6 @@ final class WalletReceiveScreen: ViewController {
     private let mode: WalletReceiveScreenMode
     private var presentationData: WalletPresentationData
     
-    private var previousScreenBrightness: CGFloat?
-    private var displayLinkAnimator: DisplayLinkAnimator?
     private let idleTimerExtensionDisposable: Disposable
     
     public init(context: WalletContext, mode: WalletReceiveScreenMode) {
@@ -107,33 +105,6 @@ final class WalletReceiveScreen: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override public func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        let screenBrightness = UIScreen.main.brightness
-        if screenBrightness < 0.85 {
-            self.previousScreenBrightness = screenBrightness
-            self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.5, from: screenBrightness, to: 0.85, update: { value in
-                UIScreen.main.brightness = value
-            }, completion: {
-                self.displayLinkAnimator = nil
-            })
-        }
-    }
-    
-    public override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        
-        let screenBrightness = UIScreen.main.brightness
-        if let previousScreenBrightness = self.previousScreenBrightness, screenBrightness > previousScreenBrightness {
-            self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2, from: screenBrightness, to: previousScreenBrightness, update: { value in
-                UIScreen.main.brightness = value
-            }, completion: {
-                self.displayLinkAnimator = nil
-            })
-        }
-    }
-
     override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
         return CGSize(width: layout.size.width, height: min(640.0, layout.size.height))
     }
