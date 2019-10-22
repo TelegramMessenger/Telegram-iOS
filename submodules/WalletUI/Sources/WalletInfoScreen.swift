@@ -135,24 +135,24 @@ public final class WalletInfoScreen: ViewController {
     }
 }
 
-private final class WalletInfoBalanceNode: ASDisplayNode {
+final class WalletInfoBalanceNode: ASDisplayNode {
     let dateTimeFormat: WalletPresentationDateTimeFormat
     
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
     let balanceIconNode: AnimatedStickerNode
     
-    var balance: String = " " {
+    var balance: (String, UIColor) = (" ", .white) {
         didSet {
             let integralString = NSMutableAttributedString()
             let fractionalString = NSMutableAttributedString()
-            if let range = self.balance.range(of: self.dateTimeFormat.decimalSeparator) {
-                let integralPart = String(self.balance[..<range.lowerBound])
-                let fractionalPart = String(self.balance[range.lowerBound...])
-                integralString.append(NSAttributedString(string: integralPart, font: Font.medium(48.0), textColor: .white))
-                fractionalString.append(NSAttributedString(string: fractionalPart, font: Font.medium(48.0), textColor: .white))
+            if let range = self.balance.0.range(of: self.dateTimeFormat.decimalSeparator) {
+                let integralPart = String(self.balance.0[..<range.lowerBound])
+                let fractionalPart = String(self.balance.0[range.lowerBound...])
+                integralString.append(NSAttributedString(string: integralPart, font: Font.medium(48.0), textColor: self.balance.1))
+                fractionalString.append(NSAttributedString(string: fractionalPart, font: Font.medium(48.0), textColor: self.balance.1))
             } else {
-                integralString.append(NSAttributedString(string: self.balance, font: Font.medium(48.0), textColor: .white))
+                integralString.append(NSAttributedString(string: self.balance.0, font: Font.medium(48.0), textColor: self.balance.1))
             }
             self.balanceIntegralTextNode.attributedText = integralString
             self.balanceFractionalTextNode.attributedText = fractionalString
@@ -161,7 +161,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     var isLoading: Bool = true
     
-    init(theme: WalletTheme, dateTimeFormat: WalletPresentationDateTimeFormat) {
+    init(dateTimeFormat: WalletPresentationDateTimeFormat) {
         self.dateTimeFormat = dateTimeFormat
         
         self.balanceIntegralTextNode = ImmediateTextNode()
@@ -244,7 +244,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
         self.hasActions = hasActions
         
-        self.balanceNode = WalletInfoBalanceNode(theme: presentationData.theme, dateTimeFormat: presentationData.dateTimeFormat)
+        self.balanceNode = WalletInfoBalanceNode(dateTimeFormat: presentationData.dateTimeFormat)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
@@ -856,7 +856,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private func updateCombinedState(combinedState: CombinedWalletState?, isUpdated: Bool) {
         self.combinedState = combinedState
         if let combinedState = combinedState {
-            self.headerNode.balanceNode.balance = formatBalanceText(max(0, combinedState.walletState.balance), decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)
+            self.headerNode.balanceNode.balance = (formatBalanceText(max(0, combinedState.walletState.balance), decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator), .white)
             self.headerNode.balance = max(0, combinedState.walletState.balance)
             
             if self.isReady, let (layout, navigationHeight) = self.validLayout {

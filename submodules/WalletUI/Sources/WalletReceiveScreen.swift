@@ -306,15 +306,25 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
             if case .receive = self.mode {
                 url = url + "?"
             }
-            let count = min(url.count / 2, Int(ceil(min(layout.size.width, layout.size.height) * 0.0853)))
+            
+            let addressFont: UIFont
+            let countRatio: CGFloat
+            if layout.size.width == 320.0 {
+                addressFont = Font.monospace(16.0)
+                countRatio = 0.0999
+            } else {
+                addressFont = Font.monospace(17.0)
+                countRatio = 0.0853
+            }
+            let count = min(url.count / 2, Int(ceil(min(layout.size.width, layout.size.height) * countRatio)))
             let sliced = String(url.enumerated().map { $0 > 0 && $0 % count == 0 ? ["\n", $1] : [$1]}.joined())
             
-            let addressFont = Font.monospace(17.0)
             self.urlTextNode.attributedText = NSAttributedString(string: sliced, font: addressFont, textColor: self.presentationData.theme.list.itemPrimaryTextColor, paragraphAlignment: .justified)
         }
         
-        let urlTextSize = self.urlTextNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.urlTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - urlTextSize.width) / 2.0), y: imageFrame.maxY + 25.0), size: urlTextSize))
+        let addressInset: CGFloat = 12.0
+        let urlTextSize = self.urlTextNode.updateLayout(CGSize(width: layout.size.width - addressInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.urlTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - urlTextSize.width) / 2.0), y: imageFrame.maxY + 23.0), size: urlTextSize))
         
         let buttonSideInset: CGFloat = 16.0
         let bottomInset = insets.bottom + 10.0
