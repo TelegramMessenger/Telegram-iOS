@@ -640,7 +640,7 @@ public final class AccountStateManager {
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
-                                    strongSelf.callSessionManager.updateSession(call)
+                                    strongSelf.callSessionManager.updateSession(call, completion: { _ in })
                                 }
                             }
                             if !events.isContactUpdates.isEmpty {
@@ -988,6 +988,38 @@ public final class AccountStateManager {
         for subscriber in self.updatedPeersNearbyContext.subscribers.copyItems() {
             subscriber(updatedPeersNearby)
         }
+    }
+    
+    public func processIncomingCallUpdate(data: Data, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
+        var rawData = data
+        let reader = BufferReader(Buffer(data: data))
+        if let signature = reader.readInt32(), signature == 0x3072cfa1 {
+            if let compressedData = parseBytes(reader) {
+                if let decompressedData = MTGzip.decompress(compressedData.makeData()) {
+                    rawData = decompressedData
+                }
+            }
+        }
+        
+        if let updates = Api.parse(Buffer(data: rawData)) as? Api.Updates {
+            switch updates {
+            case let .updates(updates, users, chats, date, seq):
+                for update in updates {
+                    switch update {
+                    case let .updatePhoneCall(phoneCall):
+                        self.callSessionManager.updateSession(phoneCall, completion: { result in
+                            completion(result)
+                        })
+                        return
+                    default:
+                        break
+                    }
+                }
+            default:
+                break
+            }
+        }
+        completion(nil)
     }
 }
 

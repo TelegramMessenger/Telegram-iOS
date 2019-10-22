@@ -13,6 +13,8 @@ public protocol WalletContext {
     var keychain: TonKeychain { get }
     var presentationData: WalletPresentationData { get }
     
+    var supportsCustomConfigurations: Bool { get }
+    
     var inForeground: Signal<Bool, NoError> { get }
     
     func getServerSalt() -> Signal<Data, WalletContextGetServerSaltError>

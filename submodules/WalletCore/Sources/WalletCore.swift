@@ -55,6 +55,7 @@ private final class TonInstanceImpl {
     private let blockchainName: String
     private let proxy: TonNetworkProxy?
     private var instance: TON?
+    private let syncStateProgress = ValuePromise<Float>(0.0)
     
     init(queue: Queue, basePath: String, config: String, blockchainName: String, proxy: TonNetworkProxy?) {
         self.queue = queue
@@ -70,6 +71,7 @@ private final class TonInstanceImpl {
             instance = current
         } else {
             let proxy = self.proxy
+            let syncStateProgress = self.syncStateProgress
             instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, blockchainName: self.blockchainName, performExternalRequest: { request in
                 if let proxy = proxy {
                     let _ = proxy.request(data: request.data, timeout: 20.0, completion: { result in
@@ -83,7 +85,9 @@ private final class TonInstanceImpl {
                 } else {
                     request.onResult(nil, "NETWORK_DISABLED")
                 }
-            }, enableExternalRequests: proxy != nil)
+            }, enableExternalRequests: proxy != nil, syncStateUpdated: { progress in
+                syncStateProgress.set(progress)
+            })
             self.instance = instance
         }
         f(instance)
@@ -1019,8 +1023,39 @@ private func getWalletTransactionsOnce(address: String, previousId: WalletTransa
     }
 }
 
+public enum CustomWalletConfigurationDecodingError: Error {
+    case generic
+}
+
+public enum CustomWalletConfiguration: Codable {
+    enum Key: CodingKey {
+        case string
+    }
+    
+    case string(String)
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Key.self)
+        if let string = try? container.decode(String.self, forKey: .string) {
+            self = .string(string)
+        } else {
+            throw CustomWalletConfigurationDecodingError.generic
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = try encoder.container(keyedBy: Key.self)
+        switch self {
+        case let .string(string):
+            try container.encode(string, forKey: .string)
+        }
+    }
+}
+
 public protocol WalletStorageInterface {
     func watchWalletRecords() -> Signal<[WalletStateRecord], NoError>
     func getWalletRecords() -> Signal<[WalletStateRecord], NoError>
     func updateWalletRecords(_ f: @escaping ([WalletStateRecord]) -> [WalletStateRecord]) -> Signal<[WalletStateRecord], NoError>
+    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError>
+    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?)
 }

@@ -228,9 +228,11 @@ private let records = Atomic<[WalletStateRecord]>(value: [])
 
 private final class WalletStorageInterfaceImpl: WalletStorageInterface {
     private let storage: FileBackedStorage
+    private let configurationStorage: FileBackedStorage
     
-    init(path: String) {
+    init(path: String, configurationPath: String) {
         self.storage = FileBackedStorage(path: path)
+        self.configurationStorage = FileBackedStorage(path: configurationPath)
     }
     
     func watchWalletRecords() -> Signal<[WalletStateRecord], NoError> {
@@ -278,6 +280,35 @@ private final class WalletStorageInterfaceImpl: WalletStorageInterface {
             }
         }
     }
+    
+    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError> {
+        return self.configurationStorage.watch()
+        |> map { data -> CustomWalletConfiguration? in
+            guard let data = data, !data.isEmpty else {
+                return nil
+            }
+            do {
+                return try JSONDecoder().decode(CustomWalletConfiguration.self, from: data)
+            } catch let error {
+                print("Error deserializing data: \(error)")
+                return nil
+            }
+        }
+    }
+    
+    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?) {
+        do {
+            if let value = value {
+                let updatedData = try JSONEncoder().encode(value)
+                let _ = self.configurationStorage.set(data: updatedData).start()
+            } else {
+                let _ = self.configurationStorage.set(data: Data()).start()
+            }
+        } catch let error {
+            print("Error serializing data: \(error)")
+            let _ = self.configurationStorage.set(data: Data()).start()
+        }
+    }
 }
 
 private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -286,6 +317,8 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
     let keychain: TonKeychain
     let presentationData: WalletPresentationData
     let window: Window1
+    
+    let supportsCustomConfigurations: Bool = true
     
     private var currentImagePickerCompletion: ((UIImage) -> Void)?
     
@@ -360,17 +393,17 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         picker.presentingViewController?.dismiss(animated: true, completion: nil)
     }
     
-    init(basePath: String, config: String, blockchainName: String, navigationBarTheme: NavigationBarTheme, window: Window1) {
+    init(basePath: String, storage: WalletStorageInterfaceImpl, config: String, blockchainName: String, navigationBarTheme: NavigationBarTheme, window: Window1) {
         let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: basePath + "/keys"), withIntermediateDirectories: true, attributes: nil)
+        self.storage = storage
         
-        self.storage = WalletStorageInterfaceImpl(path: basePath + "/data")
         self.window = window
         
         self.tonInstance = TonInstance(
             basePath: basePath + "/keys",
             config: config,
             blockchainName: blockchainName,
-            proxy: nil /*TonProxyImpl()*/
+            proxy: nil
         )
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
@@ -555,40 +588,74 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("Starting with \(documentsPath)")
         #endif
         
-        let updatedConfigSignal: Signal<String, NoError> = Signal { subscriber in
-            let downloadTask = URLSession.shared.downloadTask(with: URL(string: "https://test.ton.org/ton-lite-client-test1.config.json")!, completionHandler: { location, _, error in
-                if let location = location, let data = try? Data(contentsOf: location), let string = String(data: data, encoding: .utf8) {
-                    subscriber.putNext(string)
-                    subscriber.putCompletion()
-                }
-            })
-            downloadTask.resume()
-            
-            return ActionDisposable {
+        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/customConfiguration")
+        
+        let configSignal = downloadFile(url: URL(string: "https://test.ton.org/ton-lite-client-test1.config.json")!)
+        |> mapToSignal { data -> Signal<String, DownloadFileError> in
+            if let string = String(data: data, encoding: .utf8) {
+                return .single(string)
+            } else {
+                return .complete()
             }
         }
+        |> retry(retryOnError: { error in
+            if case .network = error {
+                return true
+            } else {
+                return false
+            }
+        }, delayIncrement: 0.2, maxDelay: 5.0, maxRetries: 1000, onQueue: Queue.concurrentDefaultQueue())
+        |> `catch` { _ -> Signal<String, NoError> in
+            return .complete()
+        }
         
-        let updatedConfig = Promise<String>()
-        updatedConfig.set(updatedConfigSignal)
+        let updatedRemoteConfig = Promise<String>()
+        updatedRemoteConfig.set(configSignal)
         
         let configPath = documentsPath + "/config"
         var initialConfig: Signal<String, NoError> = .complete()
         if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)), let string = String(data: data, encoding: .utf8) {
             initialConfig = .single(string)
         } else {
-            initialConfig = updatedConfig.get() |> take(1)
+            initialConfig = updatedRemoteConfig.get() |> take(1)
         }
         
-        let _ = (initialConfig
+        let resolvedInitialConfig = combineLatest(queue: .mainQueue(),
+            initialConfig,
+            storage.customWalletConfiguration() |> take(1)
+        )
+        |> map { initialConfig, customConfig -> String in
+            if let customConfig = customConfig {
+                switch customConfig {
+                case let .string(string):
+                    return string
+                }
+            } else {
+                return initialConfig
+            }
+        }
+        
+        let _ = (resolvedInitialConfig
         |> deliverOnMainQueue).start(next: { initialConfig in
-            let walletContext = WalletContextImpl(basePath: documentsPath, config: initialConfig, blockchainName: "testnet", navigationBarTheme: navigationBarTheme, window: mainWindow)
+            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialConfig, blockchainName: "testnet", navigationBarTheme: navigationBarTheme, window: mainWindow)
             self.walletContext = walletContext
             
-            let _ = (updatedConfig.get()
-            |> deliverOnMainQueue).start(next: { config in
-                if config != initialConfig {
-                    let _ = walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet").start()
+            let _ = (combineLatest(queue: .mainQueue(),
+                updatedRemoteConfig.get(),
+                storage.customWalletConfiguration()
+            )
+            |> map { initialConfig, customConfig -> String in
+                if let customConfig = customConfig {
+                    switch customConfig {
+                    case let .string(string):
+                        return string
+                    }
+                } else {
+                    return initialConfig
                 }
+            }
+            |> distinctUntilChanged).start(next: { config in
+                let _ = walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet").start()
             })
             
             let _ = (combineLatest(queue: .mainQueue(),
@@ -637,5 +704,31 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         })
         
         return true
+    }
+}
+
+private enum DownloadFileError {
+    case network
+}
+
+private func downloadFile(url: URL) -> Signal<Data, DownloadFileError> {
+    return Signal { subscriber in
+        let completed = Atomic<Bool>(value: false)
+        let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
+            let _ = completed.swap(true)
+            if let location = location, let data = try? Data(contentsOf: location) {
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putError(.network)
+            }
+        })
+        downloadTask.resume()
+        
+        return ActionDisposable {
+            if !completed.with({ $0 }) {
+                downloadTask.cancel()
+            }
+        }
     }
 }

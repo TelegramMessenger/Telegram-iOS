@@ -332,10 +332,6 @@ public class Window1 {
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
-        //self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)), shouldBeVisible: statusBarHost?.handleVolumeControl ?? .single(false))
-        //self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
-        //self.volumeControlStatusBarNode.isHidden = true
-        
         let boundsSize = self.hostView.eventView.bounds.size
         self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHost?.statusBarFrame.height ?? defaultStatusBarHeight, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
         
@@ -343,12 +339,10 @@ public class Window1 {
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
             statusBarHeight = statusBarHost.statusBarFrame.size.height
-            //self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             self.keyboardManager = KeyboardManager(host: statusBarHost)
             self.keyboardViewManager = KeyboardViewManager(host: statusBarHost)
         } else {
             statusBarHeight = self.deviceMetrics.statusBarHeight
-            //self.statusBarManager = nil
             self.keyboardManager = nil
             self.keyboardViewManager = nil
         }

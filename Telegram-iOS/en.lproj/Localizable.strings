@@ -4824,6 +4824,8 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Settings.Title" = "Wallet Settings";
+"Wallet.Settings.Configuration" = "Configuration";
+"Wallet.Settings.BackupWallet" = "Backup Wallet";
 "Wallet.Settings.DeleteWallet" = "Delete Wallet";
 "Wallet.Settings.DeleteWalletInfo" = "This will disconnect the wallet from this app. You will be able to restore your wallet using 24 secret words – or import another wallet.\n\nWallets are located in the TON Blockchain, which is not controlled by Telegram. If you want a wallet to be deleted, simply transfer all the grams from it and leave it empty.";
 "Wallet.Intro.NotNow" = "Not Now";
@@ -4908,10 +4910,14 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.SendAnyway" = "Send Anyway";
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
 "Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+
 "Conversation.WalletRequiredTitle" = "Gram Wallet Required";
 "Conversation.WalletRequiredText" = "This link can be used to send money on the TON Blockchain. To do this, you need to set up a Gram wallet first.";
 "Conversation.WalletRequiredNotNow" = "Not Now";
 "Conversation.WalletRequiredSetup" = "Set Up";
+
+"Wallet.Configuration.Title" = "Confguration";
+"Wallet.Configuration.Apply" = "Save";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";
 

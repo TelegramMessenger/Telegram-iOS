@@ -28,7 +28,7 @@
 "Wallet.Info.TransactionTo" = "to";
 "Wallet.Info.TransactionFrom" = "from";
 "Wallet.Info.Updating" = "updating";
-"Wallet.Info.TransactionBlockchainFee" = "%@ blockchain fee";
+"Wallet.Info.TransactionBlockchainFee" = "%@ blockchain fees";
 "Wallet.Info.TransactionPendingHeader" = "Pending";
 "Wallet.Qr.ScanCode" = "Scan QR Code";
 "Wallet.Qr.Title" = "QR Code";
@@ -58,6 +58,8 @@
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Settings.Title" = "Wallet Settings";
+"Wallet.Settings.Configuration" = "Configuration";
+"Wallet.Settings.BackupWallet" = "Backup Wallet";
 "Wallet.Settings.DeleteWallet" = "Delete Wallet";
 "Wallet.Settings.DeleteWalletInfo" = "This will disconnect the wallet from this app. You will be able to restore your wallet using 24 secret words – or import another wallet.\n\nWallets are located in the TON Blockchain, which is not controlled by Telegram. If you want a wallet to be deleted, simply transfer all the grams from it and leave it empty.";
 "Wallet.Intro.NotNow" = "Not Now";
@@ -142,6 +144,8 @@
 "Wallet.Send.SendAnyway" = "Send Anyway";
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
 "Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+"Wallet.Configuration.Title" = "Confguration";
+"Wallet.Configuration.Apply" = "Save";
 "Wallet.CreateInvoice.Title" = "Create Invoice";
 "Wallet.Navigation.Close" = "Close";
 "Wallet.Navigation.Back" = "Back";
@@ -192,3 +196,4 @@
 "Wallet.Time.PreciseDate_m11" = "Nov %1$@, %2$@ at %3$@";
 "Wallet.Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
+"Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";

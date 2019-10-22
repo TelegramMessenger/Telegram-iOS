@@ -1,6 +1,8 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
+import PostboxCoding
+import PreferencesTable
+import MessageHistoryMetadataTable
+import PostboxDataTypes
 
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0
@@ -84,19 +86,5 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         } else {
             return false
         }
-    }
-}
-
-public func updateInAppNotificationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
-    return accountManager.transaction { transaction -> Void in
-        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings, { entry in
-            let currentSettings: InAppNotificationSettings
-            if let entry = entry as? InAppNotificationSettings {
-                currentSettings = entry
-            } else {
-                currentSettings = InAppNotificationSettings.defaultSettings
-            }
-            return f(currentSettings)
-        })
     }
 }

@@ -348,9 +348,9 @@ private final class CallSessionManagerContext {
         }
     }
     
-    private func addIncoming(peerId: PeerId, stableId: CallSessionStableId, accessHash: Int64, timestamp: Int32, gAHash: Data) {
+    private func addIncoming(peerId: PeerId, stableId: CallSessionStableId, accessHash: Int64, timestamp: Int32, gAHash: Data) -> CallSessionInternalId? {
         if self.contextIdByStableId[stableId] != nil {
-            return
+            return nil
         }
         
         let bBytes = malloc(256)!
@@ -365,6 +365,9 @@ private final class CallSessionManagerContext {
             self.contextIdByStableId[stableId] = internalId
             self.contextUpdated(internalId: internalId)
             self.ringingStatesUpdated()
+            return internalId
+        } else {
+            return nil
         }
     }
     
@@ -497,7 +500,9 @@ private final class CallSessionManagerContext {
         }
     }
     
-    func updateSession(_ call: Api.PhoneCall) {
+    func updateSession(_ call: Api.PhoneCall, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
+        var resultRingingState: (CallSessionRingingState, CallSession)?
+        
         switch call {
         case .phoneCallEmpty:
             break
@@ -532,7 +537,7 @@ private final class CallSessionManagerContext {
                             context.state = .confirming(id: id, accessHash: accessHash, key: key, keyId: keyId, keyVisualHash: keyVisualHash, disposable: (confirmCallSession(network: self.network, stableId: id, accessHash: accessHash, gA: gA, keyFingerprint: keyId, maxLayer: self.maxLayer) |> deliverOnMainQueue).start(next: { [weak self] updatedCall in
                                 if let strongSelf = self, let context = strongSelf.contexts[internalId], case .confirming = context.state {
                                     if let updatedCall = updatedCall {
-                                        strongSelf.updateSession(updatedCall)
+                                        strongSelf.updateSession(updatedCall, completion: { _ in })
                                     } else {
                                         strongSelf.drop(internalId: internalId, reason: .disconnect)
                                     }
@@ -634,7 +639,22 @@ private final class CallSessionManagerContext {
             }
         case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, gAHash, _):
             if self.contextIdByStableId[id] == nil {
-                self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData())
+                let internalId = self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData())
+                if let internalId = internalId {
+                    var resultRingingStateValue: CallSessionRingingState?
+                    for ringingState in self.ringingStatesValue() {
+                        if ringingState.id == internalId {
+                            resultRingingStateValue = ringingState
+                            break
+                        }
+                    }
+                    if let context = self.contexts[internalId] {
+                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context))
+                        if let resultRingingStateValue = resultRingingStateValue {
+                            resultRingingState = (resultRingingStateValue, callSession)
+                        }
+                    }
+                }
             }
         case let .phoneCallWaiting(_, id, _, _, _, _, _, receiveDate):
             if let internalId = self.contextIdByStableId[id] {
@@ -653,6 +673,8 @@ private final class CallSessionManagerContext {
                 }
             }
         }
+        
+        completion(resultRingingState)
     }
     
     private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyVisualHash: Data)? {
@@ -744,9 +766,9 @@ public final class CallSessionManager {
         }
     }
     
-    func updateSession(_ call: Api.PhoneCall) {
+    func updateSession(_ call: Api.PhoneCall, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
         self.withContext { context in
-            context.updateSession(call)
+            context.updateSession(call, completion: completion)
         }
     }
     
@@ -981,38 +1003,38 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
             mappedReason = .phoneCallDiscardReasonMissed
     }
     return network.request(Api.functions.phone.discardCall(flags: 0, peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
-        }
-        |> mapToSignal { updates -> Signal<(Bool, Bool), NoError> in
-            var reportRating: Bool = false
-            var sendDebugLogs: Bool = false
-            if let updates = updates {
-                switch updates {
-                    case .updates(let updates, _, _, _, _):
-                        for update in updates {
-                            switch update {
-                                case .updatePhoneCall(let phoneCall):
-                                    switch phoneCall {
-                                        case.phoneCallDiscarded(let values):
-                                            reportRating = (values.flags & (1 << 2)) != 0
-                                            sendDebugLogs = (values.flags & (1 << 3)) != 0
-                                        default:
-                                            break
-                                    }
-                                    break
-                                default:
-                                    break
-                            }
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { updates -> Signal<(Bool, Bool), NoError> in
+        var reportRating: Bool = false
+        var sendDebugLogs: Bool = false
+        if let updates = updates {
+            switch updates {
+                case .updates(let updates, _, _, _, _):
+                    for update in updates {
+                        switch update {
+                            case .updatePhoneCall(let phoneCall):
+                                switch phoneCall {
+                                    case.phoneCallDiscarded(let values):
+                                        reportRating = (values.flags & (1 << 2)) != 0
+                                        sendDebugLogs = (values.flags & (1 << 3)) != 0
+                                    default:
+                                        break
+                                }
+                                break
+                            default:
+                                break
                         }
-                    default:
-                        break
-                }
-                
-                addUpdates(updates)
-                
+                    }
+                default:
+                    break
             }
-            return .single((reportRating, sendDebugLogs))
+            
+            addUpdates(updates)
+            
+        }
+        return .single((reportRating, sendDebugLogs))
     }
 }

@@ -48,9 +48,6 @@ private func encodeText(_ string: String, _ key: Int) -> String {
     return result
 }
 
-private let statusBarRootViewClass: AnyClass = NSClassFromString("UIStatusBar")!
-private let statusBarPlaceholderClass: AnyClass? = NSClassFromString("UIStatusBar_Placeholder")
-private let cutoutStatusBarForegroundClass: AnyClass? = NSClassFromString("_UIStatusBar")
 private let keyboardViewClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuIptuWjfx", -1))!
 private let keyboardViewContainerClass: AnyClass? = NSClassFromString(encodeText("VJJoqvuTfuDpoubjofsWjfx", -1))!
 
@@ -93,33 +90,6 @@ private class ApplicationStatusBarHost: StatusBarHost {
         self.application.setStatusBarHidden(value, with: animated ? .fade : .none)
     }
     
-    var statusBarWindow: UIView? {
-        return self.application.value(forKey: "statusBarWindow") as? UIView
-    }
-    
-    var statusBarView: UIView? {
-        guard let containerView = self.statusBarWindow?.subviews.first else {
-            return nil
-        }
-        
-        if containerView.isKind(of: statusBarRootViewClass) {
-            return containerView
-        }
-        if let statusBarPlaceholderClass = statusBarPlaceholderClass {
-            if containerView.isKind(of: statusBarPlaceholderClass) {
-                return containerView
-            }
-        }
-            
-        
-        for subview in containerView.subviews {
-            if let cutoutStatusBarForegroundClass = cutoutStatusBarForegroundClass, subview.isKind(of: cutoutStatusBarForegroundClass) {
-                return subview
-            }
-        }
-        return nil
-    }
-    
     var keyboardWindow: UIWindow? {
         guard let keyboardWindowClass = keyboardWindowClass else {
             return nil
@@ -148,10 +118,6 @@ private class ApplicationStatusBarHost: StatusBarHost {
             }
         }
         return nil
-    }
-    
-    var handleVolumeControl: Signal<Bool, NoError> {
-        return MediaManagerImpl.globalAudioSession.isPlaybackActive()
     }
 }
 
@@ -1460,16 +1426,84 @@ final class SharedApplicationContext {
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
         if #available(iOS 9.0, *) {
-            let _ = (self.sharedContextPromise.get()
+            guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+                return
+            }
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            guard let data = Data(base64Encoded: encryptedPayload) else {
+                return
+            }
+            
+            let semaphore = DispatchSemaphore(value: 0)
+            var accountAndDecryptedPayload: (Account, Data)?
+            
+            var sharedApplicationContextValue: SharedApplicationContext?
+            
+            let accountsAndKeys = self.sharedContextPromise.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            |> mapToSignal { sharedApplicationContext -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                sharedApplicationContextValue = sharedApplicationContext
+                
+                return sharedApplicationContext.sharedContext.activeAccounts
+                |> take(1)
+                |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                    return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
+                        return masterNotificationsKey(account: account.1, ignoreDisabled: true)
+                        |> map { key -> (Account, MasterNotificationKey) in
+                            return (account.1, key)
+                        }
+                    })
+                }
+            }
+            
+            let _ = accountsAndKeys.start(next: { accountsAndKeys in
+                for (account, key) in accountsAndKeys {
+                    if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                        accountAndDecryptedPayload = (account, decryptedData)
+                        break
+                    }
+                }
+                semaphore.signal()
+            })
+            semaphore.wait()
+            
+            if let sharedApplicationContextValue = sharedApplicationContextValue, let (account, decryptedData) = accountAndDecryptedPayload {
+                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                    if var updateString = decryptedDict["updates"] as? String {
+                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                        while updateString.count % 4 != 0 {
+                            updateString.append("=")
+                        }
+                        if let updateData = Data(base64Encoded: updateString) {
+                            var result: (CallSessionRingingState, CallSession)?
+                            let semaphore = DispatchSemaphore(value: 0)
+                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { ringingState in
+                                result = ringingState
+                                semaphore.signal()
+                            })
+                            semaphore.wait()
+                            
+                            if let (ringingState, callSession) = result {
+                                (sharedApplicationContextValue.sharedContext.callManager as? PresentationCallManagerImpl)?.injectRingingStateSynchronously(account: account, ringingState: ringingState, callSession: callSession)
+                            }
+                        }
+                    }
+                }
+            }
+                
+                /*.start(next: { sharedApplicationContext in
                 sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
                 
                 if case PKPushType.voIP = type {
                     Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
                     sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
                 }
-            })
+            })*/
         }
     }
     

@@ -345,6 +345,8 @@ apple_binary(
         "//submodules/Database/PostboxDataTypes:PostboxDataTypes",
         "//submodules/Database/MessageHistoryReadStateTable:MessageHistoryReadStateTable",
         "//submodules/Database/MessageHistoryMetadataTable:MessageHistoryMetadataTable",
+        "//submodules/Database/PreferencesTable:PreferencesTable",
+        "//submodules/Database/PeerTable:PeerTable",
         "//submodules/sqlcipher:sqlcipher",
     ],
     frameworks = [

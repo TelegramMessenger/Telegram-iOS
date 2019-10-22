@@ -46,12 +46,6 @@ typedef struct {
   const char    hockey_build[16];
 } bitstadium_info_t;
 
-static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_hockey,regular,no_dead_strip"))) = {
-  .info_version = 1,
-  .hockey_version = BITHOCKEY_C_VERSION,
-  .hockey_build = BITHOCKEY_C_BUILD
-};
-
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManagerPrivate.h"
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
@@ -528,11 +522,11 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
 
 
 - (NSString *)version {
-  return (NSString *)[NSString stringWithUTF8String:bitstadium_library_info.hockey_version];
+  return (NSString *)[NSString stringWithUTF8String:BITHOCKEY_C_VERSION];
 }
 
 - (NSString *)build {
-  return (NSString *)[NSString stringWithUTF8String:bitstadium_library_info.hockey_build];
+  return (NSString *)[NSString stringWithUTF8String:BITHOCKEY_C_BUILD];
 }
 
 

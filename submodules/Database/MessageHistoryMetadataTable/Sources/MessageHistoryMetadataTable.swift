@@ -17,16 +17,6 @@ private enum MetadataPrefix: Int8 {
     case PeerHistoryInitialized = 9
 }
 
-public enum ChatListTotalUnreadStateCategory: Int32 {
-    case filtered = 0
-    case raw = 1
-}
-
-public enum ChatListTotalUnreadStateStats: Int32 {
-    case messages = 0
-    case chats = 1
-}
-
 private struct InitializedChatListKey: Hashable {
     let groupId: PeerGroupId
 }

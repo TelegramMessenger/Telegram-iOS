@@ -1,0 +1,17 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "PeerTable",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/Database/ValueBox:ValueBox",
+        "//submodules/Database/Table:Table",
+        "//submodules/Database/PostboxCoding:PostboxCoding",
+        "//submodules/Database/PostboxDataTypes:PostboxDataTypes",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

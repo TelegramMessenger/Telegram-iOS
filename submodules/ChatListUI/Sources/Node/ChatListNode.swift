@@ -1284,8 +1284,6 @@ public final class ChatListNode: ListView {
             var filter = true
             if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
                 switch inAppNotificationSettings.totalUnreadCountDisplayStyle {
-                    case .raw:
-                        filter = false
                     case .filtered:
                         filter = true
                 }

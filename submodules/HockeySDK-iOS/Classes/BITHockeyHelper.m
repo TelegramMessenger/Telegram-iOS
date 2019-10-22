@@ -78,12 +78,6 @@ typedef struct {
   const char    bit_build[16];
 } bit_info_t;
 
-static bit_info_t hockeyapp_library_info __attribute__((section("__TEXT,__bit_ios,regular,no_dead_strip"))) = {
-  .info_version = 1,
-  .bit_version = BITHOCKEY_C_VERSION,
-  .bit_build = BITHOCKEY_C_BUILD
-};
-
 
 #pragma mark - Helpers
 
@@ -485,7 +479,7 @@ NSString *bit_screenSize(void){
 }
 
 NSString *bit_sdkVersion(void){
-  return [NSString stringWithFormat:@"ios:%@", [NSString stringWithUTF8String:hockeyapp_library_info.bit_version]];
+  return [NSString stringWithFormat:@"ios:%@", [NSString stringWithUTF8String:BITHOCKEY_C_VERSION]];
 }
 
 NSString *bit_appVersion(void){

@@ -9,27 +9,33 @@ import OverlayStatusController
 import WalletCore
 
 private final class WalletSettingsControllerArguments {
+    let openConfiguration: () -> Void
     let exportWallet: () -> Void
     let deleteWallet: () -> Void
     
-    init(exportWallet: @escaping () -> Void, deleteWallet: @escaping () -> Void) {
+    init(openConfiguration: @escaping () -> Void, exportWallet: @escaping () -> Void, deleteWallet: @escaping () -> Void) {
+        self.openConfiguration = openConfiguration
         self.exportWallet = exportWallet
         self.deleteWallet = deleteWallet
     }
 }
 
 private enum WalletSettingsSection: Int32 {
+    case configuration
     case exportWallet
     case deleteWallet
 }
 
 private enum WalletSettingsEntry: ItemListNodeEntry {
+    case configuration(WalletTheme, String)
     case exportWallet(WalletTheme, String)
     case deleteWallet(WalletTheme, String)
     case deleteWalletInfo(WalletTheme, String)
     
     var section: ItemListSectionId {
         switch self {
+        case .configuration:
+            return WalletSettingsSection.configuration.rawValue
         case .exportWallet:
             return WalletSettingsSection.exportWallet.rawValue
         case .deleteWallet, .deleteWalletInfo:
@@ -39,12 +45,14 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-        case .exportWallet:
+        case .configuration:
             return 0
-        case .deleteWallet:
+        case .exportWallet:
             return 1
-        case .deleteWalletInfo:
+        case .deleteWallet:
             return 2
+        case .deleteWalletInfo:
+            return 3
         }
     }
     
@@ -55,6 +63,10 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! WalletSettingsControllerArguments
         switch self {
+        case let .configuration(theme, text):
+            return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.openConfiguration()
+            })
         case let .exportWallet(theme, text):
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.exportWallet()
@@ -72,14 +84,16 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
 private struct WalletSettingsControllerState: Equatable {
 }
 
-private func walletSettingsControllerEntries(presentationData: WalletPresentationData, state: WalletSettingsControllerState) -> [WalletSettingsEntry] {
+private func walletSettingsControllerEntries(presentationData: WalletPresentationData, state: WalletSettingsControllerState, supportsCustomConfigurations: Bool) -> [WalletSettingsEntry] {
     var entries: [WalletSettingsEntry] = []
     
-    entries.append(.exportWallet(presentationData.theme, "Export Wallet"))
+    if supportsCustomConfigurations {
+        entries.append(.configuration(presentationData.theme, presentationData.strings.Wallet_Settings_Configuration))
+    }
+    entries.append(.exportWallet(presentationData.theme, presentationData.strings.Wallet_Settings_BackupWallet))
     entries.append(.deleteWallet(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWallet))
     entries.append(.deleteWalletInfo(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWalletInfo))
 
-    
     return entries
 }
 
@@ -96,7 +110,13 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
     
     var replaceAllWalletControllersImpl: ((ViewController) -> Void)?
     
-    let arguments = WalletSettingsControllerArguments(exportWallet: {
+    let arguments = WalletSettingsControllerArguments(openConfiguration: {
+        let _ = (context.storage.customWalletConfiguration()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { configuration in
+            pushControllerImpl?(walletConfigurationScreen(context: context, currentConfiguration: configuration))
+        })
+    }, exportWallet: {
         let presentationData = context.presentationData
         let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
         presentControllerImpl?(controller, nil)
@@ -145,7 +165,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
     let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Settings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSettingsControllerEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSettingsControllerEntries(presentationData: presentationData, state: state, supportsCustomConfigurations: context.supportsCustomConfigurations), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

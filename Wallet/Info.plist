@@ -42,19 +42,6 @@
 	<string>$(PRODUCT_BUNDLE_SHORT_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>CFBundleURLName</key>
-			<string>$(PRODUCT_BUNDLE_IDENTIFIER).ton</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>ton</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleVersion</key>
 	<string>${BUILD_NUMBER}</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
