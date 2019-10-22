@@ -291,7 +291,7 @@ typedef enum {
                     }]);
                 }
                 return;
-            }/* else if (response.object->get_id() == tonlib_api::updateSyncState::ID) {
+            } else if (response.object->get_id() == tonlib_api::updateSyncState::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::updateSyncState>(response.object);
                 if (result.sync_state_->get_id() == tonlib_api::syncStateInProgress::ID) {
                     auto syncStateInProgress = tonlib_api::move_object_as<tonlib_api::syncStateInProgress>(result.sync_state_);
@@ -307,7 +307,7 @@ typedef enum {
                     syncStateUpdated(1.0f);
                 }
                 return
-            }*/
+            }
             NSNumber *requestId = @(response.id);
             [requestHandlersLock lock];
             TONRequestHandler *handler = requestHandlers[requestId];
