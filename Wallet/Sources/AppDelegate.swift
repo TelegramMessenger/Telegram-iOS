@@ -620,7 +620,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)), let string = String(data: data, encoding: .utf8) {
             initialConfig = .single(string)
         } else {
-            initialConfig = updatedRemoteConfig.get() |> take(1)
+            initialConfig = updatedRemoteConfig.get()
+            |> take(1)
+            |> beforeNext { config in
+                let _ = try? config.data(using: .utf8)?.write(to: URL(fileURLWithPath: configPath), options: .atomic)
+            }
         }
         
         let resolvedInitialConfig = combineLatest(queue: .mainQueue(),

@@ -116,7 +116,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .none
             }))
             
-            options.append(OpenInOption(identifier: "edge", application: .other(title: "Microsoft Edge", identifier: 1288723196, scheme: "microsoft-edge-http", store: nil), action: {
+            options.append(OpenInOption(application: .other(title: "Microsoft Edge", identifier: 1288723196, scheme: "microsoft-edge-http", store: nil), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                     components.scheme = components.scheme == "https" ? "microsoft-edge-https" : "microsoft-edge-http"
                     if let url = components.string {

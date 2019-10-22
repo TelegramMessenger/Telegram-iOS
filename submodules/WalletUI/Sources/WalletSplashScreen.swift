@@ -307,7 +307,7 @@ public final class WalletSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletSplashScreenNode(context: self.context, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        self.displayNode = WalletSplashScreenNode(context: self.context, walletCreatedPreloadState: self.walletCreatedPreloadState, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -635,6 +635,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     private let secondaryActionTitleNode: ImmediateTextNode
     private let secondaryActionButtonNode: HighlightTrackingButtonNode
     
+    private var stateDisposable: Disposable?
+    private var synchronizationProgressDisposable: Disposable?
+    
+    private var validLayout: (ContainerViewLayout, CGFloat)?
+    
     var inProgress: Bool = false {
         didSet {
             self.buttonNode.isUserInteractionEnabled = !self.inProgress
@@ -642,7 +647,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: WalletContext, presentationData: WalletPresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void) {
+    init(context: WalletContext, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?, presentationData: WalletPresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.secondaryAction = secondaryAction
@@ -692,15 +697,16 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case .success:
-            title = self.presentationData.strings.Wallet_Completed_Title
-            text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_Text, font: textFont, textColor: textColor)
+            title = self.presentationData.strings.Wallet_Completed_ProgressTitle
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_ProgressText, font: textFont, textColor: textColor)
             buttonText = self.presentationData.strings.Wallet_Completed_ViewWallet
+            buttonHidden = true
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
-            if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+            if let path = getAppBundle().path(forResource: "WalletSynchronization", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .loop, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
-                self.animationOffset = CGPoint(x: 14.0, y: 0.0)
+                self.animationOffset = CGPoint(x: 0.0, y: 0.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -875,6 +881,96 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 openTerms()
             }
         }
+        
+        switch mode {
+        case .success:
+            var stateSignal: Signal<Bool, NoError>
+            if let walletCreatedPreloadState = walletCreatedPreloadState {
+                stateSignal = walletCreatedPreloadState.get()
+                |> map { state -> Bool in
+                    if let state = state {
+                        if case .updated = state {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else {
+                        return true
+                    }
+                }
+                |> filter { $0 }
+                |> take(1)
+            } else {
+                stateSignal = .single(true)
+            }
+            self.stateDisposable = (stateSignal
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.buttonNode.isHidden = false
+                
+                let title = strongSelf.presentationData.strings.Wallet_Completed_Title
+                let text = NSAttributedString(string: strongSelf.presentationData.strings.Wallet_Completed_Text, font: textFont, textColor: textColor)
+                
+                strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(32.0), textColor: strongSelf.presentationData.theme.list.itemPrimaryTextColor)
+                strongSelf.textNode.attributedText = text
+                
+                if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
+                    let animateIn = !strongSelf.animationNode.frame.isEmpty
+                    var snapshotView: UIView?
+                    if animateIn {
+                        snapshotView = strongSelf.animationNode.view.snapshotContentTree()
+                    }
+                    
+                    strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                    strongSelf.animationSize = CGSize(width: 130.0, height: 130.0)
+                    strongSelf.animationOffset = CGPoint(x: 14.0, y: 0.0)
+                    strongSelf.animationNode.visibility = true
+                    
+                    if animateIn {
+                        if let snapshotView = snapshotView {
+                            strongSelf.view.insertSubview(snapshotView, belowSubview: strongSelf.animationNode.view)
+                            snapshotView.frame = strongSelf.animationNode.frame
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            snapshotView.layer.animateScale(from: 1.0, to: 0.7, duration: 0.18, removeOnCompletion: false)
+                        }
+                        strongSelf.animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
+                        strongSelf.animationNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.2)
+                    }
+                }
+                
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+            })
+            
+            self.synchronizationProgressDisposable = (context.tonInstance.syncProgress
+            |> deliverOnMainQueue).start(next: { [weak self] progress in
+                guard let strongSelf = self, strongSelf.buttonNode.isHidden else {
+                    return
+                }
+                
+                let percent = Int(progress * 100.0)
+                
+                let title = strongSelf.presentationData.strings.Wallet_Completed_ProgressTitle + " \(percent)%"
+                
+                strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(32.0), textColor: strongSelf.presentationData.theme.list.itemPrimaryTextColor)
+                
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+            })
+        default:
+            break
+        }
+    }
+    
+    deinit {
+        self.stateDisposable?.dispose()
+        self.synchronizationProgressDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -893,6 +989,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationHeight)
+        
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
         let iconSpacing: CGFloat = 8.0
