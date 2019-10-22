@@ -137,6 +137,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .swipeToReply(title, text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_swipereply", colors: [:], scale: 1.0)
+                self.animatedStickerNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -168,7 +178,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
                 self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji:
+            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply:
                 break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)

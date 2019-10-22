@@ -343,10 +343,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     func handle(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
+        |> castError(IntentHandlingError.self)
         |> take(1)
-        |> mapError { _ -> IntentHandlingError in
-            return .generic
-        }
         |> mapToSignal { account -> Signal<Void, IntentHandlingError> in
             guard let account = account else {
                 return .fail(.generic)
@@ -456,10 +454,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     func handle(intent: INSetMessageAttributeIntent, completion: @escaping (INSetMessageAttributeIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
+        |> castError(IntentHandlingError.self)
         |> take(1)
-        |> mapError { _ -> IntentHandlingError in
-            return .generic
-        }
         |> mapToSignal { account -> Signal<Void, IntentHandlingError> in
             guard let account = account else {
                 return .fail(.generic)
@@ -532,10 +528,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
+        |> castError(IntentHandlingError.self)
         |> take(1)
-        |> mapError { _ -> IntentHandlingError in
-            return .generic
-        }
         |> mapToSignal { account -> Signal<PeerId, IntentHandlingError> in
             guard let contact = intent.contacts?.first, let customIdentifier = contact.customIdentifier, customIdentifier.hasPrefix("tg") else {
                 return .fail(.generic)

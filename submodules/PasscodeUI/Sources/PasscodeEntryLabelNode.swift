@@ -13,7 +13,7 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
     private let wrapperNode: ASDisplayNode
     private let textNode: ASTextNode
     
-    private var validLayout: ContainerViewLayout?
+    private var validLayout: CGSize?
     
     override init() {
         self.wrapperNode = ASDisplayNode()
@@ -34,13 +34,13 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
                 self.textNode.attributedText = text
                 completion()
             
-                if let validLayout = self.validLayout {
-                    let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+                if let size = self.validLayout {
+                    let _ = self.updateLayout(size: size, transition: .immediate)
                 }
             case .slideIn:
                 self.textNode.attributedText = text
-                if let validLayout = self.validLayout {
-                    let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+                if let size = self.validLayout {
+                    let _ = self.updateLayout(size: size, transition: .immediate)
                 }
             
                 let offset = self.wrapperNode.bounds.width / 2.0
@@ -61,29 +61,29 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
                         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { _ in
                             completion()
                         })
-                        if let validLayout = self.validLayout {
-                            let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+                        if let size = self.validLayout {
+                            let _ = self.updateLayout(size: size, transition: .immediate)
                         }
                     })
                 } else {
                     self.textNode.attributedText = text
                     self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     completion()
-                    if let validLayout = self.validLayout {
-                        let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+                    if let size = self.validLayout {
+                        let _ = self.updateLayout(size: size, transition: .immediate)
                     }
                 }
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGSize {
-        self.validLayout = layout
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        self.validLayout = size
         
-        let textSize = self.textNode.measure(layout.size)
-        let textFrame = CGRect(x: floor((layout.size.width - textSize.width) / 2.0), y: 0.0, width: textSize.width, height: textSize.height)
+        let textSize = self.textNode.measure(size)
+        let textFrame = CGRect(x: floor((size.width - textSize.width) / 2.0), y: 0.0, width: textSize.width, height: textSize.height)
         transition.updateFrame(node: self.wrapperNode, frame: textFrame)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(), size: textSize))
         
-        return CGSize(width: layout.size.width, height: 25.0)
+        return CGSize(width: size.width, height: 25.0)
     }
 }

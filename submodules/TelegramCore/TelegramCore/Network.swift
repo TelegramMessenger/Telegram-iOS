@@ -490,7 +490,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             context.keychain = keychain
             var wrappedAdditionalSource: MTSignal?
             #if os(iOS)
-            if #available(iOS 10.0, *) {
+            if #available(iOS 10.0, *), !supplementary {
                 var cloudDataContextValue: CloudDataContext?
                 if let value = cloudDataContext.with({ $0 }) {
                     cloudDataContextValue = value

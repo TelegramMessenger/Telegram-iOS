@@ -366,7 +366,7 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         }
     }
     
-    func pickImage(completion: @escaping (UIImage) -> Void) {
+    func pickImage(present: @escaping (ViewController) -> Void, completion: @escaping (UIImage) -> Void) {
         self.currentImagePickerCompletion = completion
         
         let pickerController = UIImagePickerController()
@@ -465,6 +465,9 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
                     buttonTextColor: .white,
                     incomingFundsTitleColor: UIColor(rgb: 0x00b12c),
                     outgoingFundsTitleColor: UIColor(rgb: 0xff3b30)
+                ), transaction: WalletTransactionTheme(
+                    descriptionBackgroundColor: UIColor(rgb: 0xf1f1f4),
+                    descriptionTextColor: .black
                 ), setup: WalletSetupTheme(
                     buttonFillColor: accentColor,
                     buttonForegroundColor: .white,

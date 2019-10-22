@@ -26,6 +26,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     private let titleNode: ASTextNode
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
+    private let onlineButton: HighlightableButtonNode
     
     private var pickerView: UIDatePicker?
     private let dateFormatter: DateFormatter
@@ -76,6 +77,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         
+        self.onlineButton = HighlightableButtonNode()
+        self.onlineButton.setTitle(self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        
         self.dateFormatter = DateFormatter()
         self.dateFormatter.timeStyle = .none
         self.dateFormatter.dateStyle = .short
@@ -98,6 +102,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
+        //self.contentContainerNode.addSubnode(self.onlineButton)
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
@@ -112,6 +117,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
                 }
             }
         }
+        self.onlineButton.addTarget(self, action: #selector(self.onlineButtonPressed), forControlEvents: .touchUpInside)
         
         self.setupPickerView(currentTime: currentTime)
         self.updateButtonTitle()
@@ -131,7 +137,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         pickerView.timeZone = TimeZone.current
         pickerView.minuteInterval = 1
         pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
-        contentContainerNode.view.addSubview(pickerView)
+        self.contentContainerNode.view.addSubview(pickerView)
         pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
         self.pickerView = pickerView
         
@@ -155,6 +161,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
+        self.onlineButton.setTitle(self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
     }
     
     private func updateMinimumDate(currentTime: Int32? = nil) {
@@ -234,6 +241,10 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.cancel?()
     }
     
+    @objc func onlineButtonPressed() {
+        self.completion?(0x7FFFFFFE)
+    }
+    
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if self.dismissByTapOutside, case .ended = recognizer.state {
             self.cancelButtonPressed()
@@ -300,10 +311,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
+        var buttonOffset: CGFloat = 0.0 //44.0
+        
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
-        let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
+        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + buttonOffset
+        let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight - buttonOffset)
         contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
@@ -330,7 +343,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         let buttonInset: CGFloat = 16.0
         let buttonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0, width: contentFrame.width, height: buttonHeight))
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0 - buttonOffset, width: contentFrame.width, height: buttonHeight))
+        
+        let onlineSize = self.onlineButton.measure(CGSize(width: width, height: titleHeight))
+        let onlineFrame = CGRect(origin: CGPoint(x: ceil((layout.size.width - onlineSize.width) / 2.0), y: contentHeight - 36.0 - insets.bottom), size: onlineSize)
+        transition.updateFrame(node: self.onlineButton, frame: onlineFrame)
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         

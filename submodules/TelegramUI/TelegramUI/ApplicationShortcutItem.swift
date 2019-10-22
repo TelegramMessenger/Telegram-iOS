@@ -24,7 +24,7 @@ extension ApplicationShortcutItem {
             case .compose:
                 icon = UIApplicationShortcutIcon(type: .compose)
             case .camera:
-                icon = UIApplicationShortcutIcon(type: .capturePhoto)
+                icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/Camera")
             case .savedMessages:
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/SavedMessages")
         }

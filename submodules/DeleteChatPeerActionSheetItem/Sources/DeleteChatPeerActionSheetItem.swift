@@ -12,6 +12,8 @@ import AccountContext
 public enum DeleteChatPeerAction {
     case delete
     case clearHistory
+    case clearCache
+    case clearCacheSuggestion
 }
 
 public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
@@ -81,8 +83,20 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
             self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
         }
         
-        let text: (String, [(Int, NSRange)])
+        var attributedText: NSAttributedString?
         switch action {
+        case .clearCache, .clearCacheSuggestion:
+            switch action {
+            case .clearCache:
+                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+            case .clearCacheSuggestion:
+                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+            default:
+                break
+            }
+        default:
+            var text: (String, [(Int, NSRange)])?
+            switch action {
             case .delete:
                 if chatPeer.id == context.account.peerId {
                     text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
@@ -97,16 +111,24 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 }
             case .clearHistory:
                 text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
-        }
-        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
-        for (_, range) in text.1 {
-            attributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+            default:
+                break
+            }
+            if let text = text {
+                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
+                for (_, range) in text.1 {
+                    formattedAttributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                }
+                attributedText = formattedAttributedText
+            }
         }
         
-        self.textNode.attributedText = attributedText
-        
-        self.accessibilityArea.accessibilityLabel = attributedText.string
-        self.accessibilityArea.accessibilityTraits = .staticText
+        if let attributedText = attributedText {
+            self.textNode.attributedText = attributedText
+            
+            self.accessibilityArea.accessibilityLabel = attributedText.string
+            self.accessibilityArea.accessibilityTraits = .staticText
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

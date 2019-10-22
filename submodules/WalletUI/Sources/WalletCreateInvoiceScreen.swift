@@ -184,7 +184,7 @@ protocol WalletCreateInvoiceScreen {
 
 private final class WalletCreateInvoiceScreenImpl: ItemListController, WalletCreateInvoiceScreen {
     override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
-        return CGSize(width: layout.size.width, height: layout.size.height - 174.0)
+        return CGSize(width: layout.size.width, height: min(640.0, layout.size.height))
     }
 }
 

@@ -414,7 +414,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             self.requestLayout?(.immediate)
         }
         
-        self.deleteButton.isHidden = origin == nil
+        if origin == nil {
+            self.deleteButton.isHidden = true
+        }
     }
     
     func setMessage(_ message: Message) {
@@ -831,7 +833,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if !ask && items.count == 1 {
                     let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
-                } else {
+                } else if !items.isEmpty {
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()

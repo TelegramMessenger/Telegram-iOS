@@ -336,9 +336,9 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
                 popImpl?()
                 if let updatedState = updatedState {
                     if updatedState.amount.isEmpty {
-                        selectNextInputItemImpl?(WalletSendScreenEntryTag.address)
-                    } else if updatedState.comment.isEmpty {
                         selectNextInputItemImpl?(WalletSendScreenEntryTag.amount)
+                    } else if updatedState.comment.isEmpty {
+                        selectNextInputItemImpl?(WalletSendScreenEntryTag.comment)
                     }
                 }
             }))

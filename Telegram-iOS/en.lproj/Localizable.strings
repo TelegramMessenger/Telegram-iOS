@@ -4638,12 +4638,12 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
-"Conversation.SelectedMessages_1" = "%@ Message Selected";
-"Conversation.SelectedMessages_2" = "%@ Messages Selected";
-"Conversation.SelectedMessages_3_10" = "%@ Messages Selected";
-"Conversation.SelectedMessages_any" = "%@ Messages Selected";
-"Conversation.SelectedMessages_many" = "%@ Messages Selected";
-"Conversation.SelectedMessages_0" = "%@ Messages Selected";
+"Conversation.SelectedMessages_1" = "%@ Selected";
+"Conversation.SelectedMessages_2" = "%@ Selected";
+"Conversation.SelectedMessages_3_10" = "%@ Selected";
+"Conversation.SelectedMessages_any" = "%@ Selected";
+"Conversation.SelectedMessages_many" = "%@ Selected";
+"Conversation.SelectedMessages_0" = "%@ Selected";
 
 "AccentColor.Title" = "Accent Color";
 
@@ -4872,11 +4872,11 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.TransactionInfo.SenderHeader" = "SENDER";
 "Wallet.TransactionInfo.CopyAddress" = "Copy Wallet Address";
 "Wallet.TransactionInfo.AddressCopied" = "Address copied to clipboard.";
-"Wallet.TransactionInfo.SendGrams" = "Send Grams";
+"Wallet.TransactionInfo.SendGrams" = "Send Grams to This Address";
 "Wallet.TransactionInfo.CommentHeader" = "COMMENT";
 "Wallet.TransactionInfo.StorageFeeHeader" = "STORAGE FEE";
 "Wallet.TransactionInfo.OtherFeeHeader" = "TRANSACTION FEE";
-"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet. [More info]()";
+"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and processing your transactions. [More info]()";
 "Wallet.TransactionInfo.OtherFeeInfo" = "Blockchain validators collect a tiny fee for processing your decentralized transactions. [More info]()";
 "Wallet.TransactionInfo.FeeInfoURL" = "https://telegram.org/wallet/fee";
 "Wallet.WordCheck.Title" = "Test Time!";
@@ -4979,3 +4979,15 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
 
 "Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";
+
+"Conversation.ClearCache" = "Clear Cache";
+"ClearCache.Description" = "Media files will be deleted from your phone, but available for re-downloading when necessary.";
+"ClearCache.FreeSpaceDescription" = "If you want to save space on your device, you don't need to delete anything.\n\nYou can use cache settings to remove unnecessary media — and re-download files if you need them again.";
+"ClearCache.FreeSpace" = "Free Space";
+"ClearCache.Success" = "**%@** freed on your %@!";
+
+"Conversation.ScheduleMessage.SendWhenOnline" = "Send When Online";
+"ScheduledMessages.ScheduledOnline" = "Scheduled until online";
+
+"Conversation.SwipeToReplyHintTitle" = "Swipe To Reply";
+"Conversation.SwipeToReplyHintText" = "Swipe left on any message to reply to it.";

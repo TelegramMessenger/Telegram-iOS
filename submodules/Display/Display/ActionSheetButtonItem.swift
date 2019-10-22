@@ -8,7 +8,6 @@ public enum ActionSheetButtonColor {
     case disabled
 }
 
-
 public enum ActionSheetButtonFont {
     case `default`
     case bold

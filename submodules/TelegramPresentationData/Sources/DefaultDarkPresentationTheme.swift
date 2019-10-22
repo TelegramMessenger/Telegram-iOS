@@ -85,7 +85,11 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         separatorColor: UIColor(rgb: 0x3d3d40),
         badgeBackgroundColor: badgeFillColor,
         badgeStrokeColor: UIColor(rgb: 0x1c1c1d),
-        badgeTextColor: badgeTextColor
+        badgeTextColor: badgeTextColor,
+        segmentedBackgroundColor: UIColor(rgb: 0x3a3b3d),
+        segmentedForegroundColor: UIColor(rgb: 0x6f7075),
+        segmentedTextColor: UIColor(rgb: 0xffffff),
+        segmentedDividerColor: UIColor(rgb: 0x505155)
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(

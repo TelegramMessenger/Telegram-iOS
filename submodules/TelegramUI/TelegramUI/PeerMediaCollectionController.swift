@@ -405,6 +405,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
+        }, displaySwipeToReplyHint: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -423,6 +424,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
             if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
+                }, push: { c in
+                    self?.push(c)
                 }, completion: { _ in }), in: .window(.root))
             }
         }, reportMessages: { _, _ in
@@ -517,6 +520,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
         }, openScheduledMessages: {
+        }, displaySearchResultsTooltip: { _, _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

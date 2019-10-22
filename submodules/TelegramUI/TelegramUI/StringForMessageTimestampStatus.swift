@@ -20,6 +20,9 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
         timestamp = message.timestamp
     }
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
+    if timestamp == 0x7FFFFFFE {
+        dateText = "         "
+    }
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {

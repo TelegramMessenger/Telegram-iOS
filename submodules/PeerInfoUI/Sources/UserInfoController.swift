@@ -1181,6 +1181,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }, report: {
         presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
+        }, push: { c in
+            pushControllerImpl?(c)
         }, completion: { _ in }), nil)
     })
         
@@ -1579,8 +1581,6 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 let text: String = presentationData.strings.UserInfo_TapToCall
                 
                 let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true)
-                tooltipController.dismissed = {
-                }
                 controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, callButtonFrame)

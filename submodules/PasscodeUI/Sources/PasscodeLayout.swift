@@ -101,7 +101,7 @@ struct PasscodeKeyboardLayout {
                 self.verticalThird = 176.0
                 self.verticalFourth = 264.0
                 self.size = CGSize(width: 265.0, height: 339.0)
-                self.topOffset =  0.0
+                self.topOffset = 120.0 + (layout.size.height - self.size.height - 120.0) / 2.0
                 self.biometricsOffset = 30.0
                 self.deleteOffset = 20.0
         }

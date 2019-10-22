@@ -185,7 +185,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 }
             case .shareProxyList:
                 switch rhs {
-                    case .enabled, .serversHeader, .addServer, .server, .useForCalls:
+                    case .enabled, .serversHeader, .addServer, .server, .shareProxyList:
                         return false
                     default:
                         return true

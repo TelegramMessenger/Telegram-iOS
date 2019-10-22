@@ -266,7 +266,7 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
     }
 }
 
-public func callRatingController(sharedContext: SharedAccountContext, account: Account, callId: CallId, userInitiated: Bool, present: @escaping (ViewController, Any) -> Void) -> AlertController {
+public func callRatingController(sharedContext: SharedAccountContext, account: Account, callId: CallId, userInitiated: Bool, present: @escaping (ViewController, Any) -> Void, push: @escaping (ViewController) -> Void) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -282,8 +282,7 @@ public func callRatingController(sharedContext: SharedAccountContext, account: A
     }, apply: { rating in
         dismissImpl?(true)
         if rating < 4 {
-            let controller = callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating, userInitiated: userInitiated)
-            present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            push(callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating, userInitiated: userInitiated))
         } else {
             let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", userInitiated: userInitiated, includeLogs: false).start()
         }

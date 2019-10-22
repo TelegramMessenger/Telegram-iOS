@@ -283,16 +283,11 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     let horizontalOrigin: CGFloat = floor(min(max(8.0, sourceRect.midX - contentSize.width / 2.0), layout.size.width - contentSize.width - 8.0))
                     
                     strongSelf.tooltipContainerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: contentSize)
-                    //transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: contentSize))
                     strongSelf.tooltipContainerNode.relativeArrowPosition = (sourceRect.midX - horizontalOrigin, arrowOnBottom)
                     
                     strongSelf.tooltipContainerNode.updateLayout(transition: .immediate)
                     
-                    let textFrame = CGRect(origin: CGPoint(x: 6.0, y: 17.0), size: textSize)
-//                    if transition.isAnimated, textFrame.size != self.textNode.frame.size {
-//                        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
-//                    }
-                    
+                    let textFrame = CGRect(origin: CGPoint(x: 6.0, y: 17.0), size: textSize)                    
                     strongSelf.textNode.frame = textFrame
                 }
             })

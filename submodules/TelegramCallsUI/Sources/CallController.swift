@@ -190,6 +190,10 @@ public final class CallController: ViewController {
                             c.presentationArguments = a
                             window.present(c, on: .root, blockInteraction: false, completion: {})
                         }
+                    }, push: { [weak self] c in
+                        if let strongSelf = self {
+                            strongSelf.push(c)
+                        }
                     })
                     strongSelf.present(controller, in: .window(.root))
                 })

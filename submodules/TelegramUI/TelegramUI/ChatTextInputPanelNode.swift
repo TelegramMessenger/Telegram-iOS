@@ -1576,7 +1576,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                 if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
                     inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)
-                    return (ChatTextInputState(inputText: inputText), inputMode)
+                    let updatedRange = current.selectionRange.lowerBound + attributedString.length
+                    return (ChatTextInputState(inputText: inputText, selectionRange: updatedRange ..< updatedRange), inputMode)
                 } else {
                     return (ChatTextInputState(inputText: attributedString), inputMode)
                 }

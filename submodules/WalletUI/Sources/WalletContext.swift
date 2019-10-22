@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
+import Display
 import WalletCore
 
 public enum WalletContextGetServerSaltError {
@@ -26,5 +27,5 @@ public protocol WalletContext {
     func shareUrl(_ url: String)
     func openPlatformSettings()
     func authorizeAccessToCamera(completion: @escaping () -> Void)
-    func pickImage(completion: @escaping (UIImage) -> Void)
+    func pickImage(present: @escaping (ViewController) -> Void, completion: @escaping (UIImage) -> Void)
 }
