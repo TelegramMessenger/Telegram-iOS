@@ -421,7 +421,9 @@ void add_partial_storage_payment(td::BigInt256& payment, ton::UnixTime delta, co
   payment += b;
 }
 
-td::RefInt256 Account::compute_storage_fees(ton::UnixTime now, const std::vector<block::StoragePrices>& pricing) const {
+td::RefInt256 StoragePrices::compute_storage_fees(ton::UnixTime now, const std::vector<block::StoragePrices>& pricing,
+                                                  const vm::CellStorageStat& storage_stat, ton::UnixTime last_paid,
+                                                  bool is_special, bool is_masterchain) {
   if (now <= last_paid || !last_paid || is_special || pricing.empty() || now <= pricing[0].valid_since) {
     return {};
   }
@@ -438,12 +440,16 @@ td::RefInt256 Account::compute_storage_fees(ton::UnixTime now, const std::vector
     ton::UnixTime valid_until = (i < n - 1 ? std::min(now, pricing[i + 1].valid_since) : now);
     if (upto < valid_until) {
       assert(upto >= pricing[i].valid_since);
-      add_partial_storage_payment(total.unique_write(), valid_until - upto, pricing[i], storage_stat, is_masterchain());
+      add_partial_storage_payment(total.unique_write(), valid_until - upto, pricing[i], storage_stat, is_masterchain);
     }
     upto = valid_until;
   }
   total.unique_write().rshift(16, 1);  // divide by 2^16 with ceil rounding to obtain nanograms
   return total;
+}
+
+td::RefInt256 Account::compute_storage_fees(ton::UnixTime now, const std::vector<block::StoragePrices>& pricing) const {
+  return StoragePrices::compute_storage_fees(now, pricing, storage_stat, last_paid, is_special, is_masterchain());
 }
 
 Transaction::Transaction(const Account& _account, int ttype, ton::LogicalTime req_start_lt, ton::UnixTime _now,
@@ -739,7 +745,8 @@ td::uint64 ComputePhaseConfig::gas_bought_for(td::RefInt256 nanograms) const {
 }
 
 td::RefInt256 ComputePhaseConfig::compute_gas_price(td::uint64 gas_used) const {
-  return td::rshift(gas_price256 * gas_used, 16, 1);
+  return gas_used <= flat_gas_limit ? td::make_refint(flat_gas_price)
+                                    : td::rshift(gas_price256 * (gas_used - flat_gas_limit), 16, 1) + flat_gas_price;
 }
 
 bool Transaction::compute_gas_limits(ComputePhase& cp, const ComputePhaseConfig& cfg) {
@@ -805,7 +812,6 @@ bool Transaction::prepare_rand_seed(td::BitArray<256>& rand_seed, const ComputeP
 }
 
 Ref<vm::Tuple> Transaction::prepare_vm_c7(const ComputePhaseConfig& cfg) const {
-  // TODO: fix initialization of c7
   td::BitArray<256> rand_seed;
   td::RefInt256 rand_seed_int{true};
   if (!(prepare_rand_seed(rand_seed, cfg) && rand_seed_int.unique_write().import_bits(rand_seed.cbits(), 256, false))) {
@@ -969,7 +975,7 @@ bool Transaction::prepare_compute_phase(const ComputePhaseConfig& cfg) {
   gas = vm.get_gas_limits();
   cp.gas_used = std::min<long long>(gas.gas_consumed(), gas.gas_limit);
   cp.accepted = (gas.gas_credit == 0);
-  cp.success = (cp.accepted && (unsigned)cp.exit_code <= 1);
+  cp.success = (cp.accepted && vm.committed());
   if (cp.accepted & use_msg_state) {
     was_activated = true;
     acc_status = Account::acc_active;
@@ -978,8 +984,8 @@ bool Transaction::prepare_compute_phase(const ComputePhaseConfig& cfg) {
             << ", limit=" << gas.gas_limit << ", credit=" << gas.gas_credit;
   LOG(INFO) << "out_of_gas=" << cp.out_of_gas << ", accepted=" << cp.accepted << ", success=" << cp.success;
   if (cp.success) {
-    cp.new_data = vm.get_c4();  // c4 -> persistent data
-    cp.actions = vm.get_d(5);   // c5 -> action list
+    cp.new_data = vm.get_committed_state().c4;  // c4 -> persistent data
+    cp.actions = vm.get_committed_state().c5;   // c5 -> action list
     int out_act_num = output_actions_count(cp.actions);
     if (verbosity > 2) {
       std::cerr << "new smart contract data: ";
@@ -1304,9 +1310,9 @@ bool Transaction::check_rewrite_dest_addr(Ref<vm::CellSlice>& dest_addr, const A
 int Transaction::try_action_send_msg(const vm::CellSlice& cs0, ActionPhase& ap, const ActionPhaseConfig& cfg,
                                      int redoing) {
   block::gen::OutAction::Record_action_send_msg act_rec;
-  // mode: +128 = attach all remaining balance, +64 = attach all remaining balance of the inbound message, +1 = pay message fees, +2 = skip if message cannot be sent
+  // mode: +128 = attach all remaining balance, +64 = attach all remaining balance of the inbound message, +32 = delete smart contract if balance becomes zero, +1 = pay message fees, +2 = skip if message cannot be sent
   vm::CellSlice cs{cs0};
-  if (!tlb::unpack_exact(cs, act_rec) || (act_rec.mode & ~0xc3) || (act_rec.mode & 0xc0) == 0xc0) {
+  if (!tlb::unpack_exact(cs, act_rec) || (act_rec.mode & ~0xe3) || (act_rec.mode & 0xc0) == 0xc0) {
     return -1;
   }
   bool skip_invalid = (act_rec.mode & 2);
@@ -1573,7 +1579,7 @@ int Transaction::try_action_send_msg(const vm::CellSlice& cs0, ActionPhase& ap, 
   ap.total_action_fees += fees_collected;
   ap.total_fwd_fees += fees_total;
 
-  if (act_rec.mode & 0x80) {
+  if ((act_rec.mode & 0xa0) == 0xa0) {
     CHECK(ap.remaining_balance.is_zero());
     ap.acc_delete_req = ap.reserved_balance.is_zero();
   }

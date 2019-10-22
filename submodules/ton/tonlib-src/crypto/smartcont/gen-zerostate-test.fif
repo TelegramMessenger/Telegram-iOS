@@ -121,7 +121,7 @@ dup make_special dup constant smc3_addr
 ."address = " x. cr
 
 // SmartContract #4 (elector)
-"elector-code.fif" include   // code in separate source file
+"auto/elector-code.fif" include   // code in separate source file
 <b 0 1 1+ 1+ 5 + u, 0 256 u, b>  // data
 GR$10  // balance: 10 grams
 0 // split_depth

@@ -88,6 +88,7 @@ set(TON_CRYPTO_SOURCE
   vm/cells/CellBuilder.cpp
   vm/cells/CellHash.cpp
   vm/cells/CellSlice.cpp
+  vm/cells/CellString.cpp
   vm/cells/CellTraits.cpp
   vm/cells/CellUsageTree.cpp
   vm/cells/DataCell.cpp
@@ -99,6 +100,7 @@ set(TON_CRYPTO_SOURCE
   vm/cells/CellBuilder.h
   vm/cells/CellHash.h
   vm/cells/CellSlice.h
+  vm/cells/CellString.h
   vm/cells/CellTraits.h
   vm/cells/CellUsageTree.h
   vm/cells/CellWithStorage.h
@@ -197,6 +199,24 @@ set(BLOCK_SOURCE
   block/transaction.h
 )
 
+set(SMC_ENVELOPE_SOURCE
+  smc-envelope/GenericAccount.cpp
+  smc-envelope/MultisigWallet.cpp
+  smc-envelope/SmartContract.cpp
+  smc-envelope/SmartContractCode.cpp
+  smc-envelope/TestGiver.cpp
+  smc-envelope/TestWallet.cpp
+  smc-envelope/Wallet.cpp
+
+  smc-envelope/GenericAccount.h
+  smc-envelope/MultisigWallet.h
+  smc-envelope/SmartContract.h
+  smc-envelope/SmartContractCode.h
+  smc-envelope/TestGiver.h
+  smc-envelope/TestWallet.h
+  smc-envelope/Wallet.h
+)
+
 set(ED25519_TEST_SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/test/Ed25519.cpp
   PARENT_SCOPE
@@ -214,6 +234,11 @@ set(CELLS_TEST_SOURCE
 
 set(TONVM_TEST_SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/test/vm.cpp
+  PARENT_SCOPE
+)
+
+set(SMARTCONT_TEST_SOURCE
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/test-smartcont.cpp
   PARENT_SCOPE
 )
 
@@ -279,6 +304,7 @@ if (TON_USE_ASAN AND NOT WIN32)
   set(TURN_OFF_LSAN export LSAN_OPTIONS=detect_leaks=0)
 endif()
 
+file(MAKE_DIRECTORY smartcont/auto)
 if (NOT CMAKE_CROSSCOMPILING)
   set(GENERATE_TLB_CMD tlbc)
   add_custom_command(
@@ -295,29 +321,51 @@ if (NOT CMAKE_CROSSCOMPILING)
   add_custom_target(gen_fif ALL)
   function(GenFif)
     set(options )
-    set(oneValueArgs DEST)
+    set(oneValueArgs DEST NAME)
     set(multiValueArgs SOURCE)
     set(FUNC_LIB_SOURCE smartcont/stdlib.fc)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     string(REGEX REPLACE "[^a-zA-Z_]" "_" ID ${ARG_DEST})
+    set(ARG_DEST_FIF "${ARG_DEST}.fif")
     add_custom_command(
-      COMMENT "Generate ${ARG_DEST}"
+      COMMENT "Generate ${ARG_DEST_FIF}"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND func -PS -o ${ARG_DEST} ${FUNC_LIB_SOURCE} ${ARG_SOURCE}
+      COMMAND func -PS -o ${ARG_DEST_FIF} ${FUNC_LIB_SOURCE} ${ARG_SOURCE}
       MAIN_DEPENDENCY ${ARG_SOURCE}
       DEPENDS func ${FUNC_LIB_SOURCE}
-      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DEST}
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DEST_FIF}
     )
-    add_custom_target(gen_fif_${ID} DEPENDS ${ARG_DEST})
+    set(ARG_DEST_CPP "${ARG_DEST}.cpp")
+    add_custom_command(
+      COMMENT "Generate ${ARG_DEST_CPP}"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND fift -Ifift/lib:smartcont -s asm-to-cpp.fif ${ARG_DEST_FIF} ${ARG_DEST_CPP} ${ARG_NAME}
+      MAIN_DEPENDENCY ${ARG_SOURCE}
+      DEPENDS fift ${ARG_DEST_FIF} smartcont/asm-to-cpp.fif
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DEST_CPP}
+    )
+    add_custom_target(gen_fif_${ID} DEPENDS ${ARG_DEST_FIF} ${ARG_DEST_CPP})
     add_dependencies(gen_fif gen_fif_${ID})
   endfunction()
 
-  GenFif(DEST smartcont/config-code.fif SOURCE smartcont/config-code.fc)
-  GenFif(DEST smartcont/wallet-code.fif SOURCE smartcont/wallet-code.fc)
-  GenFif(DEST smartcont/simple-wallet-code.fif SOURCE smartcont/simple-wallet-code.fc)
-  GenFif(DEST smartcont/highload-wallet-code.fif SOURCE smartcont/highload-wallet-code.fc)
-  GenFif(DEST smartcont/highload-wallet-v2-code.fif SOURCE smartcont/highload-wallet-v2-code.fc)
-  GenFif(DEST smartcont/elector-code.fif SOURCE smartcont/elector-code.fc)
+  GenFif(DEST smartcont/auto/config-code SOURCE smartcont/config-code.fc NAME config)
+  GenFif(DEST smartcont/auto/wallet-code SOURCE smartcont/wallet-code.fc NAME wallet)
+  GenFif(DEST smartcont/auto/simple-wallet-code SOURCE smartcont/simple-wallet-code.fc NAME simple-wallet)
+  GenFif(DEST smartcont/auto/highload-wallet-code SOURCE smartcont/highload-wallet-code.fc NAME highload-wallet)
+  GenFif(DEST smartcont/auto/highload-wallet-v2-code SOURCE smartcont/highload-wallet-v2-code.fc NAME highoad-wallet-v2)
+  GenFif(DEST smartcont/auto/elector-code SOURCE smartcont/elector-code.fc NAME elector-code)
+  GenFif(DEST smartcont/auto/multisig-code SOURCE smartcont/multisig-code.fc NAME multisig)
+  GenFif(DEST smartcont/auto/restricted-wallet-code SOURCE smartcont/restricted-wallet-code.fc NAME restricted-wallet)
+  GenFif(DEST smartcont/auto/restricted-wallet2-code SOURCE smartcont/restricted-wallet2-code.fc NAME restricted-wallet2)
+
+  GenFif(DEST smartcont/auto/simple-wallet-ext-code SOURCE smartcont/simple-wallet-ext-code.fc NAME simple-wallet-ext)
+endif()
+
+add_library(smc-envelope ${SMC_ENVELOPE_SOURCE})
+target_include_directories(smc-envelope PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_link_libraries(smc-envelope PUBLIC ton_crypto PRIVATE tdutils ton_block)
+if (NOT CMAKE_CROSSCOMPILING)
+  add_dependencies(smc-envelope gen_fif)
 endif()
 
 add_executable(create-state block/create-state.cpp)

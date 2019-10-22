@@ -212,6 +212,10 @@ int Expr::predefine_vars() {
   return 0;
 }
 
+var_idx_t Expr::new_tmp(CodeBlob& code) const {
+  return code.create_tmp_var(e_type, &here);
+}
+
 std::vector<var_idx_t> Expr::pre_compile(CodeBlob& code) const {
   switch (cls) {
     case _Tuple: {
@@ -241,8 +245,7 @@ std::vector<var_idx_t> Expr::pre_compile(CodeBlob& code) const {
           res.insert(res.end(), add.cbegin(), add.cend());
         }
       }
-      var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-      std::vector<var_idx_t> rvect{rv};
+      auto rvect = new_tmp_vect(code);
       auto& op = code.emplace_back(here, Op::_Call, rvect, std::move(res), sym);
       if (flags & _IsImpure) {
         op.flags |= Op::_Impure;
@@ -256,57 +259,52 @@ std::vector<var_idx_t> Expr::pre_compile(CodeBlob& code) const {
       return {val};
     case _VarApply:
       if (args[0]->cls == _Glob) {
-        std::vector<var_idx_t> res = args[1]->pre_compile(code);
-        var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-        std::vector<var_idx_t> rvect{rv};
+        auto res = args[1]->pre_compile(code);
+        auto rvect = new_tmp_vect(code);
         auto& op = code.emplace_back(here, Op::_Call, rvect, std::move(res), args[0]->sym);
         if (args[0]->flags & _IsImpure) {
           op.flags |= Op::_Impure;
         }
         return rvect;
       } else {
-        std::vector<var_idx_t> res = args[1]->pre_compile(code);
-        std::vector<var_idx_t> tfunc = args[0]->pre_compile(code);
+        auto res = args[1]->pre_compile(code);
+        auto tfunc = args[0]->pre_compile(code);
         if (tfunc.size() != 1) {
           throw src::Fatal{"stack tuple used as a function"};
         }
         res.push_back(tfunc[0]);
-        var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-        std::vector<var_idx_t> rvect{rv};
+        auto rvect = new_tmp_vect(code);
         code.emplace_back(here, Op::_CallInd, rvect, std::move(res));
         return rvect;
       }
     case _Const: {
-      var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-      std::vector<var_idx_t> rvect{rv};
+      auto rvect = new_tmp_vect(code);
       code.emplace_back(here, Op::_IntConst, rvect, intval);
       return rvect;
     }
     case _Glob: {
-      var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-      std::vector<var_idx_t> rvect{rv};
+      auto rvect = new_tmp_vect(code);
       code.emplace_back(here, Op::_GlobVar, rvect, std::vector<var_idx_t>{}, sym);
       return rvect;
     }
     case _Letop: {
-      std::vector<var_idx_t> right = args[1]->pre_compile(code);
-      std::vector<var_idx_t> left = args[0]->pre_compile(code);
-      code.emplace_back(here, Op::_Let, left, std::move(right));
-      return left;
+      auto right = args[1]->pre_compile(code);
+      auto left = args[0]->pre_compile(code);
+      code.emplace_back(here, Op::_Let, std::move(left), right);
+      return right;
     }
     case _LetFirst: {
-      var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-      std::vector<var_idx_t> right = args[1]->pre_compile(code);
-      std::vector<var_idx_t> left = args[0]->pre_compile(code);
-      left.push_back(rv);
+      auto rvect = new_tmp_vect(code);
+      auto right = args[1]->pre_compile(code);
+      auto left = args[0]->pre_compile(code);
+      left.push_back(rvect[0]);
       code.emplace_back(here, Op::_Let, std::move(left), std::move(right));
-      return std::vector<var_idx_t>{rv};
+      return rvect;
     }
     case _CondExpr: {
       auto cond = args[0]->pre_compile(code);
       assert(cond.size() == 1);
-      var_idx_t rv = code.create_var(TmpVar::_Tmp, e_type, nullptr, &here);
-      std::vector<var_idx_t> rvect{rv};
+      auto rvect = new_tmp_vect(code);
       Op& if_op = code.emplace_back(here, Op::_If, cond);
       code.push_set_cur(if_op.block0);
       code.emplace_back(here, Op::_Let, rvect, args[1]->pre_compile(code));

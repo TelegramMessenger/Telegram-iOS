@@ -1,0 +1,67 @@
+;; Simple wallet smart contract
+
+cell create_state(int seqno, int public_key) {
+  return begin_cell().store_uint(seqno, 32).store_uint(public_key, 256).end_cell();
+}
+
+(int, int) load_state() {
+  var cs2 = begin_parse(get_data());
+  return (cs2~load_uint(32), cs2~load_uint(256));
+}
+
+() save_state(int seqno, int public_key) impure {
+  set_data(create_state(seqno, public_key));
+}
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+slice do_verify_message(slice in_msg, int seqno, int public_key) {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  int msg_seqno = cs~load_uint(32);
+  throw_unless(33, msg_seqno == seqno);
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
+  return cs;
+}
+
+() recv_external(slice in_msg) impure {
+  (int stored_seqno, int public_key) = load_state();
+  var cs = do_verify_message(in_msg, stored_seqno, public_key);
+  accept_message();
+  cs~touch_slice();
+  if (cs.slice_refs()) {
+    var mode = cs~load_uint(8);
+    send_raw_message(cs~load_ref(), mode);
+  }
+  cs.end_parse();
+  save_state(stored_seqno + 1, public_key);
+}
+
+;; Get methods
+
+int seqno() method_id {
+  return get_data().begin_parse().preload_uint(32);
+}
+
+cell create_init_state(int public_key) method_id {
+  return create_state(0, public_key);
+}
+
+cell prepare_send_message_with_seqno(int mode, cell msg, int seqno) method_id {
+  return begin_cell().store_uint(seqno, 32).store_uint(mode, 8).store_ref(msg).end_cell();
+}
+
+cell prepare_send_message(int mode, cell msg) method_id {
+  return prepare_send_message_with_seqno(mode, msg, seqno());
+}
+
+
+slice verify_message(slice msg) method_id {
+  var (stored_seqno, public_key) = load_state();
+  return do_verify_message(msg, stored_seqno, public_key);
+}
+
+
+

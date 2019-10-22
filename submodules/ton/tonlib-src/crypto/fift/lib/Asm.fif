@@ -756,6 +756,12 @@ x{EDF9} @Defop BOOLEVAL
   { PUSHINT c3 PREPAREVAR } cond
 } dup : PREPARE : PREPAREDICT
 //
+// inline support
+{ dup sbits { @addop } {
+  dup srefs 1- abort"exactly one reference expected in inline"
+  ref@ CALLREF } cond
+} : INLINE
+//
 // throwing and handling exceptions
 { dup 6 ufits
   { <b x{F22_} s, swap 6 u, }
@@ -964,11 +970,14 @@ x{F4B7} @Defop SUBDICTURPGET
 
 x{F800} @Defop ACCEPT
 x{F801} @Defop SETGASLIMIT
+x{F80F} @Defop COMMIT
 
 x{F82} @Defop(4u) GETPARAM
 x{F823} @Defop NOW
 x{F824} @Defop BLOCKLT
 x{F825} @Defop LTIME
+x{F826} @Defop BALANCE
+x{F827} @Defop RANDSEED
 x{F828} @Defop MYADDR
 x{F829} @Defop CONFIGROOT
 x{F830} @Defop CONFIGDICT
@@ -1047,6 +1056,7 @@ x{FFF0} @Defop SETCPX
 //
 variable @proccnt
 variable @proclist
+variable @procdict
 19 constant @procdictkeylen
 { @proclist @ cons @proclist ! } : @proclistadd
 { dup @procdictkeylen fits not abort"procedure index out of range"
@@ -1061,26 +1071,39 @@ variable @proclist
     { swap @declproc }
   cond } : DECLMETHOD
   "main" @proclistadd
-  dictnew
+  dictnew @procdict !
 } : PROGRAM{
-{ dup sbits 1000 > { s>c <b swap ref, b> <s } if } : @adj-long-proc
-{ // d i s
-  @adj-long-proc swap rot @procdictkeylen idict!+ not abort"cannot define procedure, redefined?"
-} : PROC
-{ 2dup swap @procdictkeylen idict@ abort"procedure already defined"
-  1 { -rot @normal? b> <s PROC } does @doafter<{
-} : PROC:<{
-{ 0 swap @procdictkeylen idict@ not abort"`main` procedure not defined" drop
+{ over sbits < { s>c <b swap ref, b> <s } if } : @adj-long-proc
+{ // i s l
+  @adj-long-proc swap @procdict @ @procdictkeylen
+  idict!+ not abort"cannot define procedure, redefined?"
+  @procdict !
+} : @def-proc
+{ 1000 @def-proc } : PROC
+{ 0 @def-proc } : PROCREF
+{ @procdict @ @procdictkeylen idict@ abort"procedure already defined"
+} : @fail-ifdef
+{ over @fail-ifdef
+  2 { rot @normal? rot b> <s swap @def-proc drop } does
+  null swap @doafter<{
+} : @PROC:<{
+{ 1000 @PROC:<{ } : PROC:<{
+{ 0 @PROC:<{ } : PROCREF:<{
+{ dup @procdict @ @procdictkeylen idict@
+  { nip INLINE } { CALLDICT } cond
+} dup : INLINECALL : INLINECALLDICT
+{ 0 @procdict @ @procdictkeylen idict@ not abort"`main` procedure not defined" drop
 } : @chkmaindef
-{ dup @chkmaindef
+{ @chkmaindef
   @proclist @ { dup null? not } {
     uncons swap dup find not
     { +": undefined procedure name in list" abort } if
-    execute 3 pick @procdictkeylen idict@ not
+    execute @procdict @ @procdictkeylen idict@ not
     { +": procedure declared but left undefined" abort } if
     drop (forget)
   } while
   drop @proclist null! @proccnt 0!
+  @procdict dup @ swap null!
 } : }END
 forget @proclist  forget @proccnt
 { }END <{ SETCP0 swap @procdictkeylen DICTPUSHCONST DICTIGETJMP 11 THROWARG }> } : }END>

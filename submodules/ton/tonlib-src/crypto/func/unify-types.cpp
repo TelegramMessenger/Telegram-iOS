@@ -153,7 +153,7 @@ bool TypeExpr::remove_forall(TypeExpr*& te) {
 bool TypeExpr::remove_forall_in(TypeExpr*& te, TypeExpr* te2, const std::vector<TypeExpr*>& new_vars) {
   assert(te);
   assert(te2 && te2->constr == te_ForAll);
-  if (te->constr == te_Unknown) {
+  if (te->constr == te_Var) {
     for (std::size_t i = 0; i < new_vars.size(); i++) {
       if (te == te2->args[i + 1]) {
         te = new_vars[i];
@@ -201,12 +201,14 @@ std::ostream& operator<<(std::ostream& os, TypeExpr* type_expr) {
 std::ostream& TypeExpr::print(std::ostream& os, int lex_level) {
   switch (constr) {
     case te_Unknown:
-      if (value >= 0) {
-        return os << "??" << value;
-      } else if (value >= -26) {
-        return os << (char)(64 - value);
+      return os << "??" << value;
+    case te_Var:
+      if (value >= -26 && value < 0) {
+        return os << "_" << (char)(91 + value);
+      } else if (value >= 0 && value < 26) {
+        return os << (char)(65 + value);
       } else {
-        return os << "TVAR" << -value;
+        return os << "TVAR" << value;
       }
     case te_Indirect:
       return os << args[0];

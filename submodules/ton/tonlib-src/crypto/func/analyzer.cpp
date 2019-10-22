@@ -272,6 +272,12 @@ VarDescrList& VarDescrList::operator+=(const VarDescrList& y) {
 }
 
 VarDescrList VarDescrList::operator|(const VarDescrList& y) const {
+  if (y.unreachable) {
+    return *this;
+  }
+  if (unreachable) {
+    return y;
+  }
   VarDescrList res;
   auto it1 = list.cbegin();
   auto it2 = y.list.cbegin();
@@ -289,7 +295,11 @@ VarDescrList VarDescrList::operator|(const VarDescrList& y) const {
 }
 
 VarDescrList& VarDescrList::operator|=(const VarDescrList& y) {
-  return *this = *this | y;
+  if (y.unreachable) {
+    return *this;
+  } else {
+    return *this = *this | y;
+  }
 }
 
 VarDescrList& VarDescrList::operator&=(const VarDescrList& values) {
@@ -299,16 +309,22 @@ VarDescrList& VarDescrList::operator&=(const VarDescrList& values) {
       *item &= vd;
     }
   }
+  unreachable |= values.unreachable;
   return *this;
 }
 
 VarDescrList& VarDescrList::import_values(const VarDescrList& values) {
-  for (const VarDescr& vd : values.list) {
-    VarDescr* item = operator[](vd.idx);
-    if (item) {
-      item->set_value(vd);
+  if (values.unreachable) {
+    set_unreachable();
+  } else
+    for (auto& vd : list) {
+      auto new_vd = values[vd.idx];
+      if (new_vd) {
+        vd.set_value(*new_vd);
+      } else {
+        vd.clear_value();
+      }
     }
-  }
   return *this;
 }
 
@@ -658,8 +674,11 @@ void Op::prepare_args(VarDescrList values) {
     const VarDescr* val = values[right[i]];
     if (val) {
       args[i].set_value(*val);
-      args[i].clear_unused();
+      // args[i].clear_unused();
+    } else {
+      args[i].clear_value();
     }
+    args[i].clear_unused();
   }
 }
 
@@ -670,7 +689,7 @@ VarDescrList Op::fwd_analyze(VarDescrList values) {
     case _Import:
       break;
     case _Return:
-      values.list.clear();
+      values.set_unreachable();
       break;
     case _IntConst: {
       values.add_newval(left[0]).set_const(int_const);

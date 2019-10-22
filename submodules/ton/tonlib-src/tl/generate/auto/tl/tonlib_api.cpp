@@ -175,6 +175,33 @@ void exportedPemKey::store(td::TlStorerToString &s, const char *field_name) cons
   }
 }
 
+fees::fees()
+  : in_fwd_fee_()
+  , storage_fee_()
+  , gas_fee_()
+  , fwd_fee_()
+{}
+
+fees::fees(std::int64_t in_fwd_fee_, std::int64_t storage_fee_, std::int64_t gas_fee_, std::int64_t fwd_fee_)
+  : in_fwd_fee_(in_fwd_fee_)
+  , storage_fee_(storage_fee_)
+  , gas_fee_(gas_fee_)
+  , fwd_fee_(fwd_fee_)
+{}
+
+const std::int32_t fees::ID;
+
+void fees::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "fees");
+    s.store_field("in_fwd_fee", in_fwd_fee_);
+    s.store_field("storage_fee", storage_fee_);
+    s.store_field("gas_fee", gas_fee_);
+    s.store_field("fwd_fee", fwd_fee_);
+    s.store_class_end();
+  }
+}
+
 inputKey::inputKey()
   : key_()
   , local_password_()
@@ -192,6 +219,18 @@ void inputKey::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_class_begin(field_name, "inputKey");
     if (key_ == nullptr) { s.store_field("key", "null"); } else { key_->store(s, "key"); }
     s.store_bytes_field("local_password", local_password_);
+    s.store_class_end();
+  }
+}
+
+inputKeyFake::inputKeyFake() {
+}
+
+const std::int32_t inputKeyFake::ID;
+
+void inputKeyFake::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "inputKeyFake");
     s.store_class_end();
   }
 }
@@ -382,6 +421,42 @@ void sendGramsResult::store(td::TlStorerToString &s, const char *field_name) con
   }
 }
 
+syncStateDone::syncStateDone() {
+}
+
+const std::int32_t syncStateDone::ID;
+
+void syncStateDone::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "syncStateDone");
+    s.store_class_end();
+  }
+}
+
+syncStateInProgress::syncStateInProgress()
+  : from_seqno_()
+  , to_seqno_()
+  , current_seqno_()
+{}
+
+syncStateInProgress::syncStateInProgress(std::int32_t from_seqno_, std::int32_t to_seqno_, std::int32_t current_seqno_)
+  : from_seqno_(from_seqno_)
+  , to_seqno_(to_seqno_)
+  , current_seqno_(current_seqno_)
+{}
+
+const std::int32_t syncStateInProgress::ID;
+
+void syncStateInProgress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "syncStateInProgress");
+    s.store_field("from_seqno", from_seqno_);
+    s.store_field("to_seqno", to_seqno_);
+    s.store_field("current_seqno", current_seqno_);
+    s.store_class_end();
+  }
+}
+
 unpackedAccountAddress::unpackedAccountAddress()
   : workchain_id_()
   , bounceable_()
@@ -426,6 +501,24 @@ void updateSendLiteServerQuery::store(td::TlStorerToString &s, const char *field
     s.store_class_begin(field_name, "updateSendLiteServerQuery");
     s.store_field("id", id_);
     s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
+updateSyncState::updateSyncState()
+  : sync_state_()
+{}
+
+updateSyncState::updateSyncState(object_ptr<SyncState> &&sync_state_)
+  : sync_state_(std::move(sync_state_))
+{}
+
+const std::int32_t updateSyncState::ID;
+
+void updateSyncState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "updateSyncState");
+    if (sync_state_ == nullptr) { s.store_field("sync_state", "null"); } else { sync_state_->store(s, "sync_state"); }
     s.store_class_end();
   }
 }
@@ -537,6 +630,75 @@ void internal_transactionId::store(td::TlStorerToString &s, const char *field_na
     s.store_class_begin(field_name, "internal_transactionId");
     s.store_field("lt", lt_);
     s.store_bytes_field("hash", hash_);
+    s.store_class_end();
+  }
+}
+
+liteServer_info::liteServer_info()
+  : now_()
+  , version_()
+  , capabilities_()
+{}
+
+liteServer_info::liteServer_info(std::int64_t now_, std::int32_t version_, std::int64_t capabilities_)
+  : now_(now_)
+  , version_(version_)
+  , capabilities_(capabilities_)
+{}
+
+const std::int32_t liteServer_info::ID;
+
+void liteServer_info::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "liteServer_info");
+    s.store_field("now", now_);
+    s.store_field("version", version_);
+    s.store_field("capabilities", capabilities_);
+    s.store_class_end();
+  }
+}
+
+query_fees::query_fees()
+  : source_fees_()
+  , destination_fees_()
+{}
+
+query_fees::query_fees(object_ptr<fees> &&source_fees_, object_ptr<fees> &&destination_fees_)
+  : source_fees_(std::move(source_fees_))
+  , destination_fees_(std::move(destination_fees_))
+{}
+
+const std::int32_t query_fees::ID;
+
+void query_fees::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_fees");
+    if (source_fees_ == nullptr) { s.store_field("source_fees", "null"); } else { source_fees_->store(s, "source_fees"); }
+    if (destination_fees_ == nullptr) { s.store_field("destination_fees", "null"); } else { destination_fees_->store(s, "destination_fees"); }
+    s.store_class_end();
+  }
+}
+
+query_info::query_info()
+  : id_()
+  , valid_until_()
+  , body_hash_()
+{}
+
+query_info::query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_)
+  : id_(id_)
+  , valid_until_(valid_until_)
+  , body_hash_(std::move(body_hash_))
+{}
+
+const std::int32_t query_info::ID;
+
+void query_info::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_info");
+    s.store_field("id", id_);
+    s.store_field("valid_until", valid_until_);
+    s.store_bytes_field("body_hash", body_hash_);
     s.store_class_end();
   }
 }
@@ -864,7 +1026,7 @@ changeLocalPassword::changeLocalPassword()
   , new_local_password_()
 {}
 
-changeLocalPassword::changeLocalPassword(object_ptr<inputKey> &&input_key_, td::SecureString &&new_local_password_)
+changeLocalPassword::changeLocalPassword(object_ptr<InputKey> &&input_key_, td::SecureString &&new_local_password_)
   : input_key_(std::move(input_key_))
   , new_local_password_(std::move(new_local_password_))
 {}
@@ -993,7 +1155,7 @@ exportEncryptedKey::exportEncryptedKey()
   , key_password_()
 {}
 
-exportEncryptedKey::exportEncryptedKey(object_ptr<inputKey> &&input_key_, td::SecureString &&key_password_)
+exportEncryptedKey::exportEncryptedKey(object_ptr<InputKey> &&input_key_, td::SecureString &&key_password_)
   : input_key_(std::move(input_key_))
   , key_password_(std::move(key_password_))
 {}
@@ -1013,7 +1175,7 @@ exportKey::exportKey()
   : input_key_()
 {}
 
-exportKey::exportKey(object_ptr<inputKey> &&input_key_)
+exportKey::exportKey(object_ptr<InputKey> &&input_key_)
   : input_key_(std::move(input_key_))
 {}
 
@@ -1032,7 +1194,7 @@ exportPemKey::exportPemKey()
   , key_password_()
 {}
 
-exportPemKey::exportPemKey(object_ptr<inputKey> &&input_key_, td::SecureString &&key_password_)
+exportPemKey::exportPemKey(object_ptr<InputKey> &&input_key_, td::SecureString &&key_password_)
   : input_key_(std::move(input_key_))
   , key_password_(std::move(key_password_))
 {}
@@ -1044,6 +1206,42 @@ void exportPemKey::store(td::TlStorerToString &s, const char *field_name) const 
     s.store_class_begin(field_name, "exportPemKey");
     if (input_key_ == nullptr) { s.store_field("input_key", "null"); } else { input_key_->store(s, "input_key"); }
     s.store_bytes_field("key_password", key_password_);
+    s.store_class_end();
+  }
+}
+
+generic_createSendGramsQuery::generic_createSendGramsQuery()
+  : private_key_()
+  , source_()
+  , destination_()
+  , amount_()
+  , timeout_()
+  , allow_send_to_uninited_()
+  , message_()
+{}
+
+generic_createSendGramsQuery::generic_createSendGramsQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
+  : private_key_(std::move(private_key_))
+  , source_(std::move(source_))
+  , destination_(std::move(destination_))
+  , amount_(amount_)
+  , timeout_(timeout_)
+  , allow_send_to_uninited_(allow_send_to_uninited_)
+  , message_(std::move(message_))
+{}
+
+const std::int32_t generic_createSendGramsQuery::ID;
+
+void generic_createSendGramsQuery::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "generic_createSendGramsQuery");
+    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
+    if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_field("amount", amount_);
+    s.store_field("timeout", timeout_);
+    s.store_field("allow_send_to_uninited", allow_send_to_uninited_);
+    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }
@@ -1076,7 +1274,7 @@ generic_sendGrams::generic_sendGrams()
   , message_()
 {}
 
-generic_sendGrams::generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
+generic_sendGrams::generic_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , source_(std::move(source_))
   , destination_(std::move(destination_))
@@ -1288,6 +1486,18 @@ void kdf::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+liteServer_getInfo::liteServer_getInfo() {
+}
+
+const std::int32_t liteServer_getInfo::ID;
+
+void liteServer_getInfo::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "liteServer_getInfo");
+    s.store_class_end();
+  }
+}
+
 onLiteServerQueryError::onLiteServerQueryError()
   : id_()
   , error_()
@@ -1366,6 +1576,132 @@ void packAccountAddress::store(td::TlStorerToString &s, const char *field_name) 
   }
 }
 
+query_estimateFees::query_estimateFees()
+  : id_()
+  , ignore_chksig_()
+{}
+
+query_estimateFees::query_estimateFees(std::int64_t id_, bool ignore_chksig_)
+  : id_(id_)
+  , ignore_chksig_(ignore_chksig_)
+{}
+
+const std::int32_t query_estimateFees::ID;
+
+void query_estimateFees::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_estimateFees");
+    s.store_field("id", id_);
+    s.store_field("ignore_chksig", ignore_chksig_);
+    s.store_class_end();
+  }
+}
+
+query_forget::query_forget()
+  : id_()
+{}
+
+query_forget::query_forget(std::int64_t id_)
+  : id_(id_)
+{}
+
+const std::int32_t query_forget::ID;
+
+void query_forget::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_forget");
+    s.store_field("id", id_);
+    s.store_class_end();
+  }
+}
+
+query_getInfo::query_getInfo()
+  : id_()
+{}
+
+query_getInfo::query_getInfo(std::int64_t id_)
+  : id_(id_)
+{}
+
+const std::int32_t query_getInfo::ID;
+
+void query_getInfo::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_getInfo");
+    s.store_field("id", id_);
+    s.store_class_end();
+  }
+}
+
+query_send::query_send()
+  : id_()
+{}
+
+query_send::query_send(std::int64_t id_)
+  : id_(id_)
+{}
+
+const std::int32_t query_send::ID;
+
+void query_send::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "query_send");
+    s.store_field("id", id_);
+    s.store_class_end();
+  }
+}
+
+raw_createAndSendMessage::raw_createAndSendMessage()
+  : destination_()
+  , initial_account_state_()
+  , data_()
+{}
+
+raw_createAndSendMessage::raw_createAndSendMessage(object_ptr<accountAddress> &&destination_, std::string const &initial_account_state_, std::string const &data_)
+  : destination_(std::move(destination_))
+  , initial_account_state_(std::move(initial_account_state_))
+  , data_(std::move(data_))
+{}
+
+const std::int32_t raw_createAndSendMessage::ID;
+
+void raw_createAndSendMessage::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "raw_createAndSendMessage");
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_bytes_field("initial_account_state", initial_account_state_);
+    s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
+raw_createQuery::raw_createQuery()
+  : destination_()
+  , init_code_()
+  , init_data_()
+  , body_()
+{}
+
+raw_createQuery::raw_createQuery(object_ptr<accountAddress> &&destination_, std::string const &init_code_, std::string const &init_data_, std::string const &body_)
+  : destination_(std::move(destination_))
+  , init_code_(std::move(init_code_))
+  , init_data_(std::move(init_data_))
+  , body_(std::move(body_))
+{}
+
+const std::int32_t raw_createQuery::ID;
+
+void raw_createQuery::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "raw_createQuery");
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_bytes_field("init_code", init_code_);
+    s.store_bytes_field("init_data", init_data_);
+    s.store_bytes_field("body", body_);
+    s.store_class_end();
+  }
+}
+
 raw_getAccountAddress::raw_getAccountAddress()
   : initital_account_state_()
 {}
@@ -1424,15 +1760,11 @@ void raw_getTransactions::store(td::TlStorerToString &s, const char *field_name)
 }
 
 raw_sendMessage::raw_sendMessage()
-  : destination_()
-  , initial_account_state_()
-  , data_()
+  : body_()
 {}
 
-raw_sendMessage::raw_sendMessage(object_ptr<accountAddress> &&destination_, std::string const &initial_account_state_, std::string const &data_)
-  : destination_(std::move(destination_))
-  , initial_account_state_(std::move(initial_account_state_))
-  , data_(std::move(data_))
+raw_sendMessage::raw_sendMessage(std::string const &body_)
+  : body_(std::move(body_))
 {}
 
 const std::int32_t raw_sendMessage::ID;
@@ -1440,9 +1772,7 @@ const std::int32_t raw_sendMessage::ID;
 void raw_sendMessage::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "raw_sendMessage");
-    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
-    s.store_bytes_field("initial_account_state", initial_account_state_);
-    s.store_bytes_field("data", data_);
+    s.store_bytes_field("body", body_);
     s.store_class_end();
   }
 }
@@ -1518,6 +1848,18 @@ void setLogVerbosityLevel::store(td::TlStorerToString &s, const char *field_name
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "setLogVerbosityLevel");
     s.store_field("new_verbosity_level", new_verbosity_level_);
+    s.store_class_end();
+  }
+}
+
+sync::sync() {
+}
+
+const std::int32_t sync::ID;
+
+void sync::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "sync");
     s.store_class_end();
   }
 }
@@ -1613,7 +1955,7 @@ testWallet_init::testWallet_init()
   : private_key_()
 {}
 
-testWallet_init::testWallet_init(object_ptr<inputKey> &&private_key_)
+testWallet_init::testWallet_init(object_ptr<InputKey> &&private_key_)
   : private_key_(std::move(private_key_))
 {}
 
@@ -1635,7 +1977,7 @@ testWallet_sendGrams::testWallet_sendGrams()
   , message_()
 {}
 
-testWallet_sendGrams::testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
+testWallet_sendGrams::testWallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , destination_(std::move(destination_))
   , seqno_(seqno_)
@@ -1715,7 +2057,7 @@ wallet_init::wallet_init()
   : private_key_()
 {}
 
-wallet_init::wallet_init(object_ptr<inputKey> &&private_key_)
+wallet_init::wallet_init(object_ptr<InputKey> &&private_key_)
   : private_key_(std::move(private_key_))
 {}
 
@@ -1738,7 +2080,7 @@ wallet_sendGrams::wallet_sendGrams()
   , message_()
 {}
 
-wallet_sendGrams::wallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_)
+wallet_sendGrams::wallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , destination_(std::move(destination_))
   , seqno_(seqno_)

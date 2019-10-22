@@ -1,0 +1,14 @@
+(cell) recv_external(slice in_msg) impure {
+   cell mydict = new_dict();
+   builder r = begin_cell().store_int(10, 16);
+   mydict~udict_set_builder(32, 1, r );
+   int index = -1;
+   do {
+      (var index, var value, var found) = mydict.udict_get_next?(32, index);
+    } until ( ~ found );
+  return mydict;
+}
+
+() recv_internal() impure {
+  ;; Nothing
+}

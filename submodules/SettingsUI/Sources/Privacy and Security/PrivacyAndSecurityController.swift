@@ -14,6 +14,7 @@ import AccountContext
 import TelegramNotices
 import LocalAuth
 import AppBundle
+import PasswordSetupUI
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -640,7 +641,14 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             case .set:
                 break
             case let .notSet(pendingEmail):
-                intro = pendingEmail == nil
+                if pendingEmail == nil {
+                    let controller = TwoFactorAuthSplashScreen(context: context, mode: .intro)
+                    pushControllerImpl?(controller, true)
+                } else {
+                    
+                }
+                //intro = pendingEmail == nil
+                return
             }
         }
         if intro {

@@ -178,6 +178,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return db_candidate::fetch(p);
     case db_block_info::ID:
       return db_block_info::fetch(p);
+    case db_block_packedInfo::ID:
+      return db_block_packedInfo::fetch(p);
     case db_block_archivedInfo::ID:
       return db_block_archivedInfo::fetch(p);
     case db_blockdb_key_lru::ID:
@@ -4330,6 +4332,8 @@ object_ptr<db_block_Info> db_block_Info::fetch(td::TlParser &p) {
   switch (constructor) {
     case db_block_info::ID:
       return db_block_info::fetch(p);
+    case db_block_packedInfo::ID:
+      return db_block_packedInfo::fetch(p);
     case db_block_archivedInfo::ID:
       return db_block_archivedInfo::fetch(p);
     default:
@@ -4423,6 +4427,56 @@ void db_block_info::store(td::TlStorerToString &s, const char *field_name) const
     if (var0 & 8192) { s.store_field("lt", lt_); }
     if (var0 & 16384) { s.store_field("ts", ts_); }
     if (var0 & 131072) { s.store_field("state", state_); }
+    s.store_class_end();
+  }
+}
+
+db_block_packedInfo::db_block_packedInfo()
+  : id_()
+  , unixtime_()
+  , offset_()
+{}
+
+db_block_packedInfo::db_block_packedInfo(object_ptr<tonNode_blockIdExt> &&id_, std::int32_t unixtime_, std::int64_t offset_)
+  : id_(std::move(id_))
+  , unixtime_(unixtime_)
+  , offset_(offset_)
+{}
+
+const std::int32_t db_block_packedInfo::ID;
+
+object_ptr<db_block_Info> db_block_packedInfo::fetch(td::TlParser &p) {
+  return make_object<db_block_packedInfo>(p);
+}
+
+db_block_packedInfo::db_block_packedInfo(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : id_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , unixtime_(TlFetchInt::parse(p))
+  , offset_(TlFetchLong::parse(p))
+#undef FAIL
+{}
+
+void db_block_packedInfo::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreObject::store(id_, s);
+  TlStoreBinary::store(unixtime_, s);
+  TlStoreBinary::store(offset_, s);
+}
+
+void db_block_packedInfo::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreObject::store(id_, s);
+  TlStoreBinary::store(unixtime_, s);
+  TlStoreBinary::store(offset_, s);
+}
+
+void db_block_packedInfo::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "db_block_packedInfo");
+    if (id_ == nullptr) { s.store_field("id", "null"); } else { id_->store(s, "id"); }
+    s.store_field("unixtime", unixtime_);
+    s.store_field("offset", offset_);
     s.store_class_end();
   }
 }

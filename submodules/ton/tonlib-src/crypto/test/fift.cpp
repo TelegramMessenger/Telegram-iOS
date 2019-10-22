@@ -90,3 +90,23 @@ TEST(Fift, test) {
 TEST(Fift, bug_div) {
   run_fift("bug_div.fif");
 }
+
+TEST(Fift, bug_ufits) {
+  run_fift("bug_ufits.fif");
+}
+
+TEST(Fift, test_dict) {
+  run_fift("testdict.fif");
+}
+
+TEST(Fift, test_fixed) {
+  run_fift("fixed.fif");
+}
+
+TEST(Fift, test_sort) {
+  run_fift("sort.fif");
+}
+
+TEST(Fift, test_sort2) {
+  run_fift("sort2.fif");
+}

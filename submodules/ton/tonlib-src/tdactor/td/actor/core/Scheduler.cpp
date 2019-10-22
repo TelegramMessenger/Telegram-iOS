@@ -133,6 +133,7 @@ void Scheduler::ContextImpl::add_to_queue(ActorInfoPtr actor_info_ptr, Scheduler
   if (!scheduler_id.is_valid()) {
     scheduler_id = get_scheduler_id();
   }
+  //LOG(ERROR) << "Add to queue: " << actor_info_ptr->get_name() << " " << scheduler_id.value();
   auto &info = scheduler_group()->schedulers.at(scheduler_id.value());
   if (need_poll || !info.cpu_queue) {
     info.io_queue->writer_put(std::move(actor_info_ptr));

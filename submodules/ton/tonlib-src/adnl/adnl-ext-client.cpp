@@ -62,6 +62,9 @@ void AdnlExtClientImpl::hangup() {
   conn_ = {};
   is_closing_ = true;
   ref_cnt_--;
+  for (auto &it : out_queries_) {
+    td::actor::ActorOwn<>(it.second);  // send hangup
+  }
   try_stop();
 }
 

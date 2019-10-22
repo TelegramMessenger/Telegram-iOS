@@ -59,20 +59,20 @@ operator _/%_ infix 20;
   return (x / y, x % y);
 }
 -}
-{-
-< type A, type B, type C >
+
+forall A, B, C ->
 (B, C, A) rot (A x, B y, C z) {
   return (y, z, x);
 }
--}
+
 int ataninv(int base, int q) { ;; computes base*atan(1/q)
-  base /~= q;
+  base ~/= q;
   q *= - q;
   int sum = 0;
   int n = 1;
   do {
-    sum += base /~ n;
-    base /~= q;
+    sum += base ~/ n;
+    base ~/= q;
     n += 2;
   } until base == 0;
   return sum;
@@ -81,5 +81,9 @@ int ataninv(int base, int q) { ;; computes base*atan(1/q)
 int calc_pi() {
   int base = 64;
   repeat (70) { base *= 10; }
-  return (ataninv(base << 2, 5) - ataninv(base, 239)) >>~ 4;
+  return (ataninv(base << 2, 5) - ataninv(base, 239)) ~>> 4;
+}
+
+int main() {
+  return calc_pi();
 }

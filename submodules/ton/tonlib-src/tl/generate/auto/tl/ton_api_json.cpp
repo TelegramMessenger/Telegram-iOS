@@ -159,6 +159,7 @@ Result<int32> tl_constructor_from_string(ton_api::catchain_block_inner_Data *obj
 Result<int32> tl_constructor_from_string(ton_api::db_block_Info *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"db.block.info", 1254549287},
+    {"db.block.packedInfo", 1186697618},
     {"db.block.archivedInfo", 543128145}
   };
   auto it = m.find(str);
@@ -575,6 +576,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"control.config.local", 1964895469},
     {"db.candidate", 1708747482},
     {"db.block.info", 1254549287},
+    {"db.block.packedInfo", 1186697618},
     {"db.block.archivedInfo", 543128145},
     {"db.blockdb.key.lru", 1354536506},
     {"db.blockdb.key.value", 2136461683},
@@ -2112,6 +2114,27 @@ Status from_json(ton_api::db_block_info &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "state", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.state_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::db_block_packedInfo &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "unixtime", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.unixtime_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "offset", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.offset_, value));
     }
   }
   return Status::OK();
@@ -6445,6 +6468,15 @@ void to_json(JsonValueScope &jv, const ton_api::db_block_info &object) {
   jo << ctie("lt", ToJson(JsonInt64{object.lt_}));
   jo << ctie("ts", ToJson(object.ts_));
   jo << ctie("state", ToJson(object.state_));
+}
+void to_json(JsonValueScope &jv, const ton_api::db_block_packedInfo &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.block.packedInfo");
+  if (object.id_) {
+    jo << ctie("id", ToJson(object.id_));
+  }
+  jo << ctie("unixtime", ToJson(object.unixtime_));
+  jo << ctie("offset", ToJson(JsonInt64{object.offset_}));
 }
 void to_json(JsonValueScope &jv, const ton_api::db_block_archivedInfo &object) {
   auto jo = jv.enter_object();

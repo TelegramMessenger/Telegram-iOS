@@ -614,6 +614,43 @@ void interpret_str_reverse(vm::Stack& stack) {
   stack.push_string(std::move(s));
 }
 
+void interpret_utf8_str_len(vm::Stack& stack) {
+  std::string s = stack.pop_string();
+  long long cnt = 0;
+  for (char c : s) {
+    if ((c & 0xc0) != 0x80) {
+      cnt++;
+    }
+  }
+  stack.push_smallint(cnt);
+}
+
+void interpret_utf8_str_split(vm::Stack& stack) {
+  stack.check_underflow(2);
+  unsigned c = stack.pop_smallint_range(0xffff);
+  std::string s = stack.pop_string();
+  if (c > s.size()) {
+    throw IntError{"not enough utf8 characters for cutting"};
+  }
+  auto it = s.begin();
+  for (; it < s.end(); ++it) {
+    if ((*it & 0xc0) != 0x80) {
+      if (!c) {
+        stack.push_string(std::string{s.begin(), it});
+        stack.push_string(std::string{it, s.end()});
+        return;
+      }
+      --c;
+    }
+  }
+  if (!c) {
+    stack.push_string(std::move(s));
+    stack.push_string(std::string{});
+  } else {
+    throw IntError{"not enough utf8 characters for cutting"};
+  }
+}
+
 void interpret_str_remove_trailing_int(vm::Stack& stack, int arg) {
   char x = (char)(arg ? arg : stack.pop_long_range(127));
   std::string s = stack.pop_string();
@@ -1797,6 +1834,16 @@ void interpret_char(IntCtx& ctx) {
   push_argcount(ctx, 1);
 }
 
+void interpret_char_internal(vm::Stack& stack) {
+  auto s = stack.pop_string();
+  int len = (s.size() < 10 ? (int)s.size() : 10);
+  int code = str_utf8_code(s.c_str(), len);
+  if (code < 0 || s.size() != (unsigned)len) {
+    throw IntError{"exactly one character expected"};
+  }
+  stack.push_smallint(code);
+}
+
 int parse_number(std::string s, td::RefInt256& num, td::RefInt256& denom, bool allow_frac = true,
                  bool throw_error = false) {
   if (allow_frac) {
@@ -2149,7 +2196,23 @@ void interpret_run_vm(IntCtx& ctx, bool with_gas) {
   OstreamLogger ostream_logger(ctx.error_stream);
   auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
   vm::GasLimits gas{gas_limit};
-  int res = vm::run_vm_code(cs, ctx.stack, 3, &data, log, nullptr, &gas);
+  int res = vm::run_vm_code(cs, ctx.stack, 1, &data, log, nullptr, &gas, get_vm_libraries());
+  ctx.stack.push_smallint(res);
+  ctx.stack.push_cell(std::move(data));
+  if (with_gas) {
+    ctx.stack.push_smallint(gas.gas_consumed());
+  }
+}
+
+void interpret_run_vm_c7(IntCtx& ctx, bool with_gas) {
+  long long gas_limit = with_gas ? ctx.stack.pop_long_range(vm::GasLimits::infty) : vm::GasLimits::infty;
+  auto c7 = ctx.stack.pop_tuple();
+  auto data = ctx.stack.pop_cell();
+  auto cs = ctx.stack.pop_cellslice();
+  OstreamLogger ostream_logger(ctx.error_stream);
+  auto log = create_vm_log(ctx.error_stream ? &ostream_logger : nullptr);
+  vm::GasLimits gas{gas_limit};
+  int res = vm::run_vm_code(cs, ctx.stack, 1, &data, log, nullptr, &gas, get_vm_libraries(), std::move(c7));
   ctx.stack.push_smallint(res);
   ctx.stack.push_cell(std::move(data));
   if (with_gas) {
@@ -2278,6 +2341,21 @@ void interpret_get_cmdline_arg(IntCtx& ctx) {
   }
 }
 
+void interpret_getenv(vm::Stack& stack) {
+  auto str = stack.pop_string();
+  auto value = str.size() < 1024 ? getenv(str.c_str()) : nullptr;
+  stack.push_string(value ? std::string{value} : "");
+}
+
+void interpret_getenv_exists(vm::Stack& stack) {
+  auto str = stack.pop_string();
+  auto value = str.size() < 1024 ? getenv(str.c_str()) : nullptr;
+  if (value) {
+    stack.push_string(std::string{value});
+  }
+  stack.push_bool((bool)value);
+}
+
 // x1 .. xn n 'w -->
 void interpret_execute_internal(IntCtx& ctx) {
   Ref<WordDef> word_def = pop_exec_token(ctx);
@@ -2315,7 +2393,7 @@ void compile_one_literal(WordList& wlist, vm::StackEntry val) {
     auto x = std::move(val).as_int();
     if (!x->signed_fits_bits(257)) {
       throw IntError{"invalid numeric literal"};
-    } else if (x->signed_fits_bits(64)) {
+    } else if (x->signed_fits_bits(td::BigIntInfo::word_shift)) {
       wlist.push_back(Ref<StackWord>{true, std::bind(interpret_const, _1, x->to_long())});
     } else {
       wlist.push_back(Ref<StackWord>{true, std::bind(interpret_big_const, _1, std::move(x))});
@@ -2465,6 +2543,7 @@ void init_words_common(Dictionary& d) {
   // char/string manipulation
   d.def_active_word("\"", interpret_quote_str);
   d.def_active_word("char ", interpret_char);
+  d.def_stack_word("(char) ", interpret_char_internal);
   d.def_ctx_word("emit ", interpret_emit);
   d.def_ctx_word("space ", std::bind(interpret_emit_const, _1, ' '));
   d.def_ctx_word("cr ", std::bind(interpret_emit_const, _1, '\n'));
@@ -2484,6 +2563,8 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("-trailing0 ", std::bind(interpret_str_remove_trailing_int, _1, '0'));
   d.def_stack_word("$len ", interpret_str_len);
   d.def_stack_word("Blen ", interpret_bytes_len);
+  d.def_stack_word("$Len ", interpret_utf8_str_len);
+  d.def_stack_word("$Split ", interpret_utf8_str_split);
   d.def_ctx_word("Bx. ", std::bind(interpret_bytes_hex_print_raw, _1, true));
   d.def_stack_word("B>X ", std::bind(interpret_bytes_to_hex, _1, true));
   d.def_stack_word("B>x ", std::bind(interpret_bytes_to_hex, _1, false));
@@ -2572,6 +2653,8 @@ void init_words_common(Dictionary& d) {
   d.def_ctx_word("file-exists? ", interpret_file_exists);
   // custom & crypto
   d.def_ctx_word("now ", interpret_now);
+  d.def_stack_word("getenv ", interpret_getenv);
+  d.def_stack_word("getenv? ", interpret_getenv_exists);
   d.def_stack_word("newkeypair ", interpret_new_keypair);
   d.def_stack_word("priv>pub ", interpret_priv_key_to_pub);
   d.def_stack_word("ed25519_sign ", interpret_ed25519_sign);
@@ -2696,6 +2779,8 @@ void init_words_vm(Dictionary& d) {
   d.def_ctx_word("gasrunvmdict ", std::bind(interpret_run_vm_dict, _1, true));
   d.def_ctx_word("runvm ", std::bind(interpret_run_vm, _1, false));
   d.def_ctx_word("gasrunvm ", std::bind(interpret_run_vm, _1, true));
+  d.def_ctx_word("runvmctx ", std::bind(interpret_run_vm_c7, _1, false));
+  d.def_ctx_word("gasrunvmctx ", std::bind(interpret_run_vm_c7, _1, true));
   d.def_ctx_word("dbrunvm ", interpret_db_run_vm);
   d.def_ctx_word("dbrunvm-parallel ", interpret_db_run_vm_parallel);
 }

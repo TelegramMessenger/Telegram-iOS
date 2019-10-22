@@ -86,6 +86,39 @@
   .end_cell(), 0);
 }
 
+() after_code_upgrade(slice param, cell old_code) impure method_id(1666) {
+}
+
+_ perform_action(cfg_dict, public_key, action, cs) {
+  if (action == 0x43665021) {
+    ;; change one configuration parameter
+    var param_index = cs~load_uint(32);
+    var param_value = cs~load_ref();
+    cs.end_parse();
+    cfg_dict~idict_set_ref(32, param_index, param_value);
+  } elseif (action == 0x4e436f64) {
+    ;; change configuration smart contract code
+    var new_code = cs~load_ref();
+    set_code(new_code);
+    ifnot(cs.slice_empty?()) {
+      var old_code = get_c3();
+      set_c3(new_code);
+      after_code_upgrade(cs, old_code);
+      set_c3(old_code);
+    }
+  } elseif (action == 0x50624b21) {
+    ;; change configuration master public key
+    public_key = cs~load_uint(256);
+    cs.end_parse();
+  } elseif (action == 0x4e43ef05) {
+    ;; change election smart contract code
+    change_elector_code(cs);
+  } else {
+    throw_if(32, action);
+  }
+  return (cfg_dict, public_key);
+}
+
 () recv_external(slice in_msg) impure {
   var signature = in_msg~load_bits(512);
   var cs = in_msg;
@@ -101,27 +134,7 @@
   throw_unless(33, msg_seqno == stored_seqno);
   throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
   accept_message();
-  if (action == 0x43665021) {
-    ;; change one configuration parameter
-    var param_index = cs~load_uint(32);
-    var param_value = cs~load_ref();
-    cs.end_parse();
-    cfg_dict~idict_set_ref(32, param_index, param_value);
-  } elseif (action == 0x4e436f64) {
-    ;; change configuration smart contract code
-    var new_code = cs~load_ref();
-    cs.end_parse();
-    set_code(new_code);
-  } elseif (action == 0x50624b21) {
-    ;; change configuration master public key
-    public_key = cs~load_uint(256);
-    cs.end_parse();
-  } elseif (action == 0x4e43ef05) {
-    ;; change election smart contract code
-    change_elector_code(cs);
-  } else {
-    throw_if(32, action);
-  }
+  (cfg_dict, public_key) = perform_action(cfg_dict, public_key, action, cs);
   set_data(begin_cell().store_ref(cfg_dict).store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
 }
 

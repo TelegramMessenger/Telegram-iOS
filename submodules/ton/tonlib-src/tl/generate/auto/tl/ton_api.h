@@ -2382,6 +2382,32 @@ class db_block_info final : public db_block_Info {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class db_block_packedInfo final : public db_block_Info {
+ public:
+  object_ptr<tonNode_blockIdExt> id_;
+  std::int32_t unixtime_;
+  std::int64_t offset_;
+
+  db_block_packedInfo();
+
+  db_block_packedInfo(object_ptr<tonNode_blockIdExt> &&id_, std::int32_t unixtime_, std::int64_t offset_);
+
+  static const std::int32_t ID = 1186697618;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<db_block_Info> fetch(td::TlParser &p);
+
+  explicit db_block_packedInfo(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class db_block_archivedInfo final : public db_block_Info {
  public:
   object_ptr<tonNode_blockIdExt> id_;

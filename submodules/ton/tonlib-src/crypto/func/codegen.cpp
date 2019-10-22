@@ -308,7 +308,7 @@ bool Op::generate_code_step(Stack& stack) {
         func->compile(stack.o, res, args);  // compile res := f (args)
       } else {
         std::string name = sym::symbols.get_name(fun_ref->sym_idx);
-        stack.o << AsmOp::Custom(name + " CALLDICT", (int)right.size());
+        stack.o << AsmOp::Custom(name + " CALLDICT", (int)right.size(), (int)left.size());
       }
       stack.push_new_var(left[0]);
       return true;
@@ -395,7 +395,7 @@ bool Op::generate_code_step(Stack& stack) {
         assert(stack.s[k + i].first == right1[i]);
       }
       if (cl == _CallInd) {
-        stack.o << exec_arg_op("CALLARGS", (int)right.size() - 1, -1, (int)right.size() - 1);
+        stack.o << exec_arg_op("CALLARGS", (int)right.size() - 1, (int)right.size(), (int)left.size());
       } else {
         auto func = dynamic_cast<const SymValAsmFunc*>(fun_ref->value);
         if (func) {
@@ -406,8 +406,11 @@ bool Op::generate_code_step(Stack& stack) {
           }
           func->compile(stack.o, res, args);  // compile res := f (args)
         } else {
+          auto fv = dynamic_cast<const SymValCodeFunc*>(fun_ref->value);
           std::string name = sym::symbols.get_name(fun_ref->sym_idx);
-          stack.o << AsmOp::Custom(name + " CALLDICT", (int)right.size());
+          bool is_inline = (fv && (fv->flags & 3));
+          stack.o << AsmOp::Custom(name + (is_inline ? " INLINECALLDICT" : " CALLDICT"), (int)right.size(),
+                                   (int)left.size());
         }
       }
       stack.s.resize(k);
@@ -420,6 +423,11 @@ bool Op::generate_code_step(Stack& stack) {
     case _If: {
       if (block0->is_empty() && block1->is_empty()) {
         return true;
+      }
+      if (!next->noreturn() && (block0->noreturn() != block1->noreturn())) {
+        // simple fix of unbalanced returns in if/else branches
+        // (to be replaced with a finer condition working in loop bodies)
+        throw src::ParseError{where, "`if` and `else` branches should both return or both not return"};
       }
       var_idx_t x = left[0];
       stack.rearrange_top(x, var_info[x] && var_info[x]->is_last());
@@ -548,7 +556,7 @@ bool Op::generate_code_step(Stack& stack) {
       stack.opt_show();
       stack.s.pop_back();
       stack.modified();
-      if (!next->is_empty()) {
+      if (true || !next->is_empty()) {
         stack.o << "REPEAT:<{";
         stack.o.indent();
         stack.forget_const();
@@ -596,7 +604,7 @@ bool Op::generate_code_step(Stack& stack) {
     case _Until: {
       // stack.drop_vars_except(block0->var_info);
       // stack.opt_show();
-      if (!next->is_empty()) {
+      if (true || !next->is_empty()) {
         stack.o << "UNTIL:<{";
         stack.o.indent();
         stack.forget_const();
@@ -627,7 +635,7 @@ bool Op::generate_code_step(Stack& stack) {
       stack.drop_vars_except(block0->var_info);
       stack.opt_show();
       StackLayout layout1 = stack.vars();
-      bool next_empty = next->is_empty();
+      bool next_empty = false && next->is_empty();
       stack.o << "WHILE:<{";
       stack.o.indent();
       stack.forget_const();

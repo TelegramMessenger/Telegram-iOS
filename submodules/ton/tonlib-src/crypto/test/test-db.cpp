@@ -51,34 +51,6 @@
 
 #include <openssl/sha.h>
 
-struct Step {
-  std::function<void()> func;
-  td::uint32 weight;
-};
-class RandomSteps {
- public:
-  RandomSteps(std::vector<Step> steps) : steps_(std::move(steps)) {
-    for (auto &step : steps_) {
-      steps_sum_ += step.weight;
-    }
-  }
-  template <class Random>
-  void step(Random &rnd) {
-    auto w = rnd() % steps_sum_;
-    for (auto &step : steps_) {
-      if (w < step.weight) {
-        step.func();
-        break;
-      }
-      w -= step.weight;
-    }
-  }
-
- private:
-  std::vector<Step> steps_;
-  td::int32 steps_sum_ = 0;
-};
-
 namespace vm {
 
 std::vector<int> do_get_serialization_modes() {
@@ -879,7 +851,7 @@ TEST(TonDb, DynamicBoc2) {
     VLOG(boc) << "  OK";
   };
 
-  RandomSteps steps({{new_root, 10}, {delete_root, 9}, {commit, 2}, {reset, 1}});
+  td::RandomSteps steps({{new_root, 10}, {delete_root, 9}, {commit, 2}, {reset, 1}});
   while (first_root_id != total_roots) {
     VLOG(boc) << first_root_id << " " << last_root_id << " " << kv->count("").ok();
     steps.step(rnd);
@@ -1732,7 +1704,7 @@ TEST(TonDb, CompactArray) {
     fast_array = vm::FastCompactArray(size);
   };
 
-  RandomSteps steps({{reset_array, 1}, {set_value, 1000}, {validate, 10}, {validate_full, 2}, {flush_to_db, 1}});
+  td::RandomSteps steps({{reset_array, 1}, {set_value, 1000}, {validate, 10}, {validate_full, 2}, {flush_to_db, 1}});
   for (size_t t = 0; t < 100000; t++) {
     if (t % 10000 == 0) {
       LOG(ERROR) << t;

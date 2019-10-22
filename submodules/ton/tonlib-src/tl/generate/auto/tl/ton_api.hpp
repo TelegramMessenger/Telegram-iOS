@@ -245,6 +245,9 @@ bool downcast_call(Object &obj, const T &func) {
     case db_block_info::ID:
       func(static_cast<db_block_info &>(obj));
       return true;
+    case db_block_packedInfo::ID:
+      func(static_cast<db_block_packedInfo &>(obj));
+      return true;
     case db_block_archivedInfo::ID:
       func(static_cast<db_block_archivedInfo &>(obj));
       return true;
@@ -1339,6 +1342,9 @@ bool downcast_call(db_block_Info &obj, const T &func) {
   switch (obj.get_id()) {
     case db_block_info::ID:
       func(static_cast<db_block_info &>(obj));
+      return true;
+    case db_block_packedInfo::ID:
+      func(static_cast<db_block_packedInfo &>(obj));
       return true;
     case db_block_archivedInfo::ID:
       func(static_cast<db_block_archivedInfo &>(obj));

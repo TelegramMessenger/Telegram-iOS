@@ -339,9 +339,9 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         inputBackgroundColor: UIColor(rgb: 0xe9e9e9),
         inputHollowBackgroundColor: .white,
         inputBorderColor: UIColor(rgb: 0xe4e4e6),
-        inputPlaceholderColor: UIColor(rgb: 0x818086),
+        inputPlaceholderColor: UIColor(rgb: 0x8E8D92),
         inputTextColor: .black,
-        inputClearButtonColor: UIColor(rgb: 0x7b7b81),
+        inputClearButtonColor: UIColor(rgb: 0xBCBCC0),
         checkContentColor: .white
     )
     

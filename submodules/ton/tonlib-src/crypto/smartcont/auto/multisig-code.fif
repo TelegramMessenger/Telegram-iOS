@@ -1,0 +1,502 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/multisig-code.fc` 
+PROGRAM{
+  DECLPROC unpack_state
+  DECLPROC pack_state
+  DECLPROC check_signatures
+  DECLPROC recv_internal
+  DECLPROC unpack_query_data
+  DECLPROC try_init
+  DECLPROC update_pending_queries
+  DECLPROC recv_external
+  104746 DECLMETHOD get_query_state
+  117746 DECLMETHOD processed?
+  81625 DECLMETHOD create_init_state
+  DECLPROC merge_list
+  120004 DECLMETHOD get_public_keys
+  87157 DECLMETHOD check_query_signatures
+  109260 DECLMETHOD messages_by_mask
+  85042 DECLMETHOD get_messages_unsigned_by_id
+  120055 DECLMETHOD get_messages_unsigned
+  114740 DECLMETHOD get_n_k
+  83381 DECLMETHOD merge_inner_queries
+  unpack_state PROCREF:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  ds
+    8 LDU	//  _4 ds
+    8 LDU	//  _4 _7 ds
+    64 LDU	//  _4 _7 _10 ds
+    LDDICT	//  _4 _7 _10 _13 ds
+    LDDICT	//  res res res res res ds
+    ENDS
+  }>
+  pack_state PROCREF:<{
+    //  pending_queries public_keys last_cleaned k n
+    NEWC	//  pending_queries public_keys last_cleaned k n _5
+    8 STU	//  pending_queries public_keys last_cleaned k _7
+    8 STU	//  pending_queries public_keys last_cleaned _9
+    64 STU	//  pending_queries public_keys _11
+    STDICT	//  pending_queries _12
+    STDICT	//  _13
+    ENDC	//  _14
+  }>
+  check_signatures PROCREF:<{
+    //  public_keys signatures hash cnt_bits
+    0 PUSHINT	//  public_keys signatures hash cnt_bits cnt=0
+    UNTIL:<{
+      s0 s3 XCHG	//  public_keys cnt hash cnt_bits signatures
+      CTOS	//  public_keys cnt hash cnt_bits cs
+      9 PUSHPOW2	//  public_keys cnt hash cnt_bits cs _10=512
+      LDSLICEX	//  public_keys cnt hash cnt_bits signature cs
+      8 LDU	//  public_keys cnt hash cnt_bits signature i cs
+      LDDICT	//  public_keys cnt hash cnt_bits signature i _43 _42
+      DROP	//  public_keys cnt hash cnt_bits signature i signatures
+      s1 s6 PUSH2
+      8 PUSHINT	//  public_keys cnt hash cnt_bits signature i signatures i public_keys _20=8
+      DICTUGET
+      NULLSWAPIFNOT	//  public_keys cnt hash cnt_bits signature i signatures public_key found?
+      37 THROWIFNOT
+      256 PLDU	//  public_keys cnt hash cnt_bits signature i signatures _26
+      s5 s3 s3 PUXC2	//  public_keys cnt hash cnt_bits signatures i hash signature _26
+      CHKSIGNU	//  public_keys cnt hash cnt_bits signatures i _27
+      38 THROWIFNOT
+      POW2	//  public_keys cnt hash cnt_bits signatures mask
+      s2 s(-1) PUXC	//  public_keys cnt hash old_cnt_bits signatures cnt_bits mask
+      OR	//  public_keys cnt hash old_cnt_bits signatures cnt_bits
+      s0 s2 PUXC	//  public_keys cnt hash cnt_bits signatures cnt_bits old_cnt_bits
+      NEQ	//  public_keys cnt hash cnt_bits signatures should_check
+      s1 s4 XCHG	//  public_keys signatures hash cnt_bits cnt should_check
+      SUB	//  public_keys signatures hash cnt_bits cnt
+      s3 PUSH	//  public_keys signatures hash cnt_bits cnt signatures
+      ISNULL	//  public_keys signatures hash cnt_bits cnt _37
+    }>	//  public_keys signatures hash cnt_bits cnt
+    s2 POP
+    s2 POP
+    s2 POP	//  cnt cnt_bits
+  }>
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  unpack_query_data PROCREF:<{
+    //  in_msg n query found?
+    IFJMP:<{	//  in_msg n query
+      1 LDI	//  in_msg n _5 query
+      SWAP	//  in_msg n query _5
+      35 THROWIFNOT
+      8 LDU	//  in_msg n _12 query
+      ROT	//  in_msg _12 query n
+      LDUX	//  in_msg cnt cnt_bits msg
+      DUP	//  in_msg cnt cnt_bits msg msg
+      HASHSU	//  in_msg cnt cnt_bits msg _18
+      s0 s4 XCHG	//  _18 cnt cnt_bits msg in_msg
+      HASHSU	//  _18 cnt cnt_bits msg _19
+      s1 s4 XCHG	//  msg cnt cnt_bits _18 _19
+      EQUAL	//  msg cnt cnt_bits _20
+      36 THROWIFNOT
+      ROT	//  cnt cnt_bits msg
+    }>	//  in_msg n query
+    2DROP	//  in_msg
+    0 PUSHINT	//  in_msg _22=0
+    s0 s1 PUXC	//  _22=0 _23=0 in_msg
+  }>
+  try_init PROCREF:<{
+    // 
+    unpack_state INLINECALLDICT	//  n k last_cleaned public_keys pending_queries
+    s0 s2 XCHG	//  n k pending_queries public_keys last_cleaned
+    37 THROWIF
+    ACCEPT
+    2SWAP
+    1 PUSHINT
+    s0 s2 XCHG	//  pending_queries public_keys _9=1 k n
+    pack_state INLINECALLDICT	//  _10
+    c4 POP
+  }>
+  update_pending_queries PROCREF:<{
+    //  pending_queries msg query_id cnt cnt_bits n k
+    s3 s(-1) PUXC	//  pending_queries msg query_id cnt cnt_bits n cnt k
+    GEQ	//  pending_queries msg query_id cnt cnt_bits n _7
+    IF:<{	//  pending_queries msg query_id cnt cnt_bits n
+      3 BLKDROP	//  pending_queries msg query_id
+      WHILE:<{
+        OVER	//  pending_queries msg query_id msg
+        SREFS	//  pending_queries msg query_id _8
+      }>DO<{	//  pending_queries msg query_id
+        SWAP	//  pending_queries query_id msg
+        8 LDU	//  pending_queries query_id mode msg
+        LDREF	//  pending_queries query_id mode _13 msg
+        s0 s2 XCHG	//  pending_queries query_id msg _13 mode
+        SENDRAWMSG
+        SWAP	//  pending_queries msg query_id
+      }>	//  pending_queries msg query_id
+      NIP	//  pending_queries query_id
+      0 PUSHINT	//  pending_queries query_id _17=0
+      NEWC	//  pending_queries query_id _17=0 _18
+      1 STI	//  pending_queries query_id _20
+      s0 s2 XCHG
+      64 PUSHINT	//  _20 query_id pending_queries _21=64
+      DICTUSETB	//  pending_queries
+    }>ELSE<{	//  pending_queries msg query_id cnt cnt_bits n
+      1 PUSHINT	//  pending_queries msg query_id cnt cnt_bits n _24=1
+      NEWC	//  pending_queries msg query_id cnt cnt_bits n _24=1 _25
+      1 STU	//  pending_queries msg query_id cnt cnt_bits n _27
+      s1 s3 XCHG	//  pending_queries msg query_id n cnt_bits cnt _27
+      8 STU	//  pending_queries msg query_id n cnt_bits _29
+      ROT	//  pending_queries msg query_id cnt_bits _29 n
+      STUX	//  pending_queries msg query_id _30
+      ROT	//  pending_queries query_id _30 msg
+      STSLICER	//  pending_queries query_id _31
+      s0 s2 XCHG
+      64 PUSHINT	//  _31 query_id pending_queries _32=64
+      DICTUSETB	//  pending_queries
+    }>
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    DUP	//  in_msg in_msg
+    SEMPTY	//  in_msg _1
+    IFJMP:<{	//  in_msg
+      DROP	// 
+      try_init INLINECALLDICT
+    }>	//  in_msg
+    9 PUSHPOW2	//  in_msg _5=512
+    LDSLICEX	//  root_signature in_msg
+    DUP	//  root_signature in_msg in_msg
+    HASHSU	//  root_signature in_msg root_hash
+    SWAP	//  root_signature root_hash in_msg
+    8 LDU	//  root_signature root_hash root_i in_msg
+    unpack_state INLINECALLDICT	//  root_signature root_hash root_i in_msg n k last_cleaned public_keys pending_queries
+    s2 PUSH	//  root_signature root_hash root_i in_msg n k last_cleaned public_keys pending_queries last_cleaned
+    0 EQINT	//  root_signature root_hash root_i in_msg n k last_cleaned public_keys pending_queries _20
+    s1 s3 XCHG	//  root_signature root_hash root_i in_msg n k pending_queries public_keys last_cleaned _20
+    SUB	//  root_signature root_hash root_i in_msg n k pending_queries public_keys last_cleaned
+    s6 s1 PUSH2
+    8 PUSHINT	//  root_signature root_hash root_i in_msg n k pending_queries public_keys last_cleaned root_i public_keys _24=8
+    DICTUGET
+    NULLSWAPIFNOT	//  root_signature root_hash root_i in_msg n k pending_queries public_keys last_cleaned public_key found?
+    31 THROWIFNOT
+    256 PLDU	//  root_signature root_hash root_i in_msg n k pending_queries public_keys last_cleaned _30
+    s8 s9 s0 XCHG3	//  last_cleaned public_keys root_i in_msg n k pending_queries root_hash root_signature _30
+    CHKSIGNU	//  last_cleaned public_keys root_i in_msg n k pending_queries _31
+    32 THROWIFNOT
+    s0 s3 XCHG	//  last_cleaned public_keys root_i pending_queries n k in_msg
+    LDDICT	//  last_cleaned public_keys root_i pending_queries n k signatures in_msg
+    DUP	//  last_cleaned public_keys root_i pending_queries n k signatures in_msg in_msg
+    HASHSU	//  last_cleaned public_keys root_i pending_queries n k signatures in_msg hash
+    SWAP	//  last_cleaned public_keys root_i pending_queries n k signatures hash in_msg
+    64 LDU	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg
+    NOW	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg _43
+    32 LSHIFT#	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg bound
+    s2 s0 PUSH2	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg bound query_id bound
+    LESS	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg bound _47
+    33 THROWIF
+    s2 s7 PUSH2
+    64 PUSHINT	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg bound query_id pending_queries _51=64
+    DICTUGET
+    NULLSWAPIFNOT	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id in_msg bound query found?
+    s2 s3 XCHG
+    s8 s(-1) s(-1) PUXC2	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id bound in_msg n query found?
+    unpack_query_data INLINECALLDICT	//  last_cleaned public_keys root_i pending_queries n k signatures hash query_id bound cnt cnt_bits msg
+    s0 s10 XCHG	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt cnt_bits root_i
+    POW2	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt cnt_bits mask
+    2DUP	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt cnt_bits mask cnt_bits mask
+    AND	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt cnt_bits mask _61
+    34 THROWIF
+    OR	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt cnt_bits
+    SWAP	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt_bits cnt
+    INC	//  last_cleaned public_keys msg pending_queries n k signatures hash query_id bound cnt_bits cnt
+    ACCEPT
+    s8 s9 s3 XCPU2
+    s10 s3 s9 PUSH3
+    s11 PUSH	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries msg query_id cnt cnt_bits n k
+    update_pending_queries INLINECALLDICT	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries
+    s0 s10 s11 PUSH3
+    s9 s10 PUSH2	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries pending_queries public_keys last_cleaned k n
+    pack_state INLINECALLDICT	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries _68
+    c4 POP
+    COMMIT
+    0 PUSHINT	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0
+    s6 PUSH	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0 signatures
+    ISNULL	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0 _73
+    s10 s8 PUSH2	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0 _73 cnt k
+    GEQ	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0 _73 _74
+    OR	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0 _75
+    IFNOT:<{	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries need_save=0
+      DROP	//  last_cleaned public_keys msg cnt n k signatures hash query_id bound cnt_bits pending_queries
+      s10 PUSH
+      s6 s5 s3 XCHG3
+      s0 s6 XCHG	//  last_cleaned public_keys msg cnt n k bound pending_queries query_id public_keys signatures hash cnt_bits
+      check_signatures INLINECALLDICT	//  last_cleaned public_keys msg cnt n k bound pending_queries query_id new_cnt cnt_bits
+      s7 s7 XCHG2	//  last_cleaned public_keys msg cnt_bits n k bound pending_queries query_id cnt new_cnt
+      ADD	//  last_cleaned public_keys msg cnt_bits n k bound pending_queries query_id cnt
+      s2 s4 XCHG
+      s3 s7 XCHG
+      s1 s0 s6 XCHG3
+      s5 s6 PUSH2	//  last_cleaned public_keys bound k n pending_queries msg query_id cnt cnt_bits n k
+      update_pending_queries INLINECALLDICT	//  last_cleaned public_keys bound k n pending_queries
+      -1 PUSHINT	//  last_cleaned public_keys bound k n pending_queries need_save=-1
+    }>ELSE<{
+      s3 s10 XCHG
+      s7 s9 XCHG
+      s7 s6 XCHG2
+      6 BLKDROP	//  last_cleaned public_keys bound k n pending_queries need_save
+    }>
+    s0 s4 XCHG
+    38 PUSHPOW2	//  last_cleaned public_keys need_save k n pending_queries bound _83
+    SUB	//  last_cleaned public_keys need_save k n pending_queries bound
+    UNTIL:<{
+      OVER
+      64 PUSHINT	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries _90=64
+      DICTUREMMIN
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  last_cleaned public_keys need_save k n pending_queries bound _121 _123 _122 _124
+      s2 POP	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' f i
+      s1 s0 XCPU	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f f
+      IF:<{	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f
+        DROP	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i
+        s0 s2 PUSH2	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i i bound
+        LESS	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f
+      }>	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f
+      DUP	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f f
+      IF:<{	//  last_cleaned public_keys need_save k n pending_queries bound pending_queries' i f
+        s4 POP
+        s6 POP
+        s7 POP	//  pending_queries public_keys last_cleaned k n f bound
+        -1 PUSHINT	//  pending_queries public_keys last_cleaned k n f bound need_save=-1
+      }>ELSE<{
+        s4 s9 XCHG
+        s4 s7 XCHG
+        s4 s1 s4 XCHG3
+        2DROP	//  pending_queries public_keys last_cleaned k n f bound need_save
+      }>
+      s0 s2 XCHG	//  pending_queries public_keys last_cleaned k n need_save bound f
+      NOT	//  pending_queries public_keys last_cleaned k n need_save bound _96
+      s5 s7 XCHG
+      s2 s5 XCHG	//  last_cleaned public_keys need_save k n pending_queries bound _96
+    }>	//  last_cleaned public_keys need_save k n pending_queries bound
+    DROP	//  last_cleaned public_keys need_save k n pending_queries
+    s0 s3 XCHG	//  last_cleaned public_keys pending_queries k n need_save
+    IF:<{	//  last_cleaned public_keys pending_queries k n
+      s2 s4 XCHG	//  pending_queries public_keys last_cleaned k n
+      pack_state INLINECALLDICT	//  _97
+      c4 POP
+    }>ELSE<{
+      5 BLKDROP	// 
+    }>
+  }>
+  get_query_state PROC:<{
+    //  query_id
+    unpack_state INLINECALLDICT	//  query_id _25 _26 _27 _28 _29
+    NIP
+    s2 POP	//  query_id n pending_queries last_cleaned
+    64 PUSHINT	//  query_id n pending_queries last_cleaned _9=64
+    s4 s2 s2 PUXC2	//  query_id n last_cleaned query_id pending_queries _9=64
+    DICTUGET
+    NULLSWAPIFNOT	//  query_id n last_cleaned cs found
+    IFJMP:<{	//  query_id n last_cleaned cs
+      NIP
+      s2 POP	//  cs n
+      SWAP	//  n cs
+      1 LDI	//  n _11 cs
+      SWAP	//  n cs _11
+      IFJMP:<{	//  n cs
+        8 LDU	//  n _35 _34
+        NIP	//  n cs
+        0 PUSHINT	//  n cs _17=0
+        s0 s2 XCHG	//  _17=0 cs n
+        LDUX	//  _17=0 _37 _36
+        DROP	//  _17=0 _18
+      }>	//  n cs
+      2DROP	// 
+      -1 PUSHINT	//  _20=-1
+      0 PUSHINT	//  _20=-1 _21=0
+    }>	//  query_id n last_cleaned cs
+    DROP
+    NIP	//  query_id last_cleaned
+    LEQ	//  _22
+    NEGATE	//  _23
+    0 PUSHINT	//  _23 _24=0
+  }>
+  processed? PROC:<{
+    //  query_id
+    get_query_state CALLDICT	//  _4 _5
+    DROP	//  x
+  }>
+  create_init_state PROC:<{
+    //  n k public_keys
+    NEWDICT	//  n k public_keys _3
+    s2 s3 XCHG2
+    0 PUSHINT
+    -ROT	//  _3 public_keys _4=0 k n
+    pack_state INLINECALLDICT	//  _5
+  }>
+  merge_list PROC:<{
+    //  a b
+    OVER	//  a b a
+    ISNULL	//  a b _2
+    IFJMP:<{	//  a b
+      NIP	//  b
+    }>	//  a b
+    DUP	//  a b b
+    ISNULL	//  a b _3
+    IFJMP:<{	//  a b
+      DROP	//  a
+    }>	//  a b
+    SWAP	//  b a
+    CTOS	//  b as
+    DUP	//  b as as
+    SREFS	//  b as _6
+    0 NEQINT	//  b as _8
+    IFJMP:<{	//  b as
+      LDREF	//  b _10 as
+      s0 s2 XCHG	//  as _10 b
+      merge_list CALLDICT	//  as tail
+      NEWC	//  as tail _13
+      ROT	//  tail _13 as
+      STSLICER	//  tail _14
+      STREF	//  _15
+      ENDC	//  _16
+    }>	//  b as
+    1 PUSHINT	//  b as _18=1
+    SDSKIPLAST	//  b as
+    NEWC	//  b as _20
+    SWAP	//  b _20 as
+    STSLICER	//  b _21
+    STDICT	//  _22
+    ENDC	//  _23
+  }>
+  get_public_keys PROC:<{
+    // 
+    unpack_state INLINECALLDICT	//  _6 _7 _8 _9 _10
+    s1 s4 XCHG
+    4 BLKDROP	//  public_keys
+  }>
+  check_query_signatures PROC:<{
+    //  query
+    CTOS	//  cs
+    9 PUSHPOW2	//  cs _5=512
+    LDSLICEX	//  root_signature cs
+    DUP	//  root_signature cs cs
+    HASHSU	//  root_signature cs root_hash
+    SWAP	//  root_signature root_hash cs
+    8 LDU	//  root_signature root_hash root_i cs
+    get_public_keys CALLDICT	//  root_signature root_hash root_i cs public_keys
+    s2 s0 PUSH2
+    8 PUSHINT	//  root_signature root_hash root_i cs public_keys root_i public_keys _17=8
+    DICTUGET
+    NULLSWAPIFNOT	//  root_signature root_hash root_i cs public_keys public_key found?
+    31 THROWIFNOT
+    256 PLDU	//  root_signature root_hash root_i cs public_keys _23
+    5 1 REVERSE	//  public_keys cs root_i root_hash root_signature _23
+    CHKSIGNU	//  public_keys cs root_i _24
+    32 THROWIFNOT
+    POW2	//  public_keys cs mask
+    SWAP	//  public_keys mask cs
+    LDDICT	//  public_keys mask signatures cs
+    OVER	//  public_keys mask signatures cs signatures
+    ISNULL	//  public_keys mask signatures cs _32
+    IFJMP:<{	//  public_keys mask signatures cs
+      s2 s3 XCHG
+      3 BLKDROP	//  mask
+      1 PUSHINT	//  mask _33=1
+      SWAP	//  _33=1 mask
+    }>	//  public_keys mask signatures cs
+    HASHSU	//  public_keys mask signatures _35
+    ROT	//  public_keys signatures _35 mask
+    check_signatures INLINECALLDICT	//  cnt mask
+    SWAP	//  mask cnt
+    INC	//  mask _38
+    SWAP	//  _38 mask
+  }>
+  messages_by_mask PROC:<{
+    //  mask
+    unpack_state INLINECALLDICT	//  mask _29 _30 _31 _32 _33
+    s0 s3 XCHG
+    3 BLKDROP	//  mask n pending_queries
+    -1 PUSHINT	//  mask n pending_queries i=-1
+    NEWDICT	//  mask n pending_queries i=-1 a
+    UNTIL:<{
+      s1 s2 XCPU
+      64 PUSHINT	//  mask n pending_queries a i pending_queries _13=64
+      DICTUGETNEXT
+      NULLSWAPIFNOT
+      NULLSWAPIFNOT	//  mask n pending_queries a cs i f
+      DUP	//  mask n pending_queries a cs i f f
+      IF:<{	//  mask n pending_queries a cs i f
+        s0 s2 XCHG	//  mask n pending_queries a f i cs
+        1 LDI	//  mask n pending_queries a f i _15 cs
+        SWAP	//  mask n pending_queries a f i cs _15
+        IF:<{	//  mask n pending_queries a f i cs
+          DUP
+          8 PUSHINT	//  mask n pending_queries a f i cs cs _19=8
+          SDSKIPFIRST	//  mask n pending_queries a f i cs _20
+          s6 PUSH	//  mask n pending_queries a f i cs _20 n
+          PLDUX	//  mask n pending_queries a f i cs cnt_bits
+          s7 PUSH	//  mask n pending_queries a f i cs cnt_bits mask
+          AND	//  mask n pending_queries a f i cs _22
+          IF:<{	//  mask n pending_queries a f i cs
+            NEWC	//  mask n pending_queries a f i cs _24
+            SWAP	//  mask n pending_queries a f i _24 cs
+            STSLICER	//  mask n pending_queries a f i _25
+            SWAP
+            64 PUSHINT
+            s1 s4 s4 PUXC2	//  mask n pending_queries i f _25 i a _26=64
+            DICTUSETB	//  mask n pending_queries i f a
+          }>ELSE<{
+            s1 s3 XCHG
+            DROP	//  mask n pending_queries i f a
+          }>
+        }>ELSE<{
+          s1 s3 XCHG
+          DROP	//  mask n pending_queries i f a
+        }>
+      }>ELSE<{
+        2SWAP
+        DROP	//  mask n pending_queries i f a
+      }>
+      SWAP	//  mask n pending_queries i a f
+      NOT	//  mask n pending_queries i a _28
+    }>	//  mask n pending_queries i a
+    s0 s4 XCHG
+    4 BLKDROP	//  a
+  }>
+  get_messages_unsigned_by_id PROC:<{
+    //  id
+    POW2	//  _2
+    messages_by_mask CALLDICT	//  _3
+  }>
+  get_messages_unsigned PROC:<{
+    // 
+    0 PUSHINT	//  _0=0
+    NOT	//  _1
+    messages_by_mask CALLDICT	//  _2
+  }>
+  get_n_k PROC:<{
+    // 
+    unpack_state INLINECALLDICT	//  _6 _7 _8 _9 _10
+    3 BLKDROP	//  n k
+  }>
+  merge_inner_queries PROC:<{
+    //  a b
+    SWAP	//  b a
+    CTOS	//  b ca
+    SWAP	//  ca b
+    CTOS	//  ca cb
+    SWAP	//  cb ca
+    LDDICT	//  cb list_a ca
+    s0 s2 XCHG	//  ca list_a cb
+    LDDICT	//  ca list_a list_b cb
+    s3 PUSH	//  ca list_a list_b cb ca
+    HASHSU	//  ca list_a list_b cb _13
+    SWAP	//  ca list_a list_b _13 cb
+    HASHSU	//  ca list_a list_b _13 _14
+    EQUAL	//  ca list_a list_b _15
+    31 THROWIFNOT
+    merge_list CALLDICT	//  ca _17
+    NEWC	//  ca _17 _18
+    STDICT	//  ca _19
+    SWAP	//  _19 ca
+    STSLICER	//  _20
+    ENDC	//  _21
+  }>
+}END>c

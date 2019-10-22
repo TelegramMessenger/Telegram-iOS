@@ -5,42 +5,34 @@ if (NOT OPENSSL_FOUND)
 endif()
 
 set(TONLIB_SOURCE
-  tonlib/CellString.cpp
   tonlib/Client.cpp
   tonlib/Config.cpp
   tonlib/ExtClient.cpp
   tonlib/ExtClientLazy.cpp
   tonlib/ExtClientOutbound.cpp
-  tonlib/GenericAccount.cpp
   tonlib/KeyStorage.cpp
   tonlib/KeyValue.cpp
   tonlib/LastBlock.cpp
   tonlib/LastBlockStorage.cpp
+  tonlib/LastConfig.cpp
   tonlib/Logging.cpp
-  tonlib/TestGiver.cpp
-  tonlib/TestWallet.cpp
   tonlib/TonlibClient.cpp
   tonlib/utils.cpp
-  tonlib/Wallet.cpp
 
-  tonlib/CellString.h
   tonlib/Client.h
   tonlib/Config.h
   tonlib/ExtClient.h
   tonlib/ExtClientLazy.h
   tonlib/ExtClientOutbound.h
-  tonlib/GenericAccount.h
   tonlib/KeyStorage.h
   tonlib/KeyValue.h
   tonlib/LastBlock.h
   tonlib/LastBlockStorage.h
+  tonlib/LastConfig.h
   tonlib/Logging.h
-  tonlib/TestGiver.h
-  tonlib/TestWallet.h
   tonlib/TonlibCallback.h
   tonlib/TonlibClient.h
   tonlib/utils.h
-  tonlib/Wallet.h
 
   tonlib/keys/bip39.cpp
   tonlib/keys/DecryptedKey.cpp
@@ -64,7 +56,7 @@ target_include_directories(tonlib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/..
   $<BUILD_INTERFACE:${OPENSSL_INCLUDE_DIR}>
 )
-target_link_libraries(tonlib PRIVATE tdactor adnllite tl_lite_api tl-lite-utils ton_crypto ton_block lite-client-common)
+target_link_libraries(tonlib PRIVATE tdactor adnllite tl_lite_api tl-lite-utils ton_crypto ton_block lite-client-common smc-envelope)
 target_link_libraries(tonlib PUBLIC tdutils tl_tonlib_api)
 
 if (TONLIB_ENABLE_JNI AND NOT ANDROID) # jni is available by default on Android
@@ -134,7 +126,7 @@ if (NOT TON_USE_ABSEIL)
 if (WIN32)
   set(WINGETOPT_TARGET wingetopt)
 endif()
-install(TARGETS tdnet keys crc32c tdactor adnllite tl_api tl-utils tl_lite_api tl-lite-utils ton_crypto ton_block ${WINGETOPT_TARGET}
+install(TARGETS tdnet keys crc32c tdactor adnllite tl_api tl-utils tl_lite_api tl-lite-utils ton_crypto ton_block smc-envelope ${WINGETOPT_TARGET}
   tdutils tl_tonlib_api tonlib lite-client-common Tonlib EXPORT Tonlib
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

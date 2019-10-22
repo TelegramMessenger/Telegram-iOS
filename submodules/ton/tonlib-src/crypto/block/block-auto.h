@@ -4466,7 +4466,7 @@ struct BlockInfo::Record {
   unsigned prev_key_block_seqno;  	// prev_key_block_seqno : uint32
   Ref<Cell> master_ref;  	// master_ref : not_master?^BlkMasterInfo
   Ref<Cell> prev_ref;  	// prev_ref : ^(BlkPrevInfo after_merge)
-  Ref<Cell> prev_vert_ref;  	// prev_vert_ref : vert_seq_no?^(BlkPrevInfo 0)
+  Ref<Cell> prev_vert_ref;  	// prev_vert_ref : vert_seqno_incr?^(BlkPrevInfo 0)
   Record() = default;
   Record(unsigned _version, bool _not_master, bool _after_merge, bool _before_split, bool _after_split, bool _want_split, bool _want_merge, bool _key_block, bool _vert_seqno_incr, int _flags, int _seq_no, int _vert_seq_no, Ref<CellSlice> _shard, unsigned _gen_utime, unsigned long long _start_lt, unsigned long long _end_lt, unsigned _gen_validator_list_hash_short, unsigned _gen_catchain_seqno, unsigned _min_ref_mc_seqno, unsigned _prev_key_block_seqno, Ref<Cell> _master_ref, Ref<Cell> _prev_ref, Ref<Cell> _prev_vert_ref) : version(_version), not_master(_not_master), after_merge(_after_merge), before_split(_before_split), after_split(_after_split), want_split(_want_split), want_merge(_want_merge), key_block(_key_block), vert_seqno_incr(_vert_seqno_incr), flags(_flags), seq_no(_seq_no), vert_seq_no(_vert_seq_no), shard(std::move(_shard)), gen_utime(_gen_utime), start_lt(_start_lt), end_lt(_end_lt), gen_validator_list_hash_short(_gen_validator_list_hash_short), gen_catchain_seqno(_gen_catchain_seqno), min_ref_mc_seqno(_min_ref_mc_seqno), prev_key_block_seqno(_prev_key_block_seqno), master_ref(std::move(_master_ref)), prev_ref(std::move(_prev_ref)), prev_vert_ref(std::move(_prev_vert_ref)) {}
 };

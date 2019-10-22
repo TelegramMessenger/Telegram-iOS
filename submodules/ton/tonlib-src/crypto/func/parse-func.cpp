@@ -89,6 +89,15 @@ TypeExpr* parse_type1(Lexer& lex) {
     case '_':
       lex.next();
       return TypeExpr::new_hole();
+    case _Ident: {
+      auto sym = sym::lookup_symbol(lex.cur().val);
+      if (sym && dynamic_cast<SymValType*>(sym->value)) {
+        auto val = dynamic_cast<SymValType*>(sym->value);
+        lex.next();
+        return val->get_type();
+      }
+      lex.cur().error_at("`", "` is not a type identifier");
+    }
   }
   lex.expect('(');
   if (lex.tp() == ')') {
@@ -133,7 +142,14 @@ FormalArg parse_formal_arg(Lexer& lex, int fa_idx) {
   } else if (lex.tp() != _Ident) {
     arg_type = parse_type(lex);
   } else {
-    arg_type = TypeExpr::new_hole();
+    auto sym = sym::lookup_symbol(lex.cur().val);
+    if (sym && dynamic_cast<SymValType*>(sym->value)) {
+      auto val = dynamic_cast<SymValType*>(sym->value);
+      lex.next();
+      arg_type = val->get_type();
+    } else {
+      arg_type = TypeExpr::new_hole();
+    }
   }
   if (lex.tp() == '_' || lex.tp() == ',' || lex.tp() == ')') {
     if (lex.tp() == '_') {
@@ -147,6 +163,9 @@ FormalArg parse_formal_arg(Lexer& lex, int fa_idx) {
   }
   loc = lex.cur().loc;
   SymDef* new_sym_def = sym::define_symbol(lex.cur().val, true, loc);
+  if (!new_sym_def) {
+    lex.cur().error_at("cannot define symbol `", "`");
+  }
   if (new_sym_def->value) {
     lex.cur().error_at("redefined formal parameter `", "`");
   }
@@ -295,6 +314,15 @@ Expr* parse_expr100(Lexer& lex, CodeBlob& code, bool nv) {
     return res;
   }
   if (t == _Ident) {
+    auto sym = sym::lookup_symbol(lex.cur().val);
+    if (sym && dynamic_cast<SymValType*>(sym->value)) {
+      auto val = dynamic_cast<SymValType*>(sym->value);
+      Expr* res = new Expr{Expr::_Type, lex.cur().loc};
+      res->flags = Expr::_IsType;
+      res->e_type = val->get_type();
+      lex.next();
+      return res;
+    }
     Expr* res = new Expr{Expr::_Var, lex.cur().loc};
     if (nv) {
       res->val = ~lex.cur().val;
@@ -302,14 +330,14 @@ Expr* parse_expr100(Lexer& lex, CodeBlob& code, bool nv) {
       res->flags = Expr::_IsLvalue | Expr::_IsNewVar;
       // std::cerr << "defined new variable " << lex.cur().str << " : " << res->e_type << std::endl;
     } else {
-      res->sym = sym::lookup_symbol(lex.cur().val);
-      if (!res->sym) {
+      if (!sym) {
         check_global_func(lex.cur());
-        res->sym = sym::lookup_symbol(lex.cur().val);
+        sym = sym::lookup_symbol(lex.cur().val);
       }
+      res->sym = sym;
       SymVal* val = nullptr;
-      if (res->sym) {
-        val = dynamic_cast<SymVal*>(res->sym->value);
+      if (sym) {
+        val = dynamic_cast<SymVal*>(sym->value);
       }
       if (!val) {
         lex.cur().error_at("undefined identifier `", "`");
@@ -428,7 +456,6 @@ Expr* parse_expr80(Lexer& lex, CodeBlob& code, bool nv) {
     res->flags = Expr::_IsRvalue | (val->impure ? Expr::_IsImpure : 0);
     res->deduce_type(lex.cur());
     if (modify) {
-      // FIXME (use _LetFirst instead of _Letop)
       auto tmp = res;
       res = new Expr{Expr::_LetFirst, {obj->copy(), tmp}};
       res->here = loc;
@@ -464,7 +491,7 @@ Expr* parse_expr75(Lexer& lex, CodeBlob& code, bool nv) {
 Expr* parse_expr30(Lexer& lex, CodeBlob& code, bool nv) {
   Expr* res = parse_expr75(lex, code, nv);
   while (lex.tp() == '*' || lex.tp() == '/' || lex.tp() == '%' || lex.tp() == _DivMod || lex.tp() == _DivC ||
-         lex.tp() == _DivR || lex.tp() == '&') {
+         lex.tp() == _DivR || lex.tp() == _ModC || lex.tp() == _ModR || lex.tp() == '&') {
     res->chk_rvalue(lex.cur());
     int t = lex.tp();
     sym_idx_t name = symbols.lookup_add(std::string{"_"} + lex.cur().str + "_");
@@ -482,7 +509,7 @@ Expr* parse_expr30(Lexer& lex, CodeBlob& code, bool nv) {
   return res;
 }
 
-// parse [-] E { (+ | - | `|` ) E }
+// parse [-] E { (+ | - | `|` | ^) E }
 Expr* parse_expr20(Lexer& lex, CodeBlob& code, bool nv) {
   Expr* res;
   int t = lex.tp();
@@ -501,7 +528,7 @@ Expr* parse_expr20(Lexer& lex, CodeBlob& code, bool nv) {
   } else {
     res = parse_expr30(lex, code, nv);
   }
-  while (lex.tp() == '-' || lex.tp() == '+' || lex.tp() == '|') {
+  while (lex.tp() == '-' || lex.tp() == '+' || lex.tp() == '|' || lex.tp() == '^') {
     res->chk_rvalue(lex.cur());
     t = lex.tp();
     sym_idx_t name = symbols.lookup_add(std::string{"_"} + lex.cur().str + "_");
@@ -587,7 +614,8 @@ Expr* parse_expr10(Lexer& lex, CodeBlob& code, bool nv) {
   auto x = parse_expr13(lex, code, nv);
   int t = lex.tp();
   if (t == _PlusLet || t == _MinusLet || t == _TimesLet || t == _DivLet || t == _DivRLet || t == _DivCLet ||
-      t == _ModLet || t == _LshiftLet || t == _RshiftLet || t == _RshiftCLet || t == _RshiftRLet) {
+      t == _ModLet || t == _ModCLet || t == _ModRLet || t == _LshiftLet || t == _RshiftLet || t == _RshiftCLet ||
+      t == _RshiftRLet || t == _AndLet || t == _OrLet || t == _XorLet) {
     x->chk_lvalue(lex.cur());
     x->chk_rvalue(lex.cur());
     sym_idx_t name = symbols.lookup_add(std::string{"^_"} + lex.cur().str + "_");
@@ -960,9 +988,76 @@ SymValAsmFunc* parse_asm_func_body(Lexer& lex, TypeExpr* func_type, const Formal
   return res;
 }
 
+std::vector<TypeExpr*> parse_type_var_list(Lexer& lex) {
+  std::vector<TypeExpr*> res;
+  lex.expect(_Forall);
+  int idx = 0;
+  while (true) {
+    if (lex.tp() == _Type) {
+      lex.next();
+    }
+    if (lex.tp() != _Ident) {
+      throw src::ParseError{lex.cur().loc, "free type identifier expected"};
+    }
+    auto loc = lex.cur().loc;
+    SymDef* new_sym_def = sym::define_symbol(lex.cur().val, true, loc);
+    if (new_sym_def->value) {
+      lex.cur().error_at("redefined type variable `", "`");
+    }
+    auto var = TypeExpr::new_var(idx);
+    new_sym_def->value = new SymValType{SymVal::_Typename, idx++, var};
+    res.push_back(var);
+    lex.next();
+    if (lex.tp() != ',') {
+      break;
+    }
+    lex.next();
+  }
+  lex.expect(_Mapsto);
+  return res;
+}
+
+void type_var_usage(TypeExpr* expr, const std::vector<TypeExpr*>& typevars, std::vector<bool>& used) {
+  if (expr->constr != TypeExpr::te_Var) {
+    for (auto arg : expr->args) {
+      type_var_usage(arg, typevars, used);
+    }
+    return;
+  }
+  for (std::size_t i = 0; i < typevars.size(); i++) {
+    if (typevars[i] == expr) {
+      used.at(i) = true;
+      return;
+    }
+  }
+  return;
+}
+
+TypeExpr* compute_type_closure(TypeExpr* expr, const std::vector<TypeExpr*>& typevars) {
+  if (typevars.empty()) {
+    return expr;
+  }
+  std::vector<bool> used(typevars.size(), false);
+  type_var_usage(expr, typevars, used);
+  std::vector<TypeExpr*> used_vars;
+  for (std::size_t i = 0; i < typevars.size(); i++) {
+    if (used.at(i)) {
+      used_vars.push_back(typevars[i]);
+    }
+  }
+  if (!used_vars.empty()) {
+    expr = TypeExpr::new_forall(std::move(used_vars), expr);
+  }
+  return expr;
+}
+
 void parse_func_def(Lexer& lex) {
   SrcLocation loc{lex.cur().loc};
   sym::open_scope(lex);
+  std::vector<TypeExpr*> type_vars;
+  if (lex.tp() == _Forall) {
+    type_vars = parse_type_var_list(lex);
+  }
   auto ret_type = parse_type(lex);
   if (lex.tp() != _Ident) {
     throw src::ParseError{lex.cur().loc, "function name identifier expected"};
@@ -972,6 +1067,11 @@ void parse_func_def(Lexer& lex) {
   FormalArgList arg_list = parse_formal_args(lex);
   bool impure = (lex.tp() == _Impure);
   if (impure) {
+    lex.next();
+  }
+  int f = 0;
+  if (lex.tp() == _Inline || lex.tp() == _InlineRef) {
+    f = (lex.tp() == _Inline) ? 1 : 2;
     lex.next();
   }
   td::RefInt256 method_id;
@@ -1005,6 +1105,7 @@ void parse_func_def(Lexer& lex) {
     lex.expect('{', "function body block expected");
   }
   TypeExpr* func_type = TypeExpr::new_map(extract_total_arg_type(arg_list), ret_type);
+  func_type = compute_type_closure(func_type, type_vars);
   if (verbosity >= 1) {
     std::cerr << "function " << func_name.str << " : " << func_type << std::endl;
   }
@@ -1069,6 +1170,17 @@ void parse_func_def(Lexer& lex) {
       val->method_id = std::move(method_id);
     } else if (val->method_id != method_id) {
       lex.cur().error("integer method identifier for `"s + func_name.str + "` changed to a different value");
+    }
+  }
+  if (f) {
+    auto val = dynamic_cast<SymVal*>(func_sym->value);
+    if (!val) {
+      lex.cur().error("cannot set unknown function `"s + func_name.str + "` as an inline");
+    }
+    if (!(val->flags & 3)) {
+      val->flags = (short)(val->flags | f);
+    } else if ((val->flags & 3) != f) {
+      lex.cur().error("inline mode for `"s + func_name.str + "` changed with respect to a previous declaration");
     }
   }
   if (verbosity >= 1) {

@@ -403,8 +403,8 @@ public final class WalletStrings: Equatable {
     public func Wallet_Time_PreciseDate_m11(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(self._s[182]!, self._r[182]!, [_1, _2, _3])
     }
-    public func Wallet_Send_ConfirmationText(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[183]!, self._r[183]!, [_1, _2])
+    public func Wallet_Send_ConfirmationText(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(self._s[183]!, self._r[183]!, [_1, _2, _3])
     }
     public var Wallet_Created_ExportErrorText: String { return self._s[185]! }
     public func Wallet_Updated_YesterdayAt(_ _0: String) -> (String, [(Int, NSRange)]) {

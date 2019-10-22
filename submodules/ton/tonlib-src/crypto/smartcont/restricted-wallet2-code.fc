@@ -1,0 +1,69 @@
+;; Restricted wallet (a variant of wallet-code.fc)
+;; until configuration parameter -13 is set, accepts messages only to elector smc
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+_ days_passed() inline {
+  var p = config_param(-13);
+  return null?(p) ? -1 : (now() - begin_parse(p).preload_uint(32)) / 86400;
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (msg_seqno, valid_until) = (cs~load_uint(32), cs~load_uint(32));
+  throw_if(35, valid_until <= now());
+  var ds = get_data().begin_parse();
+  var (stored_seqno, public_key, rdict) = (ds~load_uint(32), ds~load_uint(256), ds~load_dict());
+  ds.end_parse();
+  throw_unless(33, msg_seqno == stored_seqno);
+  ifnot (msg_seqno) {
+    accept_message();
+    set_data(begin_cell()
+      .store_uint(stored_seqno + 1, 32)
+      .store_uint(public_key, 256)
+      .store_dict(rdict)
+      .end_cell());
+    return ();
+  }
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
+  accept_message();
+  var ts = days_passed();
+  var (_, value, found) = rdict.idict_get_preveq?(16, ts);
+  if (found) {
+    raw_reserve(value~load_grams(), 2);
+  }
+  cs~touch();
+  while (cs.slice_refs()) {
+    var mode = cs~load_uint(8);
+    var msg = cs~load_ref();
+    send_raw_message(msg, mode);
+  }
+  cs.end_parse();
+  set_data(begin_cell()
+    .store_uint(stored_seqno + 1, 32)
+    .store_uint(public_key, 256)
+    .store_dict(rdict)
+  .end_cell());
+}
+
+;; Get methods
+
+int seqno() method_id {
+  return get_data().begin_parse().preload_uint(32);
+}
+
+int balance() method_id {
+  var ds = get_data().begin_parse().skip_bits(32 + 256);
+  var rdict = ds~load_dict();
+  ds.end_parse();
+  var ts = days_passed();
+  var balance = get_balance().first();
+  var (_, value, found) = rdict.idict_get_preveq?(16, ts);
+  if (found) {
+    balance = max(balance - value~load_grams(), 0);
+  }
+  return balance;
+}

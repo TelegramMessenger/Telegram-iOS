@@ -517,6 +517,58 @@ td::Result<std::vector<StoragePrices>> Config::get_storage_prices() const {
   return std::move(res);
 }
 
+td::Result<GasLimitsPrices> Config::get_gas_limits_prices(bool is_masterchain) const {
+  GasLimitsPrices res;
+  auto id = is_masterchain ? 20 : 21;
+  auto cell = get_config_param(id);
+  if (cell.is_null()) {
+    return td::Status::Error(PSLICE() << "configuration parameter " << id << " with gas prices is absent");
+  }
+  auto cs = vm::load_cell_slice(std::move(cell));
+  block::gen::GasLimitsPrices::Record_gas_flat_pfx flat;
+  if (tlb::unpack(cs, flat)) {
+    cs = *flat.other;
+    res.flat_gas_limit = flat.flat_gas_limit;
+    res.flat_gas_price = flat.flat_gas_price;
+  }
+  auto f = [&](const auto& r, td::uint64 spec_limit) {
+    res.gas_limit = r.gas_limit;
+    res.special_gas_limit = spec_limit;
+    res.gas_credit = r.gas_credit;
+    res.gas_price = r.gas_price;
+    res.freeze_due_limit = r.freeze_due_limit;
+    res.delete_due_limit = r.delete_due_limit;
+  };
+  block::gen::GasLimitsPrices::Record_gas_prices_ext rec;
+  if (tlb::unpack(cs, rec)) {
+    f(rec, rec.special_gas_limit);
+  } else {
+    block::gen::GasLimitsPrices::Record_gas_prices rec0;
+    if (tlb::unpack(cs, rec0)) {
+      f(rec0, rec0.gas_limit);
+    } else {
+      return td::Status::Error(PSLICE() << "configuration parameter " << id
+                                        << " with gas prices is invalid - can't parse");
+    }
+  }
+  return res;
+}
+
+td::Result<MsgPrices> Config::get_msg_prices(bool is_masterchain) const {
+  auto id = is_masterchain ? 24 : 25;
+  auto cell = get_config_param(id);
+  if (cell.is_null()) {
+    return td::Status::Error(PSLICE() << "configuration parameter " << id << " with msg prices is absent");
+  }
+  auto cs = vm::load_cell_slice(std::move(cell));
+  block::gen::MsgForwardPrices::Record rec;
+  if (!tlb::unpack(cs, rec)) {
+    return td::Status::Error(PSLICE() << "configuration parameter " << id
+                                      << " with msg prices is invalid - can't parse");
+  }
+  return MsgPrices(rec.lump_price, rec.bit_price, rec.cell_price, rec.ihr_price_factor, rec.first_frac, rec.next_frac);
+}
+
 CatchainValidatorsConfig Config::unpack_catchain_validators_config(Ref<vm::Cell> cell) {
   block::gen::CatchainConfig::Record cfg;
   if (cell.is_null() || !tlb::unpack_cell(std::move(cell), cfg)) {
@@ -1019,47 +1071,47 @@ std::vector<ton::BlockId> ShardConfig::get_shard_hash_ids(
   std::vector<ton::BlockId> res;
   bool mcout = mc_shard_hash_.is_null() || !mc_shard_hash_->seqno();  // include masterchain as a shard if seqno > 0
   bool ok = shard_hashes_dict_->check_for_each(
-      [&res, &mcout, mc_shard_hash_ = mc_shard_hash_, &filter ](Ref<vm::CellSlice> cs_ref, td::ConstBitPtr key, int n)
-          ->bool {
-            int workchain = (int)key.get_int(n);
-            if (workchain >= 0 && !mcout) {
-              if (filter(ton::ShardIdFull{ton::masterchainId}, true)) {
-                res.emplace_back(mc_shard_hash_->blk_.id);
-              }
-              mcout = true;
-            }
-            if (!cs_ref->have_refs()) {
+      [&res, &mcout, mc_shard_hash_ = mc_shard_hash_, &filter](Ref<vm::CellSlice> cs_ref, td::ConstBitPtr key,
+                                                               int n) -> bool {
+        int workchain = (int)key.get_int(n);
+        if (workchain >= 0 && !mcout) {
+          if (filter(ton::ShardIdFull{ton::masterchainId}, true)) {
+            res.emplace_back(mc_shard_hash_->blk_.id);
+          }
+          mcout = true;
+        }
+        if (!cs_ref->have_refs()) {
+          return false;
+        }
+        std::stack<std::pair<Ref<vm::Cell>, unsigned long long>> stack;
+        stack.emplace(cs_ref->prefetch_ref(), ton::shardIdAll);
+        while (!stack.empty()) {
+          vm::CellSlice cs{vm::NoVm{}, std::move(stack.top().first)};
+          unsigned long long shard = stack.top().second;
+          stack.pop();
+          int t = (int)cs.fetch_ulong(1);
+          if (t < 0) {
+            return false;
+          }
+          if (!filter(ton::ShardIdFull{workchain, shard}, !t)) {
+            continue;
+          }
+          if (!t) {
+            if (!(cs.advance(4) && cs.have(32))) {
               return false;
             }
-            std::stack<std::pair<Ref<vm::Cell>, unsigned long long>> stack;
-            stack.emplace(cs_ref->prefetch_ref(), ton::shardIdAll);
-            while (!stack.empty()) {
-              vm::CellSlice cs{vm::NoVm{}, std::move(stack.top().first)};
-              unsigned long long shard = stack.top().second;
-              stack.pop();
-              int t = (int)cs.fetch_ulong(1);
-              if (t < 0) {
-                return false;
-              }
-              if (!filter(ton::ShardIdFull{workchain, shard}, !t)) {
-                continue;
-              }
-              if (!t) {
-                if (!(cs.advance(4) && cs.have(32))) {
-                  return false;
-                }
-                res.emplace_back(workchain, shard, (int)cs.prefetch_ulong(32));
-                continue;
-              }
-              unsigned long long delta = (td::lower_bit64(shard) >> 1);
-              if (!delta || cs.size_ext() != 0x20000) {
-                return false;
-              }
-              stack.emplace(cs.prefetch_ref(1), shard + delta);
-              stack.emplace(cs.prefetch_ref(0), shard - delta);
-            }
-            return true;
-          },
+            res.emplace_back(workchain, shard, (int)cs.prefetch_ulong(32));
+            continue;
+          }
+          unsigned long long delta = (td::lower_bit64(shard) >> 1);
+          if (!delta || cs.size_ext() != 0x20000) {
+            return false;
+          }
+          stack.emplace(cs.prefetch_ref(1), shard + delta);
+          stack.emplace(cs.prefetch_ref(0), shard - delta);
+        }
+        return true;
+      },
       true);
   if (!ok) {
     return {};
@@ -1415,8 +1467,8 @@ td::Result<std::vector<ton::StdSmcAddress>> Config::get_special_smartcontracts(b
     return td::Status::Error(-666, "configuration loaded without fundamental smart contract list");
   }
   std::vector<ton::StdSmcAddress> res;
-  if (!special_smc_dict->check_for_each([&res, &without_config, conf_addr = config_addr.bits() ](
-          Ref<vm::CellSlice> cs_ref, td::ConstBitPtr key, int n) {
+  if (!special_smc_dict->check_for_each([&res, &without_config, conf_addr = config_addr.bits()](
+                                            Ref<vm::CellSlice> cs_ref, td::ConstBitPtr key, int n) {
         if (cs_ref->size_ext() || n != 256) {
           return false;
         }

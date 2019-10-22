@@ -2283,7 +2283,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.setup.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: theme.setup.inputBackgroundColor)
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.attributedText = NSAttributedString(string: "\(index + 1):", font: Font.regular(17.0), textColor: theme.setup.inputPlaceholderColor)

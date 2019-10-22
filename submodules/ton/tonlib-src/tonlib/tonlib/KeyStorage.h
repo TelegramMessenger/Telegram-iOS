@@ -69,6 +69,10 @@ class KeyStorage {
 
   td::Result<PrivateKey> load_private_key(InputKey input_key);
 
+  static PrivateKey fake_private_key();
+  static InputKey fake_input_key();
+  static bool is_fake_input_key(InputKey& input_key);
+
  private:
   std::shared_ptr<KeyValue> kv_;
 

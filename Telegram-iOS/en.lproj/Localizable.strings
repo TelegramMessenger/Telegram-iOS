@@ -4820,7 +4820,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.AmountText" = "Grams to send";
 "Wallet.Send.Confirmation" = "Confirmation";
-"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?";
+"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?\n\nFees: ~%3$@ grams";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Settings.Title" = "Wallet Settings";
@@ -4991,3 +4991,38 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.SwipeToReplyHintTitle" = "Swipe To Reply";
 "Conversation.SwipeToReplyHintText" = "Swipe left on any message to reply to it.";
+
+"TwoFactorSetup.Intro.Title" = "Additional Password";
+"TwoFactorSetup.Intro.Text" = "You can set a password that will be\nrequired when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.Intro.Action" = "Set Additional Password";
+
+"TwoFactorSetup.Password.Title" = "Create Password";
+"TwoFactorSetup.Password.PlaceholderPassword" = "Password";
+"TwoFactorSetup.Password.PlaceholderConfirmPassword" = "Re-enter Password";
+"TwoFactorSetup.Password.Action" = "Create Password";
+
+"TwoFactorSetup.Email.Title" = "Recovery Email";
+"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset password and restore access\nto your Telegram account.";
+"TwoFactorSetup.Email.Placeholder" = "Your email address";
+"TwoFactorSetup.Email.Action" = "Continue";
+"TwoFactorSetup.Email.SkipAction" = "Skip setting email";
+"TwoFactorSetup.Email.SkipConfirmationTitle" = "No, seriously.";
+"TwoFactorSetup.Email.SkipConfirmationText" = "If you forget your password, you will lose access to your Telegram account. There will be no way to restore it.";
+"TwoFactorSetup.Email.SkipConfirmationSkip" = "Skip";
+
+"TwoFactorSetup.EmailVerification.Title" = "Recovery Email";
+"TwoFactorSetup.EmailVerification.Text" = "Please enter code we've just emailed at %@";
+"TwoFactorSetup.EmailVerification.Placeholder" = "Code";
+"TwoFactorSetup.EmailVerification.Action" = "Continue";
+"TwoFactorSetup.EmailVerification.ChangeAction" = "Change Email";
+"TwoFactorSetup.EmailVerification.ResendAction" = "Resend Code";
+
+"TwoFactorSetup.Hint.Title" = "Hint";
+"TwoFactorSetup.Hint.Text" = "You can create an optional hint for\nyour password.";
+"TwoFactorSetup.Hint.Placeholder" = "Hint (optional)";
+"TwoFactorSetup.Hint.Action" = "Continue";
+"TwoFactorSetup.Hint.SkipAction" = "Skip setting hint";
+
+"TwoFactorSetup.Done.Title" = "Password Set!";
+"TwoFactorSetup.Done.Text" = "Now password will be required when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.Done.Action" = "Return to Settings";

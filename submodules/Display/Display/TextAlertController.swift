@@ -171,6 +171,7 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.isLayerBacked = false
         self.textNode.isAccessibilityElement = true
         self.textNode.accessibilityLabel = text.string
+        self.textNode.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
         if text.length != 0 {
             if let paragraphStyle = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
                 self.textNode.textAlignment = paragraphStyle.alignment
@@ -292,7 +293,7 @@ public final class TextAlertContentNode: AlertContentNode {
             transition.updateFrame(node: titleNode, frame: titleFrame)
             
             let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: titleFrame.maxY + spacing), size: textSize)
-            transition.updateFrame(node: self.textNode, frame: textFrame)
+            transition.updateFrame(node: self.textNode, frame: textFrame.offsetBy(dx: -1.0, dy: -1.0))
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom)
         } else {

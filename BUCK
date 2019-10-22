@@ -50,6 +50,8 @@ resource_dependencies = [
     "//submodules/TelegramUI:TelegramUIResources",
     "//submodules/WalletUI:WalletUIAssets",
     "//submodules/WalletUI:WalletUIResources",
+    "//submodules/PasswordSetupUI:PasswordSetupUIResources",
+    "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
     "//submodules/OverlayStatusController:OverlayStatusControllerResources",
     "//:AppResources",
     "//:AppStringResources",

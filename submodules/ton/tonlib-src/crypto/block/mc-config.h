@@ -50,7 +50,7 @@ struct ValidatorDescr {
       : pubkey(_pubkey), weight(_weight), cum_weight(_cum_weight) {
     adnl_addr.set_zero();
   }
-  bool operator<(td::uint64 wt_pos) const & {
+  bool operator<(td::uint64 wt_pos) const& {
     return cum_weight < wt_pos;
   }
 };
@@ -327,6 +327,46 @@ struct StoragePrices {
       , mc_bit_price(_mc_bprice)
       , mc_cell_price(_mc_cprice) {
   }
+  static td::RefInt256 compute_storage_fees(ton::UnixTime now, const std::vector<block::StoragePrices>& pricing,
+                                            const vm::CellStorageStat& storage_stat, ton::UnixTime last_paid,
+                                            bool is_special, bool is_masterchain);
+};
+
+struct GasLimitsPrices {
+  td::uint64 flat_gas_limit{0};
+  td::uint64 flat_gas_price{0};
+  td::uint64 gas_price{0};
+  td::uint64 special_gas_limit{0};
+  td::uint64 gas_limit{0};
+  td::uint64 gas_credit{0};
+  td::uint64 block_gas_limit{0};
+  td::uint64 freeze_due_limit{0};
+  td::uint64 delete_due_limit{0};
+
+  td::RefInt256 compute_gas_price(td::uint64 gas_used) const;
+};
+
+// msg_fwd_fees = (lump_price + ceil((bit_price * msg.bits + cell_price * msg.cells)/2^16)) nanograms
+// ihr_fwd_fees = ceil((msg_fwd_fees * ihr_price_factor)/2^16) nanograms
+// bits in the root cell of a message are not included in msg.bits (lump_price pays for them)
+
+struct MsgPrices {
+  td::uint64 lump_price;
+  td::uint64 bit_price;
+  td::uint64 cell_price;
+  td::uint32 ihr_factor;
+  td::uint32 first_frac;
+  td::uint32 next_frac;
+  td::uint64 compute_fwd_fees(td::uint64 cells, td::uint64 bits) const;
+  std::pair<td::uint64, td::uint64> compute_fwd_ihr_fees(td::uint64 cells, td::uint64 bits,
+                                                         bool ihr_disabled = false) const;
+  MsgPrices() = default;
+  MsgPrices(td::uint64 lump, td::uint64 bitp, td::uint64 cellp, td::uint32 ihrf, td::uint32 firstf, td::uint32 nextf)
+      : lump_price(lump), bit_price(bitp), cell_price(cellp), ihr_factor(ihrf), first_frac(firstf), next_frac(nextf) {
+  }
+  td::RefInt256 get_first_part(td::RefInt256 total) const;
+  td::uint64 get_first_part(td::uint64 total) const;
+  td::RefInt256 get_next_part(td::RefInt256 total) const;
 };
 
 struct CatchainValidatorsConfig {
@@ -499,6 +539,8 @@ class Config {
   bool is_special_smartcontract(const ton::StdSmcAddress& addr) const;
   static td::Result<std::unique_ptr<ValidatorSet>> unpack_validator_set(Ref<vm::Cell> valset_root);
   td::Result<std::vector<StoragePrices>> get_storage_prices() const;
+  td::Result<GasLimitsPrices> get_gas_limits_prices(bool is_masterchain = false) const;
+  td::Result<MsgPrices> get_msg_prices(bool is_masterchain = false) const;
   static CatchainValidatorsConfig unpack_catchain_validators_config(Ref<vm::Cell> cell);
   CatchainValidatorsConfig get_catchain_validators_config() const;
   td::Status visit_validator_params() const;
@@ -556,7 +598,7 @@ class ConfigInfo : public Config, public ShardConfig {
     needAccountsRoot = 64,
     needPrevBlocks = 128
   };
-  int vert_seqno{-1};
+  ton::BlockSeqno vert_seqno{~0U};
   int global_id_{0};
   ton::UnixTime utime{0};
   ton::LogicalTime lt{0};
@@ -603,6 +645,9 @@ class ConfigInfo : public Config, public ShardConfig {
   }
   Ref<vm::Cell> get_state_extra_root() const {
     return state_extra_root_;
+  }
+  ton::BlockSeqno get_vert_seqno() const {
+    return vert_seqno;
   }
   ton::CatchainSeqno get_shard_cc_seqno(ton::ShardIdFull shard) const;
   bool get_last_key_block(ton::BlockIdExt& blkid, ton::LogicalTime& blklt, bool strict = false) const;

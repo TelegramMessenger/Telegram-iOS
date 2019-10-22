@@ -718,12 +718,9 @@ td::Status ShardState::unpack_state(ton::BlockIdExt blkid, Ref<vm::Cell> prev_st
     return td::Status::Error(-666, "shardchain state for "s + blkid.to_str() +
                                        " corresponds to incorrect workchain or shard " + shard1.to_str());
   }
-  if (state.vert_seq_no) {
-    return td::Status::Error(
-        -666, "shardchain state for "s + blkid.to_str() + " has non-zero vert_seq_no, which is unsupported");
-  }
   id_ = blkid;
   root_ = std::move(prev_state_root);
+  vert_seqno_ = state.vert_seq_no;
   before_split_ = state.before_split;
   account_dict_ = std::make_unique<vm::AugmentedDictionary>(
       vm::load_cell_slice(std::move(state.accounts)).prefetch_ref(), 256, block::tlb::aug_ShardAccounts);
@@ -811,7 +808,7 @@ td::Status ShardState::unpack_out_msg_queue_info(Ref<vm::Cell> out_msg_queue_inf
   }
   out_msg_queue_ =
       std::make_unique<vm::AugmentedDictionary>(std::move(qinfo.out_queue), 352, block::tlb::aug_OutMsgQueue);
-  if (verbosity >= 3 * 0) {
+  if (verbosity >= 3 * 1) {
     LOG(DEBUG) << "unpacking ProcessedUpto of our previous block " << id_.to_str();
     block::gen::t_ProcessedInfo.print(std::cerr, qinfo.proc_info);
   }
@@ -953,14 +950,16 @@ td::Status ShardState::merge_with(ShardState& sib) {
   lt_ = std::max(lt_, sib.lt_);
   // 9. compute underload & overload history
   underload_history_ = overload_history_ = 0;
+  // 10. compute vert_seqno
+  vert_seqno_ = std::max(vert_seqno_, sib.vert_seqno_);
   // Anything else? add here
   // ...
 
-  // 10. compute new root
+  // 100. compute new root
   if (!block::gen::t_ShardState.cell_pack_split_state(root_, std::move(root_), std::move(sib.root_))) {
     return td::Status::Error(-667, "cannot construct a virtual split_state after a merge");
   }
-  // 11. invalidate sibling, change id_ to the (virtual) common parent
+  // 101. invalidate sibling, change id_ to the (virtual) common parent
   sib.invalidate();
   id_.id.shard = shard.shard;
   id_.file_hash.set_zero();
