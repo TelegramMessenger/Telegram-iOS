@@ -261,6 +261,9 @@
 		<string>ddgQuickLink</string>
 		<string>moovit</string>
 		<string>alook</string>
+		<string>dgis</string>
+		<string>microsoft-edge-http</string>
+		<string>microsoft-edge-https</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
