@@ -51,7 +51,7 @@ public func isValidUrl(_ url: String, validSchemes: [String: Bool] = ["http": tr
 
 public func explicitUrl(_ url: String) -> String {
     var url = url
-    if !url.hasPrefix("http") && !url.hasPrefix("https") {
+    if !url.hasPrefix("http") && !url.hasPrefix("https") && url.range(of: "://") == nil {
         url = "https://\(url)"
     }
     return url
