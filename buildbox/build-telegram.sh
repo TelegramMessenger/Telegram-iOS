@@ -6,6 +6,7 @@ BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
 XCODE_VERSION="11.1"
+GUEST_SHELL="zsh"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
 
@@ -170,7 +171,7 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BUCK_HTTP_CACHE=\"$BUCK_HTTP_CACHE\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BUCK_HTTP_CACHE=\"$BUCK_HTTP_CACHE\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
 if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	ARCHIVE_PATH="$HOME/telegram-builds-archive"
