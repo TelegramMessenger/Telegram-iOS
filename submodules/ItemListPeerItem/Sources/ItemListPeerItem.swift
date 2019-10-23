@@ -216,7 +216,7 @@ private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
 private let labelDisclosureFont = Font.regular(17.0)
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 15.0)!
+private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let badgeFont = Font.regular(15.0)
 
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {

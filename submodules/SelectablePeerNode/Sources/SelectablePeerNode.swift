@@ -13,7 +13,7 @@ import LegacyComponents
 import ContextUI
 import LocalizedPeerData
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 24.0)!
+private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
 
 public final class SelectablePeerNodeTheme {

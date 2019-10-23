@@ -11,7 +11,7 @@ import TelegramUIPreferences
 import AvatarNode
 import AppBundle
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
+private let avatarFont = avatarPlaceholderFont(size: 26.0)
 private let titleFont = Font.semibold(14.0)
 private let textFont = Font.regular(14.0)
 

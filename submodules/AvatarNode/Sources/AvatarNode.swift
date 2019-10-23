@@ -14,6 +14,10 @@ private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precom
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
+public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
+    return Font.with(size: size, design: .round, traits: [.bold])
+}
+
 public enum AvatarNodeClipStyle {
     case none
     case round

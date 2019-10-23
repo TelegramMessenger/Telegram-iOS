@@ -60,7 +60,7 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
     }
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
+private let avatarFont = avatarPlaceholderFont(size: 12.0)
 private let boundingSize = CGSize(width: 41.0, height: 41.0)
 private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
