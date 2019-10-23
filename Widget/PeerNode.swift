@@ -13,8 +13,6 @@ private func floorToScreenPixels(_ value: CGFloat) -> CGFloat {
     return floor(value * UIScreenScale) / UIScreenScale
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 18.0) ?? UIFont.systemFont(ofSize: 18.0)
-
 private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
     [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],

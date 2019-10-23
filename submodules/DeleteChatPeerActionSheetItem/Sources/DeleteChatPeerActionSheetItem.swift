@@ -16,6 +16,8 @@ public enum DeleteChatPeerAction {
     case clearCacheSuggestion
 }
 
+private let avatarFont = avatarPlaceholderFont(size: 26.0)
+
 public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let context: AccountContext
     let peer: Peer
@@ -40,8 +42,6 @@ public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     public func updateNode(_ node: ActionSheetItemNode) {
     }
 }
-
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
 private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme

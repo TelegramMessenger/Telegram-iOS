@@ -38,7 +38,7 @@ import PhoneNumberFormat
 
 private let maximumNumberOfAccounts = 3
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController

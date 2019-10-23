@@ -99,7 +99,7 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 9.0)!
+private let avatarFont = avatarPlaceholderFont(size: 9.0)
 private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
 

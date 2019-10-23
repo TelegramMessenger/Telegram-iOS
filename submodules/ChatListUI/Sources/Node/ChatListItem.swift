@@ -287,8 +287,6 @@ private final class ChatListItemAccessibilityCustomAction: UIAccessibilityCustom
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
-
 private final class CachedChatListSearchResult {
     let text: String
     let searchQuery: String
@@ -433,7 +431,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         
-        self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true

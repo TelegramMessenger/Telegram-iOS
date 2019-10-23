@@ -11,7 +11,7 @@ import AvatarNode
 import AccountContext
 import PhoneNumberFormat
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
