@@ -203,6 +203,7 @@ public final class WindowHostView {
     public let containerView: UIView
     public let eventView: UIView
     public let isRotating: () -> Bool
+    public let systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
@@ -224,10 +225,11 @@ public final class WindowHostView {
     var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
-    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
+    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, systemUserInterfaceStyle:  Signal<WindowUserInterfaceStyle, NoError>, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
         self.containerView = containerView
         self.eventView = eventView
         self.isRotating = isRotating
+        self.systemUserInterfaceStyle = systemUserInterfaceStyle
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
         self.updatePrefersOnScreenNavigationHidden = updatePrefersOnScreenNavigationHidden
@@ -317,6 +319,8 @@ public class Window1 {
         }
     }
     
+    public let systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>
+    
     private var windowPanRecognizer: WindowPanRecognizer?
     private let keyboardGestureRecognizerDelegate = WindowKeyboardGestureRecognizerDelegate()
     private var keyboardGestureBeginLocation: CGPoint?
@@ -331,6 +335,7 @@ public class Window1 {
     
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
+        self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
         
         let boundsSize = self.hostView.eventView.bounds.size
         self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHost?.statusBarFrame.height ?? defaultStatusBarHeight, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)

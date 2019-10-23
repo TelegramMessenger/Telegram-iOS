@@ -113,7 +113,7 @@ public struct InstantPageGalleryEntry: Equatable {
                     nativeId = .instantPage(self.pageId, file.fileId)
                 }
                 
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in })
             } else {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)
@@ -125,7 +125,7 @@ public struct InstantPageGalleryEntry: Equatable {
             }
         } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
             if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in })
             } else {
                 preconditionFailure()
             }

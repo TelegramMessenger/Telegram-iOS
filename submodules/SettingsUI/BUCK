@@ -83,6 +83,7 @@ static_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

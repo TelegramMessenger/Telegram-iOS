@@ -16,6 +16,7 @@ import Geocoding
 import WallpaperResources
 
 private enum TriggerMode {
+    case system
     case none
     case timeBased
     case brightness
@@ -53,6 +54,7 @@ private enum ThemeAutoNightSettingsControllerSection: Int32 {
 }
 
 private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
+    case modeSystem(PresentationTheme, String, Bool)
     case modeDisabled(PresentationTheme, String, Bool)
     case modeTimeBased(PresentationTheme, String, Bool)
     case modeBrightness(PresentationTheme, String, Bool)
@@ -70,7 +72,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .modeDisabled, .modeTimeBased, .modeBrightness:
+        case .modeSystem, .modeDisabled, .modeTimeBased, .modeBrightness:
             return ThemeAutoNightSettingsControllerSection.mode.rawValue
         case .settingsHeader, .timeBasedAutomaticLocation, .timeBasedAutomaticLocationValue, .timeBasedManualFrom, .timeBasedManualTo, .brightnessValue, .settingInfo:
             return ThemeAutoNightSettingsControllerSection.settings.rawValue
@@ -81,35 +83,43 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .modeDisabled:
+            case .modeSystem:
                 return 0
-            case .modeTimeBased:
+            case .modeDisabled:
                 return 1
-            case .modeBrightness:
+            case .modeTimeBased:
                 return 2
-            case .settingsHeader:
+            case .modeBrightness:
                 return 3
-            case .timeBasedAutomaticLocation:
+            case .settingsHeader:
                 return 4
-            case .timeBasedAutomaticLocationValue:
+            case .timeBasedAutomaticLocation:
                 return 5
-            case .timeBasedManualFrom:
+            case .timeBasedAutomaticLocationValue:
                 return 6
-            case .timeBasedManualTo:
+            case .timeBasedManualFrom:
                 return 7
-            case .brightnessValue:
+            case .timeBasedManualTo:
                 return 8
-            case .settingInfo:
+            case .brightnessValue:
                 return 9
-            case .themeHeader:
+            case .settingInfo:
                 return 10
-            case .themeItem:
+            case .themeHeader:
                 return 11
+            case .themeItem:
+                return 12
         }
     }
     
     static func ==(lhs: ThemeAutoNightSettingsControllerEntry, rhs: ThemeAutoNightSettingsControllerEntry) -> Bool {
         switch lhs {
+            case let .modeSystem(lhsTheme, lhsTitle, lhsValue):
+                if case let .modeSystem(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .modeDisabled(lhsTheme, lhsTitle, lhsValue):
                 if case let .modeDisabled(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
@@ -192,6 +202,10 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! ThemeAutoNightSettingsControllerArguments
         switch self {
+            case let .modeSystem(theme, title, value):
+                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateMode(.system)
+                })
             case let .modeDisabled(theme, title, value):
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateMode(.none)
@@ -243,7 +257,13 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
     
     let activeTriggerMode: TriggerMode
     switch switchSetting.trigger {
-        case .none:
+        case .system:
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                activeTriggerMode = .system
+            } else {
+                activeTriggerMode = .none
+            }
+        case .explicitNone:
             activeTriggerMode = .none
         case .timeBased:
             activeTriggerMode = .timeBased
@@ -251,12 +271,15 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             activeTriggerMode = .brightness
     }
     
+    if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+        entries.append(.modeSystem(theme, strings.AutoNightTheme_System, activeTriggerMode == .system))
+    }
     entries.append(.modeDisabled(theme, strings.AutoNightTheme_Disabled, activeTriggerMode == .none))
     entries.append(.modeTimeBased(theme, strings.AutoNightTheme_Scheduled, activeTriggerMode == .timeBased))
     entries.append(.modeBrightness(theme, strings.AutoNightTheme_Automatic, activeTriggerMode == .brightness))
     
     switch switchSetting.trigger {
-        case .none:
+        case .system, .explicitNone:
             break
         case let .timeBased(setting):
             entries.append(.settingsHeader(theme, strings.AutoNightTheme_ScheduleSection))
@@ -286,9 +309,9 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
     }
     
     switch switchSetting.trigger {
-        case .none:
+        case .explicitNone:
             break
-        case .timeBased, .brightness:
+        case .system, .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
             entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors))
     }
@@ -305,7 +328,7 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
 
 private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
     switch settings.trigger {
-        case .none:
+        case .system, .explicitNone, .brightness:
             return true
         case let .timeBased(setting):
             switch setting {
@@ -318,8 +341,6 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
                 case .manual:
                     return true
             }
-        case .brightness:
-            return true
     }
 }
 
@@ -386,8 +407,10 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         updateSettings { settings in
             var settings = settings
             switch mode {
+                case .system:
+                    settings.trigger = .system
                 case .none:
-                    settings.trigger = .none
+                    settings.trigger = .explicitNone
                 case .timeBased:
                     if case .timeBased = settings.trigger {
                     } else {

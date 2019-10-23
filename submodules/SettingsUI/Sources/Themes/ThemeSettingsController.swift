@@ -366,7 +366,13 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     let title: String
     switch autoNightSettings.trigger {
-        case .none:
+        case .system:
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                title = strings.AutoNightTheme_System
+            } else {
+                title = strings.AutoNightTheme_Disabled
+            }
+        case .explicitNone:
             title = strings.AutoNightTheme_Disabled
         case .timeBased:
             title = strings.AutoNightTheme_Scheduled

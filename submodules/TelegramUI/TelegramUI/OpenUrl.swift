@@ -11,12 +11,14 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 import UrlEscaping
 import PassportUI
 import UrlHandling
 import WalletUI
 import WalletUrl
+import OpenInExternalAppUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
