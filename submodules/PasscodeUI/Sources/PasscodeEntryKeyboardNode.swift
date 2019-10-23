@@ -116,6 +116,8 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.subtitle = subtitle
         
         self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.isUserInteractionEnabled = false
         
         super.init()
