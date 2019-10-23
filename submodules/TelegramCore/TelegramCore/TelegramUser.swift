@@ -37,7 +37,7 @@ public struct BotUserInfoFlags: OptionSet {
     
     public static let hasAccessToChatHistory = BotUserInfoFlags(rawValue: (1 << 0))
     public static let worksWithGroups = BotUserInfoFlags(rawValue: (1 << 1))
-    public static let requiresGeolocationForInlineRequests = BotUserInfoFlags(rawValue: (1 << 2))
+    public static let requiresGeolocationForInlineRequests = BotUserInfoFlags(rawValue: (1 << 3))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {
@@ -319,7 +319,7 @@ extension TelegramUser {
                 if (flags & (1 << 16)) == 0 {
                     botFlags.insert(.worksWithGroups)
                 }
-                if (flags & (1 << 21)) == 0 {
+                if (flags & (1 << 21)) != 0 {
                     botFlags.insert(.requiresGeolocationForInlineRequests)
                 }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
@@ -362,7 +362,7 @@ extension TelegramUser {
                             if (flags & (1 << 16)) == 0 {
                                 botFlags.insert(.worksWithGroups)
                             }
-                            if (flags & (1 << 21)) == 0 {
+                            if (flags & (1 << 21)) != 0 {
                                 botFlags.insert(.requiresGeolocationForInlineRequests)
                             }
                             botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
