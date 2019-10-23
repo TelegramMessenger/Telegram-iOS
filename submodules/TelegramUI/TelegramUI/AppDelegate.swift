@@ -251,8 +251,9 @@ final class SharedApplicationContext {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
-        self.deviceToken.set(voipTokenPromise.get()
-        |> map(Optional.init))
+        let _ = voipTokenPromise.get().start(next: { token in
+            self.deviceToken.set(.single(token))
+        })
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
