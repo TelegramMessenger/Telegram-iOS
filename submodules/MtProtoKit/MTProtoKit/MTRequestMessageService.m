@@ -291,6 +291,9 @@
     
     if (initializeApi && _apiEnvironment != nil)
     {
+        if (MTLogEnabled()) {
+            MTLog(@"apiEnvironment: %d", (int)_apiEnvironment.systemCode.length);
+        }
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
         // invokeWithLayer

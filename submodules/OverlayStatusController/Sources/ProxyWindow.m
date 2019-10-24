@@ -135,6 +135,7 @@ static bool ProxyWindowIsLight = true;
     NSString *_text;
     UIImage *_icon;
     bool _isShield;
+    bool _showCheck;
     UIVisualEffectView *_effectView;
     UIView *_backgroundView;
     ProxySpinnerView *_spinner;
@@ -168,13 +169,14 @@ static bool ProxyWindowIsLight = true;
     return image;
 }
 
-- (instancetype)initWithLight:(bool)light text:(NSString *)text icon:(UIImage *)icon isShield:(bool)isShield {
+- (instancetype)initWithLight:(bool)light text:(NSString *)text icon:(UIImage *)icon isShield:(bool)isShield showCheck:(bool)showCheck {
     self = [super init];
     if (self != nil) {
         _light = light;
         _text = text;
         _icon = icon;
         _isShield = isShield;
+        _showCheck = showCheck;
     }
     return self;
 }
@@ -316,7 +318,7 @@ static bool ProxyWindowIsLight = true;
         dismissBlock();
     }];
     
-    if (_isShield) {
+    if (_isShield || _showCheck) {
         dispatchAfter(0.15, dispatch_get_main_queue(), ^{
             [_spinner setSucceed];
         });

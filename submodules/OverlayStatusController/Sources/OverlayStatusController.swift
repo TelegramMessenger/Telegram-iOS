@@ -92,13 +92,13 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
             case .success:
                 self.contentController = .progress(ProgressWindowController(light: style == .light))
             case let .shieldSuccess(text, increasedDelay):
-                self.contentController = .shieldSuccess(ProxyWindowController(light: style == .light, text: text, icon: ProxyWindowController.generateShieldImage(style == .light), isShield: true), increasedDelay)
+                self.contentController = .shieldSuccess(ProxyWindowController(light: style == .light, text: text, icon: ProxyWindowController.generateShieldImage(style == .light), isShield: true, showCheck: true), increasedDelay)
             case let .genericSuccess(text, increasedDelay):
-                let controller = ProxyWindowController(light: style == .light, text: text, icon: nil, isShield: false)!
+                let controller = ProxyWindowController(light: style == .light, text: text, icon: nil, isShield: false, showCheck: true)!
                 self.contentController = .genericSuccess(controller, increasedDelay)
                 isUserInteractionEnabled = false
             case let .starSuccess(text):
-                self.contentController = .genericSuccess(ProxyWindowController(light: style == .light, text: text, icon: UIImage(bundleImageName: "Star"), isShield: false), false)
+                self.contentController = .genericSuccess(ProxyWindowController(light: style == .light, text: text, icon: UIImage(bundleImageName: "Star"), isShield: false, showCheck: false), false)
         }
         
         super.init()
