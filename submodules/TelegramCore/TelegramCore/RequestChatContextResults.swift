@@ -14,6 +14,7 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
+import SyncCore
 
 public enum RequestChatContextResultsError {
     case generic
