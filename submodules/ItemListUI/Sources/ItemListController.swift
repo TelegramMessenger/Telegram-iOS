@@ -400,7 +400,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         strongSelf.theme = controllerState.theme
                         
                         strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.theme), strings: NavigationBarStrings(presentationStrings: strongSelf.strings)))
-                        strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBarStyle.style
+                        strongSelf.statusBar.updateStatusBarStyle(strongSelf.theme.rootController.statusBarStyle.style, animated: true)
                         
                         strongSelf.segmentedTitleView?.theme = controllerState.theme
                         

@@ -685,7 +685,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Hide
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {

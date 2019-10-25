@@ -302,7 +302,20 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private weak var currentTopVisibleOverlayContainerStatusBar: NavigationOverlayContainer? = nil
     
+    private var isUpdatingContainers: Bool = false
+    
+    private func updateContainersNonReentrant(transition: ContainedViewLayoutTransition) {
+        if self.isUpdatingContainers {
+            return
+        }
+        if let layout = self.validLayout {
+            self.updateContainers(layout: layout, transition: transition)
+        }
+    }
+    
     private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.isUpdatingContainers = true
+        
         var layout = rawLayout
         
         if self.ignoreInputHeight {
@@ -393,18 +406,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                         guard let strongSelf = self, let modalContainer = modalContainer else {
                             return
                         }
-                        if let layout = strongSelf.validLayout {
-                            strongSelf.updateContainers(layout: layout, transition: .animated(duration: 0.5, curve: .spring))
-                        }
+                        strongSelf.updateContainersNonReentrant(transition: .animated(duration: 0.5, curve: .spring))
                     }
                 }
                 modalContainer.updateDismissProgress = { [weak self, weak modalContainer] _, transition in
                     guard let strongSelf = self, let modalContainer = modalContainer else {
                         return
                     }
-                    if let layout = strongSelf.validLayout {
-                        strongSelf.updateContainers(layout: layout, transition: transition)
-                    }
+                    strongSelf.updateContainersNonReentrant(transition: transition)
                 }
                 modalContainer.interactivelyDismissed = { [weak self, weak modalContainer] hadInputFocus in
                     guard let strongSelf = self, let modalContainer = modalContainer else {
@@ -632,10 +641,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                         self?.controllerRemoved(controller)
                     })
                     flatContainer.statusBarStyleUpdated = { [weak self] transition in
-                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                        guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.updateContainers(layout: layout, transition: transition)
+                        strongSelf.updateContainersNonReentrant(transition: transition)
                     }
                     if previousModalContainer == nil {
                         flatContainer.keyboardViewManager = self.keyboardViewManager
@@ -655,10 +664,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self?.controllerRemoved(controller)
                 })
                 flatContainer.statusBarStyleUpdated = { [weak self] transition in
-                    guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                    guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateContainers(layout: layout, transition: transition)
+                    strongSelf.updateContainersNonReentrant(transition: transition)
                 }
                 if previousModalContainer == nil {
                     flatContainer.keyboardViewManager = self.keyboardViewManager
@@ -885,6 +894,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.validStatusBarHidden = statusBarHidden
             self.statusBarHost?.setStatusBarHidden(statusBarHidden, animated: animateStatusBarStyleTransition)
         }
+        
+        self.isUpdatingContainers = false
     }
     
     private func controllerRemoved(_ controller: ViewController) {
@@ -1111,16 +1122,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
             }
-            if let layout = strongSelf.validLayout {
-                strongSelf.updateContainers(layout: layout, transition: .immediate)
-            }
+            strongSelf.updateContainersNonReentrant(transition: .immediate)
         }, statusBarUpdated: { [weak self] transition in
             guard let strongSelf = self else {
                 return
             }
-            if let layout = strongSelf.validLayout {
-                strongSelf.updateContainers(layout: layout, transition: transition)
-            }
+            strongSelf.updateContainersNonReentrant(transition: transition)
         })
         if inGlobal {
             self.globalOverlayContainers.append(container)
@@ -1131,9 +1138,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             guard let strongSelf = self, let container = container else {
                 return
             }
-            if let layout = strongSelf.validLayout {
-                strongSelf.updateContainers(layout: layout, transition: .immediate)
-            }
+            strongSelf.updateContainersNonReentrant(transition: .immediate)
         }
         if let layout = self.validLayout {
             self.updateContainers(layout: layout, transition: .immediate)

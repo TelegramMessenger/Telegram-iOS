@@ -125,6 +125,8 @@ public enum ViewControllerNavigationPresentation {
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
     var _presentedInModal: Bool = false
     
+    public var presentedOverCoveringView: Bool = false
+    
     public var presentationArguments: Any?
     
     public var tabBarItemDebugTapAction: (() -> Void)?
