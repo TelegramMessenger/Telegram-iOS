@@ -1580,7 +1580,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if peer.id == strongSelf.context.account.peerId {
                     mode = .reminders
                 } else {
-                    mode = .scheduledMessages
+                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
                 }
                 
                 let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
@@ -1612,7 +1612,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if peer.id == strongSelf.context.account.peerId {
                     mode = .reminders
                 } else {
-                    mode = .scheduledMessages
+                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
                 }
                 
                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
@@ -5463,7 +5463,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if peer.id == strongSelf.context.account.peerId {
                             mode = .reminders
                         } else {
-                            mode = .scheduledMessages
+                            mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
                         }
                         let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
                             if let strongSelf = self {
@@ -5504,7 +5504,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if peer.id == strongSelf.context.account.peerId {
                     mode = .reminders
                 } else {
-                    mode = .scheduledMessages
+                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
                 }
                 let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
                     if let strongSelf = self {
@@ -5693,7 +5693,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if peer.id == strongSelf.context.account.peerId {
                             mode = .reminders
                         } else {
-                            mode = .scheduledMessages
+                            mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
                         }
                         let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
                             if let strongSelf = self {
@@ -5980,7 +5980,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if peerId == self.context.account.peerId {
                 mode = .reminders
             } else {
-                mode = .scheduledMessages
+                mode = .scheduledMessages(sendWhenOnlineAvailable: peerId.namespace == Namespaces.Peer.CloudUser)
             }
             let controller = ChatScheduleTimeController(context: self.context, mode: mode, minimalTime: self.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {

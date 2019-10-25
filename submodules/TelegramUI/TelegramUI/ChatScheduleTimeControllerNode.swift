@@ -102,7 +102,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
-        //self.contentContainerNode.addSubnode(self.onlineButton)
+        if case .scheduledMessages(true) = self.mode {
+            self.contentContainerNode.addSubnode(self.onlineButton)
+        }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
@@ -311,7 +313,10 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        var buttonOffset: CGFloat = 0.0 //44.0
+        var buttonOffset: CGFloat = 0.0
+        if case .scheduledMessages(true) = self.mode {
+            buttonOffset += 44.0
+        }
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0

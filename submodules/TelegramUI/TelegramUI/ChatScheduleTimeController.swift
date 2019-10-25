@@ -9,7 +9,7 @@ import SwiftSignalKit
 import AccountContext
 
 enum ChatScheduleTimeControllerMode {
-    case scheduledMessages
+    case scheduledMessages(sendWhenOnlineAvailable: Bool)
     case reminders
 }
 
