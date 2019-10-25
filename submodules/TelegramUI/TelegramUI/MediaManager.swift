@@ -566,28 +566,40 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         })
     }
     
-    @objc func playCommandEvent(_ command: AnyObject) {
+    @objc func playCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.playback(.play), type: nil)
+        
+        return .success
     }
     
-    @objc func pauseCommandEvent(_ command: AnyObject) {
+    @objc func pauseCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.playback(.pause), type: nil)
+        
+        return .success
     }
     
-    @objc func previousTrackCommandEvent(_ command: AnyObject) {
+    @objc func previousTrackCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.previous, type: nil)
+        
+        return .success
     }
     
-    @objc func nextTrackCommandEvent(_ command: AnyObject) {
+    @objc func nextTrackCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.next, type: nil)
+        
+        return .success
     }
     
-    @objc func togglePlayPauseCommandEvent(_ command: AnyObject) {
+    @objc func togglePlayPauseCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.playback(.togglePlayPause), type: nil)
+        
+        return .success
     }
     
-    @objc func changePlaybackPositionCommandEvent(_ event: MPChangePlaybackPositionCommandEvent) {
+    @objc func changePlaybackPositionCommandEvent(_ event: MPChangePlaybackPositionCommandEvent) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.seek(event.positionTime), type: nil)
+        
+        return .success
     }
     
     public func setOverlayVideoNode(_ node: OverlayMediaItemNode?) {
