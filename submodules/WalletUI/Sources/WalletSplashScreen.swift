@@ -20,7 +20,7 @@ public enum WalletSecureStorageResetReason {
 public enum WalletSplashMode {
     case intro
     case created(WalletInfo, [String]?)
-    case success(WalletInfo)
+    case success(WalletInfo, Bool)
     case restoreFailed
     case sending(WalletInfo, String, Int64, Data, Int64, Data)
     case sent(WalletInfo, Int64)
@@ -58,7 +58,7 @@ public final class WalletSplashScreen: ViewController {
                     return .single(nil)
                 })
             }
-        case let .success(walletInfo):
+        case let .success(walletInfo, _):
             if let walletCreatedPreloadState = walletCreatedPreloadState {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
@@ -397,7 +397,7 @@ public final class WalletSplashScreen: ViewController {
                         }
                     })
                 }
-            case let .success(walletInfo):
+            case let .success(walletInfo, _):
                 let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
                 |> deliverOnMainQueue).start(next: { address in
                     guard let strongSelf = self else {
@@ -606,6 +606,16 @@ public final class WalletSplashScreen: ViewController {
                 url = "https://telegram.org/tos/wallet"
             }
             strongSelf.context.openUrl(url)
+        }, replaceWithSynchronized: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            switch strongSelf.mode {
+            case let .success(walletInfo, _):
+                (strongSelf.navigationController as? NavigationController)?.replaceTopController(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo, true), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState), animated: true)
+            default:
+                break
+            }
         })
         
         self.displayNodeDidLoad()
@@ -622,6 +632,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     private var presentationData: WalletPresentationData
     private let mode: WalletSplashMode
     private let secondaryAction: () -> Void
+    private let replaceWithSynchronized: () -> Void
     
     private let iconNode: ASImageNode
     private var animationSize: CGSize = CGSize()
@@ -647,10 +658,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: WalletContext, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?, presentationData: WalletPresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void) {
+    init(context: WalletContext, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?, presentationData: WalletPresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void, replaceWithSynchronized: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.secondaryAction = secondaryAction
+        self.replaceWithSynchronized = replaceWithSynchronized
         
         self.iconNode = ASImageNode()
         self.iconNode.displayWithoutProcessing = true
@@ -676,7 +688,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             buttonText = self.presentationData.strings.Wallet_Intro_CreateWallet
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [:])
             let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
-            termsText = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Intro_Terms, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+            if context.supportsCustomConfigurations {
+                termsText = NSAttributedString(string: "")
+            } else {
+                termsText = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Intro_Terms, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+            }
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
@@ -696,20 +712,35 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
-        case .success:
-            title = self.presentationData.strings.Wallet_Completed_ProgressTitle
-            text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_ProgressText, font: textFont, textColor: textColor)
-            buttonText = self.presentationData.strings.Wallet_Completed_ViewWallet
-            buttonHidden = true
-            termsText = NSAttributedString(string: "")
-            self.iconNode.image = nil
-            if let path = getAppBundle().path(forResource: "WalletSynchronization", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .loop, mode: .direct)
-                self.animationSize = CGSize(width: 130.0, height: 130.0)
-                self.animationOffset = CGPoint(x: 0.0, y: 0.0)
-                self.animationNode.visibility = true
+        case let .success(_, synchronized):
+            if synchronized {
+                title = self.presentationData.strings.Wallet_Completed_Title
+                text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_Text, font: textFont, textColor: textColor)
+                buttonText = self.presentationData.strings.Wallet_Completed_ViewWallet
+                termsText = NSAttributedString(string: "")
+                self.iconNode.image = nil
+                if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
+                    self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .loop, mode: .direct)
+                    self.animationSize = CGSize(width: 130.0, height: 130.0)
+                    self.animationOffset = CGPoint(x: 0.0, y: 0.0)
+                    self.animationNode.visibility = true
+                }
+                secondaryActionText = ""
+            } else {
+                title = self.presentationData.strings.Wallet_Completed_ProgressTitle
+                text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_ProgressText, font: textFont, textColor: textColor)
+                buttonText = self.presentationData.strings.Wallet_Completed_ViewWallet
+                buttonHidden = true
+                termsText = NSAttributedString(string: "")
+                self.iconNode.image = nil
+                if let path = getAppBundle().path(forResource: "WalletSynchronization", ofType: "tgs") {
+                    self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 220, height: 220, playbackMode: .loop, mode: .direct)
+                    self.animationSize = CGSize(width: 110.0, height: 110.0)
+                    self.animationOffset = CGPoint(x: -10.0, y: 0.0)
+                    self.animationNode.visibility = true
+                }
+                secondaryActionText = ""
             }
-            secondaryActionText = ""
         case .restoreFailed:
             title = self.presentationData.strings.Wallet_RestoreFailed_Title
             text = NSAttributedString(string: self.presentationData.strings.Wallet_RestoreFailed_Text, font: textFont, textColor: textColor)
@@ -883,7 +914,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         }
         
         switch mode {
-        case .success:
+        case let .success(walletInfo, synchronized) where !synchronized:
             var stateSignal: Signal<Bool, NoError>
             if let walletCreatedPreloadState = walletCreatedPreloadState {
                 stateSignal = walletCreatedPreloadState.get()
@@ -908,6 +939,12 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 guard let strongSelf = self else {
                     return
                 }
+                
+                if strongSelf.validLayout != nil {
+                    strongSelf.replaceWithSynchronized()
+                    return
+                }
+                
                 strongSelf.buttonNode.isHidden = false
                 
                 let title = strongSelf.presentationData.strings.Wallet_Completed_Title
