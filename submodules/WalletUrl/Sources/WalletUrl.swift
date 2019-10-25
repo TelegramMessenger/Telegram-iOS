@@ -18,14 +18,16 @@ public func parseWalletUrl(_ url: URL) -> ParsedWalletUrl? {
     guard url.scheme == "ton" && url.host == "transfer" else {
         return nil
     }
+    let updatedUrl = URL(string: url.absoluteString.replacingOccurrences(of: "+", with: "%20"), relativeTo: nil) ?? url
+
     var address: String?
-    let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    let path = updatedUrl.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     if isValidWalletAddress(path) {
         address = path
     }
     var amount: Int64?
     var comment: String?
-    if let query = url.query, let components = URLComponents(string: "/?" + query), let queryItems = components.queryItems {
+    if let query = updatedUrl.query, let components = URLComponents(string: "/?" + query), let queryItems = components.queryItems {
         for queryItem in queryItems {
             if let value = queryItem.value {
                 if queryItem.name == "amount", !value.isEmpty, let amountValue = Int64(value) {
