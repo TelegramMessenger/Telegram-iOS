@@ -513,8 +513,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
                 propertyAnimator?.stopAnimation(true)
             }
+            self.effectView.effect = makeCustomZoomBlurEffect()
+            self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
-                self?.effectView.effect = makeCustomZoomBlurEffect()
+                //self?.effectView.effect = makeCustomZoomBlurEffect()
             })
         }
         
@@ -674,7 +676,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     propertyAnimator?.stopAnimation(true)
                 }
                 self.propertyAnimator = UIViewPropertyAnimator(duration: transitionDuration * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
-                    self?.effectView.effect = nil
+                    //self?.effectView.effect = nil
                 })
             }
             
@@ -687,7 +689,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         intermediateCompletion()
                     })
                 }
-                self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.05 * animationDurationFactor, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+                self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
             } else {
                 UIView.animate(withDuration: 0.21 * animationDurationFactor, animations: {
                     if #available(iOS 9.0, *) {
