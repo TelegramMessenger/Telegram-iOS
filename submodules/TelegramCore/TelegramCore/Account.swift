@@ -910,13 +910,7 @@ public class Account {
         }).start()
         self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
         self.autolockReportDeadline.set(
-            accountManager.accessChallengeData()
-            |> map { dataView -> Int32? in
-                guard let autolockDeadline = dataView.data.autolockDeadline else {
-                    return nil
-                }
-                return autolockDeadline
-            }
+            networkArguments.autolockDeadine
             |> distinctUntilChanged
         )
         

@@ -410,14 +410,16 @@ public struct NetworkInitializationArguments {
     public let appVersion: String
     public let voipMaxLayer: Int32
     public let appData: Signal<Data?, NoError>
+    public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>, encryptionProvider: EncryptionProvider) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
         self.voipMaxLayer = voipMaxLayer
         self.appData = appData
+        self.autolockDeadine = autolockDeadine
         self.encryptionProvider = encryptionProvider
     }
 }

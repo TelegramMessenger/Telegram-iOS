@@ -1,0 +1,25 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "AppLock",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/MonotonicTime:MonotonicTime",
+        "//submodules/PasscodeUI:PasscodeUI",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ImageBlur:ImageBlur",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/AppLockState:AppLockState",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

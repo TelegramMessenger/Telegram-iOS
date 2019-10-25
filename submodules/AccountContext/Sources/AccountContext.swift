@@ -384,10 +384,19 @@ public enum CreateGroupMode {
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
 }
 
+public protocol AppLockContext: class {
+    var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
+    
+    func lock()
+    func unlock()
+    func failedUnlockAttempt()
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
     var accountManager: AccountManager { get }
+    var appLockContext: AppLockContext { get }
     
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }

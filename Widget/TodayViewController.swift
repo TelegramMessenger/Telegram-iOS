@@ -2,6 +2,7 @@ import UIKit
 import NotificationCenter
 import BuildConfig
 import WidgetItems
+import AppLockState
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
@@ -13,13 +14,10 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     private var buildConfig: BuildConfig?
     
+    private var appLockedLabel: UILabel?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        if self.initializedInterface {
-            return
-        }
-        self.initializedInterface = true
         
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
@@ -38,6 +36,23 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         }
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            let appLockedLabel = UILabel()
+            appLockedLabel.textColor = .black
+            appLockedLabel.font = UIFont.systemFont(ofSize: 16.0)
+            appLockedLabel.text = "Unlock the app to use widget"
+            appLockedLabel.sizeToFit()
+            self.appLockedLabel = appLockedLabel
+            self.view.addSubview(appLockedLabel)
+            return
+        }
+        
+        if self.initializedInterface {
+            return
+        }
+        self.initializedInterface = true
+        
         let dataPath = rootPath + "/widget-data"
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
@@ -96,6 +111,10 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     private func updateLayout(size: CGSize) {
         self.validLayout = size
+        
+        if let appLockedLabel = self.appLockedLabel {
+            appLockedLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - appLockedLabel.bounds.width) / 2.0), y: floor((size.height - appLockedLabel.bounds.height) / 2.0)), size: appLockedLabel.bounds.size)
+        }
         
         let peerSize = CGSize(width: 70.0, height: 100.0)
         

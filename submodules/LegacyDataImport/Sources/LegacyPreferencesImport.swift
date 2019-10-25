@@ -149,9 +149,9 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 }
                 
                 if mode == 3 {
-                    passcodeChallenge = .numericalPassword(value: passwordText, timeout: lockTimeout, attempts: nil)
+                    passcodeChallenge = .numericalPassword(value: passwordText)
                 } else if mode == 4 {
-                    passcodeChallenge = PostboxAccessChallengeData.plaintextPassword(value: passwordText, timeout: lockTimeout, attempts: nil)
+                    passcodeChallenge = PostboxAccessChallengeData.plaintextPassword(value: passwordText)
                 }
             }
         }
@@ -288,14 +288,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 var settings: PresentationPasscodeSettings = current as? PresentationPasscodeSettings ?? .defaultSettings
                 if let passcodeChallenge = passcodeChallenge {
                     transaction.setAccessChallengeData(passcodeChallenge)
-                    switch passcodeChallenge {
-                        case .none:
-                            break
-                        case let .numericalPassword(_, timeout, _):
-                            settings.autolockTimeout = timeout
-                        case let .plaintextPassword(_, timeout, _):
-                            settings.autolockTimeout = timeout
-                    }
                     settings.enableBiometrics = passcodeEnableBiometrics
                 }
                 return settings

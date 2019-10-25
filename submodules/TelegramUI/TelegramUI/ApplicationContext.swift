@@ -22,14 +22,6 @@ import ImageBlur
 import WatchBridge
 import SettingsUI
 
-func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
-    if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
-        return true
-    } else {
-        return false
-    }
-}
-
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
     let account: UnauthorizedAccount
@@ -54,14 +46,6 @@ final class UnauthorizedApplicationContext {
             }
         })
     }
-}
-
-private struct PasscodeState: Equatable {
-    let isActive: Bool
-    let challengeData: PostboxAccessChallengeData
-    let autolockTimeout: Int32?
-    let enableBiometrics: Bool
-    let biometricsDomainState: Data?
 }
 
 final class AuthorizedApplicationContext {
@@ -166,7 +150,7 @@ final class AuthorizedApplicationContext {
             context.keyShortcutsController = keyShortcutsController
         }
         
-        let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
+        /*let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
         let passcodeStatusData = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
         let passcodeState = passcodeStatusData
         |> map { sharedData, accessChallengeDataView, isActive -> PasscodeState in
@@ -331,7 +315,21 @@ final class AuthorizedApplicationContext {
             } else {
                 strongSelf.isReady.set(.single(true))
             }
-        }))
+        }))*/
+        
+        if self.rootController.rootTabController == nil {
+            self.rootController.addRootControllers(showCallsTab: self.showCallsTab)
+        }
+        if let tabsController = self.rootController.viewControllers.first as? TabBarController, !tabsController.controllers.isEmpty, tabsController.selectedIndex >= 0 {
+            let controller = tabsController.controllers[tabsController.selectedIndex]
+            let combinedReady = combineLatest(tabsController.ready.get(), controller.ready.get())
+            |> map { $0 && $1 }
+            |> filter { $0 }
+            |> take(1)
+            self.isReady.set(combinedReady)
+        } else {
+            self.isReady.set(.single(true))
+        }
         
         let accountId = context.account.id
         self.loggedOutDisposable.set((context.account.loggedOut

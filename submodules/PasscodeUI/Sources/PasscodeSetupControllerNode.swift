@@ -75,7 +75,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         switch self.mode {
             case let .entry(challenge):
                 switch challenge {
-                    case let .numericalPassword(value, _, _):
+                    case let .numericalPassword(value):
                         passcodeType = value.count == 6 ? .digits6 : .digits4
                     default:
                         passcodeType = .alphanumeric

@@ -247,6 +247,7 @@ apple_binary(
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems",
+        "//submodules/AppLockState:AppLockState",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

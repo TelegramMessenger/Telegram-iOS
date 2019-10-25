@@ -249,7 +249,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         let passcode = context.sharedContext.accountManager.accessChallengeData()
         |> map { view -> (Bool, Bool) in
             let data = view.data
-            return (data.isLockable, data.autolockDeadline == 0)
+            return (data.isLockable, false)
         }
         
         if !self.hideNetworkActivityStatus {
@@ -338,17 +338,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
-                    var data = transaction.getAccessChallengeData()
-                    if data.isLockable {
-                        if data.autolockDeadline != 0 {
-                            data = data.withUpdatedAutolockDeadline(0)
-                        } else {
-                            data = data.withUpdatedAutolockDeadline(nil)
-                        }
-                        transaction.setAccessChallengeData(data)
-                    }
-                }) |> deliverOnMainQueue).start()
+                strongSelf.context.sharedContext.appLockContext.lock()
             }
         }
         

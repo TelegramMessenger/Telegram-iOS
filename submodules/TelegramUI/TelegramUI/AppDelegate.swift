@@ -31,6 +31,7 @@ import UrlHandling
 import WalletUrl
 import WalletCore
 import OpenSSLEncryptionProvider
+import AppLock
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -362,7 +363,7 @@ final class SharedApplicationContext {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
@@ -725,8 +726,13 @@ final class SharedApplicationContext {
             let legacyBasePath = appGroupUrl.path
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
+            let presentationDataPromise = Promise<PresentationData>()
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
+                return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
+            })
+            
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -747,6 +753,8 @@ final class SharedApplicationContext {
                     }
                 }
             })
+            
+            presentationDataPromise.set(sharedContext.presentationData)
             
             let rawAccounts = sharedContext.activeAccounts
             |> map { _, accounts, _ -> [Account] in

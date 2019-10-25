@@ -254,9 +254,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
                             if numerical {
-                                data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
                             } else {
-                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                             }
                             transaction.setAccessChallengeData(data)
                             
@@ -298,9 +298,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
                     if numerical {
-                        data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                        data = PostboxAccessChallengeData.numericalPassword(value: passcode)
                     } else {
-                        data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                        data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                     }
                     transaction.setAccessChallengeData(data)
                 }) |> deliverOnMainQueue).start(next: { _ in
@@ -403,9 +403,9 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
                         if numerical {
-                            data = PostboxAccessChallengeData.numericalPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                            data = PostboxAccessChallengeData.numericalPassword(value: passcode)
                         } else {
-                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode, timeout: data.autolockDeadline, attempts: nil)
+                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                         }
                         transaction.setAccessChallengeData(data)
                         
@@ -426,9 +426,9 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                 switch challenge {
                     case .none:
                         succeed = true
-                    case let .numericalPassword(code, _, _):
+                    case let .numericalPassword(code):
                         succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                    case let .plaintextPassword(code, _, _):
+                    case let .plaintextPassword(code):
                         succeed = passcode == code
                 }
                 if succeed {
@@ -463,7 +463,7 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             } else {
                 biometrics = .none
             }
-            let controller = PasscodeEntryController(context: context, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
+            let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
             }))
             controller.presentationCompleted = { [weak controller] in
