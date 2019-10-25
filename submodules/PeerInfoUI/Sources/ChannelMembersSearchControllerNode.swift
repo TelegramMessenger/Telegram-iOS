@@ -296,6 +296,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.listNode.beganInteractiveDragging = { [weak self] in
+            self?.view.endEditing(true)
+        }
     }
     
     deinit {
