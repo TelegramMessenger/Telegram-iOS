@@ -4846,7 +4846,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Completed.Text" = "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers.";
 "Wallet.Completed.ViewWallet" = "View My Wallet";
 "Wallet.Completed.ProgressTitle" = "Synchronizing";
-"Wallet.Completed.ProgressText" = "You’re almost all set. Now you have to wait.";
+"Wallet.Completed.ProgressText" = "You’re almost all set.";
 "Wallet.Completed.ViewWallet" = "View My Wallet";
 "Wallet.RestoreFailed.Title" = "Too Bad";
 "Wallet.RestoreFailed.Text" = "Without the secret words, you can't\nrestore access to your wallet.";

@@ -194,6 +194,7 @@ framework(
         "//submodules/WidgetItems:WidgetItems",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/AppLock:AppLock",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
