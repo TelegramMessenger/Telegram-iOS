@@ -7,39 +7,9 @@ text_section_items = [
     "__text",
 ]
 
-text_section_rename_linker_flags = []#["-Wl,-rename_section,__TEXT,%s,__MY_TEXT,%s" % (name, name) for name in text_section_items] + ["-Wl,-segprot,__MY_TEXT,rx,rx"]
+text_section_rename_linker_flags = ["-Wl,-rename_section,__TEXT,%s,__MEXT,%s" % (name, name) for name in text_section_items] + ["-Wl,-segprot,__MEXT,rx,rx"]
 
-data_section_items = [
-    "__nl_symbol_ptr",
-    "__la_symbol_ptr",
-    "__mod_init_func",
-    "__const",
-    "__cfstring",
-    "__objc_classlist",
-    "__objc_nlclslist",
-    "__objc_catlist",
-    "__objc_nlcatlist",
-    "__objc_protolist",
-    "__objc_imageinfo",
-    "__objc_const",
-    "__objc_selrefs",
-    "__objc_protorefs",
-    "__objc_classrefs",
-    "__objc_superrefs",
-    "__objc_ivar",
-    "__objc_data",
-    "__data",
-    "__thread_vars",
-    "__thread_ptr",
-    "__swift_hooks",
-    "__thread_bss",
-    "__bss",
-    "__common",
-]
-
-data_section_rename_linker_flags = ["-Wl,-rename_section,__DATA,%s,__MY_DATA,%s" % (name, name) for name in data_section_items] + ["-Wl,-segprot,__MY_DATA,rw,rw"]
-
-section_rename_linker_flags = text_section_rename_linker_flags# + data_section_rename_linker_flags
+section_rename_linker_flags = text_section_rename_linker_flags
 
 def apple_lib(
         name,
