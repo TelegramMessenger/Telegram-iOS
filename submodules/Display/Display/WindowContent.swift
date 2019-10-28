@@ -1100,13 +1100,13 @@ public class Window1 {
         if level.rawValue <= 3, let controller = controller as? ViewController {
             for presentedController in self.presentationContext.controllers.reversed() {
                 if let navigationController = presentedController.0 as? NavigationController {
-                    navigationController.presentOverlay(controller: controller, inGlobal: false)
+                    navigationController.presentOverlay(controller: controller, inGlobal: false, blockInteraction: blockInteraction)
                     return
                 }
             }
             
             if let navigationController = self._rootController as? NavigationController {
-                navigationController.presentOverlay(controller: controller, inGlobal: false)
+                navigationController.presentOverlay(controller: controller, inGlobal: false, blockInteraction: blockInteraction)
             } else {
                 self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
             }

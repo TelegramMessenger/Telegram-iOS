@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 final class NavigationOverlayContainer: ASDisplayNode {
     let controller: ViewController
+    let blocksInteractionUntilReady: Bool
     
     private(set) var isReady: Bool = false
     var isReadyUpdated: (() -> Void)?
@@ -21,8 +22,9 @@ final class NavigationOverlayContainer: ASDisplayNode {
         }
     }
     
-    init(controller: ViewController, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
+    init(controller: ViewController, blocksInteractionUntilReady: Bool, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.controller = controller
+        self.blocksInteractionUntilReady = blocksInteractionUntilReady
         
         super.init()
         

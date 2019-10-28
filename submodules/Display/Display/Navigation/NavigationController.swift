@@ -45,24 +45,6 @@ public enum NavigationEmptyDetailsBackgoundMode {
     case wallpaper(UIImage)
 }
 
-private final class NavigationControllerView: UITracingLayerView {
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override class var layerClass: AnyClass {
-        return CATracingLayer.self
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        return super.hitTest(point, with: event)
-    }
-}
-
 private enum ControllerTransition {
     case none
     case appearance
@@ -105,6 +87,24 @@ private final class GlobalOverlayContainerParent: ASDisplayNode {
     }
 }
 
+private final class NavigationControllerNode: ASDisplayNode {
+    private weak var controller: NavigationController?
+    
+    init(controller: NavigationController) {
+        self.controller = controller
+        
+        super.init()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let controller = self.controller, controller.isInteractionDisabled() {
+            return self.view
+        } else {
+            return super.hitTest(point, with: event)
+        }
+    }
+}
+
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
@@ -129,10 +129,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var theme: NavigationControllerTheme
     
     public private(set) weak var overlayPresentingController: ViewController?
-    
-    private var controllerView: NavigationControllerView {
-        return self.view as! NavigationControllerView
-    }
     
     var inCallNavigate: (() -> Void)?
     private var inCallStatusBar: StatusBar?
@@ -269,6 +265,15 @@ open class NavigationController: UINavigationController, ContainableController, 
         return supportedOrientations
     }
     
+    fileprivate func isInteractionDisabled() -> Bool {
+        for overlayContainer in self.overlayContainers {
+            if overlayContainer.blocksInteractionUntilReady && !overlayContainer.isReady {
+                return true
+            }
+        }
+        return false
+    }
+    
     public func updateTheme(_ theme: NavigationControllerTheme) {
         let statusBarStyleUpdated = self.theme.statusBar != theme.statusBar
         self.theme = theme
@@ -281,7 +286,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         if self.isViewLoaded {
-            self.controllerView.backgroundColor = theme.emptyAreaColor
+            self.displayNode.backgroundColor = theme.emptyAreaColor
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: .immediate)
             }
@@ -940,15 +945,13 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func loadView() {
-        self._displayNode = ASDisplayNode(viewBlock: {
-            return NavigationControllerView()
-        }, didLoad: nil)
+        self._displayNode = NavigationControllerNode(controller: self)
         
         self.view = self.displayNode.view
         self.view.clipsToBounds = true
         self.view.autoresizingMask = []
         
-        self.controllerView.backgroundColor = self.theme.emptyAreaColor
+        self.displayNode.backgroundColor = self.theme.emptyAreaColor
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.navigationBar.prefersLargeTitles = false
@@ -1102,8 +1105,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
-    public func presentOverlay(controller: ViewController, inGlobal: Bool = false) {
-        let container = NavigationOverlayContainer(controller: controller, controllerRemoved: { [weak self] controller in
+    public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
+        let container = NavigationOverlayContainer(controller: controller, blocksInteractionUntilReady: blockInteraction, controllerRemoved: { [weak self] controller in
             guard let strongSelf = self else {
                 return
             }
