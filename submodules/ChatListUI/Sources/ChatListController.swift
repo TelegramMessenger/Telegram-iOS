@@ -1452,11 +1452,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                     })
-                                    ])
                                 ])
+                            ])
                             strongSelf.present(actionSheet, in: .window(.root))
                         } else {
-                            beginClear(.forLocalPeer)
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                }),
+                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                    beginClear(.forLocalPeer)
+                                })
+                            ], parseMarkdown: true), in: .window(.root))
                         }
                     }))
                 }
@@ -1487,12 +1493,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                                           ActionSheetItemGroup(items: [
-                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                                actionSheet?.dismissAnimated()
-                                            })
-                                            ])
+                        ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
                     ])
+                ])
                 strongSelf.present(actionSheet, in: .window(.root))
             }
         })
