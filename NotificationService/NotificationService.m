@@ -36,6 +36,7 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     return (((int64_t)(namespace)) << 32) | ((int64_t)((uint64_t)((uint32_t)value)));
 }
 
+#if DEBUG
 static void reportMemory() {
     struct task_basic_info info;
     mach_msg_type_number_t size = TASK_BASIC_INFO_COUNT;
@@ -47,6 +48,7 @@ static void reportMemory() {
         NSLog(@"Error with task_info(): %s", mach_error_string(kerr));
     }
 }
+#endif
 
 @interface NotificationServiceImpl () {
     void (^_countIncomingMessage)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t);
@@ -69,7 +71,9 @@ static void reportMemory() {
 - (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage {
     self = [super init];
     if (self != nil) {
+        #if DEBUG
         reportMemory();
+        #endif
         
         _countIncomingMessage = [countIncomingMessage copy];
         
@@ -112,7 +116,9 @@ static void reportMemory() {
 }
  
 - (void)_internalComplete {
+    #if DEBUG
     reportMemory();
+    #endif
     
     #ifdef __IPHONE_13_0
     if (_baseAppBundleId != nil) {
