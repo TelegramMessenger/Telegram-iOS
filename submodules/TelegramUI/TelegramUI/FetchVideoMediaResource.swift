@@ -163,9 +163,19 @@ private final class FetchVideoLibraryMediaResourceContextImpl {
                     queue.async {
                         item?.next(value)
                     }
-                }, error: { [weak item] value in
+                }, error: { [weak self, weak item] value in
                     queue.async {
-                        item?.error(value)
+                        guard let strongSelf = self, let item = item else {
+                            return
+                        }
+                        for i in 0 ..< strongSelf.items.count {
+                            if strongSelf.items[i] === item {
+                                strongSelf.items.remove(at: i)
+                                item.error(value)
+                                strongSelf.update()
+                                break
+                            }
+                        }
                     }
                 }, completed: { [weak self, weak item] in
                     queue.async {
