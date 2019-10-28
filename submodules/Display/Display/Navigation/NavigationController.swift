@@ -883,7 +883,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             let normalStatusBarStyle: UIStatusBarStyle
             switch resolvedStatusBarStyle {
             case .black:
-                normalStatusBarStyle = .default
+                if #available(iOS 13.0, *) {
+                    normalStatusBarStyle = .darkContent
+                } else {
+                    normalStatusBarStyle = .default
+                }
             case .white:
                 normalStatusBarStyle = .lightContent
             }
