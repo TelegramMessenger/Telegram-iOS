@@ -317,8 +317,6 @@ func walletStringsFormattedNumber(_ count: Int32, _ groupingSeparator: String = 
     }
 }
 
-extension OverlayStatusController {
-    convenience init(theme: WalletTheme, type: OverlayStatusControllerType) {
-        self.init(style: theme.keyboardAppearance == .dark ? .dark : .light, type: type)
-    }
+func OverlayStatusController(theme: WalletTheme, type: OverlayStatusControllerType) -> ViewController {
+    return OverlayStatusController(style: theme.keyboardAppearance == .dark ? .dark : .light, type: type)
 }

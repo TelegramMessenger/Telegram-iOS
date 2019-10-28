@@ -32,6 +32,7 @@ import WalletUrl
 import WalletCore
 import OpenSSLEncryptionProvider
 import AppLock
+import PresentationDataUtils
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -627,7 +628,7 @@ final class SharedApplicationContext {
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
-                    self.dataImportSplash = LegacyDataImportSplash(theme: nil, strings: nil)
+                    self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
                     self.dataImportSplash?.serviceAction = {
                         self.debugPressed()
                     }
@@ -739,7 +740,7 @@ final class SharedApplicationContext {
             }, displayUpgradeProgress: { progress in
                 if let progress = progress {
                     if self.dataImportSplash == nil {
-                        self.dataImportSplash = LegacyDataImportSplash(theme: initialPresentationDataAndSettings.presentationData.theme, strings: initialPresentationDataAndSettings.presentationData.strings)
+                        self.dataImportSplash = makeLegacyDataImportSplash(theme: initialPresentationDataAndSettings.presentationData.theme, strings: initialPresentationDataAndSettings.presentationData.strings)
                         self.dataImportSplash?.serviceAction = {
                             self.debugPressed()
                         }
@@ -881,7 +882,7 @@ final class SharedApplicationContext {
                     case let .progress(type, value):
                         Queue.mainQueue().async {
                             if self.dataImportSplash == nil {
-                                self.dataImportSplash = LegacyDataImportSplash(theme: nil, strings: nil)
+                                self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
                                 self.dataImportSplash?.serviceAction = {
                                     self.debugPressed()
                                 }

@@ -2,9 +2,8 @@ import Foundation
 import UIKit
 import OverlayStatusController
 import TelegramPresentationData
+import Display
 
-public extension OverlayStatusController {
-    convenience init(theme: PresentationTheme, type: OverlayStatusControllerType) {
-        self.init(style: theme.actionSheet.backgroundType == .light ? .light : .dark, type: type)
-    }
+public func OverlayStatusController(theme: PresentationTheme, type: OverlayStatusControllerType) -> ViewController {
+    return OverlayStatusController(style: theme.actionSheet.backgroundType == .light ? .light : .dark, type: type)
 }

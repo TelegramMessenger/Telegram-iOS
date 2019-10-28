@@ -14,6 +14,7 @@ import ContextUI
 import LegacyUI
 import AppBundle
 import SaveToCameraRoll
+import PresentationDataUtils
 
 private struct MessageContextMenuData {
     let starStatus: Bool?

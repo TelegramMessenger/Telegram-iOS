@@ -133,7 +133,7 @@ public enum OverlayStatusControllerStyle {
     case dark
 }
 
-public final class OverlayStatusController: ViewController, StandalonePresentableController {
+private final class OverlayStatusControllerImpl: ViewController, StandalonePresentableController {
     private let style: OverlayStatusControllerStyle
     private let type: OverlayStatusControllerType
     
@@ -152,7 +152,7 @@ public final class OverlayStatusController: ViewController, StandalonePresentabl
         self.statusBar.statusBarStyle = .Ignore
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -182,4 +182,8 @@ public final class OverlayStatusController: ViewController, StandalonePresentabl
     public func dismiss() {
         self.controllerNode.dismiss()
     }
+}
+
+public func OverlayStatusController(style: OverlayStatusControllerStyle, type: OverlayStatusControllerType) -> ViewController {
+    return OverlayStatusControllerImpl(style: style, type: type)
 }

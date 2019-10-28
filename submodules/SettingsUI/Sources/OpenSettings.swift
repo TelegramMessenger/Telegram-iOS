@@ -6,6 +6,7 @@ import TelegramCore
 import SyncCore
 import OverlayStatusController
 import AccountContext
+import PresentationDataUtils
 
 private let maximumNumberOfAccounts = 3
 

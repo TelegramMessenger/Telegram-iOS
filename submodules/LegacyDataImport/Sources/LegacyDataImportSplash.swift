@@ -4,7 +4,12 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import RadialStatusNode
 
-public final class LegacyDataImportSplash: WindowCoveringView {
+public protocol LegacyDataImportSplash: WindowCoveringView {
+    var progress: (AccountImportProgressType, Float) { get set }
+    var serviceAction: (() -> Void)? { get set }
+}
+
+private final class LegacyDataImportSplashImpl: WindowCoveringView, LegacyDataImportSplash {
     private let theme: PresentationTheme?
     private let strings: PresentationStrings?
     
@@ -77,4 +82,8 @@ public final class LegacyDataImportSplash: WindowCoveringView {
             self.serviceAction?()
         }
     }
+}
+
+public func makeLegacyDataImportSplash(theme: PresentationTheme?, strings: PresentationStrings?) -> LegacyDataImportSplash {
+    return LegacyDataImportSplashImpl(theme: theme, strings: strings)
 }

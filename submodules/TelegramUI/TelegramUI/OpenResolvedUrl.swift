@@ -209,7 +209,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .wallpaper(parameter):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            var controller: OverlayStatusController?
+            var controller: ViewController?
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?

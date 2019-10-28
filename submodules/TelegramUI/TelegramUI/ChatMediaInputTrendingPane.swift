@@ -11,6 +11,7 @@ import MergeLists
 import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
+import PresentationDataUtils
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void

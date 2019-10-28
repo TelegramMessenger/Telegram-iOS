@@ -11,6 +11,7 @@ import TelegramPresentationData
 import ActivityIndicator
 import OverlayStatusController
 import AccountContext
+import PresentationDataUtils
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?

@@ -14,6 +14,7 @@ import AccountContext
 import ShareController
 import SearchUI
 import HexColor
+import PresentationDataUtils
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
