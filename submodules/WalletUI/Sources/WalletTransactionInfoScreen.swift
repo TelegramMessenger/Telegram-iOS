@@ -418,21 +418,21 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
                 
         var feesString: String = ""
         if case let .completed(transaction) = walletTransaction {
-            if transaction.storageFee != 0 {
-                feesString.append(formatBalanceText(transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " storage fee")
-            }
             if transaction.otherFee != 0 {
+                feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " transaction fee")
+            }
+            if transaction.storageFee != 0 {
                 if !feesString.isEmpty {
                     feesString.append("\n")
                 }
-                feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " transaction fee")
+                feesString.append(formatBalanceText(transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " storage fee")
             }
             
             self.feesInfoIconNode.isHidden = feesString.isEmpty
         }
         self.feesNode.attributedText = NSAttributedString(string: feesString, font: subtitleFont, textColor: seccondaryTextColor)
         
-        self.feesButtonNode.addTarget(self, action: #selector(feesPressed), forControlEvents: .touchUpInside)
+        self.feesButtonNode.addTarget(self, action: #selector(self.feesPressed), forControlEvents: .touchUpInside)
         
         var commentBackgroundColor = presentationData.theme.transaction.descriptionBackgroundColor
         if commentBackgroundColor.distance(to: presentationData.theme.list.plainBackgroundColor) < 100 {
