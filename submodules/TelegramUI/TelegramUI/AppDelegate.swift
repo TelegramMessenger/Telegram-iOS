@@ -1331,7 +1331,7 @@ final class SharedApplicationContext {
             #if DEBUG
             extendNow = false
             #endif
-            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0, extendNow: extendNow)
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: extendNow)
         })
         
         self.isInForegroundValue = false
@@ -1385,7 +1385,7 @@ final class SharedApplicationContext {
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
         })
         
         var redactedPayload = userInfo
@@ -1507,7 +1507,7 @@ final class SharedApplicationContext {
             }
                 
                 /*.start(next: { sharedApplicationContext in
-                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                 
                 if case PKPushType.voIP = type {
                     Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
@@ -1717,7 +1717,7 @@ final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
-                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                     return sharedContext.sharedContext.activeAccounts
                     |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
                         for account in accounts {
