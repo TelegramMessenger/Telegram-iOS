@@ -487,14 +487,21 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
                 } else if let contentFile = content.file, contentFile.mimeType == mimeType {
                     file = contentFile
                 }
-                if case let .theme(slug) = resolvedUrl, let file = file {
-                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
-                        let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
-                        pushController(controller)
-                    }
-                } else {
+                let displayUnsupportedAlert: () -> Void = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     present(textAlertController(context: context, title: nil, text: presentationData.strings.Theme_Unsupported, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
+                if case let .theme(slug) = resolvedUrl, let file = file {
+                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                        if let theme = makePresentationTheme(data: data) {
+                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                            pushController(controller)
+                        } else {
+                            displayUnsupportedAlert()
+                        }
+                    }
+                } else {
+                    displayUnsupportedAlert()
                 }
             })
         }
