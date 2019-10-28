@@ -18,7 +18,7 @@ static_library(
     ]),
     headers = glob([
         "LegacyComponents/*.h",
-    ], exclude = ["LegacyComponents/LegacyComponents.h"]),
+    ]),
     exported_headers = [
         "LegacyComponents/LegacyComponentsGlobals.h",
         "LegacyComponents/LegacyComponentsContext.h",
@@ -204,7 +204,6 @@ static_library(
         "LegacyComponents/TGImageManagerTask.h",
 
         "LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h",
-        "LegacyComponents/TGPopoverController.h",
         "LegacyComponents/TGNavigationController.h",
         "LegacyComponents/TGNavigationBar.h",
         "LegacyComponents/TGViewController.h",

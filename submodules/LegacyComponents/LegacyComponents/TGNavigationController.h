@@ -20,8 +20,6 @@ typedef enum {
 @property (nonatomic) TGNavigationControllerPresentationStyle presentationStyle;
 @property (nonatomic) bool detachFromPresentingControllerInCompactMode;
 
-@property (nonatomic, weak) UIPopoverController *parentPopoverController;
-
 @property (nonatomic) bool displayPlayer;
 @property (nonatomic) bool minimizePlayer;
 
