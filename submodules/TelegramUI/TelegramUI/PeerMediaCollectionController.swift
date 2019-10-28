@@ -178,100 +178,108 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     gesture?.cancel()
                     return
                 }
-                if let previewData = chatMessagePreviewControllerData(context: strongSelf.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController) {
-                    let context = strongSelf.context
-                    let strings = strongSelf.presentationData.strings
-                    let items = chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
-                    |> map { actions -> [ContextMenuItem] in
-                        var items: [ContextMenuItem] = []
-                        
-                        items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            c.dismiss(completion: {
-                                if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
-                                }
-                            })
-                        })))
-                        
-                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            c.dismiss(completion: {
-                                if let strongSelf = self {
-                                    strongSelf.forwardMessages([message.id])
-                                }
-                            })
-                        })))
-                        
-                        if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
-                            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
-                                c.setItems(context.account.postbox.transaction { transaction -> [ContextMenuItem] in
-                                    var items: [ContextMenuItem] = []
-                                    let messageIds = [message.id]
-                                    
-                                    if let peer = transaction.getPeer(message.id.peerId) {
-                                        var personalPeerName: String?
-                                        var isChannel = false
-                                        if let user = peer as? TelegramUser {
-                                            personalPeerName = user.compactDisplayTitle
-                                        } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                            isChannel = true
-                                        }
-                                        
-                                        if actions.options.contains(.deleteGlobally) {
-                                            let globalTitle: String
-                                            if isChannel {
-                                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                                            } else if let personalPeerName = personalPeerName {
-                                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
-                                            } else {
-                                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                                            }
-                                            items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { c, f in
-                                                c.dismiss(completion: {
-                                                    if let strongSelf = self {
-                                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                        let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
-                                                    }
-                                                })
-                                            })))
-                                        }
-                                        
-                                        if actions.options.contains(.deleteLocally) {
-                                            var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                                            if strongSelf.context.account.peerId == strongSelf.peerId {
-                                                if messageIds.count == 1 {
-                                                    localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
-                                                } else {
-                                                    localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
-                                                }
-                                            }
-                                            items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { c, f in
-                                                c.dismiss(completion: {
-                                                    if let strongSelf = self {
-                                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                        let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
-                                                    }
-                                                })
-                                            })))
-                                        }
+                
+                let _ = (chatMediaListPreviewControllerData(context: strongSelf.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController)
+                |> deliverOnMainQueue).start(next: { previewData in
+                    guard let strongSelf = self else {
+                        gesture?.cancel()
+                        return
+                    }
+                    if let previewData = previewData {
+                        let context = strongSelf.context
+                        let strings = strongSelf.presentationData.strings
+                        let items = chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+                        |> map { actions -> [ContextMenuItem] in
+                            var items: [ContextMenuItem] = []
+                            
+                            items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                                c.dismiss(completion: {
+                                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
                                     }
-                                    
-                                    return items
                                 })
                             })))
+                            
+                            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                                c.dismiss(completion: {
+                                    if let strongSelf = self {
+                                        strongSelf.forwardMessages([message.id])
+                                    }
+                                })
+                            })))
+                            
+                            if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
+                                items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
+                                    c.setItems(context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+                                        var items: [ContextMenuItem] = []
+                                        let messageIds = [message.id]
+                                        
+                                        if let peer = transaction.getPeer(message.id.peerId) {
+                                            var personalPeerName: String?
+                                            var isChannel = false
+                                            if let user = peer as? TelegramUser {
+                                                personalPeerName = user.compactDisplayTitle
+                                            } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                                isChannel = true
+                                            }
+                                            
+                                            if actions.options.contains(.deleteGlobally) {
+                                                let globalTitle: String
+                                                if isChannel {
+                                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                                                } else if let personalPeerName = personalPeerName {
+                                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                                                } else {
+                                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                                                }
+                                                items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { c, f in
+                                                    c.dismiss(completion: {
+                                                        if let strongSelf = self {
+                                                            strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                                        }
+                                                    })
+                                                })))
+                                            }
+                                            
+                                            if actions.options.contains(.deleteLocally) {
+                                                var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                                                if strongSelf.context.account.peerId == strongSelf.peerId {
+                                                    if messageIds.count == 1 {
+                                                        localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
+                                                    } else {
+                                                        localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
+                                                    }
+                                                }
+                                                items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { c, f in
+                                                    c.dismiss(completion: {
+                                                        if let strongSelf = self {
+                                                            strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                                        }
+                                                    })
+                                                })))
+                                            }
+                                        }
+                                        
+                                        return items
+                                    })
+                                })))
+                            }
+                            
+                            return items
                         }
                         
-                        return items
+                        switch previewData {
+                        case let .gallery(gallery):
+                            gallery.setHintWillBePresentedInPreviewingContext(true)
+                            let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
+                            strongSelf.presentInGlobalOverlay(contextController)
+                        case .instantPage:
+                            break
+                        }
                     }
-                    
-                    switch previewData {
-                    case let .gallery(gallery):
-                        gallery.setHintWillBePresentedInPreviewingContext(true)
-                        let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
-                        strongSelf.presentInGlobalOverlay(contextController)
-                    case .instantPage:
-                        break
-                    }
-                }
+                })
             }, navigateToMessage: { [weak self] fromId, id in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if id.peerId == strongSelf.peerId {

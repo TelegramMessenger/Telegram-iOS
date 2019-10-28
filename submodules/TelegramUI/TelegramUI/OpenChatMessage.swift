@@ -224,6 +224,23 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     return nil
 }
 
+func chatMediaListPreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> Signal<ChatMessagePreviewControllerData?, NoError> {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
+        switch mediaData {
+            case let .gallery(gallery):
+                return gallery
+                |> map { gallery in
+                    return .gallery(gallery)
+                }
+            case let .instantPage(gallery, centralIndex, galleryMedia):
+                return .single(.instantPage(gallery, centralIndex, galleryMedia))
+            default:
+                break
+        }
+    }
+    return .single(nil)
+}
+
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(context: params.context, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, synchronousLoad: false, actionInteraction: params.actionInteraction) {
         switch mediaData {
