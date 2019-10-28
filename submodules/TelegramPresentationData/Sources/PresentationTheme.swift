@@ -702,7 +702,7 @@ public enum PresentationThemeKeyboardColor: Int32 {
     public var keyboardAppearance: UIKeyboardAppearance {
         switch self {
         case .light:
-            return .default
+            return .light
         case .dark:
             return .dark
         }
