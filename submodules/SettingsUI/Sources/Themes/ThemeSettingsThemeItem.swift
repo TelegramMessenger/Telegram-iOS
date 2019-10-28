@@ -87,17 +87,19 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let themes: [PresentationThemeReference]
+    let displayUnsupported: Bool
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
+        self.displayUnsupported = displayUnsupported
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
@@ -389,6 +391,10 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var i = 0
                     for theme in item.themes {
+                        if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
+                            continue
+                        }
+                        
                         let imageNode: ThemeSettingsThemeItemIconNode
                         if strongSelf.nodes.count > i {
                             imageNode = strongSelf.nodes[i]

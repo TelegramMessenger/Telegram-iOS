@@ -245,7 +245,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
             case let .themeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
                 }, contextAction: nil)
         }
