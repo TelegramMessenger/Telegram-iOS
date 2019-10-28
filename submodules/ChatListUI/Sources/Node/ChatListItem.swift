@@ -860,7 +860,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         if let chatListSearchResult = chatListSearchResult {
                             for range in chatListSearchResult.resultRanges {
-                                composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: NSRange(range, in: chatListSearchResult.text))
+                                let stringRange = NSRange(range, in: chatListSearchResult.text)
+                                if stringRange.location >= 0 && stringRange.location + stringRange.length <= composedString.length {
+                                    composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: stringRange)
+                                }
                             }
                         }
                         
