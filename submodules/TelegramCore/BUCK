@@ -3,18 +3,18 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "TelegramCore",
     srcs = glob([
-        "TelegramCore/*.swift",
-        "TelegramCore/*.m",
+        "Sources/*.swift",
+        "Sources/*.m",
     ]),
     headers = [
-        "TelegramCore/Crypto.h",
-        "TelegramCore/NetworkLogging.h",
-        "TelegramCore/Reachability.h",
+        "Sources/Crypto.h",
+        "Sources/NetworkLogging.h",
+        "Sources/Reachability.h",
     ],
     exported_headers = [
-        "TelegramCore/Crypto.h",
-        "TelegramCore/NetworkLogging.h",
-        "TelegramCore/Reachability.h",
+        "Sources/Crypto.h",
+        "Sources/NetworkLogging.h",
+        "Sources/Reachability.h",
     ],
     deps = [
         "//submodules/TelegramApi:TelegramApi#shared",
@@ -29,3 +29,4 @@ framework(
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],
 )
+
