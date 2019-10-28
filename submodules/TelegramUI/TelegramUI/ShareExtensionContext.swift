@@ -114,7 +114,7 @@ public class ShareRootControllerImpl {
         inForeground.set(false)
     }
     
-    public func viewDidLayoutSubviews(view: UIView) {
+    public func viewDidLayoutSubviews(view: UIView, traitCollection: UITraitCollection) {
         if self.mainWindow == nil {
             let mainWindow = Window1(hostView: childWindowHostView(parent: view), statusBarHost: nil)
             mainWindow.hostView.eventView.backgroundColor = UIColor.clear
@@ -168,7 +168,13 @@ public class ShareRootControllerImpl {
                 let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
-                let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+                let systemUserInterfaceStyle: WindowUserInterfaceStyle
+                if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+                } else {
+                    systemUserInterfaceStyle = .light
+                }
+                let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle).start(next: { value in
                     initialPresentationDataAndSettings = value
                     semaphore.signal()
                 })

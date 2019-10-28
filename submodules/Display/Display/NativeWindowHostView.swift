@@ -17,7 +17,7 @@ public enum WindowUserInterfaceStyle {
     case dark
     
     @available(iOS 12.0, *)
-    fileprivate init(style: UIUserInterfaceStyle) {
+    public init(style: UIUserInterfaceStyle) {
         switch style {
         case .light, .unspecified:
             self = .light

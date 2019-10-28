@@ -715,9 +715,9 @@ final class SharedApplicationContext {
         |> deliverOnMainQueue
         |> take(1)
         |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
-            return currentPresentationDataAndSettings(accountManager: accountManager)
-                |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
-                    return (accountManager, initialPresentationDataAndSettings)
+            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light)
+            |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
+                return (accountManager, initialPresentationDataAndSettings)
             }
         }
         |> deliverOnMainQueue

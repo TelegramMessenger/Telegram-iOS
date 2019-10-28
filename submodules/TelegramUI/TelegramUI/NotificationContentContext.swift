@@ -115,7 +115,7 @@ public final class NotificationViewControllerImpl {
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
-            let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+            let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light).start(next: { value in
                 initialPresentationDataAndSettings = value
                 semaphore.signal()
             })

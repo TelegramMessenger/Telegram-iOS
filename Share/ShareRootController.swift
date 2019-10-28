@@ -55,6 +55,6 @@ class ShareRootController: UIViewController {
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        self.impl?.viewDidLayoutSubviews(view: self.view)
+        self.impl?.viewDidLayoutSubviews(view: self.view, traitCollection: self.traitCollection)
     }
 }
