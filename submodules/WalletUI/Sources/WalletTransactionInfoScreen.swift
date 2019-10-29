@@ -8,6 +8,7 @@ import SwiftSignalKit
 import OverlayStatusController
 import WalletCore
 import AnimatedStickerNode
+import Markdown
 
 private func stringForFullDate(timestamp: Int32, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
     var t: time_t = Int(timestamp)
@@ -200,12 +201,20 @@ final class WalletTransactionInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            var string = NSMutableAttributedString(string: "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and for processing your transactions. More info", font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
-            string.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor(rgb: 0x6bb2ff), range: NSMakeRange(string.string.count - 10, 10))
-            let controller = TooltipController(content: .attributedText(string), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false, arrowOnBottom: false)
+            let text: NSAttributedString
+            if let _ = strongSelf.context.feeInfoUrl {
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white, additionalAttributes: [:])
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: strongSelf.context.presentationData.theme.alert.accentColor, additionalAttributes: [:])
+                text = parseMarkdownIntoAttributedString(strongSelf.context.presentationData.strings.Wallet_TransactionInfo_StorageFeeInfoUrl, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+            } else {
+                text = NSAttributedString(string: strongSelf.context.presentationData.strings.Wallet_TransactionInfo_StorageFeeInfo, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+            }
+            let controller = TooltipController(content: .attributedText(text), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false, arrowOnBottom: false)
             controller.dismissed = { [weak self] tappedInside in
                 if let strongSelf = self, tappedInside {
-                    strongSelf.context.openUrl(strongSelf.presentationData.strings.Wallet_TransactionInfo_FeeInfoURL)
+                    if let feeInfoUrl = strongSelf.context.feeInfoUrl {
+                        strongSelf.context.openUrl(feeInfoUrl)
+                    }
                 }
             }
             strongSelf.present(controller, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {

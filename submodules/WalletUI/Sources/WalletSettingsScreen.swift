@@ -111,7 +111,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
     var replaceAllWalletControllersImpl: ((ViewController) -> Void)?
     
     let arguments = WalletSettingsControllerArguments(openConfiguration: {
-        let _ = (context.storage.customWalletConfiguration()
+        let _ = (context.storage.localWalletConfiguration()
         |> take(1)
         |> deliverOnMainQueue).start(next: { configuration in
             pushControllerImpl?(walletConfigurationScreen(context: context, currentConfiguration: configuration))

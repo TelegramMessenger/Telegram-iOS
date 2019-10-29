@@ -10,14 +10,16 @@ class WalletInfoEmptyItem: ListViewItem {
     let theme: WalletTheme
     let strings: WalletStrings
     let address: String
+    let loading: Bool
     let displayAddressContextMenu: (ASDisplayNode, CGRect) -> Void
     
     let selectable: Bool = false
     
-    init(theme: WalletTheme, strings: WalletStrings, address: String, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
+    init(theme: WalletTheme, strings: WalletStrings, address: String, loading: Bool, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.theme = theme
         self.strings = strings
         self.address = address
+        self.loading = loading
         self.displayAddressContextMenu = displayAddressContextMenu
     }
     
@@ -66,10 +68,6 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         self.offsetContainer = ASDisplayNode()
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 280, height: 280, playbackMode: .once, mode: .direct)
-            self.animationNode.visibility = true
-        }
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -158,13 +156,26 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
             let textFrame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.size.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textLayout.size)
             let addressFrame = CGRect(origin: CGPoint(x: floor((params.width - addressLayout.size.width) / 2.0), y: textFrame.maxY + titleSpacing), size: addressLayout.size)
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: addressFrame.maxY + 32.0), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: (item.loading ? iconFrame.maxY : addressFrame.maxY) + 32.0), insets: UIEdgeInsets())
             
             return (layout, {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.item = item
+                
+                if strongSelf.item?.loading != item.loading {
+                    if item.loading {
+                        if let path = getAppBundle().path(forResource: "WalletInitializing", ofType: "tgs") {
+                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 280, height: 280, playbackMode: .loop, mode: .direct)
+                            strongSelf.animationNode.visibility = true
+                        }
+                    } else {
+                        if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
+                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+                            strongSelf.animationNode.visibility = true
+                        }
+                    }
+                }
                 
                 strongSelf.item = item
                 
@@ -182,6 +193,10 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 transition.updateFrameAdditive(node: strongSelf.titleNode, frame: titleFrame)
                 transition.updateFrameAdditive(node: strongSelf.textNode, frame: textFrame)
                 transition.updateFrameAdditive(node: strongSelf.addressNode, frame: addressFrame)
+                
+                strongSelf.titleNode.isHidden = item.loading
+                strongSelf.textNode.isHidden = item.loading
+                strongSelf.addressNode.isHidden = item.loading
                     
                 strongSelf.contentSize = layout.contentSize
                 strongSelf.insets = layout.insets

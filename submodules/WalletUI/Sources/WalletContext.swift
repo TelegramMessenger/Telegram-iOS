@@ -15,6 +15,8 @@ public protocol WalletContext {
     var presentationData: WalletPresentationData { get }
     
     var supportsCustomConfigurations: Bool { get }
+    var termsUrl: String? { get }
+    var feeInfoUrl: String? { get }
     
     var inForeground: Signal<Bool, NoError> { get }
     

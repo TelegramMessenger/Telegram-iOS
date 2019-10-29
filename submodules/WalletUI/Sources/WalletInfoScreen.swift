@@ -103,9 +103,24 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
             }
-            var randomId: Int64 = 0
-            arc4random_buf(&randomId, 8)
-            strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo))
+            guard let combinedState = (strongSelf.displayNode as! WalletInfoScreenNode).combinedState else {
+                return
+            }
+            if (strongSelf.displayNode as! WalletInfoScreenNode).reloadingState {
+                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: nil, text: strongSelf.presentationData.strings.Wallet_Send_SyncInProgress, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
+                    })
+                ]), in: .window(.root))
+            } else if !combinedState.pendingTransactions.isEmpty {
+                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: nil, text: strongSelf.presentationData.strings.Wallet_Send_TransactionInProgress, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
+                    })
+                ]), in: .window(.root))
+            } else {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo))
+            }
         }, receiveAction: { [weak self] in
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
@@ -141,6 +156,7 @@ final class WalletInfoBalanceNode: ASDisplayNode {
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
     let balanceIconNode: AnimatedStickerNode
+    private var balanceIconNodeIsStatic: Bool
     
     var balance: (String, UIColor) = (" ", .white) {
         didSet {
@@ -179,6 +195,7 @@ final class WalletInfoBalanceNode: ASDisplayNode {
             self.balanceIconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 120, height: 120, mode: .direct)
             self.balanceIconNode.visibility = true
         }
+        self.balanceIconNodeIsStatic = true
         
         super.init()
         
@@ -209,13 +226,32 @@ final class WalletInfoBalanceNode: ASDisplayNode {
         balanceFractionalTextFrame.origin.x -= (balanceFractionalTextFrame.width / 4.0) * scaleTransition + 0.25 * (balanceFractionalTextFrame.width / 2.0) * (1.0 - scaleTransition)
         balanceFractionalTextFrame.origin.y += balanceFractionalTextFrame.height * 0.5 * (0.8 - fractionalScale)
         
+        let isBalanceEmpty = self.balance.0.isEmpty || self.balance.0 == " "
+        
         let balanceIconFrame: CGRect
-        balanceIconFrame = CGRect(origin: CGPoint(x: apparentBalanceIntegralTextFrame.minX - balanceIconSize.width - balanceIconSpacing * integralScale, y: balanceIntegralTextFrame.midY - balanceIconSize.height / 2.0 + balanceVerticalIconOffset), size: balanceIconSize)
+        if isBalanceEmpty {
+            balanceIconFrame = CGRect(origin: CGPoint(x: floor((width - balanceIconSize.width) / 2.0), y: balanceIntegralTextFrame.midY - balanceIconSize.height / 2.0 + balanceVerticalIconOffset), size: balanceIconSize)
+        } else {
+            balanceIconFrame = CGRect(origin: CGPoint(x: apparentBalanceIntegralTextFrame.minX - balanceIconSize.width - balanceIconSpacing * integralScale, y: balanceIntegralTextFrame.midY - balanceIconSize.height / 2.0 + balanceVerticalIconOffset), size: balanceIconSize)
+        }
         
         transition.updateFrameAsPositionAndBounds(node: self.balanceIntegralTextNode, frame: balanceIntegralTextFrame)
         transition.updateTransformScale(node: self.balanceIntegralTextNode, scale: integralScale)
         transition.updateFrameAsPositionAndBounds(node: self.balanceFractionalTextNode, frame: balanceFractionalTextFrame)
         transition.updateTransformScale(node: self.balanceFractionalTextNode, scale: fractionalScale)
+        
+        if !isBalanceEmpty != self.balanceIconNodeIsStatic {
+            self.balanceIconNodeIsStatic = !isBalanceEmpty
+            if isBalanceEmpty {
+                if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
+                self.balanceIconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 120, height: 120, mode: .direct)
+                }
+            } else {
+                if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
+                self.balanceIconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 120, height: 120, mode: .direct)
+                }
+            }
+        }
         
         self.balanceIconNode.updateLayout(size: balanceIconFrame.size)
         transition.updateFrameAsPositionAndBounds(node: self.balanceIconNode, frame: balanceIconFrame)
@@ -319,7 +355,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         
         let effectiveOffset = max(offset, navigationHeight)
         
-        let minButtonsOffset = maxOffset - buttonHeight - sideInset
+        let minButtonsOffset = maxOffset - buttonHeight * 2.0 - sideInset
         let maxButtonsOffset = maxOffset
         let buttonTransition: CGFloat = max(0.0, min(1.0, (effectiveOffset - minButtonsOffset) / (maxButtonsOffset - minButtonsOffset)))
         let buttonAlpha: CGFloat = buttonTransition
@@ -344,11 +380,11 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         
         let refreshSize = CGSize(width: 0.0, height: 0.0)
         transition.updateFrame(node: self.refreshNode, frame: CGRect(origin: CGPoint(x: floor((size.width - refreshSize.width) / 2.0), y: navigationHeight - 44.0 + floor((44.0 - refreshSize.height) / 2.0)), size: refreshSize))
-        transition.updateAlpha(node: self.refreshNode, alpha: headerScaleTransition)
-        if self.balance == nil {
-            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, 0.0))
-        } else if self.isRefreshing {
+        transition.updateAlpha(node: self.refreshNode, alpha: headerScaleTransition, beginWithCurrentState: true)
+        if self.isRefreshing {
             self.refreshNode.update(state: .refreshing)
+        } else if self.balance == nil {
+            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, 0.0))
         } else {
             let refreshOffset: CGFloat = 20.0
             let refreshScaleTransition: CGFloat = max(0.0, (offset - maxOffset) / refreshOffset)
@@ -379,7 +415,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.sendButtonNode.isHidden = false
         } else {
             if self.balance == nil {
-                self.receiveGramsButtonNode.isHidden = true
+                self.receiveGramsButtonNode.isHidden = false
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
             } else {
@@ -389,9 +425,9 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             }
         }
         if self.balance == nil {
-            self.balanceNode.isHidden = true
+            self.balanceNode.isHidden = false
             self.balanceSubtitleNode.isHidden = true
-            self.refreshNode.isHidden = true
+            self.refreshNode.isHidden = false
         } else {
             self.balanceNode.isHidden = false
             self.balanceSubtitleNode.isHidden = false
@@ -399,13 +435,13 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.receiveGramsButtonNode, frame: fullButtonFrame)
-        transition.updateAlpha(node: self.receiveGramsButtonNode, alpha: buttonAlpha)
+        transition.updateAlpha(node: self.receiveGramsButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
         transition.updateFrame(node: self.receiveButtonNode, frame: leftButtonFrame)
-        transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha)
+        transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
         self.receiveGramsButtonNode.updateLayout(width: fullButtonFrame.width, transition: transition)
         self.receiveButtonNode.updateLayout(width: leftButtonFrame.width, transition: transition)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
-        transition.updateAlpha(node: self.sendButtonNode, alpha: buttonAlpha)
+        transition.updateAlpha(node: self.sendButtonNode, alpha: buttonAlpha, beginWithCurrentState: true)
         self.sendButtonNode.updateLayout(width: sendButtonFrame.width, transition: transition)
     }
     
@@ -453,7 +489,7 @@ private enum WalletInfoListEntryId: Hashable {
 }
 
 private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
-    case empty(String)
+    case empty(String, Bool)
     case transaction(Int, WalletInfoTransaction)
     
     var stableId: WalletInfoListEntryId {
@@ -491,8 +527,8 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     
     func item(theme: WalletTheme, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
         switch self {
-        case let .empty(address):
-            return WalletInfoEmptyItem(theme: theme, strings: strings, address: address, displayAddressContextMenu: { node, frame in
+        case let .empty(address, loading):
+            return WalletInfoEmptyItem(theme: theme, strings: strings, address: address, loading: loading, displayAddressContextMenu: { node, frame in
                 displayAddressContextMenu(node, frame)
             })
         case let .transaction(_, transaction):
@@ -526,7 +562,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private let headerNode: WalletInfoHeaderNode
     private let listNode: ListView
-    private let loadingIndicator: UIActivityIndicatorView
     
     private var enqueuedTransactions: [WalletInfoListTransaction] = []
     
@@ -536,7 +571,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private let transactionListDisposable = MetaDisposable()
     
     private var listOffset: CGFloat?
-    private var reloadingState: Bool = false
+    private(set) var reloadingState: Bool = false
     private var loadingMoreTransactions: Bool = false
     private var canLoadMoreTransactions: Bool = true
     
@@ -567,10 +602,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
-        self.listNode.isHidden = true
+        self.listNode.isHidden = false
         self.listNode.view.disablesInteractiveModalDismiss = true
-        
-        self.loadingIndicator = UIActivityIndicatorView(style: .whiteLarge)
         
         super.init()
         
@@ -578,7 +611,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         
         self.addSubnode(self.listNode)
         self.addSubnode(self.headerNode)
-        self.view.addSubview(self.loadingIndicator)
         
         var canBeginRefresh = true
         var isScrolling = false
@@ -630,11 +662,11 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             switch strongSelf.listNode.visibleContentOffset() {
             case let .known(offset):
                 if offset < strongSelf.listNode.insets.top {
-                    /*if offset > strongSelf.listNode.insets.top / 2.0 {
+                    if offset > strongSelf.listNode.insets.top / 2.0 {
                         strongSelf.scrollToHideHeader()
                     } else {
                         strongSelf.scrollToTop()
-                    }*/
+                    }
                 }
             default:
                 break
@@ -717,19 +749,18 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(navigationHeight), animated: true, curve: .Spring(duration: 0.4), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        let _ = self.listNode.scrollToOffsetFromTop(self.headerNode.frame.maxY - navigationHeight)
     }
     
     func scrollToTop() {
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: 0.4), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        if !self.listNode.scrollToOffsetFromTop(0.0) {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: 0.4), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = (layout, navigationHeight)
-        
-        let indicatorSize = self.loadingIndicator.bounds.size
-        self.loadingIndicator.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: floor((layout.size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         
         let headerHeight: CGFloat = navigationHeight + 260.0
         let topInset: CGFloat = headerHeight
@@ -809,17 +840,9 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 if strongSelf.combinedState != nil {
                     return
                 }
-                if state == nil {
-                    strongSelf.loadingIndicator.startAnimating()
-                } else {
-                    strongSelf.loadingIndicator.stopAnimating()
-                    strongSelf.loadingIndicator.isHidden = true
-                }
                 combinedState = state
             case let .updated(state):
                 isUpdated = true
-                strongSelf.loadingIndicator.stopAnimating()
-                strongSelf.loadingIndicator.isHidden = true
                 combinedState = state
             }
             
@@ -877,7 +900,9 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
             }
             
-            self.reloadingState = false
+            if isUpdated {
+                self.reloadingState = false
+            }
             
             self.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
             
@@ -909,7 +934,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 }
             }
             
-            self.transactionsLoaded(isReload: true, transactions: updatedTransactions, pendingTransactions: combinedState.pendingTransactions)
+            self.transactionsLoaded(isReload: true, isEmpty: false, transactions: updatedTransactions, pendingTransactions: combinedState.pendingTransactions)
             
             if isUpdated {
                 self.headerNode.isRefreshing = false
@@ -918,17 +943,19 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             if self.isReady, let (layout, navigationHeight) = self.validLayout {
                 self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: self.listOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut), isScrolling: false)
             }
-            
-            let wasReady = self.isReady
-            self.isReady = self.combinedState != nil
-            
-            if self.isReady && !wasReady {
-                if let (layout, navigationHeight) = self.validLayout {
-                    self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: layout.size.height, transition: .immediate, isScrolling: false)
-                }
-                
-                self.becameReady(animated: self.didSetContentReady)
+        } else {
+            self.transactionsLoaded(isReload: true, isEmpty: true, transactions: [], pendingTransactions: [])
+        }
+        
+        let wasReady = self.isReady
+        self.isReady = true
+        
+        if self.isReady && !wasReady {
+            if let (layout, navigationHeight) = self.validLayout {
+                self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: layout.size.height, transition: .immediate, isScrolling: false)
             }
+            
+            self.becameReady(animated: self.didSetContentReady)
         }
         
         if !self.didSetContentReady {
@@ -961,7 +988,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.transactionsLoaded(isReload: false, transactions: transactions, pendingTransactions: [])
+            strongSelf.transactionsLoaded(isReload: false, isEmpty: false, transactions: transactions, pendingTransactions: [])
         }, error: { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -969,9 +996,11 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         }))
     }
     
-    private func transactionsLoaded(isReload: Bool, transactions: [WalletTransaction], pendingTransactions: [PendingWalletTransaction]) {
-        self.loadingMoreTransactions = false
-        self.canLoadMoreTransactions = transactions.count > 2
+    private func transactionsLoaded(isReload: Bool, isEmpty: Bool, transactions: [WalletTransaction], pendingTransactions: [PendingWalletTransaction]) {
+        if !isEmpty {
+            self.loadingMoreTransactions = false
+            self.canLoadMoreTransactions = transactions.count > 2
+        }
         
         var updatedEntries: [WalletInfoListEntry] = []
         if isReload {
@@ -989,7 +1018,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 }
             }
             if updatedEntries.isEmpty {
-                updatedEntries.append(.empty(self.address))
+                updatedEntries.append(.empty(self.address, isEmpty))
             }
         } else {
             updatedEntries = self.currentEntries ?? []
@@ -1016,7 +1045,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 }
             }
             if updatedEntries.isEmpty {
-                updatedEntries.append(.empty(self.address))
+                updatedEntries.append(.empty(self.address, false))
             }
         }
         
@@ -1065,8 +1094,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private func becameReady(animated: Bool) {
         self.listNode.isHidden = false
-        self.loadingIndicator.stopAnimating()
-        self.loadingIndicator.isHidden = true
         self.headerNode.becameReady(animated: animated)
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)

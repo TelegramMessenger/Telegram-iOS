@@ -11,22 +11,25 @@ private final class WalletConfigurationScreenArguments {
     let updateState: ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void
     let dismissInput: () -> Void
     let updateSelectedMode: (WalletConfigurationScreenMode) -> Void
+    let updateBlockchainName: (String) -> Void
     
-    init(updateState: @escaping ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void, dismissInput: @escaping () -> Void, updateSelectedMode: @escaping (WalletConfigurationScreenMode) -> Void) {
+    init(updateState: @escaping ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void, dismissInput: @escaping () -> Void, updateSelectedMode: @escaping (WalletConfigurationScreenMode) -> Void, updateBlockchainName: @escaping (String) -> Void) {
         self.updateState = updateState
         self.dismissInput = dismissInput
         self.updateSelectedMode = updateSelectedMode
+        self.updateBlockchainName = updateBlockchainName
     }
 }
 
 private enum WalletConfigurationScreenMode {
-    case `default`
+    case url
     case customString
 }
 
 private enum WalletConfigurationScreenSection: Int32 {
     case mode
     case configString
+    case blockchainName
 }
 
 private enum WalletConfigurationScreenEntryTag: ItemListItemTag {
@@ -42,27 +45,38 @@ private enum WalletConfigurationScreenEntryTag: ItemListItemTag {
 }
 
 private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
-    case modeDefault(WalletTheme, String, Bool)
+    case modeUrl(WalletTheme, String, Bool)
     case modeCustomString(WalletTheme, String, Bool)
+    case configUrl(WalletTheme, WalletStrings, String, String)
     case configString(WalletTheme, String, String)
+    case blockchainNameHeader(WalletTheme, String)
+    case blockchainName(WalletTheme, WalletStrings, String, String)
    
     var section: ItemListSectionId {
         switch self {
-        case .modeDefault, .modeCustomString:
+        case .modeUrl, .modeCustomString:
             return WalletConfigurationScreenSection.mode.rawValue
-        case .configString:
+        case .configUrl, .configString:
             return WalletConfigurationScreenSection.configString.rawValue
+        case .blockchainNameHeader, .blockchainName:
+            return WalletConfigurationScreenSection.blockchainName.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-        case .modeDefault:
+        case .modeUrl:
             return 0
         case .modeCustomString:
             return 1
-        case .configString:
+        case .configUrl:
             return 2
+        case .configString:
+            return 3
+        case .blockchainNameHeader:
+            return 4
+        case .blockchainName:
+            return 5
         }
     }
     
@@ -73,14 +87,22 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! WalletConfigurationScreenArguments
         switch self {
-        case let .modeDefault(theme, text, isSelected):
+        case let .modeUrl(theme, text, isSelected):
             return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                arguments.updateSelectedMode(.default)
+                arguments.updateSelectedMode(.url)
             })
         case let .modeCustomString(theme, text, isSelected):
             return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.updateSelectedMode(.customString)
             })
+        case let .configUrl(theme, strings, placeholder, text):
+            return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                arguments.updateState { state in
+                    var state = state
+                    state.configUrl = value
+                    return state
+                }
+            }, action: {})
         case let .configString(theme, placeholder, text):
             return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, capitalization: false, autocorrection: false, returnKeyType: .done, minimalHeight: nil, textUpdated: { value in
                 arguments.updateState { state in
@@ -91,18 +113,29 @@ private enum WalletConfigurationScreenEntry: ItemListNodeEntry, Equatable {
             }, shouldUpdateText: { _ in
                 return true
             }, processPaste: nil, updatedFocus: nil, tag: WalletConfigurationScreenEntryTag.configStringText, action: nil, inlineAction: nil)
+        case let .blockchainNameHeader(theme, title):
+            return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
+        case let .blockchainName(theme, strings, title, value):
+            return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: value, placeholder: title, sectionId: self.section, textUpdated: { value in
+                arguments.updateBlockchainName(value)
+            }, action: {})
         }
     }
 }
 
 private struct WalletConfigurationScreenState: Equatable {
     var mode: WalletConfigurationScreenMode
+    var configUrl: String
     var configString: String
+    var blockchainName: String
     
     var isEmpty: Bool {
+        if self.blockchainName.isEmpty {
+            return true
+        }
         switch self.mode {
-        case .default:
-            return false
+        case .url:
+            return self.configUrl.isEmpty || URL(string: self.configUrl) == nil
         case .customString:
             return self.configString.isEmpty
         }
@@ -112,15 +145,18 @@ private struct WalletConfigurationScreenState: Equatable {
 private func walletConfigurationScreenEntries(presentationData: WalletPresentationData, state: WalletConfigurationScreenState) -> [WalletConfigurationScreenEntry] {
     var entries: [WalletConfigurationScreenEntry] = []
    
-    entries.append(.modeDefault(presentationData.theme, "Default", state.mode == .default))
+    entries.append(.modeUrl(presentationData.theme, "URL", state.mode == .url))
     entries.append(.modeCustomString(presentationData.theme, "Custom", state.mode == .customString))
     
     switch state.mode {
-    case .default:
-        break
+    case .url:
+        entries.append(.configUrl(presentationData.theme, presentationData.strings, "URL", state.configUrl))
     case .customString:
-        entries.append(.configString(presentationData.theme, "", state.configString))
+        entries.append(.configString(presentationData.theme, "JSON", state.configString))
     }
+    
+    entries.append(.blockchainNameHeader(presentationData.theme, "BLOCKCHAIN NAME"))
+    entries.append(.blockchainName(presentationData.theme, presentationData.strings, "Blockchain Name", state.blockchainName))
     
     return entries
 }
@@ -134,15 +170,16 @@ private final class WalletConfigurationScreenImpl: ItemListController, WalletCon
     }
 }
 
-func walletConfigurationScreen(context: WalletContext, currentConfiguration: CustomWalletConfiguration?) -> ViewController {
+func walletConfigurationScreen(context: WalletContext, currentConfiguration: LocalWalletConfiguration) -> ViewController {
+    var configUrl = ""
     var configString = ""
-    if let currentConfiguration = currentConfiguration {
-        switch currentConfiguration {
-        case let .string(string):
-            configString = string
-        }
+    switch currentConfiguration.source {
+    case let .url(url):
+        configUrl = url
+    case let .string(string):
+        configString = string
     }
-    let initialState = WalletConfigurationScreenState(mode: currentConfiguration == nil ? .default : .customString, configString: configString)
+    let initialState = WalletConfigurationScreenState(mode: configString.isEmpty ? .url : .customString, configUrl: configUrl, configString: configString, blockchainName: currentConfiguration.blockchainName)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((WalletConfigurationScreenState) -> WalletConfigurationScreenState) -> Void = { f in
@@ -166,6 +203,12 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Cus
             state.mode = mode
             return state
         }
+    }, updateBlockchainName: { value in
+        updateState { state in
+            var state = state
+            state.blockchainName = value
+            return state
+        }
     })
     
     let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
@@ -175,19 +218,34 @@ func walletConfigurationScreen(context: WalletContext, currentConfiguration: Cus
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Configuration_Apply), style: .bold, enabled: !state.isEmpty, action: {
             let state = stateValue.with { $0 }
-            let configuration: CustomWalletConfiguration?
+            let source: LocalWalletConfigurationSource
+            let blockchainName = state.blockchainName
+            if blockchainName.isEmpty {
+                return
+            }
             switch state.mode {
-            case .default:
-                configuration = nil
+            case .url:
+                if state.configUrl.isEmpty {
+                    return
+                } else {
+                    source = .url(state.configUrl)
+                }
             case .customString:
                 if state.configString.isEmpty {
-                    configuration = nil
+                    return
                 } else {
-                    configuration = .string(state.configString)
+                    source = .string(state.configString)
                 }
             }
-            context.storage.updateCustomWalletConfiguration(configuration)
-            dismissImpl?()
+            let _ = (context.storage.updateLocalWalletConfiguration { current in
+                var current = current
+                current.source = source
+                current.blockchainName = blockchainName
+                return current
+            }
+            |> deliverOnMainQueue).start(completed: {
+                dismissImpl?()
+            })
         })
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Configuration_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)

@@ -204,88 +204,88 @@ public final class WalletStrings: Equatable {
     public var Wallet_Month_ShortJune: String { return self._s[13]! }
     public var Wallet_TransactionInfo_StorageFeeInfo: String { return self._s[14]! }
     public var Wallet_Created_Title: String { return self._s[15]! }
-    public var Wallet_Info_YourBalance: String { return self._s[16]! }
-    public var Wallet_TransactionInfo_CommentHeader: String { return self._s[17]! }
-    public var Wallet_TransactionInfo_OtherFeeHeader: String { return self._s[18]! }
+    public var Wallet_Send_SyncInProgress: String { return self._s[16]! }
+    public var Wallet_Info_YourBalance: String { return self._s[17]! }
+    public var Wallet_TransactionInfo_CommentHeader: String { return self._s[18]! }
+    public var Wallet_TransactionInfo_OtherFeeHeader: String { return self._s[19]! }
     public func Wallet_Time_PreciseDate_m3(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[19]!, self._r[19]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[20]!, self._r[20]!, [_1, _2, _3])
     }
-    public var Wallet_WordImport_IncorrectText: String { return self._s[20]! }
-    public var Wallet_Month_GenJanuary: String { return self._s[21]! }
-    public var Wallet_Send_OwnAddressAlertTitle: String { return self._s[22]! }
-    public var Wallet_Receive_ShareAddress: String { return self._s[23]! }
-    public var Wallet_WordImport_Title: String { return self._s[24]! }
-    public var Wallet_TransactionInfo_Title: String { return self._s[25]! }
-    public var Wallet_Words_NotDoneText: String { return self._s[27]! }
-    public var Wallet_RestoreFailed_EnterWords: String { return self._s[28]! }
-    public var Wallet_WordImport_Text: String { return self._s[29]! }
-    public var Wallet_RestoreFailed_Text: String { return self._s[31]! }
-    public var Wallet_TransactionInfo_NoAddress: String { return self._s[32]! }
-    public var Wallet_Navigation_Back: String { return self._s[33]! }
-    public var Wallet_Intro_Terms: String { return self._s[34]! }
+    public var Wallet_WordImport_IncorrectText: String { return self._s[21]! }
+    public var Wallet_Month_GenJanuary: String { return self._s[22]! }
+    public var Wallet_Send_OwnAddressAlertTitle: String { return self._s[23]! }
+    public var Wallet_Receive_ShareAddress: String { return self._s[24]! }
+    public var Wallet_WordImport_Title: String { return self._s[25]! }
+    public var Wallet_TransactionInfo_Title: String { return self._s[26]! }
+    public var Wallet_Words_NotDoneText: String { return self._s[28]! }
+    public var Wallet_RestoreFailed_EnterWords: String { return self._s[29]! }
+    public var Wallet_WordImport_Text: String { return self._s[30]! }
+    public var Wallet_RestoreFailed_Text: String { return self._s[32]! }
+    public var Wallet_TransactionInfo_NoAddress: String { return self._s[33]! }
+    public var Wallet_Navigation_Back: String { return self._s[34]! }
+    public var Wallet_Intro_Terms: String { return self._s[35]! }
     public func Wallet_Send_Balance(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[35]!, self._r[35]!, [_0])
+        return formatWithArgumentRanges(self._s[36]!, self._r[36]!, [_0])
     }
     public func Wallet_Time_PreciseDate_m8(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[36]!, self._r[36]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[37]!, self._r[37]!, [_1, _2, _3])
     }
-    public var Wallet_TransactionInfo_AddressCopied: String { return self._s[37]! }
+    public var Wallet_TransactionInfo_AddressCopied: String { return self._s[38]! }
     public func Wallet_Info_TransactionDateHeaderYear(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[38]!, self._r[38]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[39]!, self._r[39]!, [_1, _2, _3])
     }
-    public var Wallet_Send_NetworkErrorText: String { return self._s[39]! }
-    public var Wallet_VoiceOver_Editing_ClearText: String { return self._s[40]! }
-    public var Wallet_Intro_ImportExisting: String { return self._s[41]! }
-    public var Wallet_Receive_CommentInfo: String { return self._s[42]! }
-    public var Wallet_WordCheck_Continue: String { return self._s[43]! }
-    public var Wallet_Completed_ProgressText: String { return self._s[44]! }
+    public var Wallet_Send_NetworkErrorText: String { return self._s[40]! }
+    public var Wallet_VoiceOver_Editing_ClearText: String { return self._s[41]! }
+    public var Wallet_Intro_ImportExisting: String { return self._s[42]! }
+    public var Wallet_Receive_CommentInfo: String { return self._s[43]! }
+    public var Wallet_WordCheck_Continue: String { return self._s[44]! }
     public var Wallet_Receive_InvoiceUrlCopied: String { return self._s[45]! }
     public var Wallet_Completed_Text: String { return self._s[46]! }
     public var Wallet_WordCheck_IncorrectHeader: String { return self._s[48]! }
-    public var Wallet_Receive_Title: String { return self._s[49]! }
-    public var Wallet_Info_WalletCreated: String { return self._s[50]! }
-    public var Wallet_Navigation_Cancel: String { return self._s[51]! }
-    public var Wallet_CreateInvoice_Title: String { return self._s[52]! }
+    public var Wallet_TransactionInfo_StorageFeeInfoUrl: String { return self._s[49]! }
+    public var Wallet_Receive_Title: String { return self._s[50]! }
+    public var Wallet_Info_WalletCreated: String { return self._s[51]! }
+    public var Wallet_Navigation_Cancel: String { return self._s[52]! }
+    public var Wallet_CreateInvoice_Title: String { return self._s[53]! }
     public func Wallet_WordCheck_Text(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[53]!, self._r[53]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[54]!, self._r[54]!, [_1, _2, _3])
     }
-    public var Wallet_TransactionInfo_SenderHeader: String { return self._s[54]! }
+    public var Wallet_TransactionInfo_SenderHeader: String { return self._s[55]! }
     public func Wallet_Time_PreciseDate_m4(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[55]!, self._r[55]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[56]!, self._r[56]!, [_1, _2, _3])
     }
-    public var Wallet_Month_GenAugust: String { return self._s[56]! }
-    public var Wallet_Info_UnknownTransaction: String { return self._s[57]! }
-    public var Wallet_Receive_CreateInvoice: String { return self._s[58]! }
-    public var Wallet_Month_GenSeptember: String { return self._s[59]! }
-    public var Wallet_Month_GenJuly: String { return self._s[60]! }
-    public var Wallet_Receive_AddressHeader: String { return self._s[61]! }
-    public var Wallet_Send_AmountText: String { return self._s[62]! }
-    public var Wallet_SecureStorageNotAvailable_Text: String { return self._s[63]! }
+    public var Wallet_Month_GenAugust: String { return self._s[57]! }
+    public var Wallet_Info_UnknownTransaction: String { return self._s[58]! }
+    public var Wallet_Receive_CreateInvoice: String { return self._s[59]! }
+    public var Wallet_Month_GenSeptember: String { return self._s[60]! }
+    public var Wallet_Month_GenJuly: String { return self._s[61]! }
+    public var Wallet_Receive_AddressHeader: String { return self._s[62]! }
+    public var Wallet_Send_AmountText: String { return self._s[63]! }
+    public var Wallet_SecureStorageNotAvailable_Text: String { return self._s[64]! }
     public func Wallet_Time_PreciseDate_m12(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[64]!, self._r[64]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[65]!, self._r[65]!, [_1, _2, _3])
     }
     public func Wallet_Updated_TodayAt(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[65]!, self._r[65]!, [_0])
+        return formatWithArgumentRanges(self._s[66]!, self._r[66]!, [_0])
     }
-    public var Wallet_Configuration_Title: String { return self._s[67]! }
-    public var Wallet_Words_Title: String { return self._s[68]! }
-    public var Wallet_Month_ShortMay: String { return self._s[69]! }
-    public var Wallet_WordCheck_Title: String { return self._s[70]! }
-    public var Wallet_Words_NotDoneResponse: String { return self._s[71]! }
-    public var Wallet_Send_ErrorNotEnoughFundsText: String { return self._s[72]! }
-    public var Wallet_Receive_CreateInvoiceInfo: String { return self._s[73]! }
+    public var Wallet_Configuration_Title: String { return self._s[68]! }
+    public var Wallet_Words_Title: String { return self._s[69]! }
+    public var Wallet_Month_ShortMay: String { return self._s[70]! }
+    public var Wallet_WordCheck_Title: String { return self._s[71]! }
+    public var Wallet_Words_NotDoneResponse: String { return self._s[72]! }
+    public var Wallet_Send_ErrorNotEnoughFundsText: String { return self._s[73]! }
+    public var Wallet_Receive_CreateInvoiceInfo: String { return self._s[74]! }
     public func Wallet_Time_PreciseDate_m9(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[74]!, self._r[74]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[75]!, self._r[75]!, [_1, _2, _3])
     }
-    public var Wallet_Info_Address: String { return self._s[75]! }
-    public var Wallet_Intro_CreateWallet: String { return self._s[76]! }
-    public var Wallet_SecureStorageChanged_PasscodeText: String { return self._s[77]! }
+    public var Wallet_Info_Address: String { return self._s[76]! }
+    public var Wallet_Intro_CreateWallet: String { return self._s[77]! }
+    public var Wallet_SecureStorageChanged_PasscodeText: String { return self._s[78]! }
     public func Wallet_SecureStorageReset_BiometryText(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[78]!, self._r[78]!, [_0])
+        return formatWithArgumentRanges(self._s[79]!, self._r[79]!, [_0])
     }
-    public var Wallet_Send_SendAnyway: String { return self._s[79]! }
-    public var Wallet_UnknownError: String { return self._s[80]! }
-    public var Wallet_Completed_ProgressTitle: String { return self._s[81]! }
+    public var Wallet_Send_SendAnyway: String { return self._s[80]! }
+    public var Wallet_UnknownError: String { return self._s[81]! }
     public var Wallet_SecureStorageChanged_ImportWallet: String { return self._s[82]! }
     public var Wallet_SecureStorageChanged_CreateWallet: String { return self._s[84]! }
     public var Wallet_Words_NotDoneOk: String { return self._s[85]! }
@@ -336,13 +336,13 @@ public final class WalletStrings: Equatable {
     public func Wallet_SecureStorageChanged_BiometryText(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(self._s[124]!, self._r[124]!, [_0])
     }
-    public var Wallet_TransactionInfo_FeeInfoURL: String { return self._s[125]! }
     public func Wallet_Time_PreciseDate_m1(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[126]!, self._r[126]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[125]!, self._r[125]!, [_1, _2, _3])
     }
-    public var Wallet_RestoreFailed_CreateWallet: String { return self._s[127]! }
-    public var Wallet_Weekday_Yesterday: String { return self._s[128]! }
-    public var Wallet_Receive_AmountHeader: String { return self._s[129]! }
+    public var Wallet_RestoreFailed_CreateWallet: String { return self._s[126]! }
+    public var Wallet_Weekday_Yesterday: String { return self._s[127]! }
+    public var Wallet_Receive_AmountHeader: String { return self._s[128]! }
+    public var Wallet_TransactionInfo_OtherFeeInfoUrl: String { return self._s[129]! }
     public var Wallet_Month_ShortFebruary: String { return self._s[130]! }
     public var Wallet_Alert_Cancel: String { return self._s[131]! }
     public var Wallet_TransactionInfo_RecipientHeader: String { return self._s[132]! }
@@ -364,41 +364,41 @@ public final class WalletStrings: Equatable {
         return formatWithArgumentRanges(self._s[147]!, self._r[147]!, [_1, _2, _3])
     }
     public var Wallet_Info_Updating: String { return self._s[149]! }
-    public var Wallet_Intro_TermsUrl: String { return self._s[150]! }
-    public var Wallet_Created_ExportErrorTitle: String { return self._s[151]! }
-    public var Wallet_SecureStorageNotAvailable_Title: String { return self._s[152]! }
-    public var Wallet_Sending_Title: String { return self._s[153]! }
-    public var Wallet_Navigation_Done: String { return self._s[154]! }
-    public var Wallet_Settings_Title: String { return self._s[155]! }
+    public var Wallet_Created_ExportErrorTitle: String { return self._s[150]! }
+    public var Wallet_SecureStorageNotAvailable_Title: String { return self._s[151]! }
+    public var Wallet_Sending_Title: String { return self._s[152]! }
+    public var Wallet_Navigation_Done: String { return self._s[153]! }
+    public var Wallet_Settings_Title: String { return self._s[154]! }
     public func Wallet_Receive_ShareInvoiceUrlInfo(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[156]!, self._r[156]!, [_0])
+        return formatWithArgumentRanges(self._s[155]!, self._r[155]!, [_0])
     }
-    public var Wallet_Info_RefreshErrorNetworkText: String { return self._s[157]! }
-    public var Wallet_Weekday_Today: String { return self._s[159]! }
-    public var Wallet_Month_ShortDecember: String { return self._s[160]! }
-    public var Wallet_Words_Text: String { return self._s[161]! }
-    public var Wallet_WordCheck_ViewWords: String { return self._s[162]! }
-    public var Wallet_Send_AddressInfo: String { return self._s[163]! }
+    public var Wallet_Info_RefreshErrorNetworkText: String { return self._s[156]! }
+    public var Wallet_Weekday_Today: String { return self._s[158]! }
+    public var Wallet_Month_ShortDecember: String { return self._s[159]! }
+    public var Wallet_Words_Text: String { return self._s[160]! }
+    public var Wallet_WordCheck_ViewWords: String { return self._s[161]! }
+    public var Wallet_Send_AddressInfo: String { return self._s[162]! }
     public func Wallet_Updated_AtDate(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[164]!, self._r[164]!, [_0])
+        return formatWithArgumentRanges(self._s[163]!, self._r[163]!, [_0])
     }
-    public var Wallet_Intro_NotNow: String { return self._s[165]! }
-    public var Wallet_Send_OwnAddressAlertProceed: String { return self._s[166]! }
-    public var Wallet_Navigation_Close: String { return self._s[167]! }
-    public var Wallet_Month_GenDecember: String { return self._s[169]! }
-    public var Wallet_Send_ErrorNotEnoughFundsTitle: String { return self._s[170]! }
-    public var Wallet_WordImport_IncorrectTitle: String { return self._s[171]! }
-    public var Wallet_Send_AddressText: String { return self._s[172]! }
-    public var Wallet_Receive_AmountInfo: String { return self._s[173]! }
+    public var Wallet_Intro_NotNow: String { return self._s[164]! }
+    public var Wallet_Send_OwnAddressAlertProceed: String { return self._s[165]! }
+    public var Wallet_Navigation_Close: String { return self._s[166]! }
+    public var Wallet_Month_GenDecember: String { return self._s[168]! }
+    public var Wallet_Send_ErrorNotEnoughFundsTitle: String { return self._s[169]! }
+    public var Wallet_WordImport_IncorrectTitle: String { return self._s[170]! }
+    public var Wallet_Send_AddressText: String { return self._s[171]! }
+    public var Wallet_Receive_AmountInfo: String { return self._s[172]! }
     public func Wallet_Time_PreciseDate_m2(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[174]!, self._r[174]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[173]!, self._r[173]!, [_1, _2, _3])
     }
-    public var Wallet_Month_ShortAugust: String { return self._s[175]! }
-    public var Wallet_Qr_Title: String { return self._s[176]! }
-    public var Wallet_Settings_Configuration: String { return self._s[177]! }
-    public var Wallet_WordCheck_TryAgain: String { return self._s[178]! }
-    public var Wallet_Info_TransactionPendingHeader: String { return self._s[179]! }
-    public var Wallet_Receive_InvoiceUrlHeader: String { return self._s[180]! }
+    public var Wallet_Month_ShortAugust: String { return self._s[174]! }
+    public var Wallet_Qr_Title: String { return self._s[175]! }
+    public var Wallet_Settings_Configuration: String { return self._s[176]! }
+    public var Wallet_WordCheck_TryAgain: String { return self._s[177]! }
+    public var Wallet_Info_TransactionPendingHeader: String { return self._s[178]! }
+    public var Wallet_Receive_InvoiceUrlHeader: String { return self._s[179]! }
+    public var Wallet_Send_TransactionInProgress: String { return self._s[180]! }
     public var Wallet_Created_Text: String { return self._s[181]! }
     public var Wallet_Created_Proceed: String { return self._s[182]! }
     public var Wallet_Words_Done: String { return self._s[183]! }

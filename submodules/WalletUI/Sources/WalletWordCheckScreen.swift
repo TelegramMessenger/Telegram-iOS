@@ -2137,7 +2137,7 @@ public final class WalletWordCheckScreen: ViewController {
                             return true
                         }
                         let _ = confirmWalletExported(storage: strongSelf.context.storage, publicKey: walletInfo.publicKey).start()
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo, false), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
@@ -2205,7 +2205,7 @@ public final class WalletWordCheckScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo, false), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             strongSelf.view.endEditing(true)
                             navigationController.setViewControllers(controllers, animated: true)
                         }

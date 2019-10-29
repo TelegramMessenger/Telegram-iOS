@@ -219,6 +219,7 @@ enum WalletThemeResourceKey: Int32 {
     case itemListCornersTop
     case itemListCornersBottom
     case itemListClearInputIcon
+    case itemListDisclosureArrow
     case navigationShareIcon
     
     case clockMin
@@ -269,7 +270,13 @@ func itemListClearInputIcon(_ theme: WalletTheme) -> UIImage? {
 
 func navigationShareIcon(_ theme: WalletTheme) -> UIImage? {
     return theme.image(WalletThemeResourceKey.navigationShareIcon.rawValue, { theme in
-        generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.navigationBar.buttonColor)
+        generateTintedImage(image: UIImage(bundleImageName: "Wallet/NavigationShare"), color: theme.navigationBar.buttonColor)
+    })
+}
+
+func disclosureArrowImage(_ theme: WalletTheme) -> UIImage? {
+    return theme.image(WalletThemeResourceKey.itemListDisclosureArrow.rawValue, { theme in
+        return generateTintedImage(image: UIImage(bundleImageName: "Wallet/DisclosureArrow"), color: theme.list.itemSecondaryTextColor)
     })
 }
 
