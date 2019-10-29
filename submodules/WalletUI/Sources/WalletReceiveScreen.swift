@@ -106,7 +106,7 @@ final class WalletReceiveScreen: ViewController {
     }
     
     override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
-        return CGSize(width: layout.size.width, height: min(640.0, layout.size.height))
+        return CGSize(width: layout.size.width, height: min(674.0, layout.size.height))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
