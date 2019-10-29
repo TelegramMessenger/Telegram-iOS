@@ -29,14 +29,28 @@ public final class ContextExtractedContentNode: ASDisplayNode {
 final class ContextControllerContentNode: ASDisplayNode {
     let sourceNode: ASDisplayNode
     let controller: ViewController
+    private let tapped: () -> Void
     
-    init(sourceNode: ASDisplayNode, controller: ViewController) {
+    init(sourceNode: ASDisplayNode, controller: ViewController, tapped: @escaping () -> Void) {
         self.sourceNode = sourceNode
         self.controller = controller
+        self.tapped = tapped
         
         super.init()
         
         self.addSubnode(controller.displayNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.tapped()
+        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

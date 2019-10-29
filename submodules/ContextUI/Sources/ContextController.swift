@@ -67,6 +67,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let beginDismiss: (ContextMenuActionResult) -> Void
     private let reactionSelected: (String) -> Void
     private let beganAnimatingOut: () -> Void
+    private let attemptTransitionControllerIntoNavigation: () -> Void
     private let getController: () -> ContextController?
     private weak var gesture: ContextGesture?
     
@@ -107,7 +108,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
-    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void) {
+    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.source = source
@@ -115,6 +116,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.beginDismiss = beginDismiss
         self.reactionSelected = reactionSelected
         self.beganAnimatingOut = beganAnimatingOut
+        self.attemptTransitionControllerIntoNavigation = attemptTransitionControllerIntoNavigation
         self.gesture = gesture
         
         self.getController = { [weak controller] in
@@ -456,7 +458,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         case let .controller(source):
             let transitionInfo = source.transitionInfo()
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
-                let contentParentNode = ContextControllerContentNode(sourceNode: sourceNode, controller: source.controller)
+                let contentParentNode = ContextControllerContentNode(sourceNode: sourceNode, controller: source.controller, tapped: { [weak self] in
+                    self?.attemptTransitionControllerIntoNavigation()
+                })
                 self.contentContainerNode.contentNode = .controller(contentParentNode)
                 self.contentContainerNode.clipsToBounds = true
                 self.contentContainerNode.cornerRadius = 14.0
@@ -1269,6 +1273,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             case let .controller(controller):
                 let controllerPoint = self.view.convert(point, to: controller.controller.view)
                 if let result = controller.controller.view.hitTest(controllerPoint, with: event) {
+                    #if DEBUG
+                    //return controller.view
+                    #endif
                     return result
                 }
             }
@@ -1317,6 +1324,8 @@ public protocol ContextExtractedContentSource: class {
 
 public protocol ContextControllerContentSource: class {
     var controller: ViewController { get }
+    var navigationController: NavigationController? { get }
+    
     func transitionInfo() -> ContextControllerTakeControllerInfo?
 }
 
@@ -1379,6 +1388,19 @@ public final class ContextController: ViewController, StandalonePresentableContr
             strongSelf.reactionSelected?(value)
         }, beganAnimatingOut: { [weak self] in
             self?.statusBar.statusBarStyle = .Ignore
+        }, attemptTransitionControllerIntoNavigation: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            switch strongSelf.source {
+            /*case let .controller(controller):
+                if let navigationController = controller.navigationController {
+                    strongSelf.presentingViewController?.dismiss(animated: false, completion: nil)
+                    navigationController.pushViewController(controller.controller, animated: false)
+                }*/
+            default:
+                break
+            }
         })
         
         self.displayNodeDidLoad()
