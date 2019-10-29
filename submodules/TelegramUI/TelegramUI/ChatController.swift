@@ -5019,7 +5019,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             self?.chatDisplayNode.historyNode.historyAppearsCleared = false
                         }
-                    }), in: .window(.root))
+                    }), in: .current)
                 }
                 
                 let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
@@ -5133,12 +5133,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
                         
-                        var itemIndex = 0
+                        var itemIndex = 1
                         
+                        var finalSize: Int64 = 0
                         let updateTotalSize: () -> Void = { [weak controller] in
                             controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                                 let title: String
                                 let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                                finalSize = filteredSize
                                 
                                 if filteredSize == 0 {
                                     title = presentationData.strings.Cache_ClearNone
@@ -5172,6 +5174,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
                         
                         var totalSize: Int64 = 0
+                        finalSize = totalSize
                         
                         func stringForCategory(strings: PresentationStrings, category: PeerCacheUsageCategory) -> String {
                             switch category {
@@ -5224,20 +5227,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     media[peerId] = categories
                                 }
-//                                    if let additionalPeerId = additionalPeerId {
-//                                        if var categories = media[additionalPeerId] {
-//                                            for category in clearCategories {
-//                                                if let contents = categories[category] {
-//                                                    for (mediaId, _) in contents {
-//                                                        clearMediaIds.insert(mediaId)
-//                                                    }
-//                                                }
-//                                                categories.removeValue(forKey: category)
-//                                            }
-//
-//                                            media[additionalPeerId] = categories
-//                                        }
-//                                    }
                                 
                                 var clearResourceIds = Set<WrappedMediaResourceId>()
                                 for id in clearMediaIds {
@@ -5282,7 +5271,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
                                         let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .window(.root))
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(finalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .current)
                                     }
                                 }))
 
