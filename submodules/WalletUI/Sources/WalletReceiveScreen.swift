@@ -10,7 +10,7 @@ import SolidRoundedButtonNode
 
 private func shareInvoiceQrCode(context: WalletContext, invoice: String) {
     let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
-    |> map { generator -> UIImage? in
+    |> map { _, generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), scale: 1.0))
         return context?.generateImage()
@@ -151,11 +151,14 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     private let qrButtonNode: HighlightTrackingButtonNode
     private let qrImageNode: TransformImageNode
     private let qrIconNode: AnimatedStickerNode
+    private var qrCodeSize: Int?
     
     private let urlTextNode: ImmediateTextNode
     
     private let buttonNode: SolidRoundedButtonNode
     private let secondaryButtonNode: HighlightableButtonNode
+    
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var openCreateInvoice: (() -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
@@ -202,7 +205,15 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.secondaryButtonNode)
         
-        self.qrImageNode.setSignal(qrCode(string: urlForMode(mode), color: .black, backgroundColor: .white, icon: .cutout), attemptSynchronously: true)
+        self.qrImageNode.setSignal(qrCode(string: urlForMode(mode), color: .black, backgroundColor: .white, icon: .cutout) |> beforeNext { [weak self] size, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.qrCodeSize = size
+            if let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+            }
+        } |> map { $0.1 }, attemptSynchronously: true)
         
         self.qrButtonNode.addTarget(self, action: #selector(self.qrPressed), forControlEvents: .touchUpInside)
         self.qrButtonNode.highligthedChanged = { [weak self] highlighted in
@@ -275,6 +286,8 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationHeight)
+        
         var insets = layout.insets(options: [])
         insets.top += navigationHeight
         let inset: CGFloat = 22.0
@@ -295,11 +308,12 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.qrImageNode, frame: imageFrame)
         transition.updateFrame(node: self.qrButtonNode, frame: imageFrame)
         
-        let iconSide = floor(imageSide * 0.24)
-        let iconSize = CGSize(width: iconSide, height: iconSide)
-        self.qrIconNode.updateLayout(size: iconSize)
-        transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: iconSize))
-        transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
+        if let qrCodeSize = self.qrCodeSize {
+            let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
+            self.qrIconNode.updateLayout(size: cutoutFrame.size)
+            transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
+            transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
+        }
         
         if self.urlTextNode.attributedText?.string.isEmpty ?? true {
             var url = urlForMode(self.mode)

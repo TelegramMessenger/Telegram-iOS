@@ -48,6 +48,11 @@ static const void *positionChangedKey = &positionChangedKey;
             self.backgroundColor = [UIColor redColor];
             self.tintColor = [UIColor redColor];
             UIView *handleView = self.subviews[0].subviews.lastObject;
+            if (iosMajorVersion() >= 13) {
+                handleView = self.subviews[0].subviews[1].subviews.lastObject;
+            } else {
+                handleView = self.subviews[0].subviews.lastObject;
+            }
             
             static Class subclass;
             static dispatch_once_t onceToken;

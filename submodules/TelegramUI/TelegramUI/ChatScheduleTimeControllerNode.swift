@@ -134,11 +134,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         let pickerView = UIDatePicker()
         pickerView.timeZone = TimeZone(secondsFromGMT: 0)
+        pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
+        pickerView.datePickerMode = .countDownTimer
         pickerView.datePickerMode = .dateAndTime
         pickerView.locale = Locale.current
         pickerView.timeZone = TimeZone.current
         pickerView.minuteInterval = 1
-        pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
         self.contentContainerNode.view.addSubview(pickerView)
         pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
         self.pickerView = pickerView
@@ -315,14 +316,14 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         var buttonOffset: CGFloat = 0.0
         if case .scheduledMessages(true) = self.mode {
-            buttonOffset += 44.0
+            buttonOffset += 60.0
         }
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + buttonOffset
-        let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight - buttonOffset)
-        contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight
+        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
+        let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
+        contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
         
@@ -351,7 +352,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0 - buttonOffset, width: contentFrame.width, height: buttonHeight))
         
         let onlineSize = self.onlineButton.measure(CGSize(width: width, height: titleHeight))
-        let onlineFrame = CGRect(origin: CGPoint(x: ceil((layout.size.width - onlineSize.width) / 2.0), y: contentHeight - 36.0 - insets.bottom), size: onlineSize)
+        let onlineFrame = CGRect(origin: CGPoint(x: ceil((layout.size.width - onlineSize.width) / 2.0), y: contentHeight - 45.0 - insets.bottom), size: onlineSize)
         transition.updateFrame(node: self.onlineButton, frame: onlineFrame)
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
