@@ -36,13 +36,27 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
 }
 
 private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
+    print("getCoveringViewSnaphot")
+    
     let scale: CGFloat = 0.5
     let unscaledSize = window.hostView.containerView.frame.size
     return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: scale, y: scale)
         UIGraphicsPushContext(context)
+        window.forEachViewController { controller in
+            if let controller = controller as? PasscodeEntryController {
+                controller.displayNode.alpha = 0.0
+            }
+            return true
+        }
         window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+        window.forEachViewController { controller in
+            if let controller = controller as? PasscodeEntryController {
+                controller.displayNode.alpha = 1.0
+            }
+            return true
+        }
         UIGraphicsPopContext()
     }).flatMap(applyScreenshotEffectToImage)
 }
@@ -64,6 +78,17 @@ public final class AppLockContextImpl: AppLockContext {
     private var currentStateValue: LockState
     private let currentState = Promise<LockState>()
     
+    private let autolockTimeout = ValuePromise<Int32?>(nil, ignoreRepeated: true)
+    
+    private let isCurrentlyLockedPromise = Promise<Bool>()
+    public var isCurrentlyLocked: Signal<Bool, NoError> {
+        return self.isCurrentlyLockedPromise.get()
+        |> distinctUntilChanged
+    }
+    
+    private var lastActiveTimestamp: Double?
+    private var lastActiveValue: Bool = false
+    
     public init(rootPath: String, window: Window1?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -78,6 +103,7 @@ public final class AppLockContextImpl: AppLockContext {
         } else {
             self.currentStateValue = LockState()
         }
+        self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
         
         let _ = (combineLatest(queue: .mainQueue(),
             accountManager.accessChallengeData(),
@@ -93,34 +119,70 @@ public final class AppLockContextImpl: AppLockContext {
             
             let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? .defaultSettings
             
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            var becameActiveRecently = false
+            if appInForeground {
+                if !strongSelf.lastActiveValue {
+                    strongSelf.lastActiveValue = true
+                    strongSelf.lastActiveTimestamp = timestamp
+                }
+                
+                if let lastActiveTimestamp = strongSelf.lastActiveTimestamp {
+                    if lastActiveTimestamp + 0.5 > timestamp {
+                        becameActiveRecently = true
+                    }
+                }
+            } else {
+                strongSelf.lastActiveValue = false
+            }
+            
             var shouldDisplayCoveringView = false
+            var isCurrentlyLocked = false
             
             if !accessChallengeData.data.isLockable {
                 if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
                     passcodeController.dismiss()
                 }
+                
+                strongSelf.autolockTimeout.set(nil)
             } else {
                 if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
+                strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
                 if isLocked(passcodeSettings: passcodeSettings, state: state, isApplicationActive: appInForeground) {
-                    if strongSelf.passcodeController == nil {
-                        let biometrics: PasscodeEntryControllerBiometricsMode
-                        if passcodeSettings.enableBiometrics {
-                            biometrics = .enabled(passcodeSettings.biometricsDomainState)
-                        } else {
-                            biometrics = .none
+                    isCurrentlyLocked = true
+                    
+                    let biometrics: PasscodeEntryControllerBiometricsMode
+                    if passcodeSettings.enableBiometrics {
+                        biometrics = .enabled(passcodeSettings.biometricsDomainState)
+                    } else {
+                        biometrics = .none
+                    }
+                    
+                    if let passcodeController = strongSelf.passcodeController {
+                        if becameActiveRecently, case .enabled = biometrics, appInForeground {
+                            passcodeController.requestBiometrics()
                         }
-                        
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: true, lockIconInitialFrame: { [weak self] in
+                        passcodeController.ensureInputFocused()
+                    } else {
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
                                 return CGRect()
                             }
                         }))
+                        if becameActiveRecently, appInForeground {
+                            passcodeController.presentationCompleted = { [weak passcodeController] in
+                                if case .enabled = biometrics {
+                                    passcodeController?.requestBiometrics()
+                                }
+                                passcodeController?.ensureInputFocused()
+                            }
+                        }
                         passcodeController.presentedOverCoveringView = true
                         strongSelf.passcodeController = passcodeController
                         strongSelf.window?.present(passcodeController, on: .passcode)
@@ -131,7 +193,8 @@ public final class AppLockContextImpl: AppLockContext {
                 }
             }
             
-            strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && accessChallengeData.data.isLockable)
+            strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
+            strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
@@ -149,6 +212,15 @@ public final class AppLockContextImpl: AppLockContext {
         })
         
         self.currentState.set(.single(self.currentStateValue))
+        
+        let _ = (self.autolockTimeout.get()
+        |> deliverOnMainQueue).start(next: { [weak self] autolockTimeout in
+            self?.updateLockState { state in
+                var state = state
+                state.autolockTimeout = autolockTimeout
+                return state
+            }
+        })
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
