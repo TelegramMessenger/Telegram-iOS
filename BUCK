@@ -351,6 +351,8 @@ apple_binary(
         "//submodules/Database/PreferencesTable:PreferencesTable",
         "//submodules/Database/PeerTable:PeerTable",
         "//submodules/sqlcipher:sqlcipher",
+        "//submodules/AppLockState:AppLockState",
+        "//submodules/NotificationsPresentationData:NotificationsPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

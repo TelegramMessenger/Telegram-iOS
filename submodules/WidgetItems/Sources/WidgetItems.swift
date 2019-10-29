@@ -28,6 +28,18 @@ public struct WidgetDataPeers: Codable, Equatable {
     }
 }
 
+public struct WidgetPresentationData: Codable, Equatable {
+    public var applicationLockedString: String
+    
+    public init(applicationLockedString: String) {
+        self.applicationLockedString = applicationLockedString
+    }
+}
+
+public func widgetPresentationDataPath(rootPath: String) -> String {
+    return rootPath + "/widgetPresentationData.json"
+}
+
 public enum WidgetData: Codable, Equatable {
     private enum CodingKeys: CodingKey {
         case discriminator

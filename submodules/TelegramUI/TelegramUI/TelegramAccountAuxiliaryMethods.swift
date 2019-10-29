@@ -26,7 +26,7 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier)
     } else if let mapSnapshotResource = resource as? MapSnapshotMediaResource {
-        return fetchMapSnapshotResource(resource: mapSnapshotResource)
+        return .never()
     } else if let resource = resource as? ExternalMusicAlbumArtResource {
         return fetchExternalMusicAlbumArtResource(account: account, resource: resource)
     } else if let resource = resource as? ICloudFileResource {

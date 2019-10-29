@@ -618,7 +618,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
         |> map { primary, _, _ in
             return primary
-        })
+        }, presentationData: self.presentationData)
     }
     
     deinit {

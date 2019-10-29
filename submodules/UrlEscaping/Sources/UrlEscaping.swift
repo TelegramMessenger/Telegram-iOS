@@ -10,18 +10,6 @@ public func doesUrlMatchText(url: String, text: String, fullText: String) -> Boo
     return false
 }
 
-private let whitelistedHosts: Set<String> = Set([
-    "t.me",
-    "telegram.me"
-])
-
-public func isConcealedUrlWhitelisted(_ url: URL) -> Bool {
-    if let host = url.host, whitelistedHosts.contains(host) {
-        return true
-    }
-    return false
-}
-
 public extension CharacterSet {
     static let urlQueryValueAllowed: CharacterSet = {
         let generalDelimitersToEncode = ":#[]@"

@@ -234,7 +234,20 @@ final class SharedApplicationContext {
         let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
-        hostView.containerView.backgroundColor = UIColor.white
+        if let traitCollection = window.rootViewController?.traitCollection {
+            if #available(iOS 13.0, *) {
+                switch traitCollection.userInterfaceStyle {
+                case .light, .unspecified:
+                    hostView.containerView.backgroundColor = UIColor.white
+                default:
+                    hostView.containerView.backgroundColor = UIColor.black
+                }
+            } else {
+                hostView.containerView.backgroundColor = UIColor.white
+            }
+        } else {
+            hostView.containerView.backgroundColor = UIColor.white
+        }
         self.window = window
         self.nativeWindow = window
         
@@ -715,7 +728,13 @@ final class SharedApplicationContext {
         |> deliverOnMainQueue
         |> take(1)
         |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
-            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light)
+            var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
+            if #available(iOS 13.0, *) {
+                if let traitCollection = window.rootViewController?.traitCollection {
+                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+                }
+            }
+            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
             |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
                 return (accountManager, initialPresentationDataAndSettings)
             }
@@ -1630,34 +1649,38 @@ final class SharedApplicationContext {
     
     @available(iOS 9.0, *)
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
-        let _ = (self.context.get()
-        |> mapToSignal { context -> Signal<AuthorizedApplicationContext?, NoError> in
-            if let context = context {
-                return context.unlockedState
-                |> filter { $0 }
-                |> take(1)
-                |> map { _ -> AuthorizedApplicationContext? in
-                    return context
-                }
-            } else {
-                return .complete()
-            }
-        }
+        let _ = (self.sharedContextPromise.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { context in
-            if let context = context {
-                if let type = ApplicationShortcutItemType(rawValue: shortcutItem.type) {
-                    switch type {
-                        case .search:
-                            context.openRootSearch()
-                        case .compose:
-                            context.openRootCompose()
-                        case .camera:
-                            context.openRootCamera()
-                        case .savedMessages:
-                            self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+        |> deliverOnMainQueue).start(next: { sharedContext in
+            let proceed: () -> Void = {
+                let _ = (self.context.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { context in
+                    if let context = context {
+                        if let type = ApplicationShortcutItemType(rawValue: shortcutItem.type) {
+                            switch type {
+                            case .search:
+                                context.openRootSearch()
+                            case .compose:
+                                context.openRootCompose()
+                            case .camera:
+                                context.openRootCamera()
+                            case .savedMessages:
+                                self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                            }
+                        }
                     }
-                }
+                })
+            }
+            if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl {
+                let _ = (appLockContext.isCurrentlyLocked
+                |> filter { !$0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { _ in
+                    proceed()
+                })
+            } else {
+                proceed()
             }
         })
     }

@@ -8163,6 +8163,8 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
     
+    let navigationController: NavigationController? = nil
+    
     init(controller: ViewController, sourceNode: ASDisplayNode?) {
         self.controller = controller
         self.sourceNode = sourceNode
