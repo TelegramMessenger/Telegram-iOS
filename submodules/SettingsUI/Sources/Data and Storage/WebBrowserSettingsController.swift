@@ -11,9 +11,11 @@ import AccountContext
 import OpenInExternalAppUI
 
 private final class WebBrowserSettingsControllerArguments {
+    let context: AccountContext
     let updateDefaultBrowser: (String?) -> Void
     
-    init(updateDefaultBrowser: @escaping (String?) -> Void) {
+    init(context: AccountContext, updateDefaultBrowser: @escaping (String?) -> Void) {
+        self.context = context
         self.updateDefaultBrowser = updateDefaultBrowser
     }
 }
@@ -24,7 +26,7 @@ private enum WebBrowserSettingsSection: Int32 {
 
 private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
     case browserHeader(PresentationTheme, String)
-    case browser(PresentationTheme, String, String?, Bool, Int32)
+    case browser(PresentationTheme, String, OpenInApplication, String?, Bool, Int32)
     
     var section: ItemListSectionId {
         switch self {
@@ -37,7 +39,7 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .browserHeader:
                 return 0
-            case let .browser(_, _, _, _, index):
+            case let .browser(_, _, _, _, _, index):
                 return 1 + index
         }
     }
@@ -50,8 +52,8 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .browser(lhsTheme, lhsTitle, lhsIdentifier, lhsSelected, lhsIndex):
-                if case let .browser(rhsTheme, rhsTitle, rhsIdentifier, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsIdentifier == rhsIdentifier, lhsSelected == rhsSelected, lhsIndex == rhsIndex {
+            case let .browser(lhsTheme, lhsTitle, lhsApplication, lhsIdentifier, lhsSelected, lhsIndex):
+                if case let .browser(rhsTheme, rhsTitle, rhsApplication, rhsIdentifier, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsApplication == rhsApplication, lhsIdentifier == rhsIdentifier, lhsSelected == rhsSelected, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -68,8 +70,8 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case let .browserHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .browser(theme, title, identifier, selected, _):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .right, checked: selected, zeroSeparatorInsets: false, sectionId: self.section) {
+            case let .browser(theme, title, application, identifier, selected, _):
+                return WebBrowserItem(account: arguments.context.account, theme: theme, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
                 }
         }
@@ -82,11 +84,11 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
     let options = availableOpenInOptions(context: context, item: .url(url: "http://telegram.org"))
     
     entries.append(.browserHeader(presentationData.theme, presentationData.strings.WebBrowser_DefaultBrowser))
-    entries.append(.browser(presentationData.theme, presentationData.strings.WebBrowser_InAppSafari, nil, selectedBrowser == nil, 0))
+    entries.append(.browser(presentationData.theme, presentationData.strings.WebBrowser_InAppSafari, .safari, nil, selectedBrowser == nil, 0))
     
     var index: Int32 = 1
     for option in options {
-        entries.append(.browser(presentationData.theme, option.title, option.identifier, option.identifier == selectedBrowser, index))
+        entries.append(.browser(presentationData.theme, option.title, option.application, option.identifier, option.identifier == selectedBrowser, index))
         index += 1
     }
     
@@ -98,7 +100,7 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let updateDisposable = MetaDisposable()
-    let arguments = WebBrowserSettingsControllerArguments(updateDefaultBrowser: { identifier in
+    let arguments = WebBrowserSettingsControllerArguments(context: context, updateDefaultBrowser: { identifier in
         let _ = updateWebBrowserSettingsInteractively(accountManager: context.sharedContext.accountManager, { $0.withUpdatedDefaultWebBrowser(identifier) }).start()
     })
     

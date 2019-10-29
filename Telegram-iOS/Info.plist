@@ -264,6 +264,7 @@
 		<string>dgis</string>
 		<string>microsoft-edge-http</string>
 		<string>microsoft-edge-https</string>
+		<string>brave</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

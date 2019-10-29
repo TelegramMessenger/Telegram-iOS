@@ -12,7 +12,7 @@ public enum OpenInItem {
     case location(location: TelegramMediaMap, withDirections: Bool)
 }
 
-public enum OpenInApplication {
+public enum OpenInApplication: Equatable {
     case safari
     case maps
     case other(title: String, identifier: Int64, scheme: String, store: String?)
@@ -131,7 +131,14 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             options.append(OpenInOption(identifier: "duckDuckGo", application: .other(title: "DuckDuckGo", identifier: 663592361, scheme: "ddgQuickLink", store: nil), action: {
                 return .openUrl(url: "ddgQuickLink://\(url)")
             }))
-        
+
+            options.append(OpenInOption(identifier: "brave", application: .other(title: "Brave", identifier: 1052879175, scheme: "brave", store: nil), action: {
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
+                    return .openUrl(url: "brave://open-url?url=\(escapedUrl)")
+                }
+                return .none
+            }))
+            
             options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
                 return .openUrl(url: "alook://\(url)")
             }))
