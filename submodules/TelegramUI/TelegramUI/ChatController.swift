@@ -54,6 +54,7 @@ import WalletUrl
 import LocalizedPeerData
 import PhoneNumberFormat
 import SettingsUI
+import UrlWhitelist
 
 public enum ChatControllerPeekActions {
     case standard

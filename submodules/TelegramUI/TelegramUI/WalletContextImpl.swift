@@ -109,9 +109,16 @@ final class WalletContextImpl: WalletContext {
     let storage: WalletStorageInterface
     let tonInstance: TonInstance
     let keychain: TonKeychain
+    let strings: PresentationStrings
     let presentationData: WalletPresentationData
     
     let supportsCustomConfigurations: Bool = false
+    var termsUrl: String? {
+        return self.strings.TelegramWallet_Intro_TermsUrl
+    }
+    var feeInfoUrl: String? {
+        return self.strings.AppWallet_TransactionInfo_FeeInfoURL
+    }
     
     var inForeground: Signal<Bool, NoError> {
         return self.context.sharedContext.applicationBindings.applicationInForeground
@@ -125,6 +132,7 @@ final class WalletContextImpl: WalletContext {
         self.tonInstance = tonContext.instance
         self.keychain = tonContext.keychain
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.strings = presentationData.strings
         let theme = presentationData.theme
         let strings = presentationData.strings
         let timeFormat: WalletTimeFormat
