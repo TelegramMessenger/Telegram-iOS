@@ -141,46 +141,6 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     return false
 }
 
-private let transitionClass: AnyClass? = NSClassFromString(encodeText("VJUsbotjujpoWjfx", -1))
-private let previewingClass: AnyClass? = NSClassFromString("UIVisualEffectView")
-private let previewingActionGroupClass: AnyClass? = NSClassFromString("UIInterfaceActionGroupView")
-private func checkIsPreviewingView(_ view: UIView) -> Bool {
-    if let transitionClass = transitionClass, view.isKind(of: transitionClass) {
-        for subview in view.subviews {
-            if let previewingClass = previewingClass, subview.isKind(of: previewingClass) {
-                return true
-            }
-        }
-    }
-    return false
-}
-
-private func applyThemeToPreviewingView(_ view: UIView, accentColor: UIColor, darkBlur: Bool) {
-    if let previewingActionGroupClass = previewingActionGroupClass, view.isKind(of: previewingActionGroupClass) {
-        view.tintColor = accentColor
-        if darkBlur {
-            applyThemeToPreviewingEffectView(view)
-        }
-        return
-    }
-    
-    for subview in view.subviews {
-        applyThemeToPreviewingView(subview, accentColor: accentColor, darkBlur: darkBlur)
-    }
-}
-
-private func applyThemeToPreviewingEffectView(_ view: UIView) {
-    if let previewingClass = previewingClass, view.isKind(of: previewingClass) {
-        if let view = view as? UIVisualEffectView {
-            view.effect = UIBlurEffect(style: .dark)
-        }
-    }
-    
-    for subview in view.subviews {
-        applyThemeToPreviewingEffectView(subview)
-    }
-}
-
 public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeight: CGFloat? = nil) -> (UIView?, CGFloat?) {
     if view.isFirstResponder {
         return (view, accessoryHeight)
@@ -283,7 +243,6 @@ public class Window1 {
     private var deviceMetrics: DeviceMetrics
     
     private let statusBarHost: StatusBarHost?
-    //private let statusBarManager: StatusBarManager?
     private let keyboardManager: KeyboardManager?
     private let keyboardViewManager: KeyboardViewManager?
     private var statusBarChangeObserver: AnyObject?
@@ -301,6 +260,7 @@ public class Window1 {
     
     private let presentationContext: PresentationContext
     private let overlayPresentationContext: GlobalOverlayPresentationContext
+    private let topPresentationContext: PresentationContext
     
     private var tracingStatusBarsInvalidated = false
     private var shouldUpdateDeferScreenEdgeGestures = false
@@ -315,7 +275,6 @@ public class Window1 {
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {
         didSet {
-            //self.statusBarManager?.inCallNavigate = self.inCallNavigate
         }
     }
     
@@ -327,9 +286,6 @@ public class Window1 {
     private var keyboardGestureAccessoryHeight: CGFloat?
     
     private var keyboardTypeChangeTimer: SwiftSignalKit.Timer?
-    
-    //private let volumeControlStatusBar: VolumeControlStatusBar
-    //private let volumeControlStatusBarNode: VolumeControlStatusBarNode
     
     private var isInteractionBlocked = false
     
@@ -360,6 +316,7 @@ public class Window1 {
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
+        self.topPresentationContext = PresentationContext()
         
         self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
             self?.isInteractionBlocked = value
@@ -424,13 +381,10 @@ public class Window1 {
             })
         }
         
-        /*self.hostView.getAccessibilityElements = { [weak self] in
-            return self?.accessibilityElements
-        }*/
-        
         self.presentationContext.view = self.hostView.containerView
-        //self.presentationContext.volumeControlStatusBarNodeView = self.volumeControlStatusBarNode.view
+        self.topPresentationContext.view = self.hostView.containerView
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
+        self.topPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
@@ -615,9 +569,6 @@ public class Window1 {
         }
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
-        
-        //self.hostView.containerView.addSubview(self.volumeControlStatusBar)
-        //self.hostView.containerView.addSubview(self.volumeControlStatusBarNode.view)
     }
     
     public required init(coder aDecoder: NSCoder) {
@@ -640,10 +591,6 @@ public class Window1 {
         if let voiceOverStatusObserver = self.voiceOverStatusObserver {
             NotificationCenter.default.removeObserver(voiceOverStatusObserver)
         }
-    }
-    
-    public func setupVolumeControlStatusBarGraphics(_ graphics: (UIImage, UIImage, UIImage)) {
-        //self.volumeControlStatusBarNode.graphics = graphics
     }
     
     public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
@@ -695,6 +642,11 @@ public class Window1 {
         if self.isInteractionBlocked {
             return nil
         }
+        
+        if let result = self.topPresentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
+            return result
+        }
+        
         if let coveringView = self.coveringView, !coveringView.isHidden, coveringView.superview != nil, coveringView.frame.contains(point) {
             return coveringView.hitTest(point, with: event)
         }
@@ -828,7 +780,11 @@ public class Window1 {
                     coveringView.layer.removeAnimation(forKey: "opacity")
                     coveringView.layer.allowsGroupOpacity = false
                     coveringView.alpha = 1.0
-                    self.hostView.containerView.addSubview(coveringView)
+                    if let controller = self.topPresentationContext.controllers.first {
+                        self.hostView.containerView.insertSubview(coveringView, belowSubview: controller.0.displayNode.view)
+                    } else {
+                        self.hostView.containerView.addSubview(coveringView)
+                    }
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                         coveringView.updateLayout(self.windowLayout.size)
@@ -839,57 +795,8 @@ public class Window1 {
     }
     
     private func layoutSubviews(force: Bool) {
-        var hasPreview = false
-        var updatedHasPreview = false
-        for subview in self.hostView.eventView.subviews {
-            if checkIsPreviewingView(subview) {
-                applyThemeToPreviewingView(subview, accentColor: self.previewThemeAccentColor, darkBlur: self.previewThemeDarkBlur)
-                hasPreview = true
-                break
-            }
-        }
-        if hasPreview != self.cachedHasPreview {
-            self.cachedHasPreview = hasPreview
-            updatedHasPreview = true
-        }
-        
-        if self.tracingStatusBarsInvalidated || updatedHasPreview, let keyboardManager = keyboardManager {
+        if self.tracingStatusBarsInvalidated, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
-            
-            /*if self.statusBarHidden {
-                statusBarManager.updateState(surfaces: [], withSafeInsets: false, forceInCallStatusBarText: nil, forceHiddenBySystemWindows: false, animated: false)
-            } else {
-                var statusBarSurfaces: [StatusBarSurface] = []
-                for layers in self.hostView.containerView.layer.traceableLayerSurfaces(withTag: WindowTracingTags.statusBar) {
-                    let surface = StatusBarSurface()
-                    for layer in layers {
-                        let traceableInfo = layer.traceableInfo()
-                        if let statusBar = traceableInfo?.userData as? StatusBar {
-                            surface.addStatusBar(statusBar)
-                        }
-                    }
-                    statusBarSurfaces.append(surface)
-                }
-                self.hostView.containerView.layer.adjustTraceableLayerTransforms(CGSize())
-                var animatedUpdate = false
-                if let updatingLayout = self.updatingLayout {
-                    if case .animated = updatingLayout.transition {
-                        animatedUpdate = true
-                    }
-                }
-                self.cachedWindowSubviewCount = self.hostView.containerView.window?.subviews.count ?? 0
-                statusBarManager.updateState(surfaces: statusBarSurfaces, withSafeInsets: !self.windowLayout.safeInsets.top.isZero, forceInCallStatusBarText: self.forceInCallStatusBarText, forceHiddenBySystemWindows: hasPreview, animated: animatedUpdate)
-            }
-            
-            var keyboardSurfaces: [KeyboardSurface] = []
-            for layers in self.hostView.containerView.layer.traceableLayerSurfaces(withTag: WindowTracingTags.keyboard) {
-                for layer in layers {
-                    if let view = layer.delegate as? UITracingLayerView {
-                        keyboardSurfaces.append(KeyboardSurface(host: view))
-                    }
-                }
-            }
-            //keyboardManager.surfaces = keyboardSurfaces*/
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
             let orientationToLock: UIInterfaceOrientationMask
@@ -1085,9 +992,6 @@ public class Window1 {
                     })
                 }
                 
-                //self.volumeControlStatusBarNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
-                //self.volumeControlStatusBarNode.updateLayout(layout: childLayout, transition: updatingLayout.transition)
-                
                 if let coveringView = self.coveringView {
                     coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                     coveringView.updateLayout(self.windowLayout.size)
@@ -1111,7 +1015,11 @@ public class Window1 {
                 self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
             }
         } else {
-            self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+            if let controller = controller as? ViewController, controller.presentedOverCoveringView {
+                self.topPresentationContext.present(controller, on: level, completion: completion)
+            } else {
+                self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+            }
         }
     }
     
@@ -1266,6 +1174,11 @@ public class Window1 {
             }
         }
         for controller in self.topLevelOverlayControllers {
+            if !f(controller) {
+                break
+            }
+        }
+        for (controller, _) in self.topPresentationContext.controllers {
             if !f(controller) {
                 break
             }

@@ -69,6 +69,25 @@ public class MapSnapshotMediaResource: TelegramMediaResource {
     }
 }
 
+public final class MapSnapshotMediaResourceRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .shortLived
+    
+    public var uniqueId: String {
+        return "cached"
+    }
+    
+    public init() {
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? MapSnapshotMediaResourceRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 let TGGoogleMapsOffset: Int = 268435456
 let TGGoogleMapsRadius = Double(TGGoogleMapsOffset) / Double.pi
 
@@ -85,7 +104,7 @@ private func adjustGMapLatitude(_ latitude: Double, offset: Int, zoom: Int) -> D
     return yToLatitude(latitudeToY(latitude) + t)
 }
 
-public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal { subscriber in
         let disposable = MetaDisposable()
         
@@ -96,14 +115,17 @@ public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Sign
             options.mapType = .standard
             options.showsPointsOfInterest = false
             options.showsBuildings = true
-            options.size = CGSize(width: CGFloat(resource.width + 1), height: CGFloat(resource.height + 24))
+            options.size = CGSize(width: CGFloat(resource.width + 1), height: CGFloat(resource.height + 10))
             options.scale = 2.0
             let snapshotter = MKMapSnapshotter(options: options)
             snapshotter.start(with: DispatchQueue.global(), completionHandler: { result, error in
                 if let image = result?.image {
                     if let data = image.jpegData(compressionQuality: 0.9) {
-                        subscriber.putNext(MediaResourceDataFetchResult.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
-                        subscriber.putCompletion()
+                        let tempFile = TempBox.shared.tempFile(fileName: "image.jpg")
+                        if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) {
+                            subscriber.putNext(.tempFile(tempFile))
+                            subscriber.putCompletion()
+                        }
                     }
                 }
             })

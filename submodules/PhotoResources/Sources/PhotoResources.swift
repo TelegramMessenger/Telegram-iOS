@@ -2471,15 +2471,13 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
 
 public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
-        let fetchedDisposable = account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
-        let dataDisposable = account.postbox.mediaBox.resourceData(resource).start(next: { next in
+        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: MapSnapshotMediaResourceRepresentation(), complete: true).start(next: { next in
             if next.size != 0 {
                 subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         
         return ActionDisposable {
-            fetchedDisposable.dispose()
             dataDisposable.dispose()
         }
     }

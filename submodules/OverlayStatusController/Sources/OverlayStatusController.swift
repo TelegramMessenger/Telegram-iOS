@@ -179,8 +179,9 @@ private final class OverlayStatusControllerImpl: ViewController, StandalonePrese
         }
     }
     
-    public func dismiss() {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.dismiss()
+        completion?()
     }
 }
 

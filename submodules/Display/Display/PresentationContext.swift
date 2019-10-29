@@ -34,8 +34,6 @@ public final class PresentationContext {
         }
     }
     
-    weak var volumeControlStatusBarNodeView: UIView?
-    
     var updateIsInteractionBlocked: ((Bool) -> Void)?
     var updateHasBlocked: ((Bool) -> Void)?
     

@@ -191,6 +191,10 @@ public final class PasscodeEntryController: ViewController {
         }
     }
     
+    public func ensureInputFocused() {
+        self.controllerNode.activateInput()
+    }
+    
     public func requestBiometrics(force: Bool = false) {
         guard case let .enabled(data) = self.biometrics, let _ = LocalAuth.biometricAuthentication else {
             return
