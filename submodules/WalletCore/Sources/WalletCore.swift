@@ -800,32 +800,48 @@ public func getCombinedWalletState(storage: WalletStorageInterface, subject: Com
                 tonInstance.walletAddress(publicKey: walletInfo.publicKey)
                 |> castError(GetCombinedWalletStateError.self)
                 |> mapToSignal { address -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
-                    return getWalletState(address: address, tonInstance: tonInstance)
-                    |> retryTonRequest(isNetworkError: { error in
-                        if case .network = error {
-                            return true
-                        } else {
-                            return false
-                        }
-                    })
-                    |> mapError { error -> GetCombinedWalletStateError in
-                        if case .network = error {
-                            return .network
-                        } else {
-                            return .generic
+                    
+                    let walletState: Signal<(WalletState, Int64), GetCombinedWalletStateError>
+                    if cachedState == nil {
+                        walletState = getWalletState(address: address, tonInstance: tonInstance)
+                        |> retry(1.0, maxDelay: 5.0, onQueue: .concurrentDefaultQueue())
+                        |> castError(GetCombinedWalletStateError.self)
+                    } else {
+                        walletState = getWalletState(address: address, tonInstance: tonInstance)
+                        |> retryTonRequest(isNetworkError: { error in
+                            if case .network = error {
+                                return true
+                            } else {
+                                return false
+                            }
+                        })
+                        |> mapError { error -> GetCombinedWalletStateError in
+                            if case .network = error {
+                                return .network
+                            } else {
+                                return .generic
+                            }
                         }
                     }
+                    
+                    return walletState
                     |> mapToSignal { walletState, syncUtime -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
                         let topTransactions: Signal<[WalletTransaction], GetCombinedWalletStateError>
                         if walletState.lastTransactionId == cachedState?.walletState.lastTransactionId {
                             topTransactions = .single(cachedState?.topTransactions ?? [])
                         } else {
-                            topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
-                            |> mapError { error -> GetCombinedWalletStateError in
-                                if case .network = error {
-                                    return .network
-                                } else {
-                                    return .generic
+                            if cachedState == nil {
+                                topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
+                                |> retry(1.0, maxDelay: 5.0, onQueue: .concurrentDefaultQueue())
+                                |> castError(GetCombinedWalletStateError.self)
+                            } else {
+                                topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
+                                |> mapError { error -> GetCombinedWalletStateError in
+                                    if case .network = error {
+                                        return .network
+                                    } else {
+                                        return .generic
+                                    }
                                 }
                             }
                         }
@@ -1195,32 +1211,48 @@ private func getWalletTransactionsOnce(address: String, previousId: WalletTransa
     }
 }
 
-public enum CustomWalletConfigurationDecodingError: Error {
+public enum LocalWalletConfigurationDecodingError: Error {
     case generic
 }
 
-public enum CustomWalletConfiguration: Codable {
+public enum LocalWalletConfigurationSource: Codable, Equatable {
     enum Key: CodingKey {
+        case url
         case string
     }
     
+    case url(String)
     case string(String)
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Key.self)
-        if let string = try? container.decode(String.self, forKey: .string) {
+        if let url = try? container.decode(String.self, forKey: .url) {
+            self = .url(url)
+        } else if let string = try? container.decode(String.self, forKey: .string) {
             self = .string(string)
         } else {
-            throw CustomWalletConfigurationDecodingError.generic
+            throw LocalWalletConfigurationDecodingError.generic
         }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = try encoder.container(keyedBy: Key.self)
         switch self {
+        case let .url(url):
+            try container.encode(url, forKey: .url)
         case let .string(string):
             try container.encode(string, forKey: .string)
         }
+    }
+}
+
+public struct LocalWalletConfiguration: Codable, Equatable {
+    public var source: LocalWalletConfigurationSource
+    public var blockchainName: String
+    
+    public init(source: LocalWalletConfigurationSource, blockchainName: String) {
+        self.source = source
+        self.blockchainName = blockchainName
     }
 }
 
@@ -1228,6 +1260,6 @@ public protocol WalletStorageInterface {
     func watchWalletRecords() -> Signal<[WalletStateRecord], NoError>
     func getWalletRecords() -> Signal<[WalletStateRecord], NoError>
     func updateWalletRecords(_ f: @escaping ([WalletStateRecord]) -> [WalletStateRecord]) -> Signal<[WalletStateRecord], NoError>
-    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError>
-    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?)
+    func localWalletConfiguration() -> Signal<LocalWalletConfiguration, NoError>
+    func updateLocalWalletConfiguration(_ f: @escaping (LocalWalletConfiguration) -> LocalWalletConfiguration) -> Signal<Never, NoError>
 }

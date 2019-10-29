@@ -94,11 +94,12 @@ final class WalletStorageInterfaceImpl: WalletStorageInterface {
         }
     }
     
-    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError> {
-        return .single(nil)
+    func localWalletConfiguration() -> Signal<LocalWalletConfiguration, NoError> {
+        return .single(LocalWalletConfiguration(source: .string(""), blockchainName: ""))
     }
     
-    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?) {
+    func updateLocalWalletConfiguration(_ f: @escaping (LocalWalletConfiguration) -> LocalWalletConfiguration) -> Signal<Never, NoError> {
+        return .complete()
     }
 }
 
