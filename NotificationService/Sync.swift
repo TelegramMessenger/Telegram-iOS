@@ -7,6 +7,8 @@ import MessageHistoryMetadataTable
 import PreferencesTable
 import PeerTable
 import PostboxCoding
+import AppLockState
+import NotificationsPresentationData
 
 private let registeredTypes: Void = {
     declareEncodable(InAppNotificationSettings.self, f: InAppNotificationSettings.init(decoder:))
@@ -23,8 +25,24 @@ private final class ValueBoxLoggerImpl: ValueBoxLogger {
     }
 }
 
-final class SyncProviderImpl {
-    func addIncomingMessage(withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
+enum SyncProviderImpl {
+    static func isLocked(withRootPath rootPath: String) -> Bool {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    static func lockedMessageText(withRootPath rootPath: String) -> String {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: notificationsPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(NotificationsPresentationData.self, from: data) {
+            return value.applicationLockedMessageString
+        } else {
+            return "You have a new message"
+        }
+    }
+    
+    static func addIncomingMessage(withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
         Queue.mainQueue().async {
             let _ = registeredTypes
             

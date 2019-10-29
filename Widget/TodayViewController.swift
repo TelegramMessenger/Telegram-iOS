@@ -14,10 +14,20 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     private var buildConfig: BuildConfig?
     
+    private var primaryColor: UIColor = .black
     private var appLockedLabel: UILabel?
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if #available(iOSApplicationExtension 13.0, *) {
+            switch self.traitCollection.userInterfaceStyle {
+            case .dark:
+                self.primaryColor = .white
+            default:
+                break
+            }
+        }
         
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
@@ -37,11 +47,18 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         
+        let presentationData: WidgetPresentationData
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
+            presentationData = value
+        } else {
+            presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use widget")
+        }
+        
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             let appLockedLabel = UILabel()
-            appLockedLabel.textColor = .black
+            appLockedLabel.textColor = self.primaryColor
             appLockedLabel.font = UIFont.systemFont(ofSize: 16.0)
-            appLockedLabel.text = "Unlock the app to use widget"
+            appLockedLabel.text = presentationData.applicationLockedString
             appLockedLabel.sizeToFit()
             self.appLockedLabel = appLockedLabel
             self.view.addSubview(appLockedLabel)
@@ -82,7 +99,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             break
         case let .peers(peers):
             for peer in peers.peers {
-                let peerView = PeerView(accountPeerId: peers.accountPeerId, peer: peer, tapped: { [weak self] in
+                let peerView = PeerView(primaryColor: self.primaryColor, accountPeerId: peers.accountPeerId, peer: peer, tapped: { [weak self] in
                     if let strongSelf = self, let buildConfig = strongSelf.buildConfig {
                         if let url = URL(string: "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(peer.id)") {
                             strongSelf.extensionContext?.open(url, completionHandler: nil)

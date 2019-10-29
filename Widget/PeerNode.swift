@@ -117,7 +117,7 @@ final class PeerView: UIView {
     
     private let tapped: () -> Void
     
-    init(accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
+    init(primaryColor: UIColor, accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
         self.peer = peer
         self.tapped = tapped
         self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
@@ -125,7 +125,7 @@ final class PeerView: UIView {
         self.titleLabel = UILabel()
         let title = peer.name
         self.titleLabel.text = title
-        self.titleLabel.textColor = .black
+        self.titleLabel.textColor = primaryColor
         self.titleLabel.font = UIFont.systemFont(ofSize: 11.0)
         self.titleLabel.lineBreakMode = .byTruncatingTail
         

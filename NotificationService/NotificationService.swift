@@ -9,9 +9,13 @@ final class NotificationService: UNNotificationServiceExtension {
     override init() {
         var completion: ((Int32) -> Void)?
         self.impl = NotificationServiceImpl(countIncomingMessage: { rootPath, accountId, encryptionParameters, peerId, messageId in
-            SyncProviderImpl().addIncomingMessage(withRootPath: rootPath, accountId: accountId, encryptionParameters: encryptionParameters, peerId: peerId, messageId: messageId, completion: { count in
+            SyncProviderImpl.addIncomingMessage(withRootPath: rootPath, accountId: accountId, encryptionParameters: encryptionParameters, peerId: peerId, messageId: messageId, completion: { count in
                 completion?(count)
             })
+        }, isLocked: { rootPath in
+            return SyncProviderImpl.isLocked(withRootPath: rootPath)
+        }, lockedMessageText: { rootPath in
+            return SyncProviderImpl.lockedMessageText(withRootPath: rootPath)
         })
         
         super.init()
