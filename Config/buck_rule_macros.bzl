@@ -7,7 +7,7 @@ text_section_items = [
     "__text",
 ]
 
-text_section_rename_linker_flags = ["-Wl,-rename_section,__TEXT,%s,__MEXT,%s" % (name, name) for name in text_section_items] + ["-Wl,-segprot,__MEXT,rx,rx"]
+text_section_rename_linker_flags = [] #["-Wl,-rename_section,__TEXT,%s,__MEXT,%s" % (name, name) for name in text_section_items] + ["-Wl,-segprot,__MEXT,rx,rx"]
 
 section_rename_linker_flags = text_section_rename_linker_flags
 
