@@ -4,12 +4,16 @@ import Postbox
 import TelegramCore
 import SyncCore
 import WidgetItems
+import TelegramPresentationData
+import NotificationsPresentationData
 
 final class WidgetDataContext {
     private var currentAccount: Account?
     private var currentAccountDisposable: Disposable?
+    private var widgetPresentationDataDisposable: Disposable?
+    private var notificationPresentationDataDisposable: Disposable?
     
-    init(basePath: String, activeAccount: Signal<Account?, NoError>) {
+    init(basePath: String, activeAccount: Signal<Account?, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.currentAccountDisposable = (activeAccount
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs === rhs
@@ -37,6 +41,32 @@ final class WidgetDataContext {
         }).start(next: { widgetData in
             let path = basePath + "/widget-data"
             if let data = try? JSONEncoder().encode(widgetData) {
+                let _ = try? data.write(to: URL(fileURLWithPath: path), options: [.atomic])
+            } else {
+                let _ = try? FileManager.default.removeItem(atPath: path)
+            }
+        })
+        
+        self.widgetPresentationDataDisposable = (presentationData
+        |> map { presentationData -> WidgetPresentationData in
+            return WidgetPresentationData(applicationLockedString: presentationData.strings.Widget_ApplicationLocked)
+        }
+        |> distinctUntilChanged).start(next: { value in
+            let path = widgetPresentationDataPath(rootPath: basePath)
+            if let data = try? JSONEncoder().encode(value) {
+                let _ = try? data.write(to: URL(fileURLWithPath: path), options: [.atomic])
+            } else {
+                let _ = try? FileManager.default.removeItem(atPath: path)
+            }
+        })
+        
+        self.notificationPresentationDataDisposable = (presentationData
+        |> map { presentationData -> NotificationsPresentationData in
+            return NotificationsPresentationData(applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").0)
+        }
+        |> distinctUntilChanged).start(next: { value in
+            let path = notificationsPresentationDataPath(rootPath: basePath)
+            if let data = try? JSONEncoder().encode(value) {
                 let _ = try? data.write(to: URL(fileURLWithPath: path), options: [.atomic])
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: path)

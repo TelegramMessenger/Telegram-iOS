@@ -55,6 +55,8 @@ static void reportMemory() {
     
     NSString * _Nullable _rootPath;
     DeviceSpecificEncryptionParameters * _Nullable _deviceSpecificEncryptionParameters;
+    bool _isLockedValue;
+    NSString *_lockedMessageTextValue;
     NSString * _Nullable _baseAppBundleId;
     void (^_contentHandler)(UNNotificationContent *);
     UNMutableNotificationContent * _Nullable _bestAttemptContent;
@@ -68,7 +70,7 @@ static void reportMemory() {
 
 @implementation NotificationServiceImpl
 
-- (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage {
+- (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage isLocked:(nonnull bool (^)(NSString * _Nonnull))isLocked lockedMessageText:(NSString *(^)(NSString *))lockedMessageText {
     self = [super init];
     if (self != nil) {
         #if DEBUG
@@ -89,6 +91,11 @@ static void reportMemory() {
                 _rootPath = rootPath;
                 if (rootPath != nil) {
                     _deviceSpecificEncryptionParameters = [BuildConfig deviceSpecificEncryptionParameters:rootPath baseAppBundleId:_baseAppBundleId];
+                    
+                    _isLockedValue = isLocked(rootPath);
+                    if (_isLockedValue) {
+                        _lockedMessageTextValue = lockedMessageText(rootPath);
+                    }
                 }
             } else {
                 NSAssert(false, @"appGroupUrl == nil");
@@ -309,12 +316,29 @@ static void reportMemory() {
                     title = [title stringByAppendingString:@" 🔕"];
                 }
                 _bestAttemptContent.title = title;
-                _bestAttemptContent.subtitle = subtitle;
-                _bestAttemptContent.body = body;
+                if (_isLockedValue) {
+                    _bestAttemptContent.subtitle = @"";
+                    if (_lockedMessageTextValue != nil) {
+                        _bestAttemptContent.body = _lockedMessageTextValue;
+                    } else {
+                        _bestAttemptContent.body = @"You have a new message";
+                    }
+                } else {
+                    _bestAttemptContent.subtitle = subtitle;
+                    _bestAttemptContent.body = body;
+                }
             } else if ([alert isKindOfClass:[NSString class]]) {
                 _bestAttemptContent.title = @"";
                 _bestAttemptContent.subtitle = @"";
-                _bestAttemptContent.body = alert;
+                if (_isLockedValue) {
+                    if (_lockedMessageTextValue != nil) {
+                        _bestAttemptContent.body = _lockedMessageTextValue;
+                    } else {
+                        _bestAttemptContent.body = @"You have a new message";
+                    }
+                } else {
+                    _bestAttemptContent.body = alert;
+                }
             }
             
             NSString *threadIdString = aps[@"thread-id"];
