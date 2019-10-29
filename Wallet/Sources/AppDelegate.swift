@@ -281,32 +281,54 @@ private final class WalletStorageInterfaceImpl: WalletStorageInterface {
         }
     }
     
-    func customWalletConfiguration() -> Signal<CustomWalletConfiguration?, NoError> {
+    func mergedLocalWalletConfiguration() -> Signal<MergedLocalWalletConfiguration, NoError> {
         return self.configurationStorage.watch()
-        |> map { data -> CustomWalletConfiguration? in
+        |> map { data -> MergedLocalWalletConfiguration in
             guard let data = data, !data.isEmpty else {
-                return nil
+                return .default
             }
             do {
-                return try JSONDecoder().decode(CustomWalletConfiguration.self, from: data)
+                return try JSONDecoder().decode(MergedLocalWalletConfiguration.self, from: data)
             } catch let error {
                 print("Error deserializing data: \(error)")
-                return nil
+                return .default
             }
         }
     }
     
-    func updateCustomWalletConfiguration(_ value: CustomWalletConfiguration?) {
-        do {
-            if let value = value {
-                let updatedData = try JSONEncoder().encode(value)
-                let _ = self.configurationStorage.set(data: updatedData).start()
-            } else {
-                let _ = self.configurationStorage.set(data: Data()).start()
+    func localWalletConfiguration() -> Signal<LocalWalletConfiguration, NoError> {
+        return self.mergedLocalWalletConfiguration()
+        |> mapToSignal { value -> Signal<LocalWalletConfiguration, NoError> in
+            return .single(value.configuration)
+        }
+        |> distinctUntilChanged
+    }
+    
+    func updateMergedLocalWalletConfiguration(_ f: @escaping (MergedLocalWalletConfiguration) -> MergedLocalWalletConfiguration) -> Signal<Never, NoError> {
+        return self.configurationStorage.update { data -> (Data, Void) in
+            do {
+                let current: MergedLocalWalletConfiguration?
+                if let data = data, !data.isEmpty {
+                    current = try? JSONDecoder().decode(MergedLocalWalletConfiguration.self, from: data)
+                } else {
+                    current = nil
+                }
+                let updated = f(current ?? .default)
+                let updatedData = try JSONEncoder().encode(updated)
+                return (updatedData, Void())
+            } catch let error {
+                print("Error serializing data: \(error)")
+                return (Data(), Void())
             }
-        } catch let error {
-            print("Error serializing data: \(error)")
-            let _ = self.configurationStorage.set(data: Data()).start()
+        }
+        |> ignoreValues
+    }
+    
+    func updateLocalWalletConfiguration(_ f: @escaping (LocalWalletConfiguration) -> LocalWalletConfiguration) -> Signal<Never, NoError> {
+        return self.updateMergedLocalWalletConfiguration { value in
+            var value = value
+            value.configuration = f(value.configuration)
+            return value
         }
     }
 }
@@ -319,6 +341,8 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
     let window: Window1
     
     let supportsCustomConfigurations: Bool = true
+    let termsUrl: String? = nil
+    let feeInfoUrl: String? = nil
     
     private var currentImagePickerCompletion: ((UIImage) -> Void)?
     
@@ -591,78 +615,63 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("Starting with \(documentsPath)")
         #endif
         
-        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/customConfiguration")
+        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/configuration")
         
-        let configSignal = downloadFile(url: URL(string: "https://test.ton.org/ton-lite-client-test1.config.json")!)
-        |> mapToSignal { data -> Signal<String, DownloadFileError> in
-            if let string = String(data: data, encoding: .utf8) {
-                return .single(string)
+        let initialConfigValue = storage.mergedLocalWalletConfiguration()
+        |> take(1)
+        |> mapToSignal { configuration -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
+            if let resolved = configuration.resolved, resolved.source == configuration.configuration.source {
+                return .single((resolved, configuration.configuration.blockchainName))
             } else {
                 return .complete()
             }
         }
-        |> retry(retryOnError: { error in
-            if case .network = error {
-                return true
-            } else {
-                return false
-            }
-        }, delayIncrement: 0.2, maxDelay: 5.0, maxRetries: 1000, onQueue: Queue.concurrentDefaultQueue())
-        |> `catch` { _ -> Signal<String, NoError> in
-            return .complete()
-        }
         
-        let updatedRemoteConfig = Promise<String>()
-        updatedRemoteConfig.set(configSignal)
-        
-        let configPath = documentsPath + "/config"
-        var initialConfig: Signal<String, NoError> = .complete()
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)), let string = String(data: data, encoding: .utf8) {
-            initialConfig = .single(string)
-        } else {
-            initialConfig = updatedRemoteConfig.get()
-            |> take(1)
-            |> beforeNext { config in
-                let _ = try? config.data(using: .utf8)?.write(to: URL(fileURLWithPath: configPath), options: .atomic)
-            }
-        }
-        
-        let resolvedInitialConfig = combineLatest(queue: .mainQueue(),
-            initialConfig,
-            storage.customWalletConfiguration() |> take(1)
-        )
-        |> map { initialConfig, customConfig -> String in
-            if let customConfig = customConfig {
-                switch customConfig {
-                case let .string(string):
-                    return string
+        let updatedConfigValue = storage.localWalletConfiguration()
+        |> mapToSignal { configuration -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
+            switch configuration.source {
+            case let .url(url):
+                guard let parsedUrl = URL(string: url) else {
+                    return .complete()
                 }
-            } else {
-                return initialConfig
+                return downloadFile(url: parsedUrl)
+                |> retry(1.0, maxDelay: 5.0, onQueue: .mainQueue())
+                |> mapToSignal { data -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
+                    if let string = String(data: data, encoding: .utf8) {
+                        return .single((ResolvedLocalWalletConfiguration(source: configuration.source, value: string), configuration.blockchainName))
+                    } else {
+                        return .complete()
+                    }
+                }
+            case let .string(string):
+                return .single((ResolvedLocalWalletConfiguration(source: configuration.source, value: string), configuration.blockchainName))
             }
         }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            return lhs.0 == rhs.0 && lhs.1 == rhs.1
+        })
+        |> afterNext { (resolved, _) in
+            let _ = storage.updateMergedLocalWalletConfiguration { current in
+                var current = current
+                current.resolved = resolved
+                return current
+            }
+        }
+        
+        let resolvedInitialConfig = (
+            initialConfigValue
+            |> then(updatedConfigValue)
+        )
+        |> take(1)
         
         let _ = (resolvedInitialConfig
-        |> deliverOnMainQueue).start(next: { initialConfig in
-            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialConfig, blockchainName: "testnet", navigationBarTheme: navigationBarTheme, window: mainWindow)
+        |> deliverOnMainQueue).start(next: { (initialResolvedConfig, initialConfigBlockchainName) in
+            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialResolvedConfig.value, blockchainName: initialConfigBlockchainName, navigationBarTheme: navigationBarTheme, window: mainWindow)
             self.walletContext = walletContext
             
-            let _ = (combineLatest(queue: .mainQueue(),
-                updatedRemoteConfig.get(),
-                storage.customWalletConfiguration()
-            )
-            |> map { initialConfig, customConfig -> String in
-                if let customConfig = customConfig {
-                    switch customConfig {
-                    case let .string(string):
-                        return string
-                    }
-                } else {
-                    return initialConfig
-                }
-            }
-            |> distinctUntilChanged).start(next: { config in
-                let _ = walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet").start()
+            let _ = (updatedConfigValue
+            |> deliverOnMainQueue).start(next: { resolved, blockchainName in
+                let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
             })
             
             let _ = (combineLatest(queue: .mainQueue(),
@@ -737,5 +746,21 @@ private func downloadFile(url: URL) -> Signal<Data, DownloadFileError> {
                 downloadTask.cancel()
             }
         }
+    }
+}
+
+struct ResolvedLocalWalletConfiguration: Codable, Equatable {
+    var source: LocalWalletConfigurationSource
+    var value: String
+}
+
+struct MergedLocalWalletConfiguration: Codable, Equatable {
+    var configuration: LocalWalletConfiguration
+    var resolved: ResolvedLocalWalletConfiguration?
+}
+
+private extension MergedLocalWalletConfiguration {
+    static var `default`: MergedLocalWalletConfiguration {
+        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testchain"), resolved: nil)
     }
 }
