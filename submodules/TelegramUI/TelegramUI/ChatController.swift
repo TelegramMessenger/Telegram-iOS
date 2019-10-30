@@ -8046,7 +8046,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func donateSendMessageIntent() {
-        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser && peerId != context.account.peerId else {
+        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId else {
             return
         }
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -8072,6 +8072,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     let interaction = INInteraction(intent: intent, response: nil)
                     interaction.direction = .outgoing
+                    interaction.groupIdentifier = "sendMessage_\(strongSelf.context.account.peerId.toInt64())"
                     interaction.donate { error in
                         if let error = error {
                             print(error.localizedDescription)

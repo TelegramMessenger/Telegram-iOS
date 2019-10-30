@@ -981,6 +981,8 @@ final class SharedApplicationContext {
                         |> deliverOnMainQueue).start(next: { context in
                             if let context = context {
                                 self.registerForNotifications(context: context.context, authorize: false)
+                                
+                                self.resetIntentsIfNeeded(context: context.context)
                             }
                         })
                     })
@@ -1965,6 +1967,22 @@ final class SharedApplicationContext {
             
             self.window?.rootViewController?.present(activityController, animated: true, completion: nil)
         })
+    }
+    
+    private func resetIntentsIfNeeded(context: AccountContextImpl) {
+        let _ = context.sharedContext.accountManager.transaction { transaction in
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+            if !settings.initiallyReset {
+                if #available(iOS 10.0, *) {
+                    Queue.mainQueue().async {
+                        INInteraction.deleteAll()
+                    }
+                }
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
+                    return IntentsSettings(initiallyReset: true)
+                })
+            }
+        }
     }
 }
 
