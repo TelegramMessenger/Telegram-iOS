@@ -143,26 +143,24 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.forwardButton.isEnabled = actions.options.contains(.forward)
             self.shareButton.isEnabled = false
             
-            self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
+            self.deleteButton.isEnabled = true
             self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
             self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty
             
-            self.deleteButton.isHidden = !self.deleteButton.isEnabled
+            self.deleteButton.isHidden = false
             self.reportButton.isHidden = !self.reportButton.isEnabled
         } else {
             self.deleteButton.isEnabled = false
-            self.deleteButton.isHidden = true
+            self.deleteButton.isHidden = false
             self.reportButton.isEnabled = false
             self.reportButton.isHidden = true
             self.forwardButton.isEnabled = false
             self.shareButton.isEnabled = false
         }
         
-        if self.deleteButton.isHidden && self.reportButton.isHidden {
+        if self.reportButton.isHidden {
             if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
                 self.reportButton.isHidden = false
-            } else {
-                self.deleteButton.isHidden = false
             }
         }
         

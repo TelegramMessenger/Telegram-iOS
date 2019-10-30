@@ -684,7 +684,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
+        var clearCacheAsDelete = false
+        if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+            clearCacheAsDelete = true
+        }
+        if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
             actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: message.flags.isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)

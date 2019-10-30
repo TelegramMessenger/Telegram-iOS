@@ -3008,7 +3008,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let banAuthor = actions.banAuthor {
                                 strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                             } else {
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: nil, completion: { _ in })
+                                if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                                    strongSelf.presentClearCacheSuggestion()
+                                } else {
+                                    strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: nil, completion: { _ in })
+                                }
                             }
                         }
                     }))
@@ -3051,14 +3055,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
                                 completion(.dismissWithoutContent)
                             } else {
-                                var isScheduled = false
-                                for id in messageIds {
-                                    if Namespaces.Message.allScheduled.contains(id.namespace) {
-                                        isScheduled = true
-                                        break
+                                if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                                    strongSelf.presentClearCacheSuggestion()
+                                    completion(.default)
+                                } else {
+                                    var isScheduled = false
+                                    for id in messageIds {
+                                        if Namespaces.Message.allScheduled.contains(id.namespace) {
+                                            isScheduled = true
+                                            break
+                                        }
                                     }
+                                    strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
                                 }
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
                             }
                         }
                     }
@@ -8044,7 +8053,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
             |> mapToSignal { peer -> Signal<(Peer, UIImage?), NoError> in
                 let avatarImage = peerAvatarImage(account: self.context.account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil)
-                
                 return avatarImage
                 |> map { avatarImage in
                     return (peer, avatarImage)
