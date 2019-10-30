@@ -14,6 +14,7 @@ import ShareItems
 import SettingsUI
 import OpenSSLEncryptionProvider
 import AppLock
+import Intents
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -324,6 +325,15 @@ public class ShareRootControllerImpl {
                         }
                         strongSelf.currentShareController = shareController
                         strongSelf.mainWindow?.present(shareController, on: .root)
+                    }
+                    
+                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
+                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                            if let userId = Int32(string) {
+                                shareController.sendImmediately(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                            }
+                        }
                     }
                     
                     context.account.resetStateManagement()

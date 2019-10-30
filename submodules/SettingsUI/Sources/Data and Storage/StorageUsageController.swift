@@ -287,7 +287,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         return cacheSettings
     })
     
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var presentControllerImpl: ((ViewController, PresentationContextType, Any?) -> Void)?
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
@@ -341,7 +341,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
             ActionSheetItemGroup(items: timeoutItems),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openClearAll: {
         let _ = (statsPromise.get()
         |> take(1)
@@ -508,7 +508,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     cancelImpl?()
                                 }))
-                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 return ActionDisposable { [weak controller] in
                                     Queue.mainQueue().async() {
                                         controller?.dismiss()
@@ -533,7 +533,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
                                 let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), nil)
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                             }))
                         }
                         
@@ -544,7 +544,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                         ActionSheetItemGroup(items: items),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }
         })
@@ -576,12 +576,14 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     
                     var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
                     
-                    var itemIndex = 0
+                    var itemIndex = 1
                     
+                    var finalSize: Int64 = 0
                     let updateTotalSize: () -> Void = { [weak controller] in
                         controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                             let title: String
                             let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                            finalSize = filteredSize
                             
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
@@ -633,6 +635,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             }
                         }
                     }
+                    finalSize = totalSize
                     
                     if !items.isEmpty {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
@@ -687,7 +690,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                     let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                                         cancelImpl?()
                                     }))
-                                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     return ActionDisposable { [weak controller] in
                                         Queue.mainQueue().async() {
                                             controller?.dismiss()
@@ -712,7 +715,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
                                     let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), nil)
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(finalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                                 }))
                             }
                             
@@ -723,7 +726,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 }
             }
@@ -747,8 +750,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         }
     
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
+    presentControllerImpl = { [weak controller] c, contextType, a in
+        controller?.present(c, in: contextType, with: a)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

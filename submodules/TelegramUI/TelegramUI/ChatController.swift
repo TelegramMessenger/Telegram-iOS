@@ -3008,7 +3008,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let banAuthor = actions.banAuthor {
                                 strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                             } else {
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: nil, completion: { _ in })
+                                if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                                    strongSelf.presentClearCacheSuggestion()
+                                } else {
+                                    strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options, contextController: nil, completion: { _ in })
+                                }
                             }
                         }
                     }))
@@ -3051,14 +3055,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).start()
                                 completion(.dismissWithoutContent)
                             } else {
-                                var isScheduled = false
-                                for id in messageIds {
-                                    if Namespaces.Message.allScheduled.contains(id.namespace) {
-                                        isScheduled = true
-                                        break
+                                if actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                                    strongSelf.presentClearCacheSuggestion()
+                                    completion(.default)
+                                } else {
+                                    var isScheduled = false
+                                    for id in messageIds {
+                                        if Namespaces.Message.allScheduled.contains(id.namespace) {
+                                            isScheduled = true
+                                            break
+                                        }
                                     }
+                                    strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
                                 }
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: isScheduled ? [.deleteLocally] : actions.options, contextController: contextController, completion: completion)
                             }
                         }
                     }
@@ -5019,7 +5028,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             self?.chatDisplayNode.historyNode.historyAppearsCleared = false
                         }
-                    }), in: .window(.root))
+                    }), in: .current)
                 }
                 
                 let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
@@ -5133,12 +5142,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
                         
-                        var itemIndex = 0
+                        var itemIndex = 1
                         
+                        var finalSize: Int64 = 0
                         let updateTotalSize: () -> Void = { [weak controller] in
                             controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                                 let title: String
                                 let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                                finalSize = filteredSize
                                 
                                 if filteredSize == 0 {
                                     title = presentationData.strings.Cache_ClearNone
@@ -5172,6 +5183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
                         
                         var totalSize: Int64 = 0
+                        finalSize = totalSize
                         
                         func stringForCategory(strings: PresentationStrings, category: PeerCacheUsageCategory) -> String {
                             switch category {
@@ -5224,20 +5236,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     media[peerId] = categories
                                 }
-//                                    if let additionalPeerId = additionalPeerId {
-//                                        if var categories = media[additionalPeerId] {
-//                                            for category in clearCategories {
-//                                                if let contents = categories[category] {
-//                                                    for (mediaId, _) in contents {
-//                                                        clearMediaIds.insert(mediaId)
-//                                                    }
-//                                                }
-//                                                categories.removeValue(forKey: category)
-//                                            }
-//
-//                                            media[additionalPeerId] = categories
-//                                        }
-//                                    }
                                 
                                 var clearResourceIds = Set<WrappedMediaResourceId>()
                                 for id in clearMediaIds {
@@ -5282,7 +5280,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
                                         let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .window(.root))
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(finalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .current)
                                     }
                                 }))
 
@@ -8055,7 +8053,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
             |> mapToSignal { peer -> Signal<(Peer, UIImage?), NoError> in
                 let avatarImage = peerAvatarImage(account: self.context.account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil)
-                
                 return avatarImage
                 |> map { avatarImage in
                     return (peer, avatarImage)
