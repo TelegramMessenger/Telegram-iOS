@@ -626,6 +626,9 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         }),
         SettingsSearchableItem(id: .data(13), title: strings.ChatSettings_DownloadInBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_DownloadInBackground), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .downloadInBackground)
+        }),
+        SettingsSearchableItem(id: .data(14), title: strings.ChatSettings_OpenLinksIn, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_OpenLinksIn), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
+            present(.push, webBrowserSettingsController(context: context))
         })
     ]
 }
@@ -860,7 +863,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(passport)
 
         if hasWallet {
-            let wallet = SettingsSearchableItem(id: .wallet(0), title: "Gram Wallet", alternate: synonyms(""), icon: .wallet, breadcrumbs: [], present: { context, _, present in
+            let wallet = SettingsSearchableItem(id: .wallet(0), title: strings.Settings_Wallet, alternate: synonyms(strings.SettingsSearch_Synonyms_Wallet), icon: .wallet, breadcrumbs: [], present: { context, _, present in
                 context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
                     present(.push, c)
                 })
