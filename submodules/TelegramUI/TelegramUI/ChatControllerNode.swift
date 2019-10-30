@@ -2123,7 +2123,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                     }
                 }
-                
 
                 var forwardingToSameChat = false
                 if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
@@ -2134,7 +2133,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 if !messages.isEmpty && forwardingToSameChat {
-                    //self.controllerInteraction.displaySwipeToReplyHint()
+                    self.controllerInteraction.displaySwipeToReplyHint()
                 }
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
