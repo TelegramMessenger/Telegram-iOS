@@ -374,10 +374,12 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                 
                 var itemIndex = 0
                 
+                var selectedSize: Int64 = 0
                 let updateTotalSize: () -> Void = { [weak controller] in
                     controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                         let title: String
                         var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                        selectedSize = filteredSize
                         
                         if otherSize.0 {
                             filteredSize += otherSize.1
@@ -438,6 +440,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     }))
                     itemIndex += 1
                 }
+                selectedSize = totalSize
                 
                 if !items.isEmpty {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
@@ -533,7 +536,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
                                 let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                             }))
                         }
                         
@@ -578,12 +581,12 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     
                     var itemIndex = 1
                     
-                    var finalSize: Int64 = 0
+                    var selectedSize: Int64 = 0
                     let updateTotalSize: () -> Void = { [weak controller] in
                         controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                             let title: String
                             let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
-                            finalSize = filteredSize
+                            selectedSize = filteredSize
                             
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
@@ -635,7 +638,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             }
                         }
                     }
-                    finalSize = totalSize
+                    selectedSize = totalSize
                     
                     if !items.isEmpty {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
@@ -715,7 +718,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
                                     let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(finalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                                 }))
                             }
                             

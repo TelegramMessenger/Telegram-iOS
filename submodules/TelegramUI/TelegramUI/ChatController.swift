@@ -5144,12 +5144,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var itemIndex = 1
                         
-                        var finalSize: Int64 = 0
+                        var selectedSize: Int64 = 0
                         let updateTotalSize: () -> Void = { [weak controller] in
                             controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                                 let title: String
                                 let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
-                                finalSize = filteredSize
+                                selectedSize = filteredSize
                                 
                                 if filteredSize == 0 {
                                     title = presentationData.strings.Cache_ClearNone
@@ -5183,7 +5183,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
                         
                         var totalSize: Int64 = 0
-                        finalSize = totalSize
                         
                         func stringForCategory(strings: PresentationStrings, category: PeerCacheUsageCategory) -> String {
                             switch category {
@@ -5215,6 +5214,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
+                        selectedSize = totalSize
                         
                         if items.isEmpty {
                             strongSelf.presentClearCacheSuggestion()
@@ -5280,7 +5280,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
                                         let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(finalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .current)
                                     }
                                 }))
 
