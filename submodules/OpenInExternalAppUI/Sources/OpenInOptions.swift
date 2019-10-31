@@ -142,6 +142,20 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
                 return .openUrl(url: "alook://\(url)")
             }))
+                
+            options.append(OpenInOption(identifier: "onion", application: .other(title: "Onion Browser", identifier: 519296448, scheme: "onionhttp"), action: {
+                    if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+                        components.scheme = components.scheme == "https" ? "onionhttps" : "onionhttp"
+                        if let url = components.string {
+                            return .openUrl(url: url)
+                        }
+                    }
+                    return .none
+                }))
+
+            options.append(OpenInOption(identifier: "ucbrowser", application: .other(title: "UC Browser", identifier: 1048518592, scheme: "ucbrowser"), action: {
+                return .openUrl(url: "ucbrowser://\(url)")
+            }))
         
         case let .location(location, withDirections):
             let lat = location.latitude
