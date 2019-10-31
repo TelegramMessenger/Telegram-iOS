@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -12,6 +13,8 @@ import AccountContext
 import SearchUI
 import ChatListSearchItemHeader
 import ContactsPeerItem
+import ContextUI
+import PhoneNumberFormat
 
 private enum ContactListSearchGroup {
     case contacts
@@ -65,7 +68,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
+    func item(account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
         let header: ListViewItemHeader
         let status: ContactsPeerItemStatus
         switch self.group {
@@ -88,15 +91,23 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
                 status = .none
         }
         let peer = self.peer
+        var nativePeer: Peer?
         let peerItem: ContactsPeerItemPeer
         switch peer {
             case let .peer(peer, _, _):
                 peerItem = .peer(peer: peer, chatPeer: peer)
+                nativePeer = peer
             case let .deviceContact(stableId, contact):
                 peerItem = .deviceContact(stableId: stableId, contact: contact)
         }
         return ContactsPeerItem(theme: self.theme, strings: self.strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
             openPeer(peer)
+        }, contextAction: contextAction.flatMap { contextAction in
+            return nativePeer.flatMap { nativePeer in
+                return { node, gesture in
+                    contextAction(nativePeer, node, gesture)
+                }
+            }
         })
     }
 }
@@ -108,12 +119,12 @@ struct ContactListSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
     
     return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -133,6 +144,7 @@ public struct ContactsSearchCategories: OptionSet {
 public final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     private let openPeer: (ContactListPeer) -> Void
+    private let contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     
     private let dimNode: ASDisplayNode
     public let listNode: ListView
@@ -146,9 +158,10 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
-    public init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
+    public init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.openPeer = openPeer
+        self.contextAction = contextAction
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -312,7 +325,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 
                 let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: context.account, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
                     self?.openPeer(peer)
-                })
+                }, contextAction: strongSelf.contextAction)
                 
                 strongSelf.enqueueTransition(transition)
             }

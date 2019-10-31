@@ -58,6 +58,7 @@
 #include "vm/continuation.h"
 #include "vm/cp0.h"
 #include "ton/ton-shard.h"
+#include "openssl/rand.hpp"
 
 #if TD_DARWIN || TD_LINUX
 #include <unistd.h>
@@ -1153,16 +1154,24 @@ void TestNode::got_account_state(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, t
       vm::load_cell_slice(info.root).print_rec(outp);
       out << outp.str();
       out << "last transaction lt = " << info.last_trans_lt << " hash = " << info.last_trans_hash.to_hex() << std::endl;
+      block::gen::Account::Record_account acc;
+      block::gen::AccountStorage::Record store;
+      block::CurrencyCollection balance;
+      if (tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store) && balance.unpack(store.balance)) {
+        out << "account balance is " << balance.to_str() << std::endl;
+      }
     } else {
       out << "account state is empty" << std::endl;
     }
   } else if (info.root.not_null()) {
     block::gen::Account::Record_account acc;
     block::gen::AccountStorage::Record store;
-    if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store))) {
+    block::CurrencyCollection balance;
+    if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store) && balance.unpack(store.balance))) {
       LOG(ERROR) << "error unpacking account state";
       return;
     }
+    out << "account balance is " << balance.to_str() << std::endl;
     int tag = block::gen::t_AccountState.get_tag(*store.state);
     switch (tag) {
       case block::gen::AccountState::account_uninit:
@@ -1240,7 +1249,9 @@ void TestNode::run_smc_method(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton:
   }
   block::gen::Account::Record_account acc;
   block::gen::AccountStorage::Record store;
-  if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store))) {
+  block::CurrencyCollection balance;
+  if (!(tlb::unpack_cell(info.root, acc) && tlb::csr_unpack(acc.storage, store) &&
+        balance.validate_unpack(store.balance))) {
     LOG(ERROR) << "error unpacking account state";
     return;
   }
@@ -1276,6 +1287,8 @@ void TestNode::run_smc_method(ton::BlockIdExt ref_blk, ton::BlockIdExt blk, ton:
   vm::GasLimits gas{gas_limit};
   LOG(DEBUG) << "creating VM";
   vm::VmState vm{code, std::move(stack), gas, 1, data, vm::VmLog()};
+  vm.set_c7(liteclient::prepare_vm_c7(info.gen_utime, info.gen_lt, acc.addr, balance));  // tuple with SmartContractInfo
+  // vm.incr_stack_trace(1);    // enable stack dump after each step
   LOG(INFO) << "starting VM to run method `" << method << "` (" << method_id << ") of smart contract " << workchain
             << ":" << addr.to_hex();
   int exit_code = ~vm.run();
@@ -1680,7 +1693,7 @@ bool TestNode::get_config_params(ton::BlockIdExt blkid, int mode, std::string fi
                                           true);
   LOG(INFO) << "requesting " << params.size() << " configuration parameters with respect to masterchain block "
             << blkid.to_str();
-  return envelope_send_query(std::move(b), [ Self = actor_id(this), mode, filename,
+  return envelope_send_query(std::move(b), [ Self = actor_id(this), mode, filename, blkid,
                                              params = std::move(params) ](td::Result<td::BufferSlice> R) mutable {
     if (R.is_error()) {
       return;
@@ -1690,18 +1703,23 @@ bool TestNode::get_config_params(ton::BlockIdExt blkid, int mode, std::string fi
       LOG(ERROR) << "cannot parse answer to liteServer.getConfigParams";
     } else {
       auto f = F.move_as_ok();
-      td::actor::send_closure_later(Self, &TestNode::got_config_params, ton::create_block_id(f->id_),
+      td::actor::send_closure_later(Self, &TestNode::got_config_params, blkid, ton::create_block_id(f->id_),
                                     std::move(f->state_proof_), std::move(f->config_proof_), mode, filename,
                                     std::move(params));
     }
   });
 }
 
-void TestNode::got_config_params(ton::BlockIdExt blkid, td::BufferSlice state_proof, td::BufferSlice cfg_proof,
-                                 int mode, std::string filename, std::vector<int> params) {
+void TestNode::got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,
+                                 td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params) {
   LOG(INFO) << "got configuration parameters";
   if (!blkid.is_masterchain_ext()) {
     LOG(ERROR) << "reference block " << blkid.to_str() << " for the configuration is not a valid masterchain block";
+    return;
+  }
+  if (blkid != req_blkid) {
+    LOG(ERROR) << "got configuration parameters with respect to block " << blkid.to_str() << " instead of "
+               << req_blkid.to_str();
     return;
   }
   auto R = block::check_extract_state_proof(blkid, state_proof.as_slice(), cfg_proof.as_slice());

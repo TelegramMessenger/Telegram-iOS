@@ -5,6 +5,7 @@ import Postbox
 import Display
 import ImageIO
 import TelegramCore
+import SyncCore
 
 private let roundCorners = { () -> UIImage in
     let diameter: CGFloat = 60.0
@@ -63,7 +64,7 @@ public func peerAvatarImageData(account: Account, peer: Peer, authorOfMessage: M
     }
 }
 
-public func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) -> Signal<UIImage?, NoError>? {
+public func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) -> Signal<UIImage?, NoError>? {
     if let imageData = peerAvatarImageData(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, synchronousLoad: synchronousLoad) {
         return imageData
         |> mapToSignal { data -> Signal<UIImage?, NoError> in
@@ -77,19 +78,29 @@ public func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: Messa
                             context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
                             context.setBlendMode(.copy)
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
-                            context.setBlendMode(.destinationOut)
-                            context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            if round {
+                                context.setBlendMode(.destinationOut)
+                                context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            }
                         } else {
                             if let emptyColor = emptyColor {
                                 context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
                                 context.setFillColor(emptyColor.cgColor)
-                                context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                  if round {
+                                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                } else {
+                                    context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                }
                             }
                         }
                     } else if let emptyColor = emptyColor {
                         context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
                         context.setFillColor(emptyColor.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                        if round {
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                        } else {
+                            context.fill(CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                        }
                     }
                 }))
             }

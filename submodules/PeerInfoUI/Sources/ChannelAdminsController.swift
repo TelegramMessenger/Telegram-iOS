@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import UndoUI
 import ItemListPeerItem
 import ItemListPeerActionItem
@@ -198,7 +201,8 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelAdminsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
             case let .recentActions(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
@@ -218,7 +222,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                                 if peer.id == participant.peer.id {
                                     peerText = strings.Channel_Management_LabelAdministrator
                                 } else {
-                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle).0
+                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0
                                 }
                             } else {
                                 peerText = ""
@@ -524,7 +528,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(context: context, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle, peer.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in }), nil)
         })
     }
     
@@ -681,7 +685,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
     
     let signal = combineLatest(queue: .mainQueue(), presentationDataSignal, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState<ChannelAdminsEntry>, ChannelAdminsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let admins = admins, admins.count > 1 {

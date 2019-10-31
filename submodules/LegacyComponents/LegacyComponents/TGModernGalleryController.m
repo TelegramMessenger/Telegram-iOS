@@ -1191,6 +1191,13 @@ static CGFloat transformRotation(CGAffineTransform transform)
         else
             [_model _transitionCompleted];
     }
+    
+    if (!_previewMode) {
+        if (self.adjustsStatusBarVisibility && (!_showInterface || [_view.interfaceView prefersStatusBarHidden]))
+        {
+            [_context setApplicationStatusBarAlpha:0.0f];
+        }
+    }
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -1203,14 +1210,6 @@ static CGFloat transformRotation(CGAffineTransform transform)
     if (!_showInterface)
     {
         _view.interfaceView.alpha = 0.0f;
-        
-        if (self.adjustsStatusBarVisibility)
-            [_context setApplicationStatusBarAlpha:0.0f];
-    }
-    else if ([_view.interfaceView prefersStatusBarHidden])
-    {
-        if (self.adjustsStatusBarVisibility)
-            [_context setApplicationStatusBarAlpha:0.0f];
     }
 }
 

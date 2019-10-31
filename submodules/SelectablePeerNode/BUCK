@@ -9,6 +9,7 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
@@ -16,6 +17,7 @@ static_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/LocalizedPeerData:LocalizedPeerData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

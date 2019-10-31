@@ -1,0 +1,67 @@
+;; Restricted wallet (a variant of wallet-code.fc)
+;; until configuration parameter -13 is set, accepts messages only to elector smc
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+_ restricted?() inline {
+  var p = config_param(-13);
+  return null?(p) ? true : begin_parse(p).preload_uint(32) > now();
+}
+
+_ check_destination(msg, dest) inline_ref {
+  var cs = msg.begin_parse();
+  var flags = cs~load_uint(4);
+  if (flags & 8) {
+    ;; external messages are always valid
+    return true;
+  }
+  var (s_addr, d_addr) = (cs~load_msg_addr(), cs~load_msg_addr());
+  var (dest_wc, dest_addr) = parse_std_addr(d_addr);
+  return (dest_wc == -1) & (dest_addr == dest);
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (msg_seqno, valid_until) = (cs~load_uint(32), cs~load_uint(32));
+  throw_if(35, valid_until <= now());
+  var ds = get_data().begin_parse();
+  var (stored_seqno, public_key) = (ds~load_uint(32), ds~load_uint(256));
+  ds.end_parse();
+  throw_unless(33, msg_seqno == stored_seqno);
+  ifnot (msg_seqno) {
+    accept_message();
+    set_data(begin_cell().store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
+    return ();
+  }
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
+  accept_message();
+  var restrict = restricted?();
+  var elector = config_param(1).begin_parse().preload_uint(256);
+  cs~touch();
+  while (cs.slice_refs()) {
+    var mode = cs~load_uint(8);
+    var msg = cs~load_ref();
+    var ok = true;
+    if (restrict) {
+      ok = check_destination(msg, elector);
+    }
+    if (ok) {
+      send_raw_message(msg, mode);
+    }
+  }
+  cs.end_parse();
+  set_data(begin_cell().store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
+}
+
+;; Get methods
+
+int seqno() method_id {
+  return get_data().begin_parse().preload_uint(32);
+}
+
+int balance() method_id {
+  return restricted?() ? 0 : get_balance().first();
+}

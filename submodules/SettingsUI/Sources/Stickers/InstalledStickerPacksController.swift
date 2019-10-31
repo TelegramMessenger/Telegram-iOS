@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import TextFormat
 import AccountContext
 import StickerPackPreviewUI
@@ -88,7 +90,7 @@ private enum InstalledStickerPacksEntryId: Hashable {
     }
 }
 
-private enum InstalledStickerPacksEntry: ItemListNodeEntry {
+private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case suggestOptions(PresentationTheme, String, String)
     case trending(PresentationTheme, String, Int32)
     case archived(PresentationTheme, String, Int32, [ArchivedStickerPackItem]?)
@@ -287,7 +289,8 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: InstalledStickerPacksControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! InstalledStickerPacksControllerArguments
         switch self {
             case let .suggestOptions(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -580,7 +583,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     var previousPackCount: Int?
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), stickerPacks.get(), combineLatest(queue: .mainQueue(), featured.get(), archivedPromise.get()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]))
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, featuredAndArchived, sharedData -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, featuredAndArchived, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
            stickerSettings = value
@@ -640,7 +643,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     if case .modal = mode {
         controller.navigationPresentation = .modal
     }
-    controller.reorderEntry = { fromIndex, toIndex, entries in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [InstalledStickerPacksEntry]) -> Void in
         let fromEntry = entries[fromIndex]
         guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _) = fromEntry else {
             return
@@ -699,7 +702,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 transaction.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: infos)
             }
         }).start()
-    }
+    })
     
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {

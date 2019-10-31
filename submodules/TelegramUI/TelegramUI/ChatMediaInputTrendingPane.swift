@@ -4,12 +4,14 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
 import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
+import PresentationDataUtils
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
@@ -183,7 +185,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
                     }
                 })
             }

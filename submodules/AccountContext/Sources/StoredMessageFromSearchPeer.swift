@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 
 public func storedMessageFromSearchPeer(account: Account, peer: Peer) -> Signal<PeerId, NoError> {

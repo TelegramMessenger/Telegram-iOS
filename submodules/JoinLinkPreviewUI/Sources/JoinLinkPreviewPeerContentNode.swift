@@ -4,13 +4,14 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
 import SelectablePeerNode
 import ShareController
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
+private let avatarFont = avatarPlaceholderFont(size: 26.0)
 
 private final class MoreNode: ASDisplayNode {
     private let avatarNode = AvatarNode(font: Font.regular(24.0))

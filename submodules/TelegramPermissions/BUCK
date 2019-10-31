@@ -8,6 +8,7 @@ static_library(
     deps = [
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AccountContext:AccountContext",
         "//submodules/DeviceAccess:DeviceAccess",

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -29,7 +30,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 }
                 
                 if self.inProgress {
-                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: self.presentationData.theme))
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.controlColor))
                 } else {
                     self.navigationItem.rightBarButtonItem = nil
                 }

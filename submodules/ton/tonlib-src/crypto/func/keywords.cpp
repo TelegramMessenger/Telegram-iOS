@@ -54,6 +54,7 @@ void define_keywords() {
       .add_kw_char('>')
       .add_kw_char('&')
       .add_kw_char('|')
+      .add_kw_char('^')
       .add_kw_char('~');
 
   using Kw = funC::Keyword;
@@ -64,22 +65,29 @@ void define_keywords() {
       .add_keyword("<=>", Kw::_Spaceship)
       .add_keyword("<<", Kw::_Lshift)
       .add_keyword(">>", Kw::_Rshift)
-      .add_keyword(">>~", Kw::_RshiftR)
-      .add_keyword(">>^", Kw::_RshiftC)
-      .add_keyword("/~", Kw::_DivR)
-      .add_keyword("/^", Kw::_DivC)
+      .add_keyword("~>>", Kw::_RshiftR)
+      .add_keyword("^>>", Kw::_RshiftC)
+      .add_keyword("~/", Kw::_DivR)
+      .add_keyword("^/", Kw::_DivC)
+      .add_keyword("~%", Kw::_ModR)
+      .add_keyword("^%", Kw::_ModC)
       .add_keyword("/%", Kw::_DivMod)
       .add_keyword("+=", Kw::_PlusLet)
       .add_keyword("-=", Kw::_MinusLet)
       .add_keyword("*=", Kw::_TimesLet)
       .add_keyword("/=", Kw::_DivLet)
+      .add_keyword("~/=", Kw::_DivRLet)
+      .add_keyword("^/=", Kw::_DivCLet)
       .add_keyword("%=", Kw::_ModLet)
-      .add_keyword("/~=", Kw::_DivRLet)
-      .add_keyword("/^=", Kw::_DivCLet)
+      .add_keyword("~%=", Kw::_ModRLet)
+      .add_keyword("^%=", Kw::_ModCLet)
       .add_keyword("<<=", Kw::_LshiftLet)
       .add_keyword(">>=", Kw::_RshiftLet)
-      .add_keyword(">>~=", Kw::_RshiftRLet)
-      .add_keyword(">>^=", Kw::_RshiftCLet);
+      .add_keyword("~>>=", Kw::_RshiftRLet)
+      .add_keyword("^>>=", Kw::_RshiftCLet)
+      .add_keyword("&=", Kw::_AndLet)
+      .add_keyword("|=", Kw::_OrLet)
+      .add_keyword("^=", Kw::_XorLet);
 
   sym::symbols.add_keyword("return", Kw::_Return)
       .add_keyword("var", Kw::_Var)
@@ -100,11 +108,15 @@ void define_keywords() {
       .add_keyword("builder", Kw::_Builder)
       .add_keyword("cont", Kw::_Cont)
       .add_keyword("tuple", Kw::_Tuple)
-      .add_keyword("->", Kw::_Mapsto);
+      .add_keyword("type", Kw::_Type)
+      .add_keyword("->", Kw::_Mapsto)
+      .add_keyword("forall", Kw::_Forall);
 
   sym::symbols.add_keyword("extern", Kw::_Extern)
       .add_keyword("asm", Kw::_Asm)
       .add_keyword("impure", Kw::_Impure)
+      .add_keyword("inline", Kw::_Inline)
+      .add_keyword("inline_ref", Kw::_InlineRef)
       .add_keyword("method_id", Kw::_MethodId)
       .add_keyword("operator", Kw::_Operator)
       .add_keyword("infix", Kw::_Infix)

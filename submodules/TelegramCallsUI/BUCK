@@ -26,6 +26,7 @@ static_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -8,6 +8,8 @@
 #   import <MtProtoKit/MTDatacenterAuthInfo.h>
 #endif
 
+#import <EncryptionProvider/EncryptionProvider.h>
+
 @class MTDatacenterAddress;
 @class MTDatacenterAddressSet;
 @protocol MTSerialization;
@@ -47,11 +49,12 @@
 @property (nonatomic, strong) id<MTKeychain> keychain;
 
 @property (nonatomic, strong, readonly) id<MTSerialization> serialization;
+@property (nonatomic, strong) id<EncryptionProvider> encryptionProvider;
 @property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization encryptionProvider:(id<EncryptionProvider>)encryptionProvider apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
 - (void)performBatchUpdates:(void (^)())block;
 
@@ -98,6 +101,7 @@
 - (void)publicKeysForDatacenterWithIdRequired:(NSInteger)datacenterId;
 
 - (void)removeAllAuthTokens;
+- (void)removeTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (id)authTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken;
 

@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 
 private final class DataPrivacyControllerArguments {
@@ -206,7 +209,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: DataPrivacyControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! DataPrivacyControllerArguments
         switch self {
             case let .contactsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -364,7 +368,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                             return state
                         }
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                     }))
             }
             dismissAction()
@@ -418,7 +422,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                 }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -474,7 +478,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                                     return state
                                 }
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                             }))
                     }
                     dismissAction()
@@ -490,7 +494,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), recentPeers(account: context.account))
-    |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
         let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings

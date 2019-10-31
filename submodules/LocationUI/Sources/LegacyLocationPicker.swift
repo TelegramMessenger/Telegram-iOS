@@ -3,6 +3,7 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -17,10 +18,13 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 public func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, hasLiveLocation: Bool = true, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .navigation, theme: theme)
     legacyController.navigationPresentation = .modal
-    legacyController.presentationCompleted = {
-        presentationCompleted()
-    }
     let controller = TGLocationPickerController(context: legacyController.context, intent: customLocationPicker ? TGLocationPickerControllerCustomLocationIntent : TGLocationPickerControllerDefaultIntent)!
+    legacyController.presentationCompleted = { [weak controller] in
+        presentationCompleted()
+        
+        controller?.view.disablesInteractiveModalDismiss = true
+        controller?.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
     controller.peer = makeLegacyPeer(selfPeer)
     controller.receivingPeer = makeLegacyPeer(peer)
     controller.pallete = legacyLocationPalette(from: theme)
@@ -32,8 +36,6 @@ public func legacyLocationPickerController(context: AccountContext, selfPeer: Pe
     if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) && !customLocationPicker && hasLiveLocation {
         controller.allowLiveLocationSharing = true
     }
-    controller.view.disablesInteractiveModalDismiss = true
-    controller.view.disablesInteractiveTransitionGestureRecognizer = true
     let navigationController = TGNavigationController(controllers: [controller])!
     controller.navigation_setDismiss({ [weak legacyController] in
         legacyController?.dismiss()

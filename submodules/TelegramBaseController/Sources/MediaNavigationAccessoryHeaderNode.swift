@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import UniversalMediaPlayer
@@ -33,7 +34,7 @@ private class MediaHeaderItemNode: ASDisplayNode {
         self.addSubnode(self.subtitleNode)
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, playbackItem: SharedMediaPlaylistItem?, transition: ContainedViewLayoutTransition) -> (NSAttributedString?, NSAttributedString?, Bool) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, playbackItem: SharedMediaPlaylistItem?, transition: ContainedViewLayoutTransition) -> (NSAttributedString?, NSAttributedString?, Bool) {
         var rateButtonHidden = false
         var titleString: NSAttributedString?
         var subtitleString: NSAttributedString?
@@ -48,11 +49,11 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
                 case let .voice(author, peer):
                     rateButtonHidden = false
-                    let titleText: String = author?.displayTitle ?? ""
+                    let titleText: String = author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                     let subtitleText: String
                     if let peer = peer {
                         if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = peer.displayTitle
+                            subtitleText = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                         } else {
                             subtitleText = strings.MusicPlayer_VoiceNote
                         }
@@ -64,12 +65,12 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
                 case let .instantVideo(author, peer, timestamp):
                     rateButtonHidden = false
-                    let titleText: String = author?.displayTitle ?? ""
+                    let titleText: String = author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                     var subtitleText: String
                     
                     if let peer = peer {
                         if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = peer.displayTitle
+                            subtitleText = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                         } else {
                             subtitleText = strings.Message_VideoMessage
                         }
@@ -132,6 +133,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
+    private var nameDisplayOrder: PresentationPersonNameOrder
     
     private let scrollNode: ASScrollNode
     private var initialContentOffset: CGFloat?
@@ -209,6 +211,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
+        self.nameDisplayOrder = presentationData.nameDisplayOrder
         
         self.scrollNode = ASScrollNode()
         
@@ -361,6 +364,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.nameDisplayOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
@@ -421,12 +425,12 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         
         let inset: CGFloat = 40.0 + leftInset
         let constrainedSize = CGSize(width: size.width - inset * 2.0, height: size.height)
-        let (titleString, subtitleString, rateButtonHidden) = self.currentItemNode.updateLayout(size: constrainedSize, leftInset: leftInset, rightInset: rightInset, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.0, transition: transition)
+        let (titleString, subtitleString, rateButtonHidden) = self.currentItemNode.updateLayout(size: constrainedSize, leftInset: leftInset, rightInset: rightInset, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, playbackItem: self.playbackItems?.0, transition: transition)
         self.accessibilityAreaNode.accessibilityLabel = "\(titleString?.string ?? ""). \(subtitleString?.string ?? "")"
         self.rateButton.isHidden = rateButtonHidden
         
-        let _ = self.previousItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.1, transition: transition)
-        let _ = self.nextItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.2, transition: transition)
+        let _ = self.previousItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, playbackItem: self.playbackItems?.1, transition: transition)
+        let _ = self.nextItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, playbackItem: self.playbackItems?.2, transition: transition)
         
         let constrainedBounds = CGRect(origin: CGPoint(), size: constrainedSize)
         transition.updateFrame(node: self.scrollNode, frame: constrainedBounds.offsetBy(dx: inset, dy: 0.0))

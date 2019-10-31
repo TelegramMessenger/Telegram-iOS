@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 import TelegramCallsUI
 import OverlayStatusController
@@ -12,6 +13,8 @@ import PassportUI
 import LocalAuth
 import CallListUI
 import NotificationSoundSelectionUI
+import PresentationDataUtils
+import PhoneNumberFormat
 
 private let maximumNumberOfAccounts = 3
 
@@ -407,9 +410,6 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(16), title: strings.Notifications_DisplayNamesOnLockScreen, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_DisplayNamesOnLockScreen), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds], present: { context, _, present in
             presentNotificationSettings(context, present, .displayNamesOnLockscreen)
         }),
-        SettingsSearchableItem(id: .notifications(17), title: strings.Notifications_Badge_IncludeMutedChats, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedChats), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge], present: { context, _, present in
-            presentNotificationSettings(context, present, .unreadCountStyle)
-        }),
         SettingsSearchableItem(id: .notifications(18), title: strings.Notifications_Badge_IncludePublicGroups, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedPublicGroups), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge], present: { context, _, present in
             presentNotificationSettings(context, present, .includePublicGroups)
         }),
@@ -626,6 +626,9 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         }),
         SettingsSearchableItem(id: .data(13), title: strings.ChatSettings_DownloadInBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_DownloadInBackground), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .downloadInBackground)
+        }),
+        SettingsSearchableItem(id: .data(14), title: strings.ChatSettings_OpenLinksIn, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_OpenLinksIn), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
+            present(.push, webBrowserSettingsController(context: context))
         })
     ]
 }
@@ -708,7 +711,7 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
     
     let applyLocalization: (AccountContext, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void, String) -> Void = { context, present, languageCode in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
         present(.immediate, controller)
         
         let _ = (downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
@@ -860,7 +863,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(passport)
 
         if hasWallet {
-            let wallet = SettingsSearchableItem(id: .wallet(0), title: "Gram Wallet", alternate: synonyms(""), icon: .wallet, breadcrumbs: [], present: { context, _, present in
+            let wallet = SettingsSearchableItem(id: .wallet(0), title: strings.Settings_Wallet, alternate: synonyms(strings.SettingsSearch_Synonyms_Wallet), icon: .wallet, breadcrumbs: [], present: { context, _, present in
                 context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
                     present(.push, c)
                 })

@@ -3,6 +3,7 @@ import UIKit
 import LegacyComponents
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 
 final class LegacyImageDownloadActor: ASActor {

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -72,7 +73,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
     private var currentEntries: [StickersChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(StickersChatInputContextPanelTransition, Bool)] = []
-    private var validLayout: (CGSize, CGFloat, CGFloat, ChatPresentationInterfaceState)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     
     public var controllerInteraction: ChatControllerInteraction?
     private let stickersInteraction: StickersChatInputContextPanelInteraction
@@ -240,7 +241,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         }
         
         if updateLayout {
-            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate, interfaceState: validLayout.3)
+            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate, interfaceState: validLayout.4)
         }
         
         self.prepareTransition(from: self.currentEntries, to: entries)
@@ -307,9 +308,9 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (size, leftInset, rightInset, interfaceState)
+        self.validLayout = (size, leftInset, rightInset, bottomInset, interfaceState)
         
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)

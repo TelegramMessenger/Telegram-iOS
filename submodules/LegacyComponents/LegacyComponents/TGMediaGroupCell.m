@@ -276,8 +276,7 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
         _countLabel.text = [[NSString alloc] initWithFormat:@"%ld", (long)assetGroup.assetCount];
     [self setNeedsLayout];
     
-    [self configureThumbnailsWithAssets:[assetGroup latestAssets]];
-    
+    bool hideThumbnail = false;
     UIImage *iconImage = nil;
     switch (assetGroup.subtype)
     {
@@ -313,9 +312,13 @@ const CGFloat TGMediaGroupCellHeight = 86.0f;
             iconImage = TGComponentsImageNamed(@"MediaGroupSelfPortraits");
             break;
             
+        case TGMediaAssetGroupSubtypeHidden:
+            hideThumbnail = true;
         default:
             break;
     }
+    
+    [self configureThumbnailsWithAssets:hideThumbnail ? @[] : [assetGroup latestAssets]];
     
     _iconView.image = iconImage;
     _iconView.hidden = (iconImage == nil);

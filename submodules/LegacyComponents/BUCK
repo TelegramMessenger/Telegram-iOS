@@ -18,7 +18,7 @@ static_library(
     ]),
     headers = glob([
         "LegacyComponents/*.h",
-    ], exclude = ["LegacyComponents/LegacyComponents.h"]),
+    ]),
     exported_headers = [
         "LegacyComponents/LegacyComponentsGlobals.h",
         "LegacyComponents/LegacyComponentsContext.h",
@@ -204,7 +204,6 @@ static_library(
         "LegacyComponents/TGImageManagerTask.h",
 
         "LegacyComponents/TGRTLScreenEdgePanGestureRecognizer.h",
-        "LegacyComponents/TGPopoverController.h",
         "LegacyComponents/TGNavigationController.h",
         "LegacyComponents/TGNavigationBar.h",
         "LegacyComponents/TGViewController.h",
@@ -364,6 +363,8 @@ static_library(
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
-        "$SDKROOT/System/Library/Frameworks/Vision.framework",
+    ],
+    weak_frameworks = [
+        "Vision",
     ],
 )

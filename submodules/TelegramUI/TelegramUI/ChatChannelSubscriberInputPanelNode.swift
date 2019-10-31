@@ -3,10 +3,12 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AlertUI
+import PresentationDataUtils
 
 private enum SubscriberAction {
     case join

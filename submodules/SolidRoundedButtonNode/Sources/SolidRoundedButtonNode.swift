@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import TelegramPresentationData
 
 private let textFont: UIFont = Font.regular(16.0)
 
@@ -13,12 +12,6 @@ public final class SolidRoundedButtonTheme {
     public init(backgroundColor: UIColor, foregroundColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
-    }
-}
-
-public extension SolidRoundedButtonTheme {
-    convenience init(theme: PresentationTheme) {
-        self.init(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor)
     }
 }
 
@@ -85,9 +78,17 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 if highlighted {
                     strongSelf.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonBackgroundNode.alpha = 0.55
+                    strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.labelNode.alpha = 0.55
+                    strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.iconNode.alpha = 0.55
                 } else {
                     strongSelf.buttonBackgroundNode.alpha = 1.0
                     strongSelf.buttonBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    strongSelf.labelNode.alpha = 1.0
+                    strongSelf.labelNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    strongSelf.iconNode.alpha = 1.0
+                    strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                 }
             }
         }

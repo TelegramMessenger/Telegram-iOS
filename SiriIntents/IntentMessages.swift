@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Contacts
 import Intents
 
@@ -150,7 +151,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
         personHandle = INPersonHandle(value: user.phone ?? "", type: .phoneNumber)
     }
     
-    let caller = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(user.id.toInt64())")
+    let caller = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.nameOrPhone, image: nil, contactIdentifier: nil, customIdentifier: "tg\(user.id.toInt64())")
     let date = Date(timeIntervalSince1970: TimeInterval(telegramMessage.timestamp))
     
     var duration: Int32?
@@ -190,7 +191,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
     }
     
     let personIdentifier = "tg\(user.id.toInt64())"
-    let sender = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.displayTitle, image: nil, contactIdentifier: personIdentifier, customIdentifier: personIdentifier)
+    let sender = INPerson(personHandle: personHandle, nameComponents: nil, displayName: user.nameOrPhone, image: nil, contactIdentifier: personIdentifier, customIdentifier: personIdentifier)
     let date = Date(timeIntervalSince1970: TimeInterval(telegramMessage.timestamp))
     
     let message: INMessage

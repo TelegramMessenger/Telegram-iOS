@@ -1,6 +1,6 @@
 #import "TGContactModel.h"
 
-#import <TelegramCore/TelegramCore.h>
+#import <PhoneNumberFormat/PhoneNumberFormat.h>
 
 @implementation TGPhoneNumberModel
 

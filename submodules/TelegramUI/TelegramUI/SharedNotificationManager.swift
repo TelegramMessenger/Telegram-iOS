@@ -4,7 +4,9 @@ import UserNotifications
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import TelegramCallsUI
 import AccountContext
 
@@ -117,7 +119,7 @@ public final class SharedNotificationManager {
         }
     }
     
-    private func beginPollingState(account: Account) {
+    func beginPollingState(account: Account) {
         let accountId = account.id
         let context: PollStateContext
         if let current = self.pollStateContexts[accountId] {
@@ -410,7 +412,7 @@ public final class SharedNotificationManager {
     }
     
     private var currentNotificationCall: (peer: Peer?, internalId: CallSessionInternalId)?
-    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings) {
+    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder) {
         if let previousCall = currentNotificationCall {
             if #available(iOS 10.0, *) {
                 let center = UNUserNotificationCenter.current()
@@ -428,7 +430,7 @@ public final class SharedNotificationManager {
         self.currentNotificationCall = call
         
         if let notificationCall = call {
-            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").0
             let title: String?
             let body: String
             if let index = rawText.firstIndex(of: "|") {
@@ -501,11 +503,11 @@ public final class SharedNotificationManager {
                         }
                     }
                     |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).start(next: { [weak self] peerAndInternalId in
-                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings)
+                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings, nameOrder: .firstLast)
                     }))
             } else {
                 self.notificationCallStateDisposable.set(nil)
-                self.updateNotificationCall(call: nil, strings: strings)
+                self.updateNotificationCall(call: nil, strings: strings, nameOrder: .firstLast)
             }
         }
     }

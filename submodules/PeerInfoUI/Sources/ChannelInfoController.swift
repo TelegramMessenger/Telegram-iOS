@@ -5,15 +5,18 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TextFormat
 import OverlayStatusController
 import TelegramStringFormatting
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import GalleryUI
 import LegacyUI
 import ItemListAvatarAndNameInfoItem
@@ -22,6 +25,7 @@ import PeerAvatarGalleryUI
 import NotificationMuteSettingsUI
 import MapResourceToAvatarSizes
 import NotificationSoundSelectionUI
+import Markdown
 
 private final class ChannelInfoControllerArguments {
     let account: Account
@@ -318,7 +322,8 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ChannelInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelInfoControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
@@ -494,7 +499,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         discussionGroupTitle = "@\(addressName)"
                     } else {
-                        discussionGroupTitle = peer.displayTitle
+                        discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     }
                 } else {
                     discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -529,7 +534,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                         if let addressName = peer.addressName, !addressName.isEmpty {
                             discussionGroupTitle = "@\(addressName)"
                         } else {
-                            discussionGroupTitle = peer.displayTitle
+                            discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         }
                     } else if canEditChannel {
                         discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -750,7 +755,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
-                    let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle, completion: { result in
+                    let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
                         assetsController?.dismiss()
                         completedImpl(result)
                     }))
@@ -848,7 +853,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             presentControllerImpl?(controller, nil)
@@ -888,6 +893,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, reportChannel: {
         presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
+        }, push: { c in
+            pushControllerImpl?(c)
         }, completion: { _ in }), nil)
     }, leaveChannel: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
@@ -953,7 +960,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId, updateData: true), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
-        |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let peer = peerViewMainPeer(view)
             
             var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings

@@ -4,10 +4,12 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import MergeLists
 import AccountContext
 import SearchBarNode
@@ -298,13 +300,13 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
     var index: Int = 0
     for (_, value) in state.mode.settings.filter({ (_, value) in
         if let query = query, !query.isEmpty {
-            return !value.peer.displayTitle.lowercased().components(separatedBy: " ").filter { $0.hasPrefix(query.lowercased())}.isEmpty
+            return !value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).lowercased().components(separatedBy: " ").filter { $0.hasPrefix(query.lowercased())}.isEmpty
         } else {
             return true
         }
     }).sorted(by: { lhs, rhs in
-        let lhsName = lhs.value.peer.displayTitle
-        let rhsName = rhs.value.peer.displayTitle
+        let lhsName = lhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let rhsName = rhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         
         if let lhsDate = lhs.value.date, let rhsDate = rhs.value.date {
             return lhsDate > rhsDate
@@ -324,7 +326,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
         
         return lhsName < rhsName
     }) {
-        if !value.peer.displayTitle.isEmpty {
+        if !value.peer.isDeleted {
             var title: String
             var muted = false
             switch value.settings.muteState {
@@ -508,7 +510,8 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     case addException(PresentationTheme, PresentationStrings, NotificationExceptionMode.Mode, Bool)
     case removeAll(PresentationTheme, PresentationStrings)
     
-    func item(_ arguments: NotificationExceptionArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! NotificationExceptionArguments
         switch self {
             case let .search(theme, strings):
                 return NotificationSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {

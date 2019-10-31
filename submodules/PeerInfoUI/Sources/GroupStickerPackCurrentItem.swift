@@ -5,8 +5,10 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import ActivityIndicator
 import StickerResources
 import AppBundle

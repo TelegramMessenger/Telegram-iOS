@@ -1,5 +1,21 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+apple_resource(
+    name = "PasswordSetupUIResources",
+    files = glob([
+        "Resources/**/*",
+    ], exclude = ["Resources/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
+apple_asset_catalog(
+    name = "PasswordSetupUIAssets",
+    dirs = [
+        "PasswordSetupUIImages.xcassets",
+    ],
+    visibility = ["PUBLIC"],
+)
+
 static_library(
     name = "PasswordSetupUI",
     srcs = glob([
@@ -11,12 +27,19 @@ static_library(
         "//submodules/Display:Display#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ItemListUI:ItemListUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/rlottie:RLottieBinding",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

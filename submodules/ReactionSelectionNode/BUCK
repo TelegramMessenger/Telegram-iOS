@@ -8,9 +8,11 @@ static_library(
     deps = [
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
-        "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [

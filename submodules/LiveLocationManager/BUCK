@@ -6,9 +6,10 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
-        "//submodules/TelegramCore:TelegramCore#dynamic",
-        "//submodules/Postbox:Postbox#dynamic",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/Postbox:Postbox#shared",
         "//submodules/DeviceLocationManager:DeviceLocationManager",
         "//submodules/AccountContext:AccountContext",
     ],

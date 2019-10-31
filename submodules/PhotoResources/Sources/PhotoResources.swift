@@ -6,6 +6,7 @@ import Display
 import AVFoundation
 import ImageIO
 import TelegramCore
+import SyncCore
 #if BUCK
 import WebPImage
 #else
@@ -2470,15 +2471,13 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
 
 public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
-        let fetchedDisposable = account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
-        let dataDisposable = account.postbox.mediaBox.resourceData(resource).start(next: { next in
+        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: MapSnapshotMediaResourceRepresentation(), complete: true).start(next: { next in
             if next.size != 0 {
                 subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         
         return ActionDisposable {
-            fetchedDisposable.dispose()
             dataDisposable.dispose()
         }
     }
@@ -2954,15 +2953,17 @@ private func openInAppIconData(postbox: Postbox, appIcon: MediaResource) -> Sign
 
 private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImageArguments) {
     c.setBlendMode(.normal)
-    c.setStrokeColor(UIColor(rgb: 0xeeeeee).cgColor)
-    c.setLineWidth(1.0)
+    c.setStrokeColor(UIColor(rgb: 0xe5e5e5).cgColor)
+    
+    let lineWidth: CGFloat = arguments.drawingRect.size.width < 30.0 ? 1.0 - UIScreenPixel : 1.0
+    c.setLineWidth(lineWidth)
     
     var radius: CGFloat = 0.0
     if case let .Corner(cornerRadius) = arguments.corners.topLeft, cornerRadius > CGFloat.ulpOfOne {
         radius = max(0, cornerRadius - 0.5)
     }
     
-    let rect = arguments.drawingRect.insetBy(dx: 0.5, dy: 0.5)
+    let rect = arguments.drawingRect.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0)
     c.move(to: CGPoint(x: rect.minX, y: rect.midY))
     c.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.midX, y: rect.minY), radius: radius)
     c.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.midY), radius: radius)

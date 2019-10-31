@@ -1,34 +1,23 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import LegacyComponents
 import LegacyUI
+import SearchPeerMembers
+import AccountContext
 
-public func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionContext {
-    let context = TGSuggestionContext()
-    context.userListSignal = { query in
+public func legacySuggestionContext(context: AccountContext, peerId: PeerId) -> TGSuggestionContext {
+    let suggestionContext = TGSuggestionContext()
+    suggestionContext.userListSignal = { query in
         return SSignal { subscriber in
             if let query = query {
                 let normalizedQuery = query.lowercased()
-                let disposable = peerParticipants(postbox: account.postbox, id: peerId).start(next: { peers in
-                    let filteredPeers = peers.filter { peer in
-                        if peer.indexName.matchesByTokens(normalizedQuery) {
-                            return true
-                        }
-                        if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
-                            return true
-                        }
-                        return false
-                    }
-                    let sortedPeers = filteredPeers.sorted(by: { lhs, rhs in
-                        let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
-                        return result == .orderedAscending
-                    })
-                    
+                let disposable = searchPeerMembers(context: context, peerId: peerId, query: query).start(next: { peers in
                     let users = NSMutableArray()
-                    for peer in sortedPeers {
+                    for peer in peers {
                         let user = TGUser()
                         if let peer = peer as? TelegramUser {
                             user.uid = peer.id.id
@@ -56,9 +45,9 @@ public func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSugge
             }
         }
     }
-    context.hashtagListSignal = { query in
+    suggestionContext.hashtagListSignal = { query in
         return SSignal { subscriber in
-            let disposable = (recentlyUsedHashtags(postbox: account.postbox) |> map { hashtags -> [String] in
+            let disposable = (recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> [String] in
                 let normalizedQuery = query?.lowercased()
                 var result: [String] = []
                 if let normalizedQuery = normalizedQuery {
@@ -81,12 +70,12 @@ public func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSugge
             }
         }
     }
-    context.alphacodeSignal = { query, inputLanguageCode in
+    suggestionContext.alphacodeSignal = { query, inputLanguageCode in
         guard let query = query, let inputLanguageCode = inputLanguageCode else {
             return SSignal.complete()
         }
         return SSignal { subscriber in
-            let disposable = (searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
+            let disposable = (searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
             |> map { keywords -> [TGAlphacodeEntry] in
                 var result: [TGAlphacodeEntry] = []
                 for keyword in keywords {
@@ -107,5 +96,5 @@ public func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSugge
             }
         }
     }
-    return context
+    return suggestionContext
 }

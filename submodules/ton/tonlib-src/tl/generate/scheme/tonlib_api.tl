@@ -25,6 +25,7 @@ options config:config keystore_type:KeyStoreType = Options;
 
 key public_key:string secret:secureBytes = Key;
 inputKey key:key local_password:secureBytes = InputKey;
+inputKeyFake = InputKey;
 exportedKey word_list:vector<secureString> = ExportedKey;
 exportedPemKey pem:secureString = ExportedPemKey;
 exportedEncryptedKey data:secureBytes = ExportedEncryptedKey;
@@ -65,7 +66,15 @@ generic.accountStateUninited account_state:uninited.accountState = generic.Accou
 
 sendGramsResult sent_until:int53 body_hash:bytes = SendGramsResult;
 
+syncStateDone = SyncState;
+syncStateInProgress from_seqno:int32 to_seqno:int32 current_seqno:int32 = SyncState;
+
+fees in_fwd_fee:int53 storage_fee:int53 gas_fee:int53 fwd_fee:int53= Fees;
+query.fees source_fees:fees destination_fees:fees = query.Fees;
+query.info id:int53 valid_until:int53 body_hash:bytes  = query.Info;
+
 updateSendLiteServerQuery id:int64 data:bytes = Update;
+updateSyncState sync_state:SyncState = Update;
 
 //@class LogStream @description Describes a stream to which TDLib internal log is written
 
@@ -85,6 +94,10 @@ logVerbosityLevel verbosity_level:int32 = LogVerbosityLevel;
 //@description Contains a list of available TDLib internal log tags @tags List of log tags
 logTags tags:vector<string> = LogTags;
 
+data bytes:secureBytes = Data;
+
+liteServer.info now:int53 version:int32 capabilities:int64 = liteServer.Info;
+
 ---functions---
 
 init options:options = Ok;
@@ -95,13 +108,17 @@ options.setConfig config:config = Ok;
 createNewKey local_password:secureBytes mnemonic_password:secureBytes random_extra_seed:secureBytes = Key;
 deleteKey key:key = Ok;
 deleteAllKeys = Ok;
-exportKey input_key:inputKey = ExportedKey;
-exportPemKey input_key:inputKey key_password:secureBytes = ExportedPemKey;
-exportEncryptedKey input_key:inputKey key_password:secureBytes = ExportedEncryptedKey;
+exportKey input_key:InputKey = ExportedKey;
+exportPemKey input_key:InputKey key_password:secureBytes = ExportedPemKey;
+exportEncryptedKey input_key:InputKey key_password:secureBytes = ExportedEncryptedKey;
 importKey local_password:secureBytes mnemonic_password:secureBytes exported_key:exportedKey = Key;
 importPemKey local_password:secureBytes key_password:secureBytes exported_key:exportedPemKey = Key;
 importEncryptedKey local_password:secureBytes key_password:secureBytes exported_encrypted_key:exportedEncryptedKey = Key;
-changeLocalPassword input_key:inputKey new_local_password:secureBytes = Key;
+changeLocalPassword input_key:InputKey new_local_password:secureBytes = Key;
+
+encrypt decrypted_data:secureBytes secret:secureBytes = Data;
+decrypt encrypted_data:secureBytes secret:secureBytes = Data;
+kdf password:secureBytes salt:secureBytes iterations:int32 = Data;
 
 unpackAccountAddress account_address:string = UnpackedAccountAddress;
 packAccountAddress account_address:unpackedAccountAddress = AccountAddress;
@@ -111,31 +128,44 @@ getBip39Hints prefix:string = Bip39Hints;
 //raw.init initial_account_state:raw.initialAccountState = Ok;
 raw.getAccountAddress initital_account_state:raw.initialAccountState = AccountAddress;
 raw.getAccountState account_address:accountAddress = raw.AccountState;
-raw.sendMessage destination:accountAddress initial_account_state:bytes data:bytes = Ok;
 raw.getTransactions account_address:accountAddress from_transaction_id:internal.transactionId = raw.Transactions;
+raw.sendMessage body:bytes  = Ok;
+raw.createAndSendMessage destination:accountAddress initial_account_state:bytes data:bytes = Ok;
+raw.createQuery destination:accountAddress init_code:bytes init_data:bytes body:bytes = query.Info;
 
-testWallet.init private_key:inputKey = Ok;
+testWallet.init private_key:InputKey = Ok;
 testWallet.getAccountAddress initital_account_state:testWallet.initialAccountState = AccountAddress;
 testWallet.getAccountState account_address:accountAddress = testWallet.AccountState;
-testWallet.sendGrams private_key:inputKey destination:accountAddress seqno:int32 amount:int64 message:bytes = SendGramsResult;
+testWallet.sendGrams private_key:InputKey destination:accountAddress seqno:int32 amount:int64 message:bytes = SendGramsResult;
 
-wallet.init private_key:inputKey = Ok;
+wallet.init private_key:InputKey = Ok;
 wallet.getAccountAddress initital_account_state:wallet.initialAccountState = AccountAddress;
 wallet.getAccountState account_address:accountAddress = wallet.AccountState;
-wallet.sendGrams private_key:inputKey destination:accountAddress seqno:int32 valid_until:int53 amount:int64 message:bytes = SendGramsResult;
+wallet.sendGrams private_key:InputKey destination:accountAddress seqno:int32 valid_until:int53 amount:int64 message:bytes = SendGramsResult;
 
 testGiver.getAccountState = testGiver.AccountState;
 testGiver.getAccountAddress = AccountAddress;
 testGiver.sendGrams destination:accountAddress seqno:int32 amount:int64 message:bytes = SendGramsResult;
 
+sync = Ok;
+
 //generic.getAccountAddress initital_account_state:generic.InitialAccountState = AccountAddress;
 generic.getAccountState account_address:accountAddress = generic.AccountState;
-generic.sendGrams private_key:inputKey source:accountAddress destination:accountAddress amount:int64 timeout:int32 allow_send_to_uninited:Bool message:bytes = SendGramsResult;
+generic.sendGrams private_key:InputKey source:accountAddress destination:accountAddress amount:int64 timeout:int32 allow_send_to_uninited:Bool message:bytes = SendGramsResult;
+
+generic.createSendGramsQuery private_key:InputKey source:accountAddress destination:accountAddress amount:int64 timeout:int32 allow_send_to_uninited:Bool message:bytes = query.Info;
+
+query.send id:int53 = Ok;
+query.forget id:int53 = Ok;
+query.estimateFees id:int53 ignore_chksig:Bool = query.Fees;
+query.getInfo id:int53 = query.Info;
 
 onLiteServerQueryResult id:int64 bytes:bytes = Ok;
 onLiteServerQueryError id:int64 error:error = Ok;
 
 runTests dir:string = Ok;
+
+liteServer.getInfo = liteServer.Info;
 
 //@description Sets new log stream for internal logging of TDLib. This is an offline method. Can be called before authorization. Can be called synchronously @log_stream New log stream
 setLogStream log_stream:LogStream = Ok;

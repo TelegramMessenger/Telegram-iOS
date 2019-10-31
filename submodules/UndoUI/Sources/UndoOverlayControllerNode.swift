@@ -4,10 +4,12 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
-import AnimationUI
 import TextFormat
+import Markdown
 import RadialStatusNode
 import AppBundle
+import AnimatedStickerNode
+import AnimationUI
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool
@@ -120,18 +122,28 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
-            case let .emoji(account, path, text):
+            case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode?.visibility = true
-                self.animatedStickerNode?.setup(account: account, resource: .localFile(path), width: 100, height: 100, playbackMode: .once, mode: .direct)
+                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 100, height: 100, playbackMode: .once, mode: .direct)
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
+            case let .swipeToReply(title, text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_swipereply", colors: [:], scale: 1.0)
+                self.animatedStickerNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
@@ -166,7 +178,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
                 self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji:
+            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply:
                 break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)

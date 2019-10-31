@@ -1,8 +1,7 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
-import LegacyComponents
+import AppBundle
 
 public enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
@@ -13,11 +12,11 @@ public enum OverlayStatusControllerType {
 }
 
 private enum OverlayStatusContentController {
-    case loading(TGProgressWindowController)
-    case progress(TGProgressWindowController)
-    case shieldSuccess(TGProxyWindowController, Bool)
-    case genericSuccess(TGProxyWindowController, Bool)
-    case starSuccess(TGProxyWindowController)
+    case loading(ProgressWindowController)
+    case progress(ProgressWindowController)
+    case shieldSuccess(ProxyWindowController, Bool)
+    case genericSuccess(ProxyWindowController, Bool)
+    case starSuccess(ProxyWindowController)
     
     var view: UIView {
         switch self {
@@ -80,26 +79,26 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
     private let contentController: OverlayStatusContentController
     
-    init(theme: PresentationTheme, strings: PresentationStrings, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
+    init(style: OverlayStatusControllerStyle, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
         var isUserInteractionEnabled = true
         switch type {
             case let .loading(cancelled):
-                let controller = TGProgressWindowController(light: theme.actionSheet.backgroundType == .light)!
+                let controller = ProgressWindowController(light: style == .light)!
                 controller.cancelled = {
                     cancelled?()
                 }
                 self.contentController = .loading(controller)
             case .success:
-                self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
+                self.contentController = .progress(ProgressWindowController(light: style == .light))
             case let .shieldSuccess(text, increasedDelay):
-                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true, star: false), increasedDelay)
+                self.contentController = .shieldSuccess(ProxyWindowController(light: style == .light, text: text, icon: ProxyWindowController.generateShieldImage(style == .light), isShield: true, showCheck: true), increasedDelay)
             case let .genericSuccess(text, increasedDelay):
-                let controller = TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false)!
+                let controller = ProxyWindowController(light: style == .light, text: text, icon: nil, isShield: false, showCheck: true)!
                 self.contentController = .genericSuccess(controller, increasedDelay)
                 isUserInteractionEnabled = false
             case let .starSuccess(text):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: true), false)
+                self.contentController = .genericSuccess(ProxyWindowController(light: style == .light, text: text, icon: UIImage(bundleImageName: "Star"), isShield: false, showCheck: false), false)
         }
         
         super.init()
@@ -129,9 +128,13 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     }
 }
 
-public final class OverlayStatusController: ViewController, StandalonePresentableController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+public enum OverlayStatusControllerStyle {
+    case light
+    case dark
+}
+
+private final class OverlayStatusControllerImpl: ViewController, StandalonePresentableController {
+    private let style: OverlayStatusControllerStyle
     private let type: OverlayStatusControllerType
     
     private var animatedDidAppear = false
@@ -140,9 +143,8 @@ public final class OverlayStatusController: ViewController, StandalonePresentabl
         return self.displayNode as! OverlayStatusControllerNode
     }
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, type: OverlayStatusControllerType) {
-        self.theme = theme
-        self.strings = strings
+    public init(style: OverlayStatusControllerStyle, type: OverlayStatusControllerType) {
+        self.style = style
         self.type = type
         
         super.init(navigationBarPresentationData: nil)
@@ -150,12 +152,12 @@ public final class OverlayStatusController: ViewController, StandalonePresentabl
         self.statusBar.statusBarStyle = .Ignore
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = OverlayStatusControllerNode(theme: self.theme, strings: self.strings, type: self.type, dismissed: { [weak self] in
+        self.displayNode = OverlayStatusControllerNode(style: self.style, type: self.type, dismissed: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
@@ -177,7 +179,12 @@ public final class OverlayStatusController: ViewController, StandalonePresentabl
         }
     }
     
-    public func dismiss() {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.dismiss()
+        completion?()
     }
+}
+
+public func OverlayStatusController(style: OverlayStatusControllerStyle, type: OverlayStatusControllerType) -> ViewController {
+    return OverlayStatusControllerImpl(style: style, type: type)
 }

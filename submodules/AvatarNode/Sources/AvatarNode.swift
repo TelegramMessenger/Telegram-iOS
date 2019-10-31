@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import Display
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AnimationUI
@@ -12,6 +13,10 @@ import AppBundle
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
+
+public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
+    return Font.with(size: size, design: .round, traits: [.bold])
+}
 
 public enum AvatarNodeClipStyle {
     case none

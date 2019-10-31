@@ -13,9 +13,10 @@ static_library(
     	"Sources/*.h",
     ], exclude = ["Sources/LegacyDataImport.h"]),
     deps = [
-	    "//submodules/TelegramCore:TelegramCore#dynamic",
-	    "//submodules/Postbox:Postbox#dynamic",
-	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+	    "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+	    "//submodules/Postbox:Postbox#shared",
+	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/TelegramNotices:TelegramNotices",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     	"//submodules/RadialStatusNode:RadialStatusNode",

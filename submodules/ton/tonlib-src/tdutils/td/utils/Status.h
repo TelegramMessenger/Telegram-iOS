@@ -48,6 +48,15 @@
     }                                                 \
   }
 
+#define TRY_STATUS_PROMISE(promise_name, status)     \
+  {                                                  \
+    auto try_status = (status);                      \
+    if (try_status.is_error()) {                     \
+      promise_name.set_error(std::move(try_status)); \
+      return;                                        \
+    }                                                \
+  }
+
 #define TRY_RESULT(name, result) TRY_RESULT_IMPL(TD_CONCAT(TD_CONCAT(r_, name), __LINE__), auto name, result)
 
 #define TRY_RESULT_PROMISE(promise_name, name, result) \
@@ -307,6 +316,11 @@ class Status {
 
   Status move_as_error() TD_WARN_UNUSED_RESULT {
     return std::move(*this);
+  }
+
+  Auto move_as_ok() {
+    UNREACHABLE();
+    return {};
   }
 
   Status move_as_error_prefix(const Status &status) const TD_WARN_UNUSED_RESULT {

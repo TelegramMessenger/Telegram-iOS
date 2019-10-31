@@ -4,9 +4,11 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import PresentationDataUtils
 
 private let autodownloadSizeValues: [(CGFloat, Int32)] = [
     (0.000, 512 * 1024),

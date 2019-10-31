@@ -26,6 +26,7 @@
 #include <ostream>
 #include "tl/tlblib.hpp"
 #include "td/utils/bits.h"
+#include "td/utils/CancellationToken.h"
 #include "td/utils/StringBuilder.h"
 #include "ton/ton-types.h"
 
@@ -162,12 +163,12 @@ struct MsgProcessedUpto {
   MsgProcessedUpto(ton::ShardId _shard, ton::BlockSeqno _mcseqno, ton::LogicalTime _lt, td::ConstBitPtr _hash)
       : shard(_shard), mc_seqno(_mcseqno), last_inmsg_lt(_lt), last_inmsg_hash(_hash) {
   }
-  bool operator<(const MsgProcessedUpto& other) const & {
+  bool operator<(const MsgProcessedUpto& other) const& {
     return shard < other.shard || (shard == other.shard && mc_seqno < other.mc_seqno);
   }
-  bool contains(const MsgProcessedUpto& other) const &;
+  bool contains(const MsgProcessedUpto& other) const&;
   bool contains(ton::ShardId other_shard, ton::LogicalTime other_lt, td::ConstBitPtr other_hash,
-                ton::BlockSeqno other_mc_seqno) const &;
+                ton::BlockSeqno other_mc_seqno) const&;
   // NB: this is for checking whether we have already imported an internal message
   bool already_processed(const EnqueuedMsgDescr& msg) const;
 };
@@ -384,7 +385,7 @@ struct ShardState {
   int global_id_;
   ton::UnixTime utime_;
   ton::LogicalTime lt_;
-  ton::BlockSeqno mc_blk_seqno_, min_ref_mc_seqno_;
+  ton::BlockSeqno mc_blk_seqno_, min_ref_mc_seqno_, vert_seqno_;
   ton::BlockIdExt mc_blk_ref_;
   ton::LogicalTime mc_blk_lt_;
   bool before_split_{false};
@@ -573,7 +574,7 @@ struct BlockProofChain {
   bool last_link_incomplete() const {
     return !links.empty() && last_link().incomplete();
   }
-  td::Status validate();
+  td::Status validate(td::CancellationToken cancellation_token = {});
 };
 
 int filter_out_msg_queue(vm::AugmentedDictionary& out_queue, ton::ShardIdFull old_shard, ton::ShardIdFull subshard);

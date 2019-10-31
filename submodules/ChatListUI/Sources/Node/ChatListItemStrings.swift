@@ -1,9 +1,11 @@
 import Foundation
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
+import LocalizedPeerData
 
 public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
     let peer: Peer?

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 
 private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, day: Bool, preview: Bool) -> PresentationTheme {
@@ -68,7 +69,11 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         separatorColor: UIColor(rgb: 0xb1b1b1),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
-        badgeTextColor: .white
+        badgeTextColor: .white,
+        segmentedBackgroundColor: UIColor(rgb: 0xe9e9e9),
+        segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
+        segmentedTextColor: UIColor(rgb: 0x000000),
+        segmentedDividerColor: UIColor(rgb: 0xd6d6dc)
     )
     
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
@@ -334,9 +339,9 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         inputBackgroundColor: UIColor(rgb: 0xe9e9e9),
         inputHollowBackgroundColor: .white,
         inputBorderColor: UIColor(rgb: 0xe4e4e6),
-        inputPlaceholderColor: UIColor(rgb: 0x818086),
+        inputPlaceholderColor: UIColor(rgb: 0x8E8D92),
         inputTextColor: .black,
-        inputClearButtonColor: UIColor(rgb: 0x7b7b81),
+        inputClearButtonColor: UIColor(rgb: 0xBCBCC0),
         checkContentColor: .white
     )
     

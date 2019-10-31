@@ -4,8 +4,11 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import TextFormat
+import Markdown
 
 private let infoFont = Font.regular(14.0)
 private let passwordFont = Font.regular(16.0)
@@ -22,7 +25,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
     private let requestLayout: () -> Void
     private var validLayout: CGFloat?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, primaryLanguageByCountry: [String: String], openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, requestLayout: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peer: Peer, privacyPolicyUrl: String?, form: SecureIdForm, primaryLanguageByCountry: [String: String], openField: @escaping (SecureIdParsedRequestedFormField) -> Void, openURL: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, requestLayout: @escaping () -> Void) {
         self.requestLayout = requestLayout
         
         self.primaryLanguageByCountry = primaryLanguageByCountry
@@ -55,13 +58,13 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
             let privacyPolicyAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.freeTextColor)
             let privacyPolicyLinkAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.itemAccentColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber, TelegramTextAttributes.URL: privacyPolicyUrl])
             
-            text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(peer.displayTitle, (peer.addressName ?? "")).0.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
+            text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), (peer.addressName ?? "")).0.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
                 return nil
             }), textAlignment: .center)
             
             
         } else {
-            text = NSAttributedString(string: strings.Passport_AcceptHelp(peer.displayTitle, (peer.addressName ?? "")).0, font: infoFont, textColor: theme.list.freeTextColor, paragraphAlignment: .left)
+            text = NSAttributedString(string: strings.Passport_AcceptHelp(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), (peer.addressName ?? "")).0, font: infoFont, textColor: theme.list.freeTextColor, paragraphAlignment: .left)
         }
         self.textNode.attributedText = text
         

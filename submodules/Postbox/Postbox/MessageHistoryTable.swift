@@ -2479,18 +2479,23 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func enumerateMedia(lowerBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
+    func enumerateMedia(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
         var mediaRefs: [MediaId: Media] = [:]
         var result: [PeerId: Set<MediaId>] = [:]
         var lastIndex: MessageIndex?
         var count = 0
-        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(MessageIndex.absoluteUpperBound()), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(upperBound == nil ? MessageIndex.absoluteUpperBound() : upperBound!), values: { key, value in
             count += 1
             
             let entry = self.readIntermediateEntry(key, value: value)
             lastIndex = entry.message.index
             
             let message = entry.message
+            
+            if let upperBound = upperBound, message.id.peerId != upperBound.id.peerId {
+                return true
+            }
+            
             var parsedMedia: [Media] = []
             
             let embeddedMediaData = message.embeddedMediaData.sharedBufferNoCopy()

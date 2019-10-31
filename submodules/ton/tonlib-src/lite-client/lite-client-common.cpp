@@ -4,6 +4,7 @@
 #include "tl-utils/lite-utils.hpp"
 #include "ton/lite-tl.hpp"
 #include "td/utils/overloaded.h"
+#include "td/utils/Random.h"
 
 using namespace std::literals::string_literals;
 
@@ -73,5 +74,26 @@ td::Result<std::unique_ptr<block::BlockProofChain>> deserialize_proof_chain(
   }
   LOG(DEBUG) << "deserialized a BlkProofChain of " << chain->link_count() << " links";
   return std::move(chain);
+}
+td::Ref<vm::Tuple> prepare_vm_c7(ton::UnixTime now, ton::LogicalTime lt, td::Ref<vm::CellSlice> my_addr,
+                                 const block::CurrencyCollection& balance) {
+  td::BitArray<256> rand_seed;
+  td::RefInt256 rand_seed_int{true};
+  td::Random::secure_bytes(rand_seed.as_slice());
+  if (!rand_seed_int.unique_write().import_bits(rand_seed.cbits(), 256, false)) {
+    return {};
+  }
+  auto tuple = vm::make_tuple_ref(td::make_refint(0x076ef1ea),  // [ magic:0x076ef1ea
+                                  td::make_refint(0),           //   actions:Integer
+                                  td::make_refint(0),           //   msgs_sent:Integer
+                                  td::make_refint(now),         //   unixtime:Integer
+                                  td::make_refint(lt),          //   block_lt:Integer
+                                  td::make_refint(lt),          //   trans_lt:Integer
+                                  std::move(rand_seed_int),     //   rand_seed:Integer
+                                  balance.as_vm_tuple(),        //   balance_remaining:[Integer (Maybe Cell)]
+                                  my_addr,                      //  myself:MsgAddressInt
+                                  vm::StackEntry());            //  global_config:(Maybe Cell) ] = SmartContractInfo;
+  LOG(DEBUG) << "SmartContractInfo initialized with " << vm::StackEntry(tuple).to_string();
+  return vm::make_tuple_ref(std::move(tuple));
 }
 }  // namespace liteclient

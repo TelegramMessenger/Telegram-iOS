@@ -3,10 +3,12 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import ChatTitleActivityNode
+import LocalizedPeerData
 
 private let textFont = Font.regular(15.0)
 

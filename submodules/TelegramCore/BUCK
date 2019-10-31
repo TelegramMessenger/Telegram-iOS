@@ -3,30 +3,30 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "TelegramCore",
     srcs = glob([
-        "TelegramCore/*.swift",
-        "TelegramCore/*.m",
+        "Sources/*.swift",
+        "Sources/*.m",
     ]),
     headers = [
-        "TelegramCore/FormatPhoneNumber.h",
-        "TelegramCore/Crypto.h",
-        "TelegramCore/NetworkLogging.h",
-        "TelegramCore/Reachability.h",
+        "Sources/Crypto.h",
+        "Sources/NetworkLogging.h",
+        "Sources/Reachability.h",
     ],
     exported_headers = [
-        "TelegramCore/FormatPhoneNumber.h",
-        "TelegramCore/Crypto.h",
-        "TelegramCore/NetworkLogging.h",
-        "TelegramCore/Reachability.h",
+        "Sources/Crypto.h",
+        "Sources/NetworkLogging.h",
+        "Sources/Reachability.h",
     ],
     deps = [
-    	"//submodules/libphonenumber:libphonenumber",
-        "//submodules/TelegramApi:TelegramApi",
+        "//submodules/TelegramApi:TelegramApi#shared",
     	"//submodules/MtProtoKit:MtProtoKit#shared",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/Postbox:Postbox#shared",
-	"//submodules/CloudData:CloudData",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/CloudData:CloudData",
+        "//submodules/EncryptionProvider:EncryptionProvider",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],
 )
+

@@ -1,0 +1,15 @@
+load("//Config:buck_rule_macros.bzl", "framework")
+
+framework(
+    name = "SyncCore",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/Postbox:Postbox#shared",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

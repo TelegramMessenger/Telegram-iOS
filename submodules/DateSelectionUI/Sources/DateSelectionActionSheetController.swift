@@ -105,6 +105,8 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         
         self.pickerView = UIDatePicker()
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
+        self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)
@@ -116,8 +118,6 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         } else {
             self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
         }
-        
-        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         super.init(theme: theme)
         

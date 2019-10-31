@@ -1,0 +1,22 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "PresentationDataUtils",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+	"//submodules/Display:Display#shared",
+	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+	"//submodules/AccountContext:AccountContext",
+	"//submodules/TelegramPresentationData:TelegramPresentationData",
+	"//submodules/AlertUI:AlertUI",
+	"//submodules/ItemListUI:ItemListUI",
+	"//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+    "//submodules/OverlayStatusController:OverlayStatusController",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

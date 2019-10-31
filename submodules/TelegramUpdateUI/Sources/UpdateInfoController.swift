@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ItemListUI
+import PresentationDataUtils
 
 private final class UpdateInfoControllerArguments {
     let openAppStorePage: () -> Void
@@ -66,7 +68,8 @@ private enum UpdateInfoControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: UpdateInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! UpdateInfoControllerArguments
         switch self {
             case let .info(theme, icon, title, text, entities):
                 return UpdateInfoItem(theme: theme, appIcon: icon, title: title, text: text, entities: entities, sectionId: self.section, style: .blocks, linkItemAction: { action, itemLink in
@@ -106,7 +109,7 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
     
     let signal = context.sharedContext.presentationData
     |> deliverOnMainQueue
-    |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<UpdateInfoControllerEntry>, UpdateInfoControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let appIcon: PresentationAppIcon?
         let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
         if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {

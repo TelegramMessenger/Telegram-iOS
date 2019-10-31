@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -11,6 +12,7 @@ import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import OpenInExternalAppUI
 import InstantPageUI
 import HashtagSearchUI
@@ -414,6 +416,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
+        }, displaySwipeToReplyHint: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

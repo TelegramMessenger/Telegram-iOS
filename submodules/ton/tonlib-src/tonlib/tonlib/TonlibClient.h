@@ -29,9 +29,22 @@
 
 #include "td/actor/actor.h"
 
+#include "td/utils/CancellationToken.h"
+
 #include <map>
 
 namespace tonlib {
+namespace int_api {
+struct GetAccountState;
+struct GetPrivateKey;
+struct SendMessage;
+inline std::string to_string(const int_api::SendMessage&) {
+  return "Send message";
+}
+}  // namespace int_api
+class AccountState;
+class Query;
+
 class TonlibClient : public td::actor::Actor {
  public:
   template <class T>
@@ -64,7 +77,10 @@ class TonlibClient : public td::actor::Actor {
   td::actor::ActorOwn<ton::adnl::AdnlExtClient> raw_client_;
   td::actor::ActorId<ExtClientOutbound> ext_client_outbound_;
   td::actor::ActorOwn<LastBlock> raw_last_block_;
+  td::actor::ActorOwn<LastConfig> raw_last_config_;
   ExtClient client_;
+
+  td::CancellationTokenSource source_;
 
   std::map<td::int64, td::actor::ActorOwn<>> actors_;
   td::int64 actor_id_{1};
@@ -72,6 +88,7 @@ class TonlibClient : public td::actor::Actor {
   ExtClientRef get_client_ref();
   void init_ext_client();
   void init_last_block();
+  void init_last_config();
 
   bool is_closing_{false};
   td::uint32 ref_cnt_{1};
@@ -92,7 +109,9 @@ class TonlibClient : public td::actor::Actor {
   }
 
   void update_last_block_state(LastBlockState state, td::uint32 config_generation_);
+  void update_sync_state(LastBlockSyncState state, td::uint32 config_generation);
   void on_result(td::uint64 id, object_ptr<tonlib_api::Object> response);
+  void on_update(object_ptr<tonlib_api::Object> response);
   static bool is_static_request(td::int32 id);
   static bool is_uninited_request(td::int32 id);
   template <class T>
@@ -117,9 +136,57 @@ class TonlibClient : public td::actor::Actor {
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogTags& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::addLogMessage& request);
 
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::encrypt& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::decrypt& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::kdf& request);
+
+  template <class P>
+  td::Status do_request(const tonlib_api::runTests& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::raw_getAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::testWallet_getAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::wallet_getAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::testGiver_getAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::packAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::unpackAccountAddress& request, P&&);
+  template <class P>
+  td::Status do_request(tonlib_api::getBip39Hints& request, P&&);
+
+  template <class P>
+  td::Status do_request(tonlib_api::setLogStream& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::getLogStream& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::setLogVerbosityLevel& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::setLogTagVerbosityLevel& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::getLogVerbosityLevel& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::getLogTagVerbosityLevel& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::getLogTags& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::addLogMessage& request, P&&);
+
+  template <class P>
+  td::Status do_request(const tonlib_api::encrypt& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::decrypt& request, P&&);
+  template <class P>
+  td::Status do_request(const tonlib_api::kdf& request, P&&);
+
   template <class T, class P>
-  td::Status do_request(const T& request, P&& promise) {
-    return td::Status::Error(400, "Function is unsupported");
+  void make_request(T&& request, P&& promise) {
+    auto status = do_request(std::forward<T>(request), std::move(promise));
+    if (status.is_error()) {
+      promise.operator()(std::move(status));
+    }
   }
 
   td::Status set_config(object_ptr<tonlib_api::config> config);
@@ -128,6 +195,11 @@ class TonlibClient : public td::actor::Actor {
   td::Status do_request(tonlib_api::options_setConfig& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
 
   td::Status do_request(const tonlib_api::raw_sendMessage& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(const tonlib_api::raw_createAndSendMessage& request,
+                        td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(const tonlib_api::raw_createQuery& request,
+                        td::Promise<object_ptr<tonlib_api::query_info>>&& promise);
+
   td::Status do_request(tonlib_api::raw_getAccountState& request,
                         td::Promise<object_ptr<tonlib_api::raw_accountState>>&& promise);
   td::Status do_request(tonlib_api::raw_getTransactions& request,
@@ -155,6 +227,8 @@ class TonlibClient : public td::actor::Actor {
   td::Status do_request(tonlib_api::generic_sendGrams& request,
                         td::Promise<object_ptr<tonlib_api::sendGramsResult>>&& promise);
 
+  td::Status do_request(tonlib_api::sync& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+
   td::Status do_request(const tonlib_api::createNewKey& request, td::Promise<object_ptr<tonlib_api::key>>&& promise);
   td::Status do_request(const tonlib_api::exportKey& request,
                         td::Promise<object_ptr<tonlib_api::exportedKey>>&& promise);
@@ -178,6 +252,34 @@ class TonlibClient : public td::actor::Actor {
                         td::Promise<object_ptr<tonlib_api::ok>>&& promise);
   td::Status do_request(const tonlib_api::onLiteServerQueryError& request,
                         td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+
+  td::int64 next_query_id_{0};
+  std::map<td::int64, td::unique_ptr<Query>> queries_;
+  td::int64 register_query(td::unique_ptr<Query> query);
+  td::Result<tonlib_api::object_ptr<tonlib_api::query_info>> get_query_info(td::int64 id);
+  void finish_create_query(td::Result<td::unique_ptr<Query>> r_query,
+                           td::Promise<object_ptr<tonlib_api::query_info>>&& promise);
+  void finish_send_query(td::Result<td::unique_ptr<Query>> r_query,
+                         td::Promise<object_ptr<tonlib_api::sendGramsResult>>&& promise);
+  void query_estimate_fees(td::int64 id, bool ignore_chksig, td::Result<LastConfigState> r_state,
+                           td::Promise<object_ptr<tonlib_api::query_fees>>&& promise);
+
+  td::Status do_request(const tonlib_api::query_getInfo& request,
+                        td::Promise<object_ptr<tonlib_api::query_info>>&& promise);
+  td::Status do_request(const tonlib_api::query_estimateFees& request,
+                        td::Promise<object_ptr<tonlib_api::query_fees>>&& promise);
+  td::Status do_request(const tonlib_api::query_send& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(tonlib_api::query_forget& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+
+  td::Status do_request(tonlib_api::generic_createSendGramsQuery& request,
+                        td::Promise<object_ptr<tonlib_api::query_info>>&& promise);
+
+  td::Status do_request(int_api::GetAccountState request, td::Promise<td::unique_ptr<AccountState>>&&);
+  td::Status do_request(int_api::GetPrivateKey request, td::Promise<KeyStorage::PrivateKey>&&);
+  td::Status do_request(int_api::SendMessage request, td::Promise<td::Unit>&& promise);
+
+  td::Status do_request(const tonlib_api::liteServer_getInfo& request,
+                        td::Promise<object_ptr<tonlib_api::liteServer_info>>&& promise);
 
   void proxy_request(td::int64 query_id, std::string data);
 

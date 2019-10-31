@@ -4,13 +4,16 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
@@ -213,7 +216,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelPermissionsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelPermissionsControllerArguments
         switch self {
             case let .permissionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -700,7 +704,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 
                 let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)
@@ -756,7 +760,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), viewAndParticipants)
     |> deliverOnMainQueue
-    |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState<ChannelPermissionsEntry>, ChannelPermissionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (view, participants) = viewAndParticipants
         
         var rightNavigationButton: ItemListNavigationButton?

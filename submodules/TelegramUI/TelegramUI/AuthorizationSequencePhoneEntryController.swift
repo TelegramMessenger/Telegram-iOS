@@ -4,12 +4,14 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
 import CountrySelectionUI
 import SettingsUI
+import PhoneNumberFormat
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {

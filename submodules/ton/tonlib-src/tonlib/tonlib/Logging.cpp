@@ -39,7 +39,8 @@ static td::NullLog null_log;
 
 #define ADD_TAG(tag) \
   { #tag, &VERBOSITY_NAME(tag) }
-static const std::map<td::Slice, int *> log_tags{ADD_TAG(tonlib_query), ADD_TAG(last_block)};
+static const std::map<td::Slice, int *> log_tags{ADD_TAG(tonlib_query), ADD_TAG(last_block), ADD_TAG(last_config),
+                                                 ADD_TAG(lite_server)};
 #undef ADD_TAG
 
 td::Status Logging::set_current_stream(tonlib_api::object_ptr<tonlib_api::LogStream> stream) {

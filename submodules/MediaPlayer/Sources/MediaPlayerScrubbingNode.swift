@@ -46,12 +46,7 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureReco
         guard let gestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer else {
             return !self.verticalPanEnabled
         }
-        let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
-        if self.verticalPanEnabled {
-            return abs(translation.x) > abs(translation.y) || translation.y > 0.0
-        } else {
-            return abs(translation.x) > abs(translation.y)
-        }
+        return true
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -853,7 +848,11 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         switch self.contentNodes {
         case let .standard(node):
             if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
-                return handleNodeContainer.view
+                if let handleNode = node.handleNode, handleNode.convert(handleNode.bounds, to: self).insetBy(dx: -16.0, dy: -16.0).contains(point) {
+                    return handleNodeContainer.view
+                } else {
+                    return nil
+                }
             } else {
                 return nil
             }

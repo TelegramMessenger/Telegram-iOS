@@ -4,11 +4,14 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 
 private final class ChannelMembersControllerArguments {
@@ -175,7 +178,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelMembersControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
             case let .addMember(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -463,7 +467,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let peers = peers, !peers.isEmpty {

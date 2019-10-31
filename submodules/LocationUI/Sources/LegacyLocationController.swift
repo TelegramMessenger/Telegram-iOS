@@ -3,6 +3,7 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import AccountContext
@@ -251,6 +252,8 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
     
     controller.onViewDidAppear = { [weak controller] in
         if let strongController = controller {
+            strongController.view.disablesInteractiveModalDismiss = true
+            strongController.view.disablesInteractiveTransitionGestureRecognizer = true
             strongController.locationMapView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
                 return point.x > 30.0
             }
@@ -266,9 +269,6 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
         }
     }
     legacyController.bind(controller: controller)
-    
-    controller.view.disablesInteractiveModalDismiss = true
-    controller.view.disablesInteractiveTransitionGestureRecognizer = true
     
     let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {

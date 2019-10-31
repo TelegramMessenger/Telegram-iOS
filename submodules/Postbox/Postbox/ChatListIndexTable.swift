@@ -644,14 +644,10 @@ final class ChatListIndexTable: Table {
             if peerId.namespace == Int32.max {
                 return
             }
-            /*guard let peer = postbox.peerTable.get(peerId) else {
-                return
-            }*/
             guard let combinedState = postbox.readStateTable.getCombinedState(peerId) else {
                 return
             }
-            /*let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
-            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)*/
+            
             let inclusion = self.get(peerId: peerId)
             if let (inclusionGroupId, _) = inclusion.includedIndex(peerId: peerId), inclusionGroupId == groupId {
                 for (namespace, state) in combinedState.states {

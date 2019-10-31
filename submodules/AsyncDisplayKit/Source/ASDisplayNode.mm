@@ -472,7 +472,7 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   [self baseWillDealloc];
 
   // Synchronous nodes may not be able to call the hierarchy notifications, so only enforce for regular nodes.
-  ASDisplayNodeAssert(checkFlag(Synchronous) || !ASInterfaceStateIncludesVisible(_interfaceState), @"Node should always be marked invisible before deallocating. Node: %@", self);
+  //ASDisplayNodeAssert(checkFlag(Synchronous) || !ASInterfaceStateIncludesVisible(_interfaceState), @"Node should always be marked invisible before deallocating. Node: %@", self);
   
   self.asyncLayer.asyncDelegate = nil;
   _view.asyncdisplaykit_node = nil;

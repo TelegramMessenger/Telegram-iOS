@@ -11,6 +11,7 @@ static_library(
         "//submodules/Display:Display#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/PeerPresenceStatusManager:PeerPresenceStatusManager",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
@@ -18,6 +19,8 @@ static_library(
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

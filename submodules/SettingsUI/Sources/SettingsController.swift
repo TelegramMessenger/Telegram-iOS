@@ -5,20 +5,19 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import LegacyComponents
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import OverlayStatusController
 import AvatarNode
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import LegacyUI
@@ -35,14 +34,17 @@ import MapResourceToAvatarSizes
 import AppBundle
 import ContextUI
 import WalletUI
+import PhoneNumberFormat
 
 private let maximumNumberOfAccounts = 3
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+private let avatarFont = avatarPlaceholderFont(size: 13.0)
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
+    
+    let navigationController: NavigationController? = nil
     
     init(controller: ViewController, sourceNode: ASDisplayNode?) {
         self.controller = controller
@@ -61,7 +63,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-private enum SettingsEntryTag: Equatable, ItemListItemTag {
+private indirect enum SettingsEntryTag: Equatable, ItemListItemTag {
     case account(AccountRecordId)
     
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -73,7 +75,7 @@ private enum SettingsEntryTag: Equatable, ItemListItemTag {
     }
 }
 
-private struct SettingsItemArguments {
+private final class SettingsItemArguments {
     let accountManager: AccountManager
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
@@ -105,6 +107,72 @@ private struct SettingsItemArguments {
     let keepPhone: () -> Void
     let openPhoneNumberChange: () -> Void
     let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+    
+    init(
+        accountManager: AccountManager,
+        avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext,
+    
+        avatarTapAction: @escaping () -> Void,
+    
+        changeProfilePhoto: @escaping () -> Void,
+        openUsername: @escaping () -> Void,
+        openProxy: @escaping () -> Void,
+        openSavedMessages: @escaping () -> Void,
+        openRecentCalls: @escaping () -> Void,
+        openPrivacyAndSecurity: @escaping (AccountPrivacySettings?) -> Void,
+        openDataAndStorage: @escaping () -> Void,
+        openStickerPacks: @escaping ([ArchivedStickerPackItem]?) -> Void,
+        openNotificationsAndSounds: @escaping (NotificationExceptionsList?) -> Void,
+        openThemes: @escaping () -> Void,
+        pushController: @escaping (ViewController) -> Void,
+        openLanguage: @escaping () -> Void,
+        openPassport: @escaping () -> Void,
+        openWallet: @escaping () -> Void,
+        openWatch: @escaping () -> Void,
+        openSupport: @escaping () -> Void,
+        openFaq: @escaping (String?) -> Void,
+        openEditing: @escaping () -> Void,
+        displayCopyContextMenu: @escaping () -> Void,
+        switchToAccount: @escaping (AccountRecordId) -> Void,
+        addAccount: @escaping () -> Void,
+        setAccountIdWithRevealedOptions: @escaping (AccountRecordId?, AccountRecordId?) -> Void,
+        removeAccount: @escaping (AccountRecordId) -> Void,
+        keepPhone: @escaping () -> Void,
+        openPhoneNumberChange: @escaping () -> Void,
+        accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+    ) {
+        self.accountManager = accountManager
+        self.avatarAndNameInfoContext = avatarAndNameInfoContext
+        
+        self.avatarTapAction = avatarTapAction
+        
+        self.changeProfilePhoto = changeProfilePhoto
+        self.openUsername = openUsername
+        self.openProxy = openProxy
+        self.openSavedMessages = openSavedMessages
+        self.openRecentCalls = openRecentCalls
+        self.openPrivacyAndSecurity = openPrivacyAndSecurity
+        self.openDataAndStorage = openDataAndStorage
+        self.openStickerPacks = openStickerPacks
+        self.openNotificationsAndSounds = openNotificationsAndSounds
+        self.openThemes = openThemes
+        self.pushController = pushController
+        self.openLanguage = openLanguage
+        self.openPassport = openPassport
+        self.openWallet = openWallet
+        self.openWatch = openWatch
+        self.openSupport = openSupport
+        self.openFaq = openFaq
+        self.openEditing = openEditing
+        self.displayCopyContextMenu = displayCopyContextMenu
+        self.switchToAccount = switchToAccount
+        self.addAccount = addAccount
+        self.setAccountIdWithRevealedOptions = setAccountIdWithRevealedOptions
+        self.removeAccount = removeAccount
+        self.keepPhone = keepPhone
+        self.openPhoneNumberChange = openPhoneNumberChange
+        self.accountContextAction = accountContextAction
+    }
 }
 
 private enum SettingsSection: Int32 {
@@ -118,7 +186,7 @@ private enum SettingsSection: Int32 {
     case help
 }
 
-private enum SettingsEntry: ItemListNodeEntry {
+private indirect enum SettingsEntry: ItemListNodeEntry {
     case userInfo(Account, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     case setUsername(PresentationTheme, String)
@@ -391,7 +459,8 @@ private enum SettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: SettingsItemArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! SettingsItemArguments
         switch self {
             case let .userInfo(account, theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
                 return ItemListAvatarAndNameInfoItem(account: account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
@@ -596,7 +665,7 @@ public protocol SettingsController: class {
     func updateContext(context: AccountContext)
 }
 
-private final class SettingsControllerImpl: ItemListController<SettingsEntry>, SettingsController, TabBarContainedController {
+private final class SettingsControllerImpl: ItemListController, SettingsController, TabBarContainedController {
     let sharedContext: SharedAccountContext
     let contextValue: Promise<AccountContext>
     var accountsAndPeersValue: ((Account, Peer)?, [(Account, Peer, Int32)])?
@@ -611,7 +680,7 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         return false
     }
 
-    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
+    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState, Any)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
         self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
         let presentationData = currentContext.sharedContext.currentPresentationData.with { $0 }
@@ -715,7 +784,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
             |> take(1)
@@ -1100,16 +1169,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let hasWallet = contextValue.get()
     |> mapToSignal { context in
-        return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { view -> Bool in
-            if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
-                let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-                let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
-                return configuration.config != nil
-            } else {
-                return false
-            }
-        }
+        return context.hasWalletAccess
     }
     
     let hasPassport = ValuePromise<Bool>(false)
@@ -1221,7 +1281,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     
     let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
-    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
         let experimentalUISettings: ExperimentalUISettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings

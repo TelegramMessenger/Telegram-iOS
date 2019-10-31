@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import TelegramStringFormatting
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
 
 private final class ChannelBannedMemberControllerArguments {
@@ -218,7 +221,8 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelBannedMemberControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelBannedMemberControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
@@ -319,7 +323,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.timeout(presentationData.theme, presentationData.strings.GroupPermission_Duration, currentTimeoutString))
         
         if let initialParticipant = initialParticipant, case let .member(member) = initialParticipant, let banInfo = member.banInfo, let initialBannedBy = initialBannedBy {
-            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle, stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).0))
+            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).0))
             entries.append(.delete(presentationData.theme, presentationData.strings.GroupPermission_Delete))
         }
     } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup, let member = memberView.peers[memberView.peerId] {
@@ -365,7 +369,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.timeout(presentationData.theme, presentationData.strings.GroupPermission_Duration, currentTimeoutString))
         
         if let initialParticipant = initialParticipant, case let .member(member) = initialParticipant, let banInfo = member.banInfo, let initialBannedBy = initialBannedBy {
-            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle, stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).0))
+            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).0))
             entries.append(.delete(presentationData.theme, presentationData.strings.GroupPermission_Delete))
         }
     }
@@ -512,7 +516,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelBannedMemberEntry>, ChannelBannedMemberEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
         let memberView = combinedView.views[.peer(peerId: memberId, components: .all)] as! PeerView
         var initialBannedByPeer: Peer?
@@ -672,7 +676,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                         }, completed: {
                                             if previousRights == nil {
                                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess, false)), nil)
+                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess, false)), nil)
                                             }
                                             updated(cleanResolvedRights.flags.isEmpty ? nil : cleanResolvedRights)
                                             dismissImpl?()
@@ -683,7 +687,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                             var items: [ActionSheetItem] = []
-                            items.append(ActionSheetTextItem(title: presentationData.strings.GroupPermission_ApplyAlertText(peer.displayTitle).0))
+                            items.append(ActionSheetTextItem(title: presentationData.strings.GroupPermission_ApplyAlertText(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0))
                             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupPermission_ApplyAlertAction, color: .accent, font: .default, enabled: true, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 applyRights()

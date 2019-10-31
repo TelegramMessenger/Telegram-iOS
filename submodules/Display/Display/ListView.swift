@@ -609,7 +609,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.resetHeaderItemsFlashTimer(start: true)
         self.updateHeaderItemsFlashing(animated: true)
         self.resetScrollIndicatorFlashTimer(start: true)
-        self.didEndScrolling?()
+        if !scrollView.isTracking {
+            self.didEndScrolling?()
+        }
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -990,9 +992,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         if topItemIndexAndMinY.0 == 0 {
             var offsetValue: CGFloat = -(topItemIndexAndMinY.1 - self.insets.top)
-            if self.areAllItemsOnScreen() {
-                offsetValue = 0.0
-            }
             offset = .known(offsetValue)
         } else if topItemIndexAndMinY.0 == -1 {
             offset = .none
@@ -3946,6 +3945,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let verticalScrollIndicator = self.verticalScrollIndicator {
             verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
         }
+    }
+    
+    public func scrollToOffsetFromTop(_ offset: CGFloat) -> Bool {
+        for itemNode in self.itemNodes {
+            if itemNode.index == 0 {
+                self.scroller.setContentOffset(CGPoint(x: 0.0, y: offset), animated: true)
+                return true
+            }
+        }
+        return false
     }
     
     public func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {

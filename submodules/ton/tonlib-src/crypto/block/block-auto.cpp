@@ -10481,7 +10481,7 @@ bool BlockInfo::skip(vm::CellSlice& cs) const {
       && cs.advance(392)
       && (!not_master || cs.advance_refs(1))
       && cs.advance_refs(1)
-      && (!vert_seq_no || cs.advance_refs(1));
+      && (!vert_seqno_incr || cs.advance_refs(1));
 }
 
 bool BlockInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
@@ -10501,7 +10501,7 @@ bool BlockInfo::validate_skip(vm::CellSlice& cs, bool weak) const {
       && cs.advance(288)
       && (!not_master || t_BlkMasterInfo.validate_skip_ref(cs, weak))
       && BlkPrevInfo{after_merge}.validate_skip_ref(cs, weak)
-      && (!vert_seq_no || t_BlkPrevInfo_0.validate_skip_ref(cs, weak));
+      && (!vert_seqno_incr || t_BlkPrevInfo_0.validate_skip_ref(cs, weak));
 }
 
 bool BlockInfo::unpack(vm::CellSlice& cs, BlockInfo::Record& data) const {
@@ -10531,7 +10531,7 @@ bool BlockInfo::unpack(vm::CellSlice& cs, BlockInfo::Record& data) const {
       && cs.fetch_uint_to(32, data.prev_key_block_seqno)
       && (!data.not_master || cs.fetch_ref_to(data.master_ref))
       && cs.fetch_ref_to(data.prev_ref)
-      && (!data.vert_seq_no || cs.fetch_ref_to(data.prev_vert_ref));
+      && (!data.vert_seqno_incr || cs.fetch_ref_to(data.prev_vert_ref));
 }
 
 bool BlockInfo::cell_unpack(Ref<vm::Cell> cell_ref, BlockInfo::Record& data) const {
@@ -10567,7 +10567,7 @@ bool BlockInfo::pack(vm::CellBuilder& cb, const BlockInfo::Record& data) const {
       && cb.store_ulong_rchk_bool(data.prev_key_block_seqno, 32)
       && (!data.not_master || cb.store_ref_bool(data.master_ref))
       && cb.store_ref_bool(data.prev_ref)
-      && (!data.vert_seq_no || cb.store_ref_bool(data.prev_vert_ref));
+      && (!data.vert_seqno_incr || cb.store_ref_bool(data.prev_vert_ref));
 }
 
 bool BlockInfo::cell_pack(Ref<vm::Cell>& cell_ref, const BlockInfo::Record& data) const {
@@ -10613,7 +10613,7 @@ bool BlockInfo::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
       && (!not_master || (pp.field("master_ref") && t_BlkMasterInfo.print_ref(pp, cs.fetch_ref())))
       && pp.field("prev_ref")
       && BlkPrevInfo{after_merge}.print_ref(pp, cs.fetch_ref())
-      && (!vert_seq_no || (pp.field("prev_vert_ref") && t_BlkPrevInfo_0.print_ref(pp, cs.fetch_ref())))
+      && (!vert_seqno_incr || (pp.field("prev_vert_ref") && t_BlkPrevInfo_0.print_ref(pp, cs.fetch_ref())))
       && pp.close();
 }
 

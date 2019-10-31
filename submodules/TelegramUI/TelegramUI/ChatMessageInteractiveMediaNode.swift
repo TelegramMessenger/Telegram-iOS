@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import UniversalMediaPlayer
@@ -16,7 +17,8 @@ import PhotoResources
 import TelegramUniversalVideoContent
 import TelegramStringFormatting
 import GalleryUI
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import LocalMediaResources
 import WallpaperResources
 
@@ -731,7 +733,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.animatedStickerNode = animatedStickerNode
                                     let dimensions = updatedAnimatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
                                     let fittedDimensions = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                                    animatedStickerNode.setup(account: context.account, resource: .resource(updatedAnimatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: updatedAnimatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                                     strongSelf.insertSubnode(animatedStickerNode, aboveSubnode: strongSelf.imageNode)
                                     animatedStickerNode.visibility = strongSelf.visibility
                                 }

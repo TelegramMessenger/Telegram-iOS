@@ -1,0 +1,25 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "TelegramAnimatedStickerNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+	    "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/MediaResources:MediaResources",
+        "//submodules/Tuples:Tuples",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/YuvConversion:YuvConversion",
+        "//submodules/GZip:GZip",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/MobileCoreServices.framework",
+    ],
+)

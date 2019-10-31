@@ -61,10 +61,6 @@
             PHFetchOptions *options = [[PHFetchOptions alloc] init];
             options.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"startDate" ascending:true]];
             
-            //PHFetchResult *moments = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeMoment subtype:PHAssetCollectionSubtypeAny options:options];
-            //TGMediaAssetMomentList *momentList = [[TGMediaAssetMomentList alloc] initWithPHFetchResult:moments];
-            //[groups insertObject:momentList atIndex:0];
-            
             return groups;
         }];
     };

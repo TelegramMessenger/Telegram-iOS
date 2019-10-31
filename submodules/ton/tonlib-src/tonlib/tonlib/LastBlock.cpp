@@ -17,6 +17,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "tonlib/LastBlock.h"
+#include "tonlib/LastConfig.h"
 
 #include "tonlib/utils.h"
 
@@ -36,11 +37,22 @@ td::StringBuilder& operator<<(td::StringBuilder& sb, const LastBlockState& state
             << td::tag("init_block", state.init_block_id.to_str());
 }
 
-LastBlock::LastBlock(ExtClientRef client, LastBlockState state, Config config, td::unique_ptr<Callback> callback)
-    : state_(std::move(state)), config_(std::move(config)), callback_(std::move(callback)) {
+LastBlock::LastBlock(ExtClientRef client, LastBlockState state, Config config, td::CancellationToken cancellation_token,
+                     td::unique_ptr<Callback> callback)
+    : callback_(std::move(callback))
+    , state_(std::move(state))
+    , config_(std::move(config))
+    , cancellation_token_(std::move(cancellation_token)) {
   client_.set_client(client);
   state_.last_block_id = state_.last_key_block_id;
 
+  if (state_.last_key_block_id.is_valid()) {
+    min_seqno_ = state_.last_key_block_id.id.seqno;
+  }
+  if (config_.init_block_id.is_valid() && config_.init_block_id != state_.init_block_id) {
+    min_seqno_ = td::min(min_seqno_, config_.init_block_id.id.seqno);
+  }
+  current_seqno_ = min_seqno_;
   VLOG(last_block) << "State: " << state_;
 }
 
@@ -61,6 +73,9 @@ void LastBlock::get_last_block(td::Promise<LastBlockState> promise) {
 }
 
 void LastBlock::sync_loop() {
+  SCOPE_EXIT {
+    update_sync_state();
+  };
   if (promises_.empty()) {
     return;
   }
@@ -147,7 +162,7 @@ td::Result<std::unique_ptr<block::BlockProofChain>> LastBlock::process_block_pro
     return td::Status::Error(PSLICE() << "block proof chain starts from block " << chain->from.to_str()
                                       << ", not from requested block " << from.to_str());
   }
-  TRY_STATUS(chain->validate());
+  TRY_STATUS(chain->validate(cancellation_token_));
   return std::move(chain);
 }
 
@@ -155,6 +170,8 @@ void LastBlock::update_state(block::BlockProofChain& chain) {
   // Update state_
   bool is_changed = false;
   is_changed |= update_mc_last_block(chain.to);
+  current_seqno_ = td::max(current_seqno_, chain.to.id.seqno);
+  max_seqno_ = td::max(max_seqno_, current_seqno_);
   if (chain.has_key_block) {
     is_changed |= update_mc_last_key_block(chain.key_blkid);
   }
@@ -193,10 +210,10 @@ void LastBlock::on_block_proof(
   if (chain->complete) {
     VLOG(last_block) << "get_last_block: done\n" << get_last_block_stats_;
     get_last_block_state_ = QueryState::Done;
-    sync_loop();
   } else {
     do_get_last_block();
   }
+  sync_loop();
 }
 
 void LastBlock::on_init_block_proof(
@@ -209,6 +226,7 @@ void LastBlock::on_init_block_proof(
     check_init_block_state_ = QueryState::Empty;
     VLOG(last_block) << "check_init_block: error " << r_chain.error();
     on_sync_error(r_chain.move_as_error_suffix("(during check init block)"));
+    sync_loop();
     return;
   }
   auto chain = r_chain.move_as_ok();
@@ -220,10 +238,10 @@ void LastBlock::on_init_block_proof(
     if (update_init_block(config_.init_block_id)) {
       save_state();
     }
-    sync_loop();
   } else {
     do_check_init_block(chain->to, to);
   }
+  sync_loop();
 }
 
 void LastBlock::on_masterchain_info(
@@ -233,6 +251,7 @@ void LastBlock::on_masterchain_info(
     update_zero_state(create_zero_state_id(info->init_), "masterchain info");
     // last block is not validated! Do not update it
     get_mc_info_state_ = QueryState::Done;
+    max_seqno_ = td::max(max_seqno_, (unsigned)info->last_->seqno_);
     VLOG(last_block) << "get_masterchain_info: done";
   } else {
     get_mc_info_state_ = QueryState::Empty;
@@ -253,7 +272,7 @@ void LastBlock::update_zero_state(ton::ZeroStateIdExt zero_state_id, td::Slice s
   }
 
   if (!state_.zero_state_id.is_valid()) {
-    LOG(INFO) << "Init zerostate from " << source << ": " << zero_state_id.to_str();
+    VLOG(last_block) << "Init zerostate from " << source << ": " << zero_state_id.to_str();
     state_.zero_state_id = std::move(zero_state_id);
     return;
   }
@@ -277,7 +296,7 @@ bool LastBlock::update_mc_last_block(ton::BlockIdExt mc_block_id) {
   }
   if (!state_.last_block_id.is_valid() || state_.last_block_id.id.seqno < mc_block_id.id.seqno) {
     state_.last_block_id = mc_block_id;
-    LOG(INFO) << "Update masterchain block id: " << state_.last_block_id.to_str();
+    VLOG(last_block) << "Update masterchain block id: " << state_.last_block_id.to_str();
     return true;
   }
   return false;
@@ -293,7 +312,7 @@ bool LastBlock::update_mc_last_key_block(ton::BlockIdExt mc_key_block_id) {
   }
   if (!state_.last_key_block_id.is_valid() || state_.last_key_block_id.id.seqno < mc_key_block_id.id.seqno) {
     state_.last_key_block_id = mc_key_block_id;
-    LOG(INFO) << "Update masterchain key block id: " << state_.last_key_block_id.to_str();
+    VLOG(last_block) << "Update masterchain key block id: " << state_.last_key_block_id.to_str();
     //LOG(ERROR) << td::int64(state_.last_key_block_id.id.shard) << " "
     //<< td::base64_encode(state_.last_key_block_id.file_hash.as_slice()) << " "
     //<< td::base64_encode(state_.last_key_block_id.root_hash.as_slice());
@@ -312,7 +331,7 @@ bool LastBlock::update_init_block(ton::BlockIdExt init_block_id) {
   }
   if (state_.init_block_id != init_block_id) {
     state_.init_block_id = init_block_id;
-    LOG(INFO) << "Update init block id: " << state_.init_block_id.to_str();
+    VLOG(last_block) << "Update init block id: " << state_.init_block_id.to_str();
     return true;
   }
   return false;
@@ -334,6 +353,9 @@ void LastBlock::on_sync_ok() {
 }
 void LastBlock::on_sync_error(td::Status status) {
   VLOG(last_block) << "sync: error " << status;
+  if (cancellation_token_) {
+    status = TonlibError::Cancelled();
+  }
   for (auto& promise : promises_) {
     promise.set_error(status.clone());
   }
@@ -348,4 +370,32 @@ void LastBlock::on_fatal_error(td::Status status) {
 bool LastBlock::has_fatal_error() const {
   return fatal_error_.is_error();
 }
+
+LastBlockSyncState LastBlock::get_sync_state() {
+  LastBlockSyncState state;
+  if (promises_.empty()) {
+    state.type = LastBlockSyncState::Done;
+    return state;
+  }
+  state.type = LastBlockSyncState::InProgress;
+  state.from_seqno = min_seqno_;
+  state.to_seqno = max_seqno_;
+  state.current_seqno = current_seqno_;
+  return state;
+}
+
+void LastBlock::update_sync_state() {
+  auto new_state = get_sync_state();
+  if (new_state == sync_state_) {
+    return;
+  }
+  sync_state_ = new_state;
+  VLOG(last_block) << "Sync state: " << current_seqno_ - min_seqno_ << " / " << max_seqno_ - min_seqno_;
+  callback_->on_sync_state_changed(sync_state_);
+}
+
+void LastBlock::tear_down() {
+  on_sync_error(TonlibError::Cancelled());
+}
+
 }  // namespace tonlib

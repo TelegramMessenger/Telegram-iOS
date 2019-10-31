@@ -13,9 +13,10 @@ framework(
         "Display/*.h",
     ], exclude = ["Display/Display.h"]),
     deps = [
-    	"//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
-    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+    	"//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

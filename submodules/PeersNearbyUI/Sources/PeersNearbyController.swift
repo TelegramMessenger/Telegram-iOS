@@ -4,14 +4,17 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import DeviceLocationManager
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
@@ -187,7 +190,8 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         return result
     }
     
-    func item(_ arguments: PeersNearbyControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! PeersNearbyControllerArguments
         switch self {
             case let .header(theme, text):
                 return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -312,7 +316,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
 
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                 cancelImpl?()
             }))
             presentControllerImpl?(controller, nil)
@@ -410,7 +414,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading)
     |> deliverOnMainQueue
-    |> map { presentationData, data, displayLoading -> (ItemListControllerState, (ItemListNodeState<PeersNearbyEntry>, PeersNearbyEntry.ItemGenerationArguments)) in
+    |> map { presentationData, data, displayLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         
         var crossfade = false

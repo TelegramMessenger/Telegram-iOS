@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -66,7 +67,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
             validIds.insert(themeSettings.theme.index)
             themes[themeSettings.theme.index] = (themeSettings.theme, false)
         }
-        if case .cloud = themeSettings.automaticThemeSwitchSetting.theme, themeSettings.automaticThemeSwitchSetting.trigger != .none {
+        if case .cloud = themeSettings.automaticThemeSwitchSetting.theme, themeSettings.automaticThemeSwitchSetting.trigger != .explicitNone {
             validIds.insert(themeSettings.automaticThemeSwitchSetting.theme.index)
             themes[themeSettings.automaticThemeSwitchSetting.theme.index] = (themeSettings.automaticThemeSwitchSetting.theme, true)
         }

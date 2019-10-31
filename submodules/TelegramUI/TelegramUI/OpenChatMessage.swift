@@ -3,6 +3,7 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import PassKit
 import Lottie
@@ -17,6 +18,8 @@ import PeerAvatarGalleryUI
 import PeerInfoUI
 import SettingsUI
 import AlertUI
+import PresentationDataUtils
+import ShareController
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -25,8 +28,8 @@ private enum ChatMessageGalleryControllerData {
     case map(TelegramMediaMap)
     case stickerPack(StickerPackReference)
     case audio(TelegramMediaFile)
-    case document(TelegramMediaFile)
-    case gallery(GalleryController)
+    case document(TelegramMediaFile, Bool)
+    case gallery(Signal<GalleryController, NoError>)
     case secretGallery(SecretMediaPreviewController)
     case chatAvatars(AvatarGalleryController, Media)
     case theme(TelegramMediaFile)
@@ -148,28 +151,24 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                             let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                                 navigationController?.replaceTopController(controller, animated: false, ready: ready)
                                 }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                            return .gallery(gallery)
+                            return .gallery(.single(gallery))
                         }
                     }
-                    #if DEBUG
+                    
                     if ext == "mkv" {
-                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                            navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                            }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                        return .gallery(gallery)
+                        return .document(file, true)
                     }
-                    #endif
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
                     let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                         }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                    return .gallery(gallery)
+                    return .gallery(.single(gallery))
                 }
                 
                 if !file.isVideo {
-                    return .document(file)
+                    return .document(file, false)
                 }
             }
             
@@ -177,11 +176,25 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                    navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                let startTimecode: Signal<Double?, NoError>
+                if let timecode = timecode {
+                    startTimecode = .single(timecode)
+                } else {
+                    startTimecode = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
+                    |> map { state in
+                        return state?.timestamp
+                    }
+                }
+                
+                return .gallery(startTimecode
+                |> deliverOnMainQueue
+                |> map { timecode in
+                    let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                gallery.temporaryDoNotWaitForReady = autoplayingVideo
-                return .gallery(gallery)
+                    gallery.temporaryDoNotWaitForReady = autoplayingVideo
+                    return gallery
+                })
             }
         }
     }
@@ -201,7 +214,7 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
-                return .gallery(gallery)
+                break
             case let .instantPage(gallery, centralIndex, galleryMedia):
                 return .instantPage(gallery, centralIndex, galleryMedia)
             default:
@@ -209,6 +222,23 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
         }
     }
     return nil
+}
+
+func chatMediaListPreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> Signal<ChatMessagePreviewControllerData?, NoError> {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
+        switch mediaData {
+            case let .gallery(gallery):
+                return gallery
+                |> map { gallery in
+                    return .gallery(gallery)
+                }
+            case let .instantPage(gallery, centralIndex, galleryMedia):
+                return .single(.instantPage(gallery, centralIndex, galleryMedia))
+            default:
+                break
+        }
+    }
+    return .single(nil)
 }
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
@@ -270,9 +300,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 params.present(controller, nil)
                 return true
-            case let .document(file):
+            case let .document(file, immediateShare):
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
-                if let rootController = params.navigationController?.view.window?.rootViewController {
+                if immediateShare {
+                    let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
+                    params.present(controller, nil)
+                } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
                 }
                 return true
@@ -309,13 +342,16 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 return true
             case let .gallery(gallery):
                 params.dismissInput()
-                params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                    let selectedTransitionNode = params.transitionNode(messageId, media)
-                    if let selectedTransitionNode = selectedTransitionNode {
-                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
-                    }
-                    return nil
-                }))
+                let _ = (gallery
+                |> deliverOnMainQueue).start(next: { gallery in
+                    params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                        let selectedTransitionNode = params.transitionNode(messageId, media)
+                        if let selectedTransitionNode = selectedTransitionNode {
+                            return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
+                        }
+                        return nil
+                    }))
+                })
                 return true
             case let .secretGallery(gallery):
                 params.dismissInput()
@@ -468,14 +504,21 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
                 } else if let contentFile = content.file, contentFile.mimeType == mimeType {
                     file = contentFile
                 }
-                if case let .theme(slug) = resolvedUrl, let file = file {
-                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
-                        let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
-                        pushController(controller)
-                    }
-                } else {
+                let displayUnsupportedAlert: () -> Void = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     present(textAlertController(context: context, title: nil, text: presentationData.strings.Theme_Unsupported, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
+                if case let .theme(slug) = resolvedUrl, let file = file {
+                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                        if let theme = makePresentationTheme(data: data) {
+                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                            pushController(controller)
+                        } else {
+                            displayUnsupportedAlert()
+                        }
+                    }
+                } else {
+                    displayUnsupportedAlert()
                 }
             })
         }

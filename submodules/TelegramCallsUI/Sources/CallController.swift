@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -188,6 +189,10 @@ public final class CallController: ViewController {
                         if let window = window {
                             c.presentationArguments = a
                             window.present(c, on: .root, blockInteraction: false, completion: {})
+                        }
+                    }, push: { [weak self] c in
+                        if let strongSelf = self {
+                            strongSelf.push(c)
                         }
                     })
                     strongSelf.present(controller, in: .window(.root))

@@ -102,7 +102,7 @@ final class NavigationModalFrame: ASDisplayNode {
         }
     }
     
-    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {        
         let sideInset: CGFloat = 16.0
         var topInset: CGFloat = 0.0
         if let statusBarHeight = layout.statusBarHeight {

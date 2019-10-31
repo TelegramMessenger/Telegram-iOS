@@ -4,10 +4,13 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AlertUI
+import PresentationDataUtils
 import WallpaperResources
 import ShareController
 import AccountContext
@@ -16,6 +19,8 @@ import ContextUI
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
+    
+    let navigationController: NavigationController? = nil
     
     init(controller: ViewController, sourceNode: ASDisplayNode?) {
         self.controller = controller
@@ -269,7 +274,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ThemeSettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ThemeSettingsControllerArguments
         switch self {
             case let .fontSizeHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -313,7 +319,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, _):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: true, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     if case let .cloud(theme) = theme, theme.theme.file == nil {
                         if theme.theme.isCreator {
                             arguments.editTheme(theme)
@@ -362,7 +368,13 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     let title: String
     switch autoNightSettings.trigger {
-        case .none:
+        case .system:
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                title = strings.AutoNightTheme_System
+            } else {
+                title = strings.AutoNightTheme_Disabled
+            }
+        case .explicitNone:
             title = strings.AutoNightTheme_Disabled
         case .timeBased:
             title = strings.AutoNightTheme_Scheduled
@@ -543,7 +555,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = settings.fontSize
@@ -675,7 +687,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Hide
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {

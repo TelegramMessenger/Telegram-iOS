@@ -4,6 +4,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 
 public class FormController<InnerState, InitParams, Node: FormControllerNode<InitParams, InnerState>>: ViewController {
@@ -13,9 +14,7 @@ public class FormController<InnerState, InitParams, Node: FormControllerNode<Ini
     
     private let initParams: InitParams
     private var presentationData: PresentationData
-    
-    private var didPlayPresentationAnimation = false
-    
+        
     init(initParams: InitParams, presentationData: PresentationData) {
         self.initParams = initParams
         self.presentationData = presentationData
@@ -29,21 +28,9 @@ public class FormController<InnerState, InitParams, Node: FormControllerNode<Ini
         fatalError("init(coder:) has not been implemented")
     }
     
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if !self.didPlayPresentationAnimation {
-            self.didPlayPresentationAnimation = true
-            self.controllerNode.animateIn()
-        }
-    }
-    
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.view.endEditing(true)
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
+        super.dismiss(completion: completion)
     }
     
     override public func loadDisplayNode() {

@@ -5,12 +5,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ActivityIndicator
 import TextFormat
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PasswordSetupUI
+import Markdown
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
@@ -515,10 +518,10 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     var text: String
     if isGroup {
         title = presentationData.strings.Group_OwnershipTransfer_Title
-        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle, member.displayTitle).0
+        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
     } else {
         title = presentationData.strings.Channel_OwnershipTransfer_Title
-        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle, member.displayTitle).0
+        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
     }
     
     let attributedTitle = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)

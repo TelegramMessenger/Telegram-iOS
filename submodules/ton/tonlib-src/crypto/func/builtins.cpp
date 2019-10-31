@@ -50,15 +50,15 @@ void define_builtin_func(std::string name, TypeExpr* func_type, const T& func, b
 }
 
 template <typename T>
-void define_builtin_func_x(std::string name, TypeExpr* func_type, const T& func, std::initializer_list<int> arg_order,
-                           std::initializer_list<int> ret_order = {}, bool impure = false) {
+void define_builtin_func(std::string name, TypeExpr* func_type, const T& func, std::initializer_list<int> arg_order,
+                         std::initializer_list<int> ret_order = {}, bool impure = false) {
   SymDef* def = predefine_builtin_func(name, func_type);
   def->value = new SymValAsmFunc{func_type, func, arg_order, ret_order, impure};
 }
 
-void define_builtin_func_x(std::string name, TypeExpr* func_type, const AsmOp& macro,
-                           std::initializer_list<int> arg_order, std::initializer_list<int> ret_order = {},
-                           bool impure = false) {
+void define_builtin_func(std::string name, TypeExpr* func_type, const AsmOp& macro,
+                         std::initializer_list<int> arg_order, std::initializer_list<int> ret_order = {},
+                         bool impure = false) {
   SymDef* def = predefine_builtin_func(name, func_type);
   def->value = new SymValAsmFunc{func_type, make_simple_compile(macro), arg_order, ret_order, impure};
 }
@@ -429,9 +429,13 @@ AsmOp compile_mul(std::vector<VarDescr>& res, std::vector<VarDescr>& args) {
       }
       return exec_arg_op("MULCONST", y.int_const, 1);
     }
-    if (k >= 0) {
+    if (k > 0) {
       y.unused();
       return exec_arg_op("LSHIFT#", k, 1);
+    }
+    if (k == 0) {
+      y.unused();
+      return AsmOp::Nop();
     }
   }
   if (x.is_int_const()) {
@@ -451,9 +455,13 @@ AsmOp compile_mul(std::vector<VarDescr>& res, std::vector<VarDescr>& args) {
       }
       return exec_arg_op("MULCONST", x.int_const, 1);
     }
-    if (k >= 0) {
+    if (k > 0) {
       x.unused();
       return exec_arg_op("LSHIFT#", k, 1);
+    }
+    if (k == 0) {
+      x.unused();
+      return AsmOp::Nop();
     }
   }
   return exec_op("MUL", 2);
@@ -668,6 +676,7 @@ AsmOp compile_cmp_int(std::vector<VarDescr>& res, std::vector<VarDescr>& args, i
     return mode == 7 ? push_const(r.int_const) : AsmOp::BoolConst(v != 0);
   }
   int v = compute_compare(x, y, mode);
+  // std::cerr << "compute_compare(" << x << ", " << y << ", " << mode << ") = " << v << std::endl;
   assert(v);
   if (!(v & (v - 1))) {
     r.set_const(v - (v >> 2) - 2);
@@ -685,6 +694,7 @@ AsmOp compile_cmp_int(std::vector<VarDescr>& res, std::vector<VarDescr>& args, i
   if (v & 4) {
     r.val &= VarDescr::ConstOne;
   }
+  // std::cerr << "result: " << r << std::endl;
   static const char* cmp_int_names[] = {"", "GTINT", "EQINT", "GTINT", "LESSINT", "NEQINT", "LESSINT"};
   static const char* cmp_names[] = {"", "GREATER", "EQUAL", "GEQ", "LESS", "NEQ", "LEQ", "CMP"};
   static int cmp_int_delta[] = {0, 0, 0, -1, 0, 0, 1};
@@ -846,10 +856,7 @@ void define_builtins() {
   auto X = TypeExpr::new_var();
   auto Y = TypeExpr::new_var();
   auto Z = TypeExpr::new_var();
-  auto T = TypeExpr::new_var();
   auto XY = TypeExpr::new_tensor({X, Y});
-  auto XYZ = TypeExpr::new_tensor({X, Y, Z});
-  auto XYZT = TypeExpr::new_tensor({X, Y, Z, T});
   auto arith_bin_op = TypeExpr::new_map(Int2, Int);
   auto arith_un_op = TypeExpr::new_map(Int, Int);
   auto impure_bin_op = TypeExpr::new_map(Int2, Unit);
@@ -867,16 +874,20 @@ void define_builtins() {
   define_builtin_func("-_", arith_un_op, compile_negate);
   define_builtin_func("_*_", arith_bin_op, compile_mul);
   define_builtin_func("_/_", arith_bin_op, std::bind(compile_div, _1, _2, -1));
-  define_builtin_func("_/~_", arith_bin_op, std::bind(compile_div, _1, _2, 0));
-  define_builtin_func("_/^_", arith_bin_op, std::bind(compile_div, _1, _2, 1));
+  define_builtin_func("_~/_", arith_bin_op, std::bind(compile_div, _1, _2, 0));
+  define_builtin_func("_^/_", arith_bin_op, std::bind(compile_div, _1, _2, 1));
   define_builtin_func("_%_", arith_bin_op, std::bind(compile_mod, _1, _2, -1));
-  define_builtin_func("_%~_", arith_bin_op, std::bind(compile_mod, _1, _2, 0));
-  define_builtin_func("_%^_", arith_bin_op, std::bind(compile_mod, _1, _2, -1));
+  define_builtin_func("_~%_", arith_bin_op, std::bind(compile_mod, _1, _2, 0));
+  define_builtin_func("_^%_", arith_bin_op, std::bind(compile_mod, _1, _2, 1));
   define_builtin_func("_/%_", TypeExpr::new_map(Int2, Int2), AsmOp::Custom("DIVMOD", 2, 2));
+  define_builtin_func("divmod", TypeExpr::new_map(Int2, Int2), AsmOp::Custom("DIVMOD", 2, 2));
+  define_builtin_func("~divmod", TypeExpr::new_map(Int2, Int2), AsmOp::Custom("DIVMOD", 2, 2));
+  define_builtin_func("moddiv", TypeExpr::new_map(Int2, Int2), AsmOp::Custom("DIVMOD", 2, 2), {}, {1, 0});
+  define_builtin_func("~moddiv", TypeExpr::new_map(Int2, Int2), AsmOp::Custom("DIVMOD", 2, 2), {}, {1, 0});
   define_builtin_func("_<<_", arith_bin_op, compile_lshift);
   define_builtin_func("_>>_", arith_bin_op, std::bind(compile_rshift, _1, _2, -1));
-  define_builtin_func("_>>~_", arith_bin_op, std::bind(compile_rshift, _1, _2, 0));
-  define_builtin_func("_>>^_", arith_bin_op, std::bind(compile_rshift, _1, _2, 1));
+  define_builtin_func("_~>>_", arith_bin_op, std::bind(compile_rshift, _1, _2, 0));
+  define_builtin_func("_^>>_", arith_bin_op, std::bind(compile_rshift, _1, _2, 1));
   define_builtin_func("_&_", arith_bin_op, AsmOp::Custom("AND", 2));
   define_builtin_func("_|_", arith_bin_op, AsmOp::Custom("OR", 2));
   define_builtin_func("_^_", arith_bin_op, AsmOp::Custom("XOR", 2));
@@ -885,15 +896,15 @@ void define_builtins() {
   define_builtin_func("^_-=_", arith_bin_op, compile_sub);
   define_builtin_func("^_*=_", arith_bin_op, compile_mul);
   define_builtin_func("^_/=_", arith_bin_op, std::bind(compile_div, _1, _2, -1));
-  define_builtin_func("^_/~=_", arith_bin_op, std::bind(compile_div, _1, _2, 0));
-  define_builtin_func("^_/^=_", arith_bin_op, std::bind(compile_div, _1, _2, 1));
+  define_builtin_func("^_~/=_", arith_bin_op, std::bind(compile_div, _1, _2, 0));
+  define_builtin_func("^_^/=_", arith_bin_op, std::bind(compile_div, _1, _2, 1));
   define_builtin_func("^_%=_", arith_bin_op, std::bind(compile_mod, _1, _2, -1));
-  define_builtin_func("^_%~=_", arith_bin_op, std::bind(compile_mod, _1, _2, 0));
-  define_builtin_func("^_%^=_", arith_bin_op, std::bind(compile_mod, _1, _2, 1));
+  define_builtin_func("^_~%=_", arith_bin_op, std::bind(compile_mod, _1, _2, 0));
+  define_builtin_func("^_^%=_", arith_bin_op, std::bind(compile_mod, _1, _2, 1));
   define_builtin_func("^_<<=_", arith_bin_op, compile_lshift);
   define_builtin_func("^_>>=_", arith_bin_op, std::bind(compile_rshift, _1, _2, -1));
-  define_builtin_func("^_>>~=_", arith_bin_op, std::bind(compile_rshift, _1, _2, 0));
-  define_builtin_func("^_>>^=_", arith_bin_op, std::bind(compile_rshift, _1, _2, 1));
+  define_builtin_func("^_~>>=_", arith_bin_op, std::bind(compile_rshift, _1, _2, 0));
+  define_builtin_func("^_^>>=_", arith_bin_op, std::bind(compile_rshift, _1, _2, 1));
   define_builtin_func("^_&=_", arith_bin_op, AsmOp::Custom("AND", 2));
   define_builtin_func("^_|=_", arith_bin_op, AsmOp::Custom("OR", 2));
   define_builtin_func("^_^=_", arith_bin_op, AsmOp::Custom("XOR", 2));
@@ -911,43 +922,24 @@ void define_builtins() {
   define_builtin_func("false", Int, /* AsmOp::Const("FALSE") */ std::bind(compile_bool_const, _1, _2, false));
   // define_builtin_func("null", Null, AsmOp::Const("PUSHNULL"));
   define_builtin_func("nil", Tuple, AsmOp::Const("PUSHNULL"));
+  define_builtin_func("Nil", Tuple, AsmOp::Const("NIL"));
   define_builtin_func("null?", TypeExpr::new_forall({X}, TypeExpr::new_map(X, Int)), compile_is_null);
-  define_builtin_func("cons", TypeExpr::new_forall({X}, TypeExpr::new_map(TypeExpr::new_tensor(X, Tuple), Tuple)),
-                      AsmOp::Custom("CONS", 2, 1));
-  define_builtin_func("uncons", TypeExpr::new_forall({X}, TypeExpr::new_map(Tuple, TypeExpr::new_tensor(X, Tuple))),
-                      AsmOp::Custom("UNCONS", 1, 2));
-  define_builtin_func_x("list_next",
-                        TypeExpr::new_forall({X}, TypeExpr::new_map(Tuple, TypeExpr::new_tensor(Tuple, X))),
-                        AsmOp::Custom("UNCONS", 1, 2), {}, {1, 0});
-  define_builtin_func("car", TypeExpr::new_forall({X}, TypeExpr::new_map(Tuple, X)), AsmOp::Custom("CAR", 1, 1));
-  define_builtin_func("cdr", TypeExpr::new_map(Tuple, Tuple), AsmOp::Custom("CDR", 1, 1));
-  define_builtin_func("pair", TypeExpr::new_forall({X, Y}, TypeExpr::new_map(XY, Tuple)), AsmOp::Custom("PAIR", 2, 1));
-  define_builtin_func("unpair", TypeExpr::new_forall({X, Y}, TypeExpr::new_map(Tuple, XY)),
-                      AsmOp::Custom("UNPAIR", 1, 2));
-  define_builtin_func("triple", TypeExpr::new_forall({X, Y, Z}, TypeExpr::new_map(XYZ, Tuple)),
-                      AsmOp::Custom("TRIPLE", 3, 1));
-  define_builtin_func("untriple", TypeExpr::new_forall({X, Y, Z}, TypeExpr::new_map(Tuple, XYZ)),
-                      AsmOp::Custom("UNTRIPLE", 1, 3));
-  define_builtin_func("tuple4", TypeExpr::new_forall({X, Y, Z, T}, TypeExpr::new_map(XYZT, Tuple)),
-                      AsmOp::Custom("4 TUPLE", 4, 1));
-  define_builtin_func("untuple4", TypeExpr::new_forall({X, Y, Z, T}, TypeExpr::new_map(Tuple, XYZT)),
-                      AsmOp::Custom("4 UNTUPLE", 1, 4));
   define_builtin_func("throw", impure_un_op, compile_throw, true);
   define_builtin_func("throw_if", impure_bin_op, std::bind(compile_cond_throw, _1, _2, true), true);
   define_builtin_func("throw_unless", impure_bin_op, std::bind(compile_cond_throw, _1, _2, false), true);
-  define_builtin_func_x("load_int", fetch_int_op, std::bind(compile_fetch_int, _1, _2, true, true), {}, {1, 0});
-  define_builtin_func_x("load_uint", fetch_int_op, std::bind(compile_fetch_int, _1, _2, true, false), {}, {1, 0});
+  define_builtin_func("load_int", fetch_int_op, std::bind(compile_fetch_int, _1, _2, true, true), {}, {1, 0});
+  define_builtin_func("load_uint", fetch_int_op, std::bind(compile_fetch_int, _1, _2, true, false), {}, {1, 0});
   define_builtin_func("preload_int", prefetch_int_op, std::bind(compile_fetch_int, _1, _2, false, true));
   define_builtin_func("preload_uint", prefetch_int_op, std::bind(compile_fetch_int, _1, _2, false, false));
-  define_builtin_func_x("store_int", store_int_op, std::bind(compile_store_int, _1, _2, true), {1, 0, 2});
-  define_builtin_func_x("store_uint", store_int_op, std::bind(compile_store_int, _1, _2, false), {1, 0, 2});
-  define_builtin_func_x("~store_int", store_int_method, std::bind(compile_store_int, _1, _2, true), {1, 0, 2});
-  define_builtin_func_x("~store_uint", store_int_method, std::bind(compile_store_int, _1, _2, false), {1, 0, 2});
-  define_builtin_func_x("load_bits", fetch_slice_op, std::bind(compile_fetch_slice, _1, _2, true), {}, {1, 0});
+  define_builtin_func("store_int", store_int_op, std::bind(compile_store_int, _1, _2, true), {1, 0, 2});
+  define_builtin_func("store_uint", store_int_op, std::bind(compile_store_int, _1, _2, false), {1, 0, 2});
+  define_builtin_func("~store_int", store_int_method, std::bind(compile_store_int, _1, _2, true), {1, 0, 2});
+  define_builtin_func("~store_uint", store_int_method, std::bind(compile_store_int, _1, _2, false), {1, 0, 2});
+  define_builtin_func("load_bits", fetch_slice_op, std::bind(compile_fetch_slice, _1, _2, true), {}, {1, 0});
   define_builtin_func("preload_bits", prefetch_slice_op, std::bind(compile_fetch_slice, _1, _2, false));
   define_builtin_func("int_at", TypeExpr::new_map(TupleInt, Int), compile_tuple_at);
   define_builtin_func("cell_at", TypeExpr::new_map(TupleInt, Cell), compile_tuple_at);
-  define_builtin_func("slice_at", TypeExpr::new_map(TupleInt, Cell), compile_tuple_at);
+  define_builtin_func("slice_at", TypeExpr::new_map(TupleInt, Slice), compile_tuple_at);
   define_builtin_func("tuple_at", TypeExpr::new_map(TupleInt, Tuple), compile_tuple_at);
   define_builtin_func("at", TypeExpr::new_forall({X}, TypeExpr::new_map(TupleInt, X)), compile_tuple_at);
   define_builtin_func("touch", TypeExpr::new_forall({X}, TypeExpr::new_map(X, X)), AsmOp::Nop());
@@ -960,13 +952,12 @@ void define_builtins() {
                       AsmOp::Custom("s0 DUMP", 1, 1));
   define_builtin_func("run_method0", TypeExpr::new_map(Int, Unit),
                       [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 0, false); }, true);
-  define_builtin_func_x("run_method1",
-                        TypeExpr::new_forall({X}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X}), Unit)),
-                        [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 1, false); }, {1, 0}, {}, true);
-  define_builtin_func_x(
+  define_builtin_func("run_method1", TypeExpr::new_forall({X}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X}), Unit)),
+                      [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 1, false); }, {1, 0}, {}, true);
+  define_builtin_func(
       "run_method2", TypeExpr::new_forall({X, Y}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X, Y}), Unit)),
       [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 2, false); }, {1, 2, 0}, {}, true);
-  define_builtin_func_x(
+  define_builtin_func(
       "run_method3", TypeExpr::new_forall({X, Y, Z}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X, Y, Z}), Unit)),
       [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 3, false); }, {1, 2, 3, 0}, {}, true);
 }

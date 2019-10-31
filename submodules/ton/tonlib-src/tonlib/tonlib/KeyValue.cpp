@@ -2,6 +2,7 @@
 
 #include "td/utils/filesystem.h"
 #include "td/utils/port/path.h"
+#include "td/utils/PathView.h"
 
 #include <map>
 #include <utility>
@@ -51,7 +52,7 @@ class KeyValueDir : public KeyValue {
           return td::WalkPath::Action::SkipDir;
         }
       } else if (type == td::WalkPath::Type::NotDir) {
-        f(path);
+        f(td::PathView::relative(path, directory_));
       }
 
       return td::WalkPath::Action::Continue;

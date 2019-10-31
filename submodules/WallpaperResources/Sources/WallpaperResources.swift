@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import MediaResources
 import ImageBlur
 import TinyThumbnail

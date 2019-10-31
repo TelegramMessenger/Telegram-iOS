@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
@@ -13,6 +14,7 @@ import AccountContext
 import ShareController
 import SearchUI
 import HexColor
+import PresentationDataUtils
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
@@ -230,7 +232,7 @@ final class ThemeGridController: ViewController {
                         if let strongSelf = self {
                             strongSelf.scrollToTop?()
                             
-                            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                             strongSelf.present(controller, in: .window(.root))
                             
                             let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in

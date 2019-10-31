@@ -1011,6 +1011,10 @@ TGNavigationController *findNavigationController()
 
 @implementation TGNavigationPanGestureRecognizer
 
+- (UIRectEdge)edges {
+    return UIRectEdgeLeft;
+}
+
 - (void)_setEdgeRegionSize:(CGFloat)edgeRegionSize
 {
     __edgeRegionSize = edgeRegionSize;

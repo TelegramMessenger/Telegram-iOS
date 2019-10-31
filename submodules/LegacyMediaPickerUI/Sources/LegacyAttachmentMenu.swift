@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import DeviceAccess
 import AccountContext
@@ -20,7 +21,7 @@ public struct LegacyAttachmentMenuMediaEditing: OptionSet {
     public static let imageOrVideo = LegacyAttachmentMenuMediaEditing(rawValue: 1 << 0)
 }
 
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -56,8 +57,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     if canSendImageOrVideo {
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false, selectionLimit: selectionLimit)!
         carouselItemView = carouselItem
-        carouselItem.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
-        carouselItem.recipientName = peer.displayTitle
+        carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
+        carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         carouselItem.cameraPressed = { [weak controller] cameraView in
             if let controller = controller {
                 DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
@@ -98,7 +99,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         carouselItem.editingContext.setInitialCaption(initialCaption, entities: [])
         itemViews.append(carouselItem)
         
-        let galleryItem = TGMenuSheetButtonItemView(title: editing ? strings.Conversation_EditingMessageMediaChange : strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+        let galleryItem = TGMenuSheetButtonItemView(title: editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openGallery()
         })!
@@ -116,7 +117,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if !editing {
-        let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
             controller?.dismiss(animated: true)
             openFileGallery()
         })!
@@ -125,7 +126,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if canEditCurrent {
-        let fileItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
             controller?.dismiss(animated: true)
             openFileGallery()
         })!
@@ -133,21 +134,21 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if editMediaOptions == nil {
-        let locationItem = TGMenuSheetButtonItemView(title: strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+        let locationItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openMap()
         })!
         itemViews.append(locationItem)
         
         if (peer is TelegramGroup || peer is TelegramChannel) && canSendMessagesToPeer(peer) && canSendPolls {
-            let pollItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+            let pollItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openPoll()
             })!
             itemViews.append(pollItem)
         }
     
-        let contactItem = TGMenuSheetButtonItemView(title: strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+        let contactItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openContacts()
         })!
@@ -174,7 +175,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     
     carouselItemView?.remainingHeight = TGMenuSheetButtonItemViewHeight * CGFloat(itemViews.count - 1)
     
-    let cancelItem = TGMenuSheetButtonItemView(title: strings.Common_Cancel, type: TGMenuSheetButtonTypeCancel, action: { [weak controller] in
+    let cancelItem = TGMenuSheetButtonItemView(title: presentationData.strings.Common_Cancel, type: TGMenuSheetButtonTypeCancel, action: { [weak controller] in
         controller?.dismiss(animated: true)
     })!
     itemViews.append(cancelItem)
@@ -189,8 +190,8 @@ public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuShee
     return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
-    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
+public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, presentationData: PresentationData, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: initialLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     legacyController.controllerLoaded = { [weak legacyController] in
         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -209,7 +210,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEdit
         }
         hasSilentPosting = true
     }
-    let recipientName = peer.displayTitle
+    let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     
     legacyController.enableSizeClassSignal = true
 

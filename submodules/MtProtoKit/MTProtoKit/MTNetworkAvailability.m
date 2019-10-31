@@ -144,7 +144,7 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
                                             ((flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0));
          BOOL canConnectWithoutUserInteraction = (canConnectionAutomatically &&
                                                   (flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0);
-         BOOL isNetworkReachable = (isReachable && (!needsConnection || canConnectWithoutUserInteraction));
+         BOOL isNetworkReachable = isReachable;
          
          bool isWWAN = false;
 #if TARGET_OS_IPHONE

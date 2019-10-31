@@ -1,0 +1,144 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/restricted-wallet-code.fc` 
+PROGRAM{
+  DECLPROC recv_internal
+  DECLPROC restricted?
+  DECLPROC check_destination
+  DECLPROC recv_external
+  85143 DECLMETHOD seqno
+  104128 DECLMETHOD balance
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  restricted? PROC:<{
+    // 
+    -13 PUSHINT	//  _1=-13
+    CONFIGOPTPARAM	//  p
+    DUP	//  p p
+    ISNULL	//  p _3
+    IF:<{	//  p
+      DROP	// 
+      TRUE	//  _4
+    }>ELSE<{	//  p
+      CTOS	//  _6
+      32 PLDU	//  _8
+      NOW	//  _8 _9
+      GREATER	//  _4
+    }>
+  }>
+  check_destination PROCREF:<{
+    //  msg dest
+    SWAP	//  dest msg
+    CTOS	//  dest cs
+    4 LDU	//  dest flags cs
+    SWAP
+    8 PUSHINT	//  dest cs flags _8=8
+    AND	//  dest cs _9
+    IFJMP:<{	//  dest cs
+      2DROP	// 
+      TRUE	//  _10
+    }>	//  dest cs
+    LDMSGADDR	//  dest _27 _26
+    NIP	//  dest cs
+    LDMSGADDR	//  dest _29 _28
+    DROP	//  dest d_addr
+    REWRITESTDADDR	//  dest dest_wc dest_addr
+    SWAP	//  dest dest_addr dest_wc
+    -1 EQINT	//  dest dest_addr _21
+    s0 s2 XCHG	//  _21 dest_addr dest
+    EQUAL	//  _21 _22
+    AND	//  _23
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _8 cs
+    32 LDU	//  signature in_msg msg_seqno valid_until cs
+    NOW	//  signature in_msg msg_seqno valid_until cs _15
+    s1 s2 XCHG	//  signature in_msg msg_seqno cs valid_until _15
+    LEQ	//  signature in_msg msg_seqno cs _16
+    35 THROWIF
+    c4 PUSH	//  signature in_msg msg_seqno cs _19
+    CTOS	//  signature in_msg msg_seqno cs ds
+    32 LDU	//  signature in_msg msg_seqno cs _23 ds
+    256 LDU	//  signature in_msg msg_seqno cs stored_seqno public_key ds
+    ENDS
+    s3 s1 PUSH2	//  signature in_msg msg_seqno cs stored_seqno public_key msg_seqno stored_seqno
+    EQUAL	//  signature in_msg msg_seqno cs stored_seqno public_key _31
+    33 THROWIFNOT
+    s0 s3 XCHG	//  signature in_msg public_key cs stored_seqno msg_seqno
+    IFNOTJMP:<{	//  signature in_msg public_key cs stored_seqno
+      NIP
+      s2 POP
+      s2 POP	//  public_key stored_seqno
+      ACCEPT
+      INC	//  public_key _35
+      NEWC	//  public_key _35 _36
+      32 STU	//  public_key _38
+      256 STU	//  _40
+      ENDC	//  _41
+      c4 POP
+    }>	//  signature in_msg public_key cs stored_seqno
+    s0 s3 XCHG	//  signature stored_seqno public_key cs in_msg
+    HASHSU	//  signature stored_seqno public_key cs _44
+    s0 s4 s2 XC2PU	//  cs stored_seqno public_key _44 signature public_key
+    CHKSIGNU	//  cs stored_seqno public_key _45
+    34 THROWIFNOT
+    ACCEPT
+    restricted? INLINECALLDICT	//  cs stored_seqno public_key restrict
+    1 PUSHINT	//  cs stored_seqno public_key restrict _51=1
+    CONFIGOPTPARAM	//  cs stored_seqno public_key restrict _52
+    CTOS	//  cs stored_seqno public_key restrict _53
+    256 PLDU	//  cs stored_seqno public_key restrict elector
+    s0 s4 XCHG	//  elector stored_seqno public_key restrict cs
+    WHILE:<{
+      DUP	//  elector stored_seqno public_key restrict cs cs
+      SREFS	//  elector stored_seqno public_key restrict cs _58
+    }>DO<{	//  elector stored_seqno public_key restrict cs
+      8 LDU	//  elector stored_seqno public_key restrict mode cs
+      LDREF	//  elector stored_seqno public_key restrict mode msg cs
+      TRUE	//  elector stored_seqno public_key restrict mode msg cs ok
+      s4 PUSH	//  elector stored_seqno public_key restrict mode msg cs ok restrict
+      IF:<{	//  elector stored_seqno public_key restrict mode msg cs ok
+        DROP	//  elector stored_seqno public_key restrict mode msg cs
+        s1 s6 PUSH2	//  elector stored_seqno public_key restrict mode msg cs msg elector
+        check_destination INLINECALLDICT	//  elector stored_seqno public_key restrict mode msg cs ok
+      }>	//  elector stored_seqno public_key restrict mode msg cs ok
+      IF:<{	//  elector stored_seqno public_key restrict mode msg cs
+        s0 s2 XCHG	//  elector stored_seqno public_key restrict cs msg mode
+        SENDRAWMSG
+      }>ELSE<{
+        s2 POP
+        DROP	//  elector stored_seqno public_key restrict cs
+      }>
+    }>	//  elector stored_seqno public_key restrict cs
+    NIP
+    s3 POP	//  cs stored_seqno public_key
+    s0 s2 XCHG	//  public_key stored_seqno cs
+    ENDS
+    INC	//  public_key _72
+    NEWC	//  public_key _72 _73
+    32 STU	//  public_key _75
+    256 STU	//  _77
+    ENDC	//  _78
+    c4 POP
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+  balance PROC:<{
+    // 
+    restricted? INLINECALLDICT	//  _0
+    IF:<{	// 
+      0 PUSHINT	//  _1=0
+    }>ELSE<{	// 
+      BALANCE	//  _3
+      FIRST	//  _1
+    }>
+  }>
+}END>c

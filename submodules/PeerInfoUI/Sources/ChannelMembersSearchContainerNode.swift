@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -732,7 +733,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                                     if peer.id == participant.peer.id {
                                                         label = themeAndStrings.1.Channel_Management_LabelAdministrator
                                                     } else {
-                                                        label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                        label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
                                                     }
                                                 }
                                             }
@@ -759,7 +760,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch participant.participant {
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                                label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle).0
+                                                label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
                                             }
                                         default:
                                             break
@@ -1012,7 +1013,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                                 if peer.id == participant.peer.id {
                                                     label = themeAndStrings.1.Channel_Management_LabelAdministrator
                                                 } else {
-                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
                                                 }
                                             }
                                         }
@@ -1039,7 +1040,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch participant.participant {
                                     case let .member(_, _, _, banInfo, _):
                                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                            label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle).0
+                                            label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle(strings: themeAndStrings.1, displayOrder: themeAndStrings.3)).0
                                         }
                                     default:
                                         break
@@ -1150,6 +1151,9 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             }
         })
         
+        self.emptyQueryListNode.beganInteractiveDragging = { [weak self] in
+            self?.dismissInput?()
+        }
         self.listNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
         }

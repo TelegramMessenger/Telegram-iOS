@@ -17,6 +17,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "ExtClientLazy.h"
+#include "TonlibError.h"
 namespace tonlib {
 
 class ExtClientLazyImp : public ton::adnl::AdnlExtClient {
@@ -28,12 +29,18 @@ class ExtClientLazyImp : public ton::adnl::AdnlExtClient {
 
   void check_ready(td::Promise<td::Unit> promise) override {
     before_query();
+    if (client_.empty()) {
+      return promise.set_error(TonlibError::Cancelled());
+    }
     send_closure(client_, &ton::adnl::AdnlExtClient::check_ready, std::move(promise));
   }
 
   void send_query(std::string name, td::BufferSlice data, td::Timestamp timeout,
                   td::Promise<td::BufferSlice> promise) override {
     before_query();
+    if (client_.empty()) {
+      return promise.set_error(TonlibError::Cancelled());
+    }
     send_closure(client_, &ton::adnl::AdnlExtClient::send_query, std::move(name), std::move(data), timeout,
                  std::move(promise));
   }

@@ -4,14 +4,11 @@ import SwiftSignalKit
 
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0
-    case raw = 1
     
     var category: ChatListTotalUnreadStateCategory {
         switch self {
             case .filtered:
                 return .filtered
-            case .raw:
-                return .raw
         }
     }
 }
@@ -41,7 +38,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var displayNotificationsFromAllAccounts: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .raw, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.regularChatsAndPrivateGroups], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.regularChatsAndPrivateGroups], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
     }
     
     public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool) {
@@ -59,7 +56,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
-        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("tds", orElse: 1)) ?? .raw
+        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("cds", orElse: 0)) ?? .filtered
         self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: decoder.decodeInt32ForKey("totalUnreadCountDisplayCategory", orElse: 1)) ?? .messages
         if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags") {
             self.totalUnreadCountIncludeTags = PeerSummaryCounterTags(rawValue: value)
@@ -74,7 +71,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         encoder.encodeInt32(self.playSounds ? 1 : 0, forKey: "s")
         encoder.encodeInt32(self.vibrate ? 1 : 0, forKey: "v")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
-        encoder.encodeInt32(self.totalUnreadCountDisplayStyle.rawValue, forKey: "tds")
+        encoder.encodeInt32(self.totalUnreadCountDisplayStyle.rawValue, forKey: "cds")
         encoder.encodeInt32(self.totalUnreadCountDisplayCategory.rawValue, forKey: "totalUnreadCountDisplayCategory")
         encoder.encodeInt32(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags")
         encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")

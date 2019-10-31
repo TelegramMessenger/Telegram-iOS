@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -294,6 +295,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: disposableAndLoadMoreControl.1)
                 }
             }
+        }
+        
+        self.listNode.beganInteractiveDragging = { [weak self] in
+            self?.view.endEditing(true)
         }
     }
     

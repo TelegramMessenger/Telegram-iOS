@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 private final class WatchSettingsControllerArguments {
@@ -73,7 +75,8 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: WatchSettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! WatchSettingsControllerArguments
         switch self {
             case let .replyPresetsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -129,7 +132,7 @@ public func watchSettingsController(context: AccountContext) -> ViewController {
     
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.watchPresetSettings]))
     |> deliverOnMainQueue
-    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<WatchSettingsControllerEntry>, WatchSettingsControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AppleWatch_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))

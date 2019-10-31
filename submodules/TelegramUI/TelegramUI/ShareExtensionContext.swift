@@ -1,6 +1,7 @@
 import UIKit
 import Display
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -11,6 +12,9 @@ import LegacyUI
 import PeerInfoUI
 import ShareItems
 import SettingsUI
+import OpenSSLEncryptionProvider
+import AppLock
+import Intents
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -111,7 +115,7 @@ public class ShareRootControllerImpl {
         inForeground.set(false)
     }
     
-    public func viewDidLayoutSubviews(view: UIView) {
+    public func viewDidLayoutSubviews(view: UIView, traitCollection: UITraitCollection) {
         if self.mainWindow == nil {
             let mainWindow = Window1(hostView: childWindowHostView(parent: view), statusBarHost: nil)
             mainWindow.hostView.eventView.backgroundColor = UIColor.clear
@@ -165,13 +169,26 @@ public class ShareRootControllerImpl {
                 let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
-                let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+                let systemUserInterfaceStyle: WindowUserInterfaceStyle
+                if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+                } else {
+                    systemUserInterfaceStyle = .light
+                }
+                let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle).start(next: { value in
                     initialPresentationDataAndSettings = value
                     semaphore.signal()
                 })
                 semaphore.wait()
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData)), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let presentationDataPromise = Promise<PresentationData>()
+                
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
+                    return nil
+                })
+                
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
             }
@@ -261,6 +278,16 @@ public class ShareRootControllerImpl {
                         |> then(.single(.done))
                     }
                     
+                    var immediatePeerId: PeerId?
+                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
+                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                            if let userId = Int32(string) {
+                                immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            }
+                        }
+                    }
+                    
                     let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
                         if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                             let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
@@ -290,7 +317,7 @@ public class ShareRootControllerImpl {
                         } else {
                             return .single(.done)
                         }
-                    }), externalShare: false, switchableAccounts: otherAccounts)
+                    }), externalShare: false, switchableAccounts: otherAccounts, immediatePeerId: immediatePeerId)
                     shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                     shareController.dismissed = { _ in
                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -309,7 +336,7 @@ public class ShareRootControllerImpl {
                         strongSelf.currentShareController = shareController
                         strongSelf.mainWindow?.present(shareController, on: .root)
                     }
-                    
+                                        
                     context.account.resetStateManagement()
                 }
                 

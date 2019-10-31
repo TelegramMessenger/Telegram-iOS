@@ -34,7 +34,11 @@ public final class PasscodeEntryController: ViewController {
         return self.displayNode as! PasscodeEntryControllerNode
     }
     
-    private let context: AccountContext
+    private let applicationBindings: TelegramApplicationBindings
+    private let accountManager: AccountManager
+    private let appLockContext: AppLockContext
+    private let presentationDataSignal: Signal<PresentationData, NoError>
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
@@ -52,9 +56,12 @@ public final class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
-    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
-        self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+        self.applicationBindings = applicationBindings
+        self.accountManager = accountManager
+        self.appLockContext = appLockContext
+        self.presentationData = presentationData
+        self.presentationDataSignal = presentationDataSignal
         self.challengeData = challengeData
         self.biometrics = biometrics
         self.arguments = arguments
@@ -64,14 +71,14 @@ public final class PasscodeEntryController: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = .White
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (presentationDataSignal
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
         
-        self.inBackgroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+        self.inBackgroundDisposable = (applicationBindings.applicationInForeground
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -96,7 +103,7 @@ public final class PasscodeEntryController: ViewController {
     override public func loadDisplayNode() {
         let passcodeType: PasscodeEntryFieldType
         switch self.challengeData {
-            case let .numericalPassword(value, _, _):
+            case let .numericalPassword(value):
                 passcodeType = value.count == 6 ? .digits6 : .digits4
             default:
                 passcodeType = .alphanumeric
@@ -104,7 +111,7 @@ public final class PasscodeEntryController: ViewController {
         let biometricsType: LocalAuthBiometricAuthentication?
         if case let .enabled(data) = self.biometrics {
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                if data == LocalAuth.evaluatedPolicyDomainState || (data == nil && !self.context.sharedContext.applicationBindings.isMainApp) {
+                if data == LocalAuth.evaluatedPolicyDomainState || (data == nil && !self.applicationBindings.isMainApp) {
                     biometricsType = LocalAuth.biometricAuthentication
                 } else {
                     biometricsType = nil
@@ -115,12 +122,11 @@ public final class PasscodeEntryController: ViewController {
         } else {
             biometricsType = nil
         }
-        self.displayNode = PasscodeEntryControllerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, statusBar: self.statusBar)
+        self.displayNode = PasscodeEntryControllerNode(accountManager: self.accountManager, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, statusBar: self.statusBar)
         self.displayNodeDidLoad()
         
-        let _ = (self.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts? in
-            return transaction.getAccessChallengeData().attempts
-        }) |> deliverOnMainQueue).start(next: { [weak self] attempts in
+        let _ = (self.appLockContext.invalidAttempts
+        |> deliverOnMainQueue).start(next: { [weak self] attempts in
             guard let strongSelf = self else {
                 return
             }
@@ -136,9 +142,9 @@ public final class PasscodeEntryController: ViewController {
             switch strongSelf.challengeData {
                 case .none:
                     succeed = true
-                case let .numericalPassword(code, _, _):
+                case let .numericalPassword(code):
                     succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code, _, _):
+                case let .plaintextPassword(code):
                     succeed = passcode == code
             }
             
@@ -146,22 +152,11 @@ public final class PasscodeEntryController: ViewController {
                 if let completed = strongSelf.completed {
                     completed()
                 } else {
-                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                        var data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                        switch data {
-                            case .none:
-                                break
-                            case let .numericalPassword(value, timeout, _):
-                                data = .numericalPassword(value: value, timeout: timeout, attempts: nil)
-                            case let .plaintextPassword(value, timeout, _):
-                                data = .plaintextPassword(value: value, timeout: timeout, attempts: nil)
-                        }
-                        transaction.setAccessChallengeData(data)
-                    }).start()
+                    strongSelf.appLockContext.unlock()
                 }
                 
-                let isMainApp = strongSelf.context.sharedContext.applicationBindings.isMainApp
-                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
+                let isMainApp = strongSelf.applicationBindings.isMainApp
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
                     if isMainApp {
                         return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
                     } else {
@@ -169,36 +164,7 @@ public final class PasscodeEntryController: ViewController {
                     }
                 }).start()
             } else {
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> AccessChallengeAttempts in
-                    var data = transaction.getAccessChallengeData()
-                    let updatedAttempts: AccessChallengeAttempts
-                    if let attempts = data.attempts {
-                        var count = attempts.count + 1
-                        if count > 6 {
-                            count = 1
-                        }
-                        updatedAttempts = AccessChallengeAttempts(count: count, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
-                    } else {
-                        updatedAttempts = AccessChallengeAttempts(count: 1, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
-                    }
-                    switch data {
-                        case .none:
-                            break
-                        case let .numericalPassword(value, timeout, _):
-                            data = .numericalPassword(value: value, timeout: timeout, attempts: updatedAttempts)
-                        case let .plaintextPassword(value, timeout, _):
-                            data = .plaintextPassword(value: value, timeout: timeout, attempts: updatedAttempts)
-                    }
-                    transaction.setAccessChallengeData(data)
-                    
-                    return updatedAttempts
-                })
-                |> deliverOnMainQueue).start(next: { [weak self] attempts in
-                    if let strongSelf = self {
-                        strongSelf.controllerNode.updateInvalidAttempts(attempts, animated: true)
-                    }
-                })
-                
+                strongSelf.appLockContext.failedUnlockAttempt()
                 strongSelf.controllerNode.animateError()
             }
         }
@@ -225,13 +191,17 @@ public final class PasscodeEntryController: ViewController {
         }
     }
     
+    public func ensureInputFocused() {
+        self.controllerNode.activateInput()
+    }
+    
     public func requestBiometrics(force: Bool = false) {
         guard case let .enabled(data) = self.biometrics, let _ = LocalAuth.biometricAuthentication else {
             return
         }
         
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if data == nil && self.context.sharedContext.applicationBindings.isMainApp {
+            if data == nil && self.applicationBindings.isMainApp {
                 return
             }
         }
@@ -258,8 +228,8 @@ public final class PasscodeEntryController: ViewController {
             
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 if case let .enabled(storedDomainState) = strongSelf.biometrics, evaluatedPolicyDomainState != nil {
-                    if !strongSelf.context.sharedContext.applicationBindings.isMainApp && storedDomainState == nil {
-                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { settings in
+                    if !strongSelf.applicationBindings.isMainApp && storedDomainState == nil {
+                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
                             return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
                         }).start()
                     } else if storedDomainState != evaluatedPolicyDomainState {
@@ -278,14 +248,8 @@ public final class PasscodeEntryController: ViewController {
                     }
                     strongSelf.hasOngoingBiometricsRequest = false
                 } else {
-                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                        let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                        transaction.setAccessChallengeData(data)
-                    }).start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.hasOngoingBiometricsRequest = false
-                        }
-                    })
+                    strongSelf.appLockContext.unlock()
+                    strongSelf.hasOngoingBiometricsRequest = false
                 }
             } else {
                 strongSelf.hasOngoingBiometricsRequest = false

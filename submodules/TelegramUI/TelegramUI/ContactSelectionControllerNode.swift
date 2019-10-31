@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -122,7 +123,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
             self?.requestOpenPeerFromSearch?(peer)
-        }), cancel: { [weak self] in
+        }, contextAction: nil), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }

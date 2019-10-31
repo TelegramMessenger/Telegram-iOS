@@ -12,7 +12,33 @@ public enum QrCodeIcon {
     case custom(UIImage?)
 }
 
-public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M") -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+private func floorToContextPixels(_ value: CGFloat, scale: CGFloat? = UIScreenScale) -> CGFloat {
+    var scale = scale ?? UIScreenScale
+    return floor(value * scale) / scale
+}
+
+private func roundToContextPixels(_ value: CGFloat, scale: CGFloat? = UIScreenScale) -> CGFloat {
+    var scale = scale ?? UIScreenScale
+    return round(value * scale) / scale
+}
+
+public func qrCodeCutout(size: Int, dimensions: CGSize, scale: CGFloat?) -> (Int, CGRect, CGFloat) {
+    var cutoutSize = Int(round(CGFloat(size) * 0.297))
+    if size == 39 {
+        cutoutSize = 11
+    } else if cutoutSize % 2 == 0 {
+        cutoutSize += 1
+    }
+    cutoutSize = min(23, cutoutSize)
+    
+    let quadSize = floorToContextPixels(dimensions.width / CGFloat(size), scale: scale)
+    let cutoutSide = quadSize * CGFloat(cutoutSize - 2)
+    let cutoutRect = CGRect(x: floorToContextPixels((dimensions.width - cutoutSide) / 2.0, scale: scale), y: floorToContextPixels((dimensions.height - cutoutSide) / 2.0, scale: scale), width: cutoutSide, height: cutoutSide)
+    
+    return (cutoutSize, cutoutRect, quadSize)
+}
+
+public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M") -> Signal<(Int, (TransformImageArguments) -> DrawingContext?), NoError> {
     return Signal<(Data, Int, Int), NoError> { subscriber in
         if let data = string.data(using: .isoLatin1, allowLossyConversion: false), let filter = CIFilter(name: "CIQRCodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
@@ -43,31 +69,22 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
         return EmptyDisposable
     }
     |> map { data, size, bytesPerRow in
-        return { arguments in
+        return (size, { arguments in
             let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
 
+            let drawingRect = arguments.drawingRect
+            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                
+            let (cutoutSize, clipRect, side) = qrCodeCutout(size: size, dimensions: fittedSize, scale: arguments.scale)
+            let padding: CGFloat = roundToContextPixels((arguments.drawingSize.width - CGFloat(side * CGFloat(size))) / 2.0, scale: arguments.scale)
+            
             let cutout: (Int, Int)?
             if case .none = icon {
                 cutout = nil
             } else {
-                switch size {
-                    case 39:
-                        cutout = (14, 24)
-                    case 43:
-                        cutout = (15, 27)
-                    case 47:
-                        cutout = (17, 29)
-                    case 51:
-                        cutout = (19, 31)
-                    case 55:
-                        cutout = (21, 33)
-                    case 59:
-                        cutout = (22, 36)
-                    case 63:
-                        cutout = (23, 39)
-                    default:
-                        cutout = (16, 26)
-                }
+                let start = (size - cutoutSize) / 2
+                cutout = (start, start + cutoutSize - 1)
             }
             func valueAt(x: Int, y: Int) -> Bool {
                 if x >= 0 && x < size && y >= 0 && y < size {
@@ -86,9 +103,6 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                     return false
                 }
             }
-            
-            let side = floorToScreenPixels(arguments.drawingSize.width / CGFloat(size))
-            let padding: CGFloat = floor((arguments.drawingSize.width - CGFloat(side * CGFloat(size))) / 2.0)
             
             let squareSize = CGSize(width: side, height: side)
             let tmpContext = DrawingContext(size: CGSize(width: squareSize.width * 4.0, height: squareSize.height), scale: arguments.scale ?? 0.0, clear: true)
@@ -214,7 +228,7 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                 c.setStrokeColor(color.cgColor)
                 c.setFillColor(color.cgColor)
                 
-                let markerSide = floorToScreenPixels(CGFloat(markerSize - 1) * squareSize.width * 1.05)
+                let markerSide = floorToContextPixels(CGFloat(markerSize - 1) * squareSize.width * 1.05, scale: arguments.scale)
                 
                 func drawMarker(x: CGFloat, y: CGFloat) {
                     var path = UIBezierPath(roundedRect: CGRect(x: x + squareSize.width / 2.0, y: y + squareSize.width / 2.0, width: markerSide, height: markerSide), cornerRadius: markerSide / 3.5)
@@ -233,17 +247,10 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                 
                 c.translateBy(x: -padding, y: -padding)
                 
-                let drawingRect = arguments.drawingRect
-                let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
-                let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-                            
-                let codeScale: CGFloat = 43.0 / 39.0
-                let clipSide = 56.0 * fittedRect.width / 267.0 * codeScale
-                let clipRect = CGRect(x: fittedRect.midX - clipSide / 2.0, y: fittedRect.midY - clipSide / 2.0, width: clipSide, height: clipSide)
-    
+
                 switch icon {
                 case .proxy:
-                    let iconScale = fittedRect.width / 420.0 * codeScale
+                    let iconScale = clipRect.size.width * 0.01111
                     let iconSize = CGSize(width: 65.0 * iconScale, height: 79.0 * iconScale)
                     let point = CGPoint(x: fittedRect.midX - iconSize.width / 2.0, y: fittedRect.midY - iconSize.height / 2.0)
                     c.translateBy(x: point.x, y: point.y)
@@ -278,6 +285,6 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
             }
             
             return context
-        }
+        })
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -36,6 +37,8 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
         self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get())
         
         super.init(presentation: presentation, theme: theme, initialLayout: initialLayout)
+        
+        self.lockOrientation = true
     }
     
     required public init(coder aDecoder: NSCoder) {

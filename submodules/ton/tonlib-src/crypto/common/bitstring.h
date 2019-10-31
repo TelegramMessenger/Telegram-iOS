@@ -224,6 +224,8 @@ class BitSliceGen {
   BitSliceGen(BitSliceGen&& bs, unsigned _offs, unsigned _len);
   BitSliceGen(Pt* _ptr, unsigned _len) : ref(), ptr(_ptr), offs(0), len(_len) {
   }
+  explicit BitSliceGen(Slice slice) : BitSliceGen(slice.data(), slice.size() * 8) {
+  }
   ~BitSliceGen() {
   }
   Pt* get_ptr() const {

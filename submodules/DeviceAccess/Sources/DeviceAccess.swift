@@ -3,6 +3,7 @@ import UIKit
 import AVFoundation
 import Display
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Photos
 import CoreLocation

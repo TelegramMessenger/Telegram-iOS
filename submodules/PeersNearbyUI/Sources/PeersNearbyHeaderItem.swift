@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import PeersNearbyIconNode
 
 class PeersNearbyHeaderItem: ListViewItem, ItemListItem {

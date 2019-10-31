@@ -1,0 +1,14 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "AppLockState",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/MonotonicTime:MonotonicTime",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

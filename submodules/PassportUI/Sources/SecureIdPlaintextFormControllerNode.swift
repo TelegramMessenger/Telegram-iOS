@@ -3,13 +3,16 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import CoreTelephony
 import TelegramPresentationData
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import CountrySelectionUI
+import PhoneNumberFormat
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""

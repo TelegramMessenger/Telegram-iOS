@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 
 struct SecureIdEncryptedFormData {
     let form: EncryptedSecureIdForm

@@ -2,12 +2,14 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 
 enum ChatNavigationButtonAction {
     case openChatInfo
     case clearHistory
+    case clearCache
     case cancelMessageSelection
     case search
     case dismiss
@@ -44,6 +46,9 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             
             if canClear {
                 return ChatNavigationButton(action: .clearHistory, buttonItem: UIBarButtonItem(title: title, style: .plain, target: target, action: selector))
+            } else {
+                title = strings.Conversation_ClearCache
+                return ChatNavigationButton(action: .clearCache, buttonItem: UIBarButtonItem(title: title, style: .plain, target: target, action: selector))
             }
         }
     }

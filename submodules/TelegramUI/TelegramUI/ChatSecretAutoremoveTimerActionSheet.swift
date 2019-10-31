@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import UIKit
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData

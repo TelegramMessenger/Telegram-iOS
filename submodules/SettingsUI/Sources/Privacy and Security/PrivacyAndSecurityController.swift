@@ -4,14 +4,17 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TelegramNotices
 import LocalAuth
 import AppBundle
+import PasswordSetupUI
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -246,7 +249,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: PrivacyAndSecurityControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! PrivacyAndSecurityControllerArguments
         switch self {
             case let .privacyHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -637,7 +641,14 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             case .set:
                 break
             case let .notSet(pendingEmail):
-                intro = pendingEmail == nil
+                if pendingEmail == nil {
+                    let controller = TwoFactorAuthSplashScreen(context: context, mode: .intro)
+                    pushControllerImpl?(controller, true)
+                } else {
+                    
+                }
+                //intro = pendingEmail == nil
+                return
             }
         }
         if intro {
@@ -729,7 +740,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     }))
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersContext.state, activeSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), twoStepAuthDataValue.get())
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData, twoStepAuthData -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeSessionsState, accessChallengeData, twoStepAuthData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})

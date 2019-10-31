@@ -62,6 +62,8 @@ public enum ViewControllerNavigationPresentation {
     case `default`
     case master
     case modal
+    case flatModal
+    case standaloneModal
     case modalInLargeLayout
 }
 
@@ -121,6 +123,9 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
+    var _presentedInModal: Bool = false
+    
+    public var presentedOverCoveringView: Bool = false
     
     public var presentationArguments: Any?
     
@@ -319,7 +324,14 @@ public enum ViewControllerNavigationPresentation {
     
     private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight ?? 44.0)
+        let defaultNavigationBarHeight: CGFloat
+        if self._presentedInModal {
+            defaultNavigationBarHeight = 56.0
+        } else {
+            defaultNavigationBarHeight = 44.0
+        }
+        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight(defaultHeight: defaultNavigationBarHeight) ?? defaultNavigationBarHeight)
+
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
             navigationBarOffset = 0.0
@@ -342,7 +354,7 @@ public enum ViewControllerNavigationPresentation {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")
@@ -439,8 +451,13 @@ public enum ViewControllerNavigationPresentation {
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.filterController(self, animated: flag)
+            var animated = flag
+            if case .standaloneModal = self.navigationPresentation {
+                animated = false
+            }
+            navigationController.filterController(self, animated: animated)
         } else {
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
             assertionFailure()
         }
     }
@@ -463,7 +480,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation {
+        if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
             controller.navigationPresentation = .modal
             self.push(controller)
         } else {

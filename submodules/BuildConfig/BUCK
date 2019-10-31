@@ -22,7 +22,6 @@ static_library(
         "Sources/*.h",
     ]),
     deps = [
-        "//submodules/MtProtoKit:MtProtoKit#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

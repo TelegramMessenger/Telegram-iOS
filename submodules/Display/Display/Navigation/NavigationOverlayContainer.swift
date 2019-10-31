@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 final class NavigationOverlayContainer: ASDisplayNode {
     let controller: ViewController
+    let blocksInteractionUntilReady: Bool
     
     private(set) var isReady: Bool = false
     var isReadyUpdated: (() -> Void)?
@@ -21,8 +22,9 @@ final class NavigationOverlayContainer: ASDisplayNode {
         }
     }
     
-    init(controller: ViewController, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
+    init(controller: ViewController, blocksInteractionUntilReady: Bool, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.controller = controller
+        self.blocksInteractionUntilReady = blocksInteractionUntilReady
         
         super.init()
         
@@ -82,5 +84,12 @@ final class NavigationOverlayContainer: ASDisplayNode {
         self.addSubnode(self.controller.displayNode)
         self.controller.setIgnoreAppearanceMethodInvocations(false)
         self.controller.viewDidAppear(false)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = self.controller.view.hitTest(point, with: event) {
+            return result
+        }
+        return nil
     }
 }

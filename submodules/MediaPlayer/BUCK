@@ -14,6 +14,7 @@ static_library(
     ], exclude = ["Sources/UniversalMediaPlayer.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Postbox:Postbox#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",

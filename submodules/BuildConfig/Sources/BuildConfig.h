@@ -20,7 +20,7 @@
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
 + (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
-- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken;
+- (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken signatureDict:(NSDictionary * _Nullable)signatureDict;
 
 + (void)getHardwareEncryptionAvailableWithBaseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable))completion;
 + (void)encryptApplicationSecret:(NSData * _Nonnull)secret baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable, NSData * _Nullable))completion;

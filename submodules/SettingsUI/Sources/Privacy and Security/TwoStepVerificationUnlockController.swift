@@ -4,13 +4,17 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import TextFormat
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PasswordSetupUI
+import Markdown
 
 private final class TwoStepVerificationUnlockSettingsControllerArguments {
     let updatePasswordText: (String) -> Void
@@ -119,7 +123,8 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: TwoStepVerificationUnlockSettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! TwoStepVerificationUnlockSettingsControllerArguments
         switch self {
             case let .passwordEntry(theme, strings, text, value):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
@@ -488,7 +493,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                             controller?.dismiss()
                                             
                                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
+                                            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
                                         }
                                         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }, error: { _ in
@@ -529,7 +534,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                             if let password = password {
                                                 dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
                                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_EnabledSuccess, false)), nil)
+                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_EnabledSuccess, false)), nil)
                                             } else {
                                                 dataPromise.set(.single(.access(configuration: nil))
                                                 |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
@@ -561,7 +566,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                 if let password = password {
                                     dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_PasswordChangeSuccess, false)), nil)
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_PasswordChangeSuccess, false)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
                                     |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
@@ -605,7 +610,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     return .complete()
                                 case let .manage(password, _, _, _):
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess, false)), nil)
                                     return updateTwoStepVerificationPassword(network: context.account.network, currentPassword: password, updatedPassword: .none)
                                         |> mapToSignal { _ -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
                                             return .complete()
@@ -653,7 +658,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                     let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
                                     dataPromise.set(.single(data))
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
                                         |> then(twoStepVerificationConfiguration(account: context.account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: $0, password: password)) }))
@@ -737,7 +742,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
                                 dataPromise.set(.single(data))
                             case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
+                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess, false)), nil)
                                 if let password = password {
                                     let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
                                     dataPromise.set(.single(data))
@@ -759,7 +764,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
     var didAppear = false
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
-    |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var emptyStateItem: ItemListControllerEmptyStateItem?
         let title: String

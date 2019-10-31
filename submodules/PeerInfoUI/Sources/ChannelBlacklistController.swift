@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 
 private final class ChannelBlacklistControllerArguments {
@@ -145,7 +148,8 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelBlacklistControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelBlacklistControllerArguments
         switch self {
             case let .add(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -160,7 +164,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 switch participant.participant {
                     case let .member(_, _, _, banInfo, _):
                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                            text = .text(strings.Channel_Management_RemovedBy(peer.displayTitle).0)
+                            text = .text(strings.Channel_Management_RemovedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0)
                         }
                     default:
                         break
@@ -316,7 +320,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                     |> deliverOnMainQueue).start(error: { [weak progress] _ in
@@ -356,8 +360,8 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             var items: [ActionSheetItem] = []
-            if !participant.peer.displayTitle.isEmpty {
-                items.append(ActionSheetTextItem(title: participant.peer.displayTitle))
+            if !participant.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).isEmpty {
+                items.append(ActionSheetTextItem(title: participant.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)))
             }
             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupRemoved_ViewUserInfo, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
@@ -434,7 +438,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), blacklistPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let participants = participants, !participants.isEmpty {

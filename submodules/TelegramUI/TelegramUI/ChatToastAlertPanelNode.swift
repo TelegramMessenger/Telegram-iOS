@@ -31,6 +31,7 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode = ImmediateTextNode()
         self.titleNode.attributedText = NSAttributedString(string: "", font: Font.regular(14.0), textColor: UIColor.black)
         self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.insets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
         
         super.init()
         

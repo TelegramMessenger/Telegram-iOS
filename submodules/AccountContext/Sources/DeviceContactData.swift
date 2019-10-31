@@ -2,6 +2,7 @@ import Foundation
 import Contacts
 import Postbox
 import TelegramCore
+import SyncCore
 
 public final class DeviceContactPhoneNumberData: Equatable {
     public let label: String

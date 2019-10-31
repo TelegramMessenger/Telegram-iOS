@@ -23,6 +23,9 @@ bool downcast_call(Object &obj, const T &func) {
     case config::ID:
       func(static_cast<config &>(obj));
       return true;
+    case data::ID:
+      func(static_cast<data &>(obj));
+      return true;
     case error::ID:
       func(static_cast<error &>(obj));
       return true;
@@ -35,8 +38,14 @@ bool downcast_call(Object &obj, const T &func) {
     case exportedPemKey::ID:
       func(static_cast<exportedPemKey &>(obj));
       return true;
+    case fees::ID:
+      func(static_cast<fees &>(obj));
+      return true;
     case inputKey::ID:
       func(static_cast<inputKey &>(obj));
+      return true;
+    case inputKeyFake::ID:
+      func(static_cast<inputKeyFake &>(obj));
       return true;
     case key::ID:
       func(static_cast<key &>(obj));
@@ -71,11 +80,20 @@ bool downcast_call(Object &obj, const T &func) {
     case sendGramsResult::ID:
       func(static_cast<sendGramsResult &>(obj));
       return true;
+    case syncStateDone::ID:
+      func(static_cast<syncStateDone &>(obj));
+      return true;
+    case syncStateInProgress::ID:
+      func(static_cast<syncStateInProgress &>(obj));
+      return true;
     case unpackedAccountAddress::ID:
       func(static_cast<unpackedAccountAddress &>(obj));
       return true;
     case updateSendLiteServerQuery::ID:
       func(static_cast<updateSendLiteServerQuery &>(obj));
+      return true;
+    case updateSyncState::ID:
+      func(static_cast<updateSyncState &>(obj));
       return true;
     case generic_accountStateRaw::ID:
       func(static_cast<generic_accountStateRaw &>(obj));
@@ -94,6 +112,15 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case internal_transactionId::ID:
       func(static_cast<internal_transactionId &>(obj));
+      return true;
+    case liteServer_info::ID:
+      func(static_cast<liteServer_info &>(obj));
+      return true;
+    case query_fees::ID:
+      func(static_cast<query_fees &>(obj));
+      return true;
+    case query_info::ID:
+      func(static_cast<query_info &>(obj));
       return true;
     case raw_accountState::ID:
       func(static_cast<raw_accountState &>(obj));
@@ -154,11 +181,17 @@ bool downcast_call(Function &obj, const T &func) {
     case createNewKey::ID:
       func(static_cast<createNewKey &>(obj));
       return true;
+    case decrypt::ID:
+      func(static_cast<decrypt &>(obj));
+      return true;
     case deleteAllKeys::ID:
       func(static_cast<deleteAllKeys &>(obj));
       return true;
     case deleteKey::ID:
       func(static_cast<deleteKey &>(obj));
+      return true;
+    case encrypt::ID:
+      func(static_cast<encrypt &>(obj));
       return true;
     case exportEncryptedKey::ID:
       func(static_cast<exportEncryptedKey &>(obj));
@@ -168,6 +201,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case exportPemKey::ID:
       func(static_cast<exportPemKey &>(obj));
+      return true;
+    case generic_createSendGramsQuery::ID:
+      func(static_cast<generic_createSendGramsQuery &>(obj));
       return true;
     case generic_getAccountState::ID:
       func(static_cast<generic_getAccountState &>(obj));
@@ -202,6 +238,12 @@ bool downcast_call(Function &obj, const T &func) {
     case init::ID:
       func(static_cast<init &>(obj));
       return true;
+    case kdf::ID:
+      func(static_cast<kdf &>(obj));
+      return true;
+    case liteServer_getInfo::ID:
+      func(static_cast<liteServer_getInfo &>(obj));
+      return true;
     case onLiteServerQueryError::ID:
       func(static_cast<onLiteServerQueryError &>(obj));
       return true;
@@ -213,6 +255,24 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case packAccountAddress::ID:
       func(static_cast<packAccountAddress &>(obj));
+      return true;
+    case query_estimateFees::ID:
+      func(static_cast<query_estimateFees &>(obj));
+      return true;
+    case query_forget::ID:
+      func(static_cast<query_forget &>(obj));
+      return true;
+    case query_getInfo::ID:
+      func(static_cast<query_getInfo &>(obj));
+      return true;
+    case query_send::ID:
+      func(static_cast<query_send &>(obj));
+      return true;
+    case raw_createAndSendMessage::ID:
+      func(static_cast<raw_createAndSendMessage &>(obj));
+      return true;
+    case raw_createQuery::ID:
+      func(static_cast<raw_createQuery &>(obj));
       return true;
     case raw_getAccountAddress::ID:
       func(static_cast<raw_getAccountAddress &>(obj));
@@ -237,6 +297,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case setLogVerbosityLevel::ID:
       func(static_cast<setLogVerbosityLevel &>(obj));
+      return true;
+    case sync::ID:
+      func(static_cast<sync &>(obj));
       return true;
     case testGiver_getAccountAddress::ID:
       func(static_cast<testGiver_getAccountAddress &>(obj));
@@ -286,6 +349,26 @@ bool downcast_call(Function &obj, const T &func) {
  * \returns whether function object call has happened. Should always return true for correct parameters.
  */
 template <class T>
+bool downcast_call(InputKey &obj, const T &func) {
+  switch (obj.get_id()) {
+    case inputKey::ID:
+      func(static_cast<inputKey &>(obj));
+      return true;
+    case inputKeyFake::ID:
+      func(static_cast<inputKeyFake &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
 bool downcast_call(KeyStoreType &obj, const T &func) {
   switch (obj.get_id()) {
     case keyStoreTypeDirectory::ID:
@@ -316,6 +399,46 @@ bool downcast_call(LogStream &obj, const T &func) {
       return true;
     case logStreamEmpty::ID:
       func(static_cast<logStreamEmpty &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(SyncState &obj, const T &func) {
+  switch (obj.get_id()) {
+    case syncStateDone::ID:
+      func(static_cast<syncStateDone &>(obj));
+      return true;
+    case syncStateInProgress::ID:
+      func(static_cast<syncStateInProgress &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(Update &obj, const T &func) {
+  switch (obj.get_id()) {
+    case updateSendLiteServerQuery::ID:
+      func(static_cast<updateSendLiteServerQuery &>(obj));
+      return true;
+    case updateSyncState::ID:
+      func(static_cast<updateSyncState &>(obj));
       return true;
     default:
       return false;

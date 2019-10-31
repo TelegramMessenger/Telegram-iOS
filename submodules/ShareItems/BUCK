@@ -16,6 +16,7 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/MtProtoKit:MtProtoKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/LegacyComponents:LegacyComponents",
@@ -23,6 +24,7 @@ static_library(
         "//submodules/Pdf:Pdf",
         "//submodules/AccountContext:AccountContext",
         "//submodules/MimeTypes:MimeTypes",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

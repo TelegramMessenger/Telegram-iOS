@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 #if BUCK
 import MtProtoKit
 #else
@@ -13,6 +14,7 @@ import MessageUI
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import WalletUI
@@ -148,7 +150,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: DebugControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! DebugControllerArguments
         switch self {
         case let .sendLogs(theme):
             return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
@@ -453,7 +456,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
                 let _ = (context.account.postbox.transaction { transaction -> Void in
                     transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
@@ -474,13 +477,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
                 let _ = (context.account.postbox.optimizeStorage()
                     |> deliverOnMainQueue).start(completed: {
                         controller.dismiss()
                         
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .success)
                         arguments.presentController(controller, nil)
                     })
             })
@@ -597,7 +600,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
     }
     
     let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), preferencesSignal)
-    |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let loggingSettings: LoggingSettings
         if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
             loggingSettings = value

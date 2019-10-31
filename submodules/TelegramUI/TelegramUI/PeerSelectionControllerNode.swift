@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -270,7 +271,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             break
                     }
                 }
-            }), cancel: { [weak self] in
+            }, contextAction: nil), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
                 }

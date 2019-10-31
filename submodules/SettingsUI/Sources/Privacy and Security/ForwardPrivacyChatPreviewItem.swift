@@ -4,10 +4,12 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
@@ -75,6 +77,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
     private let backgroundNode: ASImageNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let containerNode: ASDisplayNode
     
@@ -98,6 +101,8 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
         
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -230,11 +235,18 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                    }
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
                     switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
-                            strongSelf.topStripeNode.isHidden = false
+                            hasTopCorners = true
+                            strongSelf.topStripeNode.isHidden = hasCorners
                     }
                     let bottomStripeInset: CGFloat
                     let bottomStripeOffset: CGFloat
@@ -245,11 +257,16 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
+                            hasBottomCorners = true
+                            strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
-                    
                     
                     strongSelf.textNode.attributedText = NSAttributedString(string: item.tooltipText, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
                     
@@ -278,19 +295,14 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                         arrowOnBottom = false
                     }
                     
-                    let horizontalOrigin: CGFloat = floor(min(max(8.0, sourceRect.midX - contentSize.width / 2.0), layout.size.width - contentSize.width - 8.0))
+                    let horizontalOrigin: CGFloat = floor(min(max(params.leftInset + 8.0, sourceRect.midX - contentSize.width / 2.0), layout.size.width - contentSize.width - 8.0))
                     
                     strongSelf.tooltipContainerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: contentSize)
-                    //transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: contentSize))
                     strongSelf.tooltipContainerNode.relativeArrowPosition = (sourceRect.midX - horizontalOrigin, arrowOnBottom)
                     
                     strongSelf.tooltipContainerNode.updateLayout(transition: .immediate)
                     
-                    let textFrame = CGRect(origin: CGPoint(x: 6.0, y: 17.0), size: textSize)
-//                    if transition.isAnimated, textFrame.size != self.textNode.frame.size {
-//                        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
-//                    }
-                    
+                    let textFrame = CGRect(origin: CGPoint(x: 6.0, y: 17.0), size: textSize)                    
                     strongSelf.textNode.frame = textFrame
                 }
             })

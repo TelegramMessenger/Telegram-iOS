@@ -133,6 +133,5 @@ UIImage * _Nullable applyBlurWithRadius(UIImage *image, CGFloat blurRadius, UICo
 }
 
 UIImage * _Nullable applyScreenshotEffectToImage(UIImage * _Nonnull image) {
-    UIColor *tintColor = [UIColor colorWithWhite:1.0f alpha:0.3f];
-    return applyBlurWithRadius(image, 10.0f, tintColor, 1.8f, nil);
+    return applyBlurWithRadius(image, 10.0f, nil, 1.8f, nil);
 }

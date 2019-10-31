@@ -4,12 +4,16 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import ItemListPeerItem
+import DeleteChatPeerActionSheetItem
+import UndoUI
 
 private final class StorageUsageControllerArguments {
     let account: Account
@@ -152,7 +156,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: StorageUsageControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! StorageUsageControllerArguments
         switch self {
             case let .keepMedia(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -282,7 +287,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         return cacheSettings
     })
     
-    var presentControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, PresentationContextType, Any?) -> Void)?
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
@@ -336,7 +341,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
             ActionSheetItemGroup(items: timeoutItems),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
-        presentControllerImpl?(controller)
+        presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openClearAll: {
         let _ = (statsPromise.get()
         |> take(1)
@@ -369,10 +374,12 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                 
                 var itemIndex = 0
                 
+                var selectedSize: Int64 = 0
                 let updateTotalSize: () -> Void = { [weak controller] in
                     controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                         let title: String
                         var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                        selectedSize = filteredSize
                         
                         if otherSize.0 {
                             filteredSize += otherSize.1
@@ -433,6 +440,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     }))
                     itemIndex += 1
                 }
+                selectedSize = totalSize
                 
                 if !items.isEmpty {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
@@ -500,10 +508,10 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             var cancelImpl: (() -> Void)?
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
-                                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     cancelImpl?()
                                 }))
-                                presentControllerImpl?(controller)
+                                presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 return ActionDisposable { [weak controller] in
                                     Queue.mainQueue().async() {
                                         controller?.dismiss()
@@ -527,6 +535,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             clearDisposable.set((signal
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
+                                let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                             }))
                         }
                         
@@ -537,7 +547,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                         ActionSheetItemGroup(items: items),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                    presentControllerImpl?(controller)
+                    presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }
         })
@@ -545,8 +555,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
                 var additionalPeerId: PeerId?
-                if var categories = stats.media[peerId] {
-                    if let channel = stats.peers[peerId] as? TelegramChannel, case .group = channel.info {
+                if var categories = stats.media[peerId], let peer = stats.peers[peerId] {
+                    if let channel = peer as? TelegramChannel, case .group = channel.info {
                         for (_, peer) in stats.peers {
                             if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference, migrationReference.peerId == peerId {
                                 if let additionalCategories = stats.media[group.id] {
@@ -569,12 +579,14 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     
                     var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
                     
-                    var itemIndex = 0
+                    var itemIndex = 1
                     
+                    var selectedSize: Int64 = 0
                     let updateTotalSize: () -> Void = { [weak controller] in
                         controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                             let title: String
                             let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                            selectedSize = filteredSize
                             
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
@@ -603,6 +615,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     }
                     var items: [ActionSheetItem] = []
                     
+                    items.append(DeleteChatPeerActionSheetItem(context: context, peer: peer, chatPeer: peer, action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
+                    
                     let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
 
                     var totalSize: Int64 = 0
@@ -624,6 +638,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             }
                         }
                     }
+                    selectedSize = totalSize
                     
                     if !items.isEmpty {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
@@ -675,10 +690,10 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
-                                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                                         cancelImpl?()
                                     }))
-                                    presentControllerImpl?(controller)
+                                    presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     return ActionDisposable { [weak controller] in
                                         Queue.mainQueue().async() {
                                             controller?.dismiss()
@@ -702,6 +717,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 clearDisposable.set((signal
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
+                                    let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
                                 }))
                             }
                             
@@ -712,7 +729,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                        presentControllerImpl?(controller)
+                        presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 }
             }
@@ -722,7 +739,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
     var dismissImpl: (() -> Void)?
     
     let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
+        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }) : nil
@@ -736,8 +753,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         }
     
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    presentControllerImpl = { [weak controller] c, contextType, a in
+        controller?.present(c, in: contextType, with: a)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

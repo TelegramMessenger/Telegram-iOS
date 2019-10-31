@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-private let textFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+private let textFont = Font.with(size: 13.0, design: .round, traits: [.bold])
 
 private class ChatMessageLiveLocationTimerNodeParams: NSObject {
     let backgroundColor: UIColor

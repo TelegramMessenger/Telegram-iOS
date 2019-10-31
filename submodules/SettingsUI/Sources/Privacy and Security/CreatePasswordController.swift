@@ -4,10 +4,13 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 
 private enum CreatePasswordField {
     case password
@@ -115,7 +118,8 @@ private enum CreatePasswordEntry: ItemListNodeEntry, Equatable {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: CreatePasswordControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! CreatePasswordControllerArguments
         switch self {
             case let .passwordHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -372,7 +376,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreatePasswordEntry>, CreatePasswordEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

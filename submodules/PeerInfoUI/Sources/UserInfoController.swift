@@ -5,9 +5,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TextFormat
 import OverlayStatusController
@@ -15,12 +17,16 @@ import TelegramStringFormatting
 import AccountContext
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import ItemListAvatarAndNameInfoItem
 import PeerAvatarGalleryUI
 import NotificationMuteSettingsUI
 import NotificationSoundSelectionUI
+import Markdown
+import LocalizedPeerData
+import PhoneNumberFormat
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -387,7 +393,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: UserInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! UserInfoControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence, cachedData, state, displayCall):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
@@ -784,7 +791,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pu
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
             }
         }), completed: nil, cancelled: nil))
     })
@@ -1027,9 +1034,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 } else {
                     let text: String
                     if value {
-                        text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle).0
+                        text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                     } else {
-                        text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
+                        text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                     }
                     presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
                         updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: value).start())
@@ -1064,7 +1071,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                             presentControllerImpl?(controller, nil)
                             return ActionDisposable { [weak controller] in
                                 Queue.mainQueue().async() {
@@ -1174,6 +1181,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }, report: {
         presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
+        }, push: { c in
+            pushControllerImpl?(c)
         }, completion: { _ in }), nil)
     })
         
@@ -1195,7 +1204,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView.get(), deviceContacts, context.account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
-    |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view.0)
         
         var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
@@ -1250,7 +1259,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         }
                     }
                     
-                    if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+                    if let updateName = updateName, case let .personName(firstName, lastName, _) = updateName {
                         updatePeerNameDisposable.set((updateContactName(account: context.account, peerId: peerId, firstName: firstName, lastName: lastName)
                         |> deliverOnMainQueue).start(error: { _ in
                             updateState { state in
@@ -1347,7 +1356,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 let _ = (enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: contact), replyToMessageId: nil, localGroupingKey: nil)])
                     |> deliverOnMainQueue).start(next: { [weak controller] _ in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        controller?.present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), in: .window(.root))
+                        controller?.present(OverlayStatusController(theme: presentationData.theme, type: .success), in: .window(.root))
                     })
         })
     }
@@ -1383,7 +1392,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
                     presentControllerImpl?(controller, nil)
@@ -1572,8 +1581,6 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 let text: String = presentationData.strings.UserInfo_TapToCall
                 
                 let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true)
-                tooltipController.dismissed = {
-                }
                 controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, callButtonFrame)

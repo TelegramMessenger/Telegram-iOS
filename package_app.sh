@@ -3,13 +3,24 @@
 #set -x
 set -e
 
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+	echo "Usage: sh package_app.sh path/to/buck platform-flavors type"
+	exit 1
+fi
+
 PLATFORM_FLAVORS="$1"
 BUCK="$2"
+APP_TYPE="$3"
+shift
 shift
 shift
 
 BUILD_PATH="build"
-APP_NAME="Telegram"
+if [ "$APP_TYPE" == "wallet" ]; then
+	APP_NAME="TONWallet"
+else
+	APP_NAME="Telegram"
+fi
 
 IPA_PATH="$BUILD_PATH/$APP_NAME.ipa"
 DSYMS_FOLDER_NAME="DSYMs"
@@ -41,7 +52,11 @@ rm -rf "$TEMP_PATH"
 mkdir -p "$TEMP_PATH"
 mkdir -p "$TEMP_ENTITLEMENTS_PATH"
 
-cp "buck-out/gen/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
+if [ "$APP_TYPE" == "wallet" ]; then
+	cp "buck-out/gen/Wallet/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
+else
+	cp "buck-out/gen/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
+fi
 rm -rf "$IPA_PATH.original.unpacked"
 rm -f "$BUILD_PATH/${APP_NAME}_signed.ipa"
 mkdir -p "$IPA_PATH.original.unpacked"
@@ -51,17 +66,17 @@ unzip "$IPA_PATH.original" -d "$IPA_PATH.original.unpacked/" 1>/dev/null
 rm "$IPA_PATH.original"
 
 UNPACKED_PATH="$IPA_PATH.original.unpacked"
-APP_PATH="$UNPACKED_PATH/Payload/Telegram.app"
+if [ "$APP_TYPE" == "wallet" ]; then
+	APP_PATH="$UNPACKED_PATH/Payload/Wallet.app"
+else
+	APP_PATH="$UNPACKED_PATH/Payload/Telegram.app"
+fi
+
 FRAMEWORKS_DIR="$APP_PATH/Frameworks"
 
 rm -rf "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos/"*
 rm -rf "$IPA_PATH.original.unpacked/Symbols/"*
 rm -rf "$FRAMEWORKS_DIR/"*
-
-if [ -z "$1" ] || [ -z "$2" ]; then
-	echo "Usage: sh package_app.sh path/to/buck platform-flavors"
-	exit 1
-fi
 
 if [ -z "$PACKAGE_METHOD" ]; then
 	echo "PACKAGE_METHOD is not set"
@@ -111,14 +126,15 @@ if [ ! -d "$PROFILES_PATH" ]; then
 	exit 1
 fi
 
-#security delete-keychain "$KEYCHAIN_PATH" || true
 rm -f "$KEYCHAIN_PATH"
-#security create-keychain -p "password" "$KEYCHAIN_PATH"
-#security unlock-keychain -p "password" "$KEYCHAIN_PATH"
-#KEYCHAIN_FLAG="--keychain '$KEYCHAIN_PATH'"
 
-APP_ITEMS_WITH_PROVISIONING_PROFILE="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents WATCH_APP WATCH_EXTENSION"
-APP_ITEMS_WITH_ENTITLEMENTS="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents"
+if [ "$APP_TYPE" == "wallet" ]; then
+	APP_ITEMS_WITH_PROVISIONING_PROFILE="APP"
+	APP_ITEMS_WITH_ENTITLEMENTS="APP"
+else
+	APP_ITEMS_WITH_PROVISIONING_PROFILE="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents WATCH_APP WATCH_EXTENSION"
+	APP_ITEMS_WITH_ENTITLEMENTS="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents"
+fi
 
 COMMON_IDENTITY_HASH=""
 
@@ -187,7 +203,7 @@ for ITEM in $APP_ITEMS_WITH_PROVISIONING_PROFILE; do
 	        if [ "$ENABLE_GET_TASK_ALLOW" == "1" ]; then
 	        	KEY="com.apple.security.get-task-allow"
 	        	PLUTIL_KEY=$(echo "$KEY" | sed 's/\./\\\./g')
-	        	plutil -insert "$PLUTIL_KEY" -xml "<false/>" "$PROFILE_ENTITLEMENTS_PATH"
+	        	plutil -insert "$PLUTIL_KEY" -xml "<true/>" "$PROFILE_ENTITLEMENTS_PATH"
 	        fi
 
 	        ENTITLEMENTS_VAR=PACKAGE_ENTITLEMENTS_$ITEM
@@ -255,8 +271,14 @@ COPY_PLIST_KEYS=(\
 )
 APP_PLIST="$APP_PATH/Info.plist"
 
+if [ "$APP_TYPE" == "wallet" ]; then
+	APP_BINARY_TARGET="//Wallet:Wallet"
+else
+	APP_BINARY_TARGET="//:Telegram"
+fi
+
 echo "Repacking frameworks..."
-for DEPENDENCY in $(${BUCK} query "kind('apple_library', deps('//:Telegram#$PLATFORM_FLAVORS', 1))" "$@"); do
+for DEPENDENCY in $(${BUCK} query "kind('apple_library', deps('${APP_BINARY_TARGET}#$PLATFORM_FLAVORS', 1))" "$@"); do
 	DEPENDENCY_PATH=$(echo "$DEPENDENCY" | sed -e "s#^//##" | sed -e "s#:#/#")
 	DEPENDENCY_NAME=$(echo "$DEPENDENCY" | sed -e "s/#.*//" | sed -e "s/^.*\://")
 	DYLIB_PATH="buck-out/gen/$DEPENDENCY_PATH/lib$DEPENDENCY_NAME.dylib"
@@ -283,31 +305,57 @@ for DEPENDENCY in $(${BUCK} query "kind('apple_library', deps('//:Telegram#$PLAT
 	cp -r "$DSYM_PATH" "$DSYMS_DIR/"
 done
 
-APP_BINARY_DSYM_PATH="buck-out/gen/Telegram#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Telegram.app.dSYM"
+if [ "$APP_TYPE" == "wallet" ]; then
+	APP_BINARY_DSYM_PATH="buck-out/gen/Wallet/Wallet#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Wallet.app.dSYM"
+else
+	APP_BINARY_DSYM_PATH="buck-out/gen/Telegram#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/Telegram.app.dSYM"
+fi
 cp -r "$APP_BINARY_DSYM_PATH" "$DSYMS_DIR/"
 
-EXTENSIONS="Share Widget Intents NotificationContent NotificationService"
+if [ "$APP_TYPE" == "wallet" ]; then
+	EXTENSIONS=""
+else
+	EXTENSIONS="Share Widget Intents NotificationContent NotificationService"
+fi
+
 for EXTENSION in $EXTENSIONS; do
 	EXTENSION_DSYM_PATH="buck-out/gen/${EXTENSION}Extension#dwarf-and-dsym,$PLATFORM_FLAVORS,no-include-frameworks/${EXTENSION}Extension.appex.dSYM"
 	cp -r "$EXTENSION_DSYM_PATH" "$DSYMS_DIR/"
 done
 
-WATCH_EXTENSION_DSYM_PATH="buck-out/gen/WatchAppExtension#dwarf-and-dsym,no-include-frameworks,watchos-arm64_32,watchos-armv7k/WatchAppExtension.appex.dSYM"
-cp -r "$WATCH_EXTENSION_DSYM_PATH" "$DSYMS_DIR/"
+if [ "$APP_TYPE" != "wallet" ]; then
+	WATCH_EXTENSION_DSYM_PATH="buck-out/gen/WatchAppExtension#dwarf-and-dsym,no-include-frameworks,watchos-arm64_32,watchos-armv7k/WatchAppExtension.appex.dSYM"
+	cp -r "$WATCH_EXTENSION_DSYM_PATH" "$DSYMS_DIR/"
+fi
 
 TEMP_DYLIB_DIR="$TEMP_PATH/SwiftSupport"
 rm -rf "$TEMP_DYLIB_DIR"
 mkdir -p "$TEMP_DYLIB_DIR"
 mkdir -p "$TEMP_DYLIB_DIR/out"
 
+if [ "$APP_TYPE" == "wallet" ]; then
+	EXECUTABLE_NAME="Wallet"
+else
+	EXECUTABLE_NAME="Telegram"
+fi
+
+XCODE_PATH="$(xcode-select -p)"
+TOOLCHAIN_PATH="$XCODE_PATH/Toolchains/XcodeDefault.xctoolchain"
+
+if [ -f "$TOOLCHAIN_PATH/usr/lib/swift/iphoneos/libswiftCore.dylib" ]; then
+	SOURCE_LIBRARIES_PATH="$TOOLCHAIN_PATH/usr/lib/swift/iphoneos"
+else
+	SOURCE_LIBRARIES_PATH="$TOOLCHAIN_PATH/usr/lib/swift-5.0/iphoneos"
+fi
+
 echo "Copying swift support files..."
 xcrun swift-stdlib-tool \
 	--copy \
 	--strip-bitcode \
 	--platform iphoneos \
-	--toolchain "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain" \
-	--source-libraries "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos" \
-	--scan-executable "$APP_PATH/Telegram" \
+	--toolchain "$TOOLCHAIN_PATH" \
+	--source-libraries "$SOURCE_LIBRARIES_PATH" \
+	--scan-executable "$APP_PATH/$EXECUTABLE_NAME" \
 	--scan-folder "$APP_PATH/Frameworks" \
 	--scan-folder "$APP_PATH/PlugIns" \
 	--destination "$TEMP_DYLIB_DIR"
@@ -348,7 +396,12 @@ done
 
 echo "Signing..."
 
-PLUGINS="Share Widget Intents NotificationService NotificationContent"
+if [ "$APP_TYPE" == "wallet" ]; then
+	PLUGINS=""
+else
+	PLUGINS="Share Widget Intents NotificationService NotificationContent"
+fi
+
 for PLUGIN in $PLUGINS; do
 	PLUGIN_PATH="$APP_PATH/PlugIns/${PLUGIN}Extension.appex"
 	if [ ! -d "$PLUGIN_PATH" ]; then
@@ -377,52 +430,54 @@ for PLUGIN in $PLUGINS; do
 	/usr/bin/codesign ${VERBOSE} -f -s "$COMMON_IDENTITY_HASH" --entitlements "${!ENTITLEMENTS_PATH_VAR}" "$PLUGIN_PATH"
 done
 
-WATCH_APP_PATH="$APP_PATH/Watch/WatchApp.app"
-WATCH_EXTENSION_PATH="$WATCH_APP_PATH/PlugIns/WatchAppExtension.appex"
+if [ "$APP_TYPE" != "wallet" ]; then
+	WATCH_APP_PATH="$APP_PATH/Watch/WatchApp.app"
+	WATCH_EXTENSION_PATH="$WATCH_APP_PATH/PlugIns/WatchAppExtension.appex"
 
-WATCH_EXTENSION_PROFILE_PATH_VAR="PROFILE_PATH_WATCH_EXTENSION"
-if [ -z "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" ]; then
-	echo "$WATCH_EXTENSION_PROFILE_PATH_VAR is not defined"
-	exit 1
-fi
-if [ ! -f "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" ]; then
-	echo "${!WATCH_EXTENSION_PROFILE_PATH_VAR} does not exist"
-	exit 1
-fi
-WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR="ENTITLEMENTS_PATH_WATCH_EXTENSION"
-if [ -z "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" ]; then
-	echo "$WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR is not defined"
-	exit 1
-fi
-if [ ! -f "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" ]; then
-	echo "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR} does not exist"
-	exit 1
-fi
+	WATCH_EXTENSION_PROFILE_PATH_VAR="PROFILE_PATH_WATCH_EXTENSION"
+	if [ -z "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" ]; then
+		echo "$WATCH_EXTENSION_PROFILE_PATH_VAR is not defined"
+		exit 1
+	fi
+	if [ ! -f "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" ]; then
+		echo "${!WATCH_EXTENSION_PROFILE_PATH_VAR} does not exist"
+		exit 1
+	fi
+	WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR="ENTITLEMENTS_PATH_WATCH_EXTENSION"
+	if [ -z "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" ]; then
+		echo "$WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR is not defined"
+		exit 1
+	fi
+	if [ ! -f "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" ]; then
+		echo "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR} does not exist"
+		exit 1
+	fi
 
-cp "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" "$WATCH_EXTENSION_PATH/embedded.mobileprovision"
-/usr/bin/codesign ${VERBOSE} -f -s "$COMMON_IDENTITY_HASH" --entitlements "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" "$WATCH_EXTENSION_PATH" 2>/dev/null
+	cp "${!WATCH_EXTENSION_PROFILE_PATH_VAR}" "$WATCH_EXTENSION_PATH/embedded.mobileprovision"
+	/usr/bin/codesign ${VERBOSE} -f -s "$COMMON_IDENTITY_HASH" --entitlements "${!WATCH_EXTENSION_ENTITLEMENTS_PATH_VAR}" "$WATCH_EXTENSION_PATH" 2>/dev/null
 
-WATCH_APP_PROFILE_PATH_VAR="PROFILE_PATH_WATCH_APP"
-if [ -z "${!WATCH_APP_PROFILE_PATH_VAR}" ]; then
-	echo "$WATCH_APP_PROFILE_PATH_VAR is not defined"
-	exit 1
-fi
-if [ ! -f "${!WATCH_APP_PROFILE_PATH_VAR}" ]; then
-	echo "${!WATCH_APP_PROFILE_PATH_VAR} does not exist"
-	exit 1
-fi
-WATCH_APP_ENTITLEMENTS_PATH_VAR="ENTITLEMENTS_PATH_WATCH_APP"
-if [ -z "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" ]; then
-	echo "$WATCH_APP_ENTITLEMENTS_PATH_VAR is not defined"
-	exit 1
-fi
-if [ ! -f "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" ]; then
-	echo "${!WATCH_APP_ENTITLEMENTS_PATH_VAR} does not exist"
-	exit 1
-fi
+	WATCH_APP_PROFILE_PATH_VAR="PROFILE_PATH_WATCH_APP"
+	if [ -z "${!WATCH_APP_PROFILE_PATH_VAR}" ]; then
+		echo "$WATCH_APP_PROFILE_PATH_VAR is not defined"
+		exit 1
+	fi
+	if [ ! -f "${!WATCH_APP_PROFILE_PATH_VAR}" ]; then
+		echo "${!WATCH_APP_PROFILE_PATH_VAR} does not exist"
+		exit 1
+	fi
+	WATCH_APP_ENTITLEMENTS_PATH_VAR="ENTITLEMENTS_PATH_WATCH_APP"
+	if [ -z "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" ]; then
+		echo "$WATCH_APP_ENTITLEMENTS_PATH_VAR is not defined"
+		exit 1
+	fi
+	if [ ! -f "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" ]; then
+		echo "${!WATCH_APP_ENTITLEMENTS_PATH_VAR} does not exist"
+		exit 1
+	fi
 
-cp "${!WATCH_APP_PROFILE_PATH_VAR}" "$WATCH_APP_PATH/embedded.mobileprovision"
-/usr/bin/codesign ${VERBOSE} -f -s "$COMMON_IDENTITY_HASH" --entitlements "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" "$WATCH_APP_PATH" 2>/dev/null
+	cp "${!WATCH_APP_PROFILE_PATH_VAR}" "$WATCH_APP_PATH/embedded.mobileprovision"
+	/usr/bin/codesign ${VERBOSE} -f -s "$COMMON_IDENTITY_HASH" --entitlements "${!WATCH_APP_ENTITLEMENTS_PATH_VAR}" "$WATCH_APP_PATH" 2>/dev/null
+fi
 
 APP_PROFILE_PATH_VAR="PROFILE_PATH_APP"
 if [ -z "${!APP_PROFILE_PATH_VAR}" ]; then

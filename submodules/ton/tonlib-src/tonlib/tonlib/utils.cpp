@@ -20,20 +20,9 @@
 #include "td/utils/misc.h"
 #include "vm/cellslice.h"
 namespace tonlib {
-int VERBOSITY_NAME(tonlib_query) = VERBOSITY_NAME(INFO);
-int VERBOSITY_NAME(last_block) = VERBOSITY_NAME(INFO);
-int VERBOSITY_NAME(lite_server) = VERBOSITY_NAME(INFO);
+int VERBOSITY_NAME(tonlib_query) = VERBOSITY_NAME(DEBUG);
+int VERBOSITY_NAME(last_block) = VERBOSITY_NAME(DEBUG);
+int VERBOSITY_NAME(last_config) = VERBOSITY_NAME(DEBUG);
+int VERBOSITY_NAME(lite_server) = VERBOSITY_NAME(DEBUG);
 
-td::Result<td::Ref<vm::CellSlice>> binary_bitstring_to_cellslice(td::Slice literal) {
-  unsigned char buff[128];
-  if (!begins_with(literal, "b{") || !ends_with(literal, "}")) {
-    return td::Status::Error("Invalid binary bitstring constant");
-  }
-  int bits =
-      (int)td::bitstring::parse_bitstring_binary_literal(buff, sizeof(buff), literal.begin() + 2, literal.end() - 1);
-  if (bits < 0) {
-    return td::Status::Error("Invalid binary bitstring constant");
-  }
-  return td::Ref<vm::CellSlice>{true, vm::CellBuilder().store_bits(td::ConstBitPtr{buff}, bits).finalize()};
-}
 }  // namespace tonlib

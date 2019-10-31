@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import AsyncDisplayKit
 import UIKit
@@ -10,6 +11,7 @@ import TelegramPresentationData
 import ActivityIndicator
 import OverlayStatusController
 import AccountContext
+import PresentationDataUtils
 
 public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
@@ -43,7 +45,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
             }
             strongSelf.isDismissed = true
             if success {
-                strongSelf.present(OverlayStatusController(theme: theme, strings: strings, type: .shieldSuccess(strings.SocksProxySetup_ProxyEnabled, false)), in: .window(.root))
+                strongSelf.present(OverlayStatusController(theme: theme, type: .shieldSuccess(strings.SocksProxySetup_ProxyEnabled, false)), in: .window(.root))
             }
             strongSelf.dismissAnimated()
         }, present: { [weak self] c, a in

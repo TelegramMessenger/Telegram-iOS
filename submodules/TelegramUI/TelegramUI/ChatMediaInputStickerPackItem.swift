@@ -3,12 +3,14 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import StickerResources
-import AnimationUI
 import ItemListStickerPackItem
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -177,7 +179,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             self.animatedStickerNode = animatedStickerNode
                             animatedStickerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             self.addSubnode(animatedStickerNode)
-                            animatedStickerNode.setup(account: account, resource: .resource(resource), width: 80, height: 80, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                         if let animatedStickerNode = self.animatedStickerNode {

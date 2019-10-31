@@ -22,17 +22,17 @@ public struct AccessChallengeAttempts: PostboxCoding, Equatable {
 
 public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
     case none
-    case numericalPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
-    case plaintextPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
+    case numericalPassword(value: String)
+    case plaintextPassword(value: String)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""))
             case 2:
-                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""))
             default:
                 assertionFailure()
                 self = .none
@@ -43,32 +43,12 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "r")
-            case let .numericalPassword(text, timeout, attempts):
+            case let .numericalPassword(text):
                 encoder.encodeInt32(1, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
-                if let timeout = timeout {
-                    encoder.encodeInt32(timeout, forKey: "a")
-                } else {
-                    encoder.encodeNil(forKey: "a")
-                }
-                if let attempts = attempts {
-                    encoder.encodeObject(attempts, forKey: "att")
-                } else {
-                    encoder.encodeNil(forKey: "att")
-                }
-            case let .plaintextPassword(text, timeout, attempts):
+            case let .plaintextPassword(text):
                 encoder.encodeInt32(2, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
-                if let timeout = timeout {
-                    encoder.encodeInt32(timeout, forKey: "a")
-                } else {
-                    encoder.encodeNil(forKey: "a")
-                }
-                if let attempts = attempts {
-                    encoder.encodeObject(attempts, forKey: "att")
-                } else {
-                    encoder.encodeNil(forKey: "att")
-                }
         }
     }
     
@@ -77,39 +57,6 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
             return false
         } else {
             return true
-        }
-    }
-    
-    public var autolockDeadline: Int32? {
-        switch self {
-            case .none:
-                return nil
-            case let .numericalPassword(_, timeout, _):
-                return timeout
-            case let .plaintextPassword(_, timeout, _):
-                return timeout
-        }
-    }
-    
-    public var attempts: AccessChallengeAttempts? {
-        switch self {
-            case .none:
-                return nil
-            case let .numericalPassword(_, _, attempts):
-                return attempts
-            case let .plaintextPassword(_, _, attempts):
-                return attempts
-        }
-    }
-    
-    public func withUpdatedAutolockDeadline(_ autolockDeadline: Int32?) -> PostboxAccessChallengeData {
-        switch self {
-            case .none:
-                return self
-            case let .numericalPassword(value, _, attempts):
-                return .numericalPassword(value: value, timeout: autolockDeadline, attempts: attempts)
-            case let .plaintextPassword(value, _, attempts):
-                return .plaintextPassword(value: value, timeout: autolockDeadline, attempts: attempts)
         }
     }
 }

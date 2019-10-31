@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import MediaResources
 import PhotoResources
 import LegacyUI
@@ -193,7 +196,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: CreateGroupArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
@@ -311,6 +315,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var replaceControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
     var clearHighlightImpl: (() -> Void)?
     
@@ -580,11 +585,11 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
             clearHighlightImpl?()
         })
-        presentControllerImpl?(controller, nil)
+        pushImpl?(controller)
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()))
-    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let rightNavigationButton: ItemListNavigationButton
         if state.creating {
@@ -615,6 +620,9 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     controller.willDisappear = { _ in
         endEditingImpl?()

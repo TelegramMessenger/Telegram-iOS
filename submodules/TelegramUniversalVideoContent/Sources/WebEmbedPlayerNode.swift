@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import WebKit
 import TelegramCore
+import SyncCore
 import UniversalMediaPlayer
 
 protocol WebEmbedImplementation {

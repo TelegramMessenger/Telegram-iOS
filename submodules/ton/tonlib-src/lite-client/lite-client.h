@@ -122,8 +122,8 @@ class TestNode : public td::actor::Actor {
   bool get_all_shards(bool use_last = true, ton::BlockIdExt blkid = {});
   void got_all_shards(ton::BlockIdExt blk, td::BufferSlice proof, td::BufferSlice data);
   bool get_config_params(ton::BlockIdExt blkid, int mode = 0, std::string filename = "");
-  void got_config_params(ton::BlockIdExt blkid, td::BufferSlice state_proof, td::BufferSlice cfg_proof, int mode,
-                         std::string filename, std::vector<int> params);
+  void got_config_params(ton::BlockIdExt req_blkid, ton::BlockIdExt blkid, td::BufferSlice state_proof,
+                         td::BufferSlice cfg_proof, int mode, std::string filename, std::vector<int> params);
   bool get_block(ton::BlockIdExt blk, bool dump = false);
   void got_block(ton::BlockIdExt blkid, td::BufferSlice data, bool dump);
   bool get_state(ton::BlockIdExt blk, bool dump = false);

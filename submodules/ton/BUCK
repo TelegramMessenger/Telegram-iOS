@@ -22,6 +22,7 @@ ton_lib_names = [
     "crc32c",
     "keys",
     "lite-client-common",
+    "smc-envelope",
     "tdactor",
     "tddb",
     "tdnet",

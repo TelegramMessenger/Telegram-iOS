@@ -9,6 +9,7 @@ static_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import Photos
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -386,7 +387,7 @@ public class WallpaperGalleryController: ViewController {
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         var chatWallpaper = current.chatWallpaper
-                                        if automaticThemeShouldSwitchNow(settings: current.automaticThemeSwitchSetting, currentTheme: current.theme) {
+                                        if automaticThemeShouldSwitchNow(settings: current.automaticThemeSwitchSetting, systemUserInterfaceStyle: .light) {
                                             themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
                                         } else {
                                             themeSpecificChatWallpapers[current.theme.index] = wallpaper

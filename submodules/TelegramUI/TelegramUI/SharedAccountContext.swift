@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -19,6 +20,8 @@ import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
 import AlertUI
+import PresentationDataUtils
+import WalletCore
 
 private enum CallStatusText: Equatable {
     case none
@@ -57,6 +60,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let applicationBindings: TelegramApplicationBindings
     public let basePath: String
     public let accountManager: AccountManager
+    public let appLockContext: AppLockContext
     
     private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
     
@@ -141,7 +145,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let displayUpgradeProgress: (Float?) -> Void
     
-    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    private var widgetDataContext: WidgetDataContext?
+    
+    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -153,6 +159,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat
         self.displayUpgradeProgress = displayUpgradeProgress
+        self.appLockContext = appLockContext
         
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
@@ -178,7 +185,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
         |> then(
-            updatedPresentationData(accountManager: self.accountManager, applicationInForeground: self.applicationBindings.applicationInForeground)
+            updatedPresentationData(accountManager: self.accountManager, applicationInForeground: self.applicationBindings.applicationInForeground, systemUserInterfaceStyle: mainWindow?.systemUserInterfaceStyle ?? .single(.light))
         ))
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
@@ -607,6 +614,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods, encryptionParameters: encryptionParameters).start()
         
         self.updateNotificationTokensRegistration()
+        
+        self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
+        |> map { primary, _, _ in
+            return primary
+        }, presentationData: self.presentationData)
     }
     
     deinit {
@@ -652,7 +664,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            return (settings.displayNotificationsFromAllAccounts, settings.totalUnreadCountDisplayStyle == .raw)
+            return (settings.displayNotificationsFromAllAccounts, false)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             if lhs.allAccounts != rhs.allAccounts {
@@ -1030,7 +1042,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return
         }
         let _ = (combineLatest(queue: .mainQueue(),
-            availableWallets(postbox: context.account.postbox),
+            WalletStorageInterfaceImpl(postbox: context.account.postbox).getWalletRecords(),
             storedContext.keychain.encryptionPublicKey(),
             context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         )
@@ -1042,7 +1054,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             let tonContext = storedContext.context(config: config, blockchainName: blockchainName, enableProxy: !walletConfiguration.disableProxy)
             
-            if wallets.wallets.isEmpty {
+            if wallets.isEmpty {
                 if case .send = walletContext {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = textAlertController(context: context, title: presentationData.strings.Conversation_WalletRequiredTitle, text: presentationData.strings.Conversation_WalletRequiredText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Conversation_WalletRequiredNotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Conversation_WalletRequiredSetup, action: { [weak self] in
@@ -1051,14 +1063,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     present(controller)
                 } else {
                     if let _ = currentPublicKey {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .intro, walletCreatedPreloadState: nil))
                     } else {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
                     }
                 }
             } else {
-                let walletInfo = wallets.wallets[0].info
-                let exportCompleted = wallets.wallets[0].exportCompleted
+                let walletInfo = wallets[0].info
+                let exportCompleted = wallets[0].exportCompleted
                 if let currentPublicKey = currentPublicKey {
                     if currentPublicKey == walletInfo.encryptedSecret.publicKey {
                         let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
@@ -1066,20 +1078,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             switch walletContext {
                             case .generic:
                                 if exportCompleted {
-                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
+                                    present(WalletInfoScreen(context: WalletContextImpl(context: context, tonContext: tonContext), walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
                                 } else {
-                                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
+                                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
                                 }
                             case let .send(address, amount, comment):
-                                present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
                             }
                             
                         })
                     } else {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
                     }
                 } else {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
+                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
                 }
             }
         })

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Markdown
 
 private let alertWidth: CGFloat = 270.0
 
@@ -170,6 +171,7 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.isLayerBacked = false
         self.textNode.isAccessibilityElement = true
         self.textNode.accessibilityLabel = text.string
+        self.textNode.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
         if text.length != 0 {
             if let paragraphStyle = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
                 self.textNode.textAlignment = paragraphStyle.alignment
@@ -291,7 +293,7 @@ public final class TextAlertContentNode: AlertContentNode {
             transition.updateFrame(node: titleNode, frame: titleFrame)
             
             let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: titleFrame.maxY + spacing), size: textSize)
-            transition.updateFrame(node: self.textNode, frame: textFrame)
+            transition.updateFrame(node: self.textNode, frame: textFrame.offsetBy(dx: -1.0, dy: -1.0))
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom)
         } else {
@@ -354,9 +356,19 @@ public func textAlertController(theme: AlertControllerTheme, title: NSAttributed
     return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout))
 }
 
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true) -> AlertController {
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center), actions: actions.map { action in
+    let attributedText: NSAttributedString
+    if parseMarkdown {
+        let font = title == nil ? Font.semibold(17.0) : Font.regular(13.0)
+        let boldFont = title == nil ? Font.bold(17.0) : Font.semibold(13.0)
+        let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
+        let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
+        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+    } else {
+        attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+    }
+    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: attributedText, actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()

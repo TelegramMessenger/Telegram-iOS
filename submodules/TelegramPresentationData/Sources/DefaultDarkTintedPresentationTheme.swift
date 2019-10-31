@@ -61,7 +61,11 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         separatorColor: mainSeparatorColor,
         badgeBackgroundColor: UIColor(rgb: 0xef5b5b),
         badgeStrokeColor: UIColor(rgb: 0xef5b5b),
-        badgeTextColor: UIColor(rgb: 0xffffff)
+        badgeTextColor: UIColor(rgb: 0xffffff),
+        segmentedBackgroundColor: mainInputColor,
+        segmentedForegroundColor: mainBackgroundColor,
+        segmentedTextColor: UIColor(rgb: 0xffffff),
+        segmentedDividerColor: mainSecondaryTextColor.withAlphaComponent(0.5)
     )
 
     let navigationSearchBar = PresentationThemeNavigationSearchBar(
@@ -211,7 +215,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: additionalBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: additionalBackgroundColor, dateFillFloating: additionalBackgroundColor.withAlphaComponent(0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: additionalBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: additionalBackgroundColor, dateFillFloating: additionalBackgroundColor.withAlphaComponent(0.2))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: additionalBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: additionalBackgroundColor.withAlphaComponent(0.6), dateFillFloating: additionalBackgroundColor.withAlphaComponent(0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: additionalBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), scam: destructiveColor, dateFillStatic: additionalBackgroundColor.withAlphaComponent(0.6), dateFillFloating: additionalBackgroundColor.withAlphaComponent(0.2))),
         unreadBarFillColor: mainBackgroundColor,
         unreadBarStrokeColor: mainBackgroundColor,
         unreadBarTextColor: .white,

@@ -21,8 +21,12 @@
 #include "td/utils/misc.h"
 #include "td/utils/Slice.h"
 #include "td/utils/tests.h"
+#include "td/utils/JsonBuilder.h"
+
+#include "wycheproof.h"
 
 #include <string>
+#include <utility>
 
 unsigned char fixed_privkey[32] = "abacabadabacabaeabacabadabacaba";
 unsigned char fixed_pubkey[32] = {0x6f, 0x9e, 0x5b, 0xde, 0xce, 0x87, 0x21, 0xeb, 0x57, 0x37, 0xfb,
@@ -141,4 +145,75 @@ TEST(Crypto, ed25519) {
   LOG(ERROR) << "secret21=" << td::buffer_to_hex(secret21);
   assert(!std::memcmp(secret12, secret21, 32));
 */
+}
+
+TEST(Crypto, wycheproof) {
+  std::vector<std::pair<std::string, std::string>> bad_tests;
+  auto json_str = wycheproof_ed25519();
+  auto value = td::json_decode(json_str).move_as_ok();
+  auto &root = value.get_object();
+  auto test_groups_o = get_json_object_field(root, "testGroups", td::JsonValue::Type::Array, false).move_as_ok();
+  auto &test_groups = test_groups_o.get_array();
+  auto from_hexc = [](char c) {
+    if (c >= '0' && c <= '9') {
+      return c - '0';
+    }
+    return c - 'a' + 10;
+  };
+  auto from_hex = [&](td::Slice s) {
+    CHECK(s.size() % 2 == 0);
+    std::string res(s.size() / 2, 0);
+    for (size_t i = 0; i < s.size(); i += 2) {
+      res[i / 2] = char(from_hexc(s[i]) * 16 + from_hexc(s[i + 1]));
+    }
+    return res;
+  };
+  for (auto &test_o : test_groups) {
+    auto &test = test_o.get_object();
+    auto key_o = get_json_object_field(test, "key", td::JsonValue::Type::Object, false).move_as_ok();
+    auto sk_str = td::get_json_object_string_field(key_o.get_object(), "sk", false).move_as_ok();
+    auto pk_str = td::get_json_object_string_field(key_o.get_object(), "pk", false).move_as_ok();
+    auto pk = td::Ed25519::PublicKey(td::SecureString(from_hex(pk_str)));
+    auto sk = td::Ed25519::PrivateKey(td::SecureString(from_hex(sk_str)));
+    CHECK(sk.get_public_key().move_as_ok().as_octet_string().as_slice() == pk.as_octet_string().as_slice());
+
+    //auto key =
+    //td::Ed25519::PrivateKey::from_pem(
+    //td::SecureString(td::get_json_object_string_field(test, "keyPem", false).move_as_ok()), td::SecureString())
+    //.move_as_ok();
+
+    auto tests_o = get_json_object_field(test, "tests", td::JsonValue::Type::Array, false).move_as_ok();
+    auto &tests = tests_o.get_array();
+    for (auto &test_o : tests) {
+      auto &test = test_o.get_object();
+      auto id = td::get_json_object_string_field(test, "tcId", false).move_as_ok();
+      auto comment = td::get_json_object_string_field(test, "comment", false).move_as_ok();
+      auto sig = from_hex(td::get_json_object_string_field(test, "sig", false).move_as_ok());
+      auto msg = from_hex(td::get_json_object_string_field(test, "msg", false).move_as_ok());
+      auto result = td::get_json_object_string_field(test, "result", false).move_as_ok();
+      auto has_result = pk.verify_signature(msg, sig).is_ok() ? "valid" : "invalid";
+      if (result != has_result) {
+        bad_tests.push_back({id, comment});
+      }
+    }
+  }
+  if (bad_tests.empty()) {
+    return;
+  }
+  LOG(ERROR) << "FAILED: " << td::format::as_array(bad_tests);
+}
+
+TEST(Crypto, almost_zero) {
+  td::SecureString pub(32);
+  td::SecureString sig(64);
+  td::SecureString msg(1);
+
+  pub.as_mutable_slice()[31] = (char)128;
+  for (td::int32 j = 0; j < 256; j++) {
+    msg.as_mutable_slice()[0] = (char)j;
+    if (td::Ed25519::PublicKey(pub.copy()).verify_signature(msg, sig).is_ok()) {
+      LOG(ERROR) << "FAILED: " << j;
+      break;
+    }
+  }
 }

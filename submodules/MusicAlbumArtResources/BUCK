@@ -7,6 +7,7 @@ static_library(
     ]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Postbox:Postbox#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/UrlEscaping:UrlEscaping",

@@ -129,6 +129,8 @@ typedef enum {
 
 @interface MTDatacenterAuthMessageService ()
 {
+    id<EncryptionProvider> _encryptionProvider;
+    
     bool _tempAuth;
     MTSessionInfo *_sessionInfo;
     
@@ -161,6 +163,7 @@ typedef enum {
     self = [super init];
     if (self != nil)
     {
+        _encryptionProvider = context.encryptionProvider;
         _tempAuth = tempAuth;
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:context];
     }
@@ -571,7 +574,7 @@ typedef enum {
                 
                 NSData *innerDataGA = dhInnerData.gA;
                 NSData *innerDataDhPrime = dhInnerData.dhPrime;
-                if (!MTCheckIsSafeGAOrB(innerDataGA, innerDataDhPrime))
+                if (!MTCheckIsSafeGAOrB(_encryptionProvider, innerDataGA, innerDataDhPrime))
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g_a]", self);
@@ -581,7 +584,7 @@ typedef enum {
                     return;
                 }
                 
-                if (!MTCheckMod(innerDataDhPrime, (unsigned int)innerDataG, mtProto.context.keychain))
+                if (!MTCheckMod(_encryptionProvider, innerDataDhPrime, (unsigned int)innerDataG, mtProto.context.keychain))
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g (2)]", self);
@@ -591,7 +594,7 @@ typedef enum {
                     return;
                 }
                 
-                if (!MTCheckIsSafePrime(innerDataDhPrime, mtProto.context.keychain))
+                if (!MTCheckIsSafePrime(_encryptionProvider, innerDataDhPrime, mtProto.context.keychain))
                 {
                     if (MTLogEnabled()) {
                         MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH prime]", self);
@@ -609,9 +612,9 @@ typedef enum {
                 tmpG = (int32_t)OSSwapInt32(tmpG);
                 NSData *g = [[NSData alloc] initWithBytes:&tmpG length:4];
                 
-                NSData *g_b = MTExp(g, b, innerDataDhPrime);
+                NSData *g_b = MTExp(_encryptionProvider, g, b, innerDataDhPrime);
                 
-                NSData *authKey = MTExp(innerDataGA, b, innerDataDhPrime);
+                NSData *authKey = MTExp(_encryptionProvider, innerDataGA, b, innerDataDhPrime);
                 
                 NSData *authKeyHash = MTSha1(authKey);
                 

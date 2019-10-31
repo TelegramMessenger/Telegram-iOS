@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 
@@ -15,19 +16,25 @@ final class ChatSearchResultsController: ViewController {
     
     private let context: AccountContext
     private var presentationData: PresentationData
+    private let location: SearchMessagesLocation
     private let searchQuery: String
-    private let messages: [Message]
+    private let searchResult: SearchMessagesResult
+    private let searchState: SearchMessagesState
         
     private let navigateToMessageIndex: (Int) -> Void
+    private let resultsUpdated: (SearchMessagesResult, SearchMessagesState) -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, searchQuery: String, messages: [Message], navigateToMessageIndex: @escaping (Int) -> Void) {
+    init(context: AccountContext, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, navigateToMessageIndex: @escaping (Int) -> Void, resultsUpdated: @escaping (SearchMessagesResult, SearchMessagesState) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.location = location
         self.searchQuery = searchQuery
-        self.messages = messages
         self.navigateToMessageIndex = navigateToMessageIndex
+        self.resultsUpdated = resultsUpdated
+        self.searchResult = searchResult
+        self.searchState = searchState
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
         
@@ -57,10 +64,13 @@ final class ChatSearchResultsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatSearchResultsControllerNode(context: self.context, searchQuery: self.searchQuery, messages: self.messages)
+        self.displayNode = ChatSearchResultsControllerNode(context: self.context, location: self.location, searchQuery: self.searchQuery, searchResult: self.searchResult, searchState: self.searchState)
         self.controllerNode.resultSelected = { [weak self] messageIndex in
             self?.navigateToMessageIndex(messageIndex)
             self?.dismiss()
+        }
+        self.controllerNode.resultsUpdated = { [weak self] result, state in
+            self?.resultsUpdated(result, state)
         }
     }
     

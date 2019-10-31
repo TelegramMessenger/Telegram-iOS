@@ -4,12 +4,16 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
 import Emoji
+import LocalizedPeerData
 
 private let rankMaxLength: Int32 = 16
 
@@ -359,7 +363,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelAdminControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
@@ -861,7 +866,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelAdminEntry>, ChannelAdminEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
         let adminView = combinedView.views[.peer(peerId: adminId, components: .all)] as! PeerView
         let canEdit = canEditAdminRights(accountPeerId: context.account.peerId, channelView: channelView, initialParticipant: initialParticipant)

@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import ImageIO
 import MobileCoreServices
 import Display
@@ -16,7 +17,7 @@ import Lottie
 import MediaResources
 import PhotoResources
 import ImageBlur
-import AnimationUI
+import TelegramAnimatedStickerNode
 import WallpaperResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
@@ -131,6 +132,8 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchAnimatedStickerFirstFrameRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
+    } else if let resource = resource as? MapSnapshotMediaResource, let _ = representation as? MapSnapshotMediaResourceRepresentation {
+        return fetchMapSnapshotResource(resource: resource)
     }
     return .never()
 }

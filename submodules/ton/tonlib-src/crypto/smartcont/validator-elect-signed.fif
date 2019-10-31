@@ -1,4 +1,4 @@
-#!/usr/bin/env fift -s
+#!/usr/bin/fift -s
 "TonUtil.fif" include
 
 { ."usage: " @' $0 type ." <wallet-addr> <elect-utime> <max-factor> <adnl-addr> <validator-pubkey> <validator-signature> [<savefile>]" cr

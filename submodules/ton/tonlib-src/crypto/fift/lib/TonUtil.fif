@@ -33,7 +33,7 @@ library TonUtil // TON Blockchain Fift Library
 } : parse-smc-addr
 
 // ( wc addr -- )  Show address in <workchain>:<account> form
-{ swap ._ .":" x. } : .addr
+{ swap ._ .":" 64 0x. } : .addr
 // ( wc addr flags -- )  Show address in base64url form
 { smca>$ type } : .Addr
 // ( wc addr fname -- )  Save address to file in 36-byte format
@@ -123,3 +123,28 @@ forget val,  forget val@  forget .val
 { 0 lib+ } : private_lib
 // ( D c -- D' )  Add public library c to collection D
 { 1 lib+ } : public_lib
+
+// serialize simple transfers with long comments
+// b B n -- b'
+recursive append-long-bytes {
+  over Blen over <= { drop B, } {
+    B| <b swap 127 append-long-bytes b> -rot B, swap ref,
+  } cond
+} swap !
+// b S n -- b'
+{ swap $>B swap append-long-bytes } : append-long-string
+// S -- c
+{ <b over $len { 0 32 u, swap 36 append-long-string } { nip } cond b>
+} : simple-transfer-body
+
+// ( S -- x )  parse public key
+{ dup $len 48 <> abort"public key must be 48 characters long"
+  base64>B dup Blen 36 <> abort"public key must be 48 characters long"
+  34 B| 16 B>u@ over crc16 <> abort"crc16 mismatch in public key"
+  16 B>u@+ 0x3ee6 <> abort"invalid tag in public key"
+  256 B>u@
+} : parse-pubkey
+{ bl word parse-pubkey 1 'nop } ::_ PK'
+// ( x -- S )  serialize public key
+{ 256 u>B B{3ee6} swap B+ dup crc16 16 u>B B+ B>base64 } : pubkey>$
+{ pubkey>$ type } : .pubkey

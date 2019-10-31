@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import CoreImage
 import TelegramPresentationData
 import Compression
@@ -13,8 +14,10 @@ import AccountContext
 import MediaResources
 import StickerResources
 import ContextUI
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import Emoji
+import Markdown
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -313,7 +316,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(account: item.context.account, resource: .resource(file.resource), fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    self.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
@@ -536,7 +539,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
                             let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                             
-                            let nameString = NSAttributedString(string: sourcePeer.displayTitle, font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                            let nameString = NSAttributedString(string: sourcePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: inlineBotPrefixFont, textColor: inlineBotNameColor)
                             viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: nameString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         }
                     }
@@ -896,7 +899,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self.item?.controllerInteraction.clickThroughMessage()
         case .longTap, .doubleTap:
             if let item = self.item, self.imageNode.frame.contains(location) {
-                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, recognizer)
                 return false
             }
         case .hold:

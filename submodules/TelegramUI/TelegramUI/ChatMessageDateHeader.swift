@@ -32,7 +32,9 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         self.presentationData = presentationData
         self.context = context
         self.action = action
-        if timestamp == Int32.max {
+        if timestamp == 0x7FFFFFFE {
+            self.roundedTimestamp = 0x7FFFFFFE
+        } else if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
         } else {
             self.roundedTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
@@ -151,7 +153,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         
         if scheduled {
-            if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
+            if localTimestamp == 0x7FFFFFFE {
+                text = presentationData.strings.ScheduledMessages_ScheduledOnline
+            } else if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.ScheduledMessages_ScheduledToday
             } else {
                 text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0

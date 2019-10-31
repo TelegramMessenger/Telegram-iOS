@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import AccountContext
@@ -44,7 +45,7 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
     }
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 15.0)!
+private let avatarFont = avatarPlaceholderFont(size: 15.0)
 
 public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme

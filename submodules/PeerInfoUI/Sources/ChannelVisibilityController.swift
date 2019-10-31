@@ -4,13 +4,16 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import ItemListPeerItem
 
@@ -260,7 +263,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ChannelVisibilityControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelVisibilityControllerArguments
         switch self {
             case let .typeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
@@ -913,7 +917,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             if let link = link {
                 UIPasteboard.general.string = link
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
             }
         })
     }, revokePrivateLink: {
@@ -974,7 +978,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
         
         var rightNavigationButton: ItemListNavigationButton?

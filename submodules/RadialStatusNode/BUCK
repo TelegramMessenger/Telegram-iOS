@@ -6,8 +6,8 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/Display:Display#dynamic",
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
+    	"//submodules/Display:Display#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/LegacyComponents:LegacyComponents",
     ],
     frameworks = [

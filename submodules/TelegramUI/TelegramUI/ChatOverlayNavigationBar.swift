@@ -4,12 +4,16 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 
 private let titleFont = Font.semibold(14.0)
 
 final class ChatOverlayNavigationBar: ASDisplayNode {
     private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    private let nameDisplayOrder: PresentationPersonNameOrder
     private let close: () -> Void
     
     private let separatorNode: ASDisplayNode
@@ -24,7 +28,7 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
             var title = ""
             if let peerView = self.peerView {
                 if let peer = peerViewMainPeer(peerView) {
-                    title = peer.displayTitle
+                    title = peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)
                 }
             }
             if self.peerTitle != title {
@@ -36,8 +40,10 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, close: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, close: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.close = close
         
         self.separatorNode = ASDisplayNode()

@@ -157,7 +157,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         self.strings = strings
         self.displayCodes = displayCodes
         
-        super.init(navigationBarPresentationData:  NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.navigationPresentation = .modal
         

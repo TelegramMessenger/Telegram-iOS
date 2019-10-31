@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MediaResources
@@ -55,11 +56,11 @@ public struct ChatHistoryCombinedInitialReadStateData {
 }
 
 public struct ChatHistoryCombinedInitialData {
-    let initialData: InitialMessageHistoryData?
-    let buttonKeyboardMessage: Message?
-    let cachedData: CachedPeerData?
-    let cachedDataMessages: [MessageId: Message]?
-    let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
+    var initialData: InitialMessageHistoryData?
+    var buttonKeyboardMessage: Message?
+    var cachedData: CachedPeerData?
+    var cachedDataMessages: [MessageId: Message]?
+    var readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
 }
 
 enum ChatHistoryViewUpdate {
@@ -604,6 +605,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let strongSelf = self {
                         if !strongSelf.didSetInitialData {
                             strongSelf.didSetInitialData = true
+                            var combinedInitialData = combinedInitialData
+                            combinedInitialData?.cachedData = nil
                             strongSelf._initialData.set(.single(combinedInitialData))
                         }
                         

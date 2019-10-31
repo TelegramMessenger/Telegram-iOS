@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 
@@ -226,7 +227,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             switch requestCategory {
                 case .admins:
                     if let query = adminQuery {
-                        return members?.filter({$0.peer.displayTitle.lowercased().components(separatedBy: " ").contains(where: {$0.hasPrefix(query.lowercased())})})
+                        return members?.filter({$0.peer.debugDisplayTitle.lowercased().components(separatedBy: " ").contains(where: {$0.hasPrefix(query.lowercased())})})
                     }
                 default:
                     break

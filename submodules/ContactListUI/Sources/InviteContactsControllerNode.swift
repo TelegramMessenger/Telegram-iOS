@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -15,6 +16,7 @@ import SearchUI
 import ContactsPeerItem
 import ChatListSearchItemHeader
 import AppBundle
+import PhoneNumberFormat
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)
@@ -528,7 +530,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 strongSelf.selectionState = strongSelf.selectionState.withSelectedContactId(id)
                 strongSelf.requestDeactivateSearch?()
             }
-        }), cancel: { [weak self] in
+        }, contextAction: nil), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }

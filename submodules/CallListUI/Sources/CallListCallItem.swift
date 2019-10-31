@@ -5,8 +5,10 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
 
@@ -172,7 +174,7 @@ class CallListCallItem: ListViewItem {
     }
 }
 
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
+private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode

@@ -3,14 +3,20 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import AvatarNode
 import AccountContext
 
 public enum DeleteChatPeerAction {
     case delete
     case clearHistory
+    case clearCache
+    case clearCacheSuggestion
 }
+
+private let avatarFont = avatarPlaceholderFont(size: 26.0)
 
 public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let context: AccountContext
@@ -18,24 +24,24 @@ public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let chatPeer: Peer
     let action: DeleteChatPeerAction
     let strings: PresentationStrings
+    let nameDisplayOrder: PresentationPersonNameOrder
     
-    public init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
+    public init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
         self.action = action
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
     }
     
     public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, context: self.context, peer: self.peer, chatPeer: self.chatPeer, action: self.action)
+        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, nameOrder: self.nameDisplayOrder, context: self.context, peer: self.peer, chatPeer: self.chatPeer, action: self.action)
     }
     
     public func updateNode(_ node: ActionSheetItemNode) {
     }
 }
-
-private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 
 private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
@@ -46,7 +52,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     
     private let accessibilityArea: AccessibilityAreaNode
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
         self.theme = theme
         self.strings = strings
         
@@ -77,30 +83,52 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
             self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
         }
         
-        let text: (String, [(Int, NSRange)])
+        var attributedText: NSAttributedString?
         switch action {
+        case .clearCache, .clearCacheSuggestion:
+            switch action {
+            case .clearCache:
+                attributedText = NSAttributedString(string: strings.ClearCache_Description, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+            case .clearCacheSuggestion:
+                attributedText = NSAttributedString(string: strings.ClearCache_FreeSpaceDescription, font: Font.regular(14.0), textColor: theme.primaryTextColor)
+            default:
+                break
+            }
+        default:
+            var text: (String, [(Int, NSRange)])?
+            switch action {
             case .delete:
                 if chatPeer.id == context.account.peerId {
                     text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
-                } else if chatPeer is TelegramGroup || chatPeer is TelegramChannel {
-                    text = strings.ChatList_LeaveGroupConfirmation(peer.displayTitle)
+                } else if let chatPeer = chatPeer as? TelegramGroup {
+                    text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
+                } else if let chatPeer = chatPeer as? TelegramChannel {
+                    text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
                 } else if chatPeer is TelegramSecretChat {
-                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle)
+                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {
-                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle)
+                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
             case .clearHistory:
-                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle)
-        }
-        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
-        for (_, range) in text.1 {
-            attributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
+            default:
+                break
+            }
+            if let text = text {
+                var formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
+                for (_, range) in text.1 {
+                    formattedAttributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                }
+                attributedText = formattedAttributedText
+            }
         }
         
-        self.textNode.attributedText = attributedText
-        
-        self.accessibilityArea.accessibilityLabel = attributedText.string
-        self.accessibilityArea.accessibilityTraits = .staticText
+        if let attributedText = attributedText {
+            self.textNode.attributedText = attributedText
+            
+            self.accessibilityArea.accessibilityLabel = attributedText.string
+            self.accessibilityArea.accessibilityTraits = .staticText
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

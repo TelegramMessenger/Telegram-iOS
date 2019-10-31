@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -159,7 +160,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
-                    headerString = "Reply to message. From: \(author.displayTitle)"
+                    headerString = "Reply to message. From: \(author.displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
                 } else if let message = message, !message.flags.contains(.Incoming) {
                     headerString = "Reply to your message"
                 } else {

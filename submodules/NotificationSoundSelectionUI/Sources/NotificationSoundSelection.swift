@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import AVFoundation
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TelegramStringFormatting
 import AppBundle
@@ -123,7 +125,8 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: NotificationSoundSelectionArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! NotificationSoundSelectionArguments
         switch self {
             case let.modernHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -281,7 +284,7 @@ public func notificationSoundSelectionController(context: AccountContext, isModa
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             arguments.cancel()

@@ -4,10 +4,12 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TextFormat
 import AccountContext
 import ShareController
+import Markdown
 
 final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?

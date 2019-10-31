@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
@@ -93,13 +94,13 @@ private final class PeerBanTimeoutActionSheetItemNode: ActionSheetItemNode {
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
+        self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)
         self.pickerView.minimumDate = Date()
         self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
-        
-        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         super.init(theme: theme)
         

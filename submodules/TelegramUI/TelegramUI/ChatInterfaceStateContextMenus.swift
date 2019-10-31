@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import UIKit
 import SwiftSignalKit
@@ -13,6 +14,7 @@ import ContextUI
 import LegacyUI
 import AppBundle
 import SaveToCameraRoll
+import PresentationDataUtils
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -118,6 +120,12 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     }
     guard !chatPresentationInterfaceState.isScheduledMessages else {
         return false
+    }
+    switch chatPresentationInterfaceState.mode {
+    case .inline:
+        return false
+    default:
+        break
     }
     
     var canReply = false
@@ -467,7 +475,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
                         |> deliverOnMainQueue).start(completed: {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
                         })
                         f(.default)
                     })))
@@ -576,9 +584,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         if channel.addressName == nil {
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
                         } else {
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
                         }
                     }
                 })
@@ -676,7 +684,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
+        var clearCacheAsDelete = false
+        if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+            clearCacheAsDelete = true
+        }
+        if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
             actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: message.flags.isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
@@ -775,14 +787,14 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                     }
                     if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {
                         if !message.flags.contains(.Incoming) {
-                            optionsMap[id]!.insert(.deleteGlobally)
+                            optionsMap[id]!.insert(.deleteLocally)
                         } else {
                             if channel.hasPermission(.deleteAllMessages) {
-                                optionsMap[id]!.insert(.deleteGlobally)
+                                optionsMap[id]!.insert(.deleteLocally)
                             }
                         }
                     } else {
-                        optionsMap[id]!.insert(.deleteGlobally)
+                        optionsMap[id]!.insert(.deleteLocally)
                     }
                 } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {

@@ -1,0 +1,16 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "MessageHistoryReadStateTable",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+	    "//submodules/Database/ValueBox:ValueBox",
+        "//submodules/Database/Table:Table",
+    	"//submodules/Database/PostboxDataTypes:PostboxDataTypes",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

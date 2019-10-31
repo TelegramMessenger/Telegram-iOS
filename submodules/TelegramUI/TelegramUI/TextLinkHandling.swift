@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import Postbox
 import Display
 import SwiftSignalKit
@@ -64,6 +65,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                             openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil))
                         }), in: .window(.root))
+                    case let .wallet(address, amount, comment):
+                        context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
+                            (controller.navigationController as? NavigationController)?.pushViewController(c)
+                        }
                     default:
                         break
                 }

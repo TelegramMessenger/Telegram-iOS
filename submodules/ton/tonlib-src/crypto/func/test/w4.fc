@@ -1,0 +1,13 @@
+_ main(cell dict, int t3) {
+  int index = -1;
+  do {
+    (index, slice value, int found) = dict.udict_get_next?(32, index);
+    if (found) {       
+      (int temp1, int temp2) = (value~load_uint(16), value~load_uint(32));
+      if (t3 > temp2) {
+        dict~udict_delete_get?(32, index);
+      }
+    }
+  } until ( ~ found);
+  return dict;
+}

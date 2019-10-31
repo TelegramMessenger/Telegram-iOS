@@ -3,23 +3,31 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TelegramPresentationData
-import ItemListUI
-import TelegramCore
-import TelegramStringFormatting
 
 private let transactionIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?.precomposed()
 
+private func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: WalletPresentationDateTimeFormat, local: Bool = true) -> String {
+    var t = Int(timestamp)
+    var timeinfo = tm()
+    if local {
+        localtime_r(&t, &timeinfo)
+    } else {
+        gmtime_r(&t, &timeinfo)
+    }
+    
+    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)
+}
+
 class WalletInfoTransactionItem: ListViewItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let dateTimeFormat: PresentationDateTimeFormat
+    let theme: WalletTheme
+    let strings: WalletStrings
+    let dateTimeFormat: WalletPresentationDateTimeFormat
     let walletTransaction: WalletInfoTransaction
     let action: () -> Void
     
     fileprivate let header: WalletInfoTransactionDateHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, action: @escaping () -> Void) {
+    init(theme: WalletTheme, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, action: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -105,6 +113,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let textNode: TextNode
     private let descriptionNode: TextNode
+    private let feesNode: TextNode
     private let dateNode: TextNode
     private var statusNode: StatusClockNode?
     
@@ -149,6 +158,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.descriptionNode.contentMode = .left
         self.descriptionNode.contentsScale = UIScreen.main.scale
         
+        self.feesNode = TextNode()
+        self.feesNode.isUserInteractionEnabled = false
+        self.feesNode.contentMode = .left
+        self.feesNode.contentsScale = UIScreen.main.scale
+        
         self.dateNode = TextNode()
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.contentMode = .left
@@ -167,6 +181,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.addSubnode(self.directionNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.feesNode)
         self.addSubnode(self.dateNode)
         
         self.addSubnode(self.activateArea)
@@ -178,12 +193,13 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         let makeDirectionLayout = TextNode.asyncLayout(self.directionNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
+        let makeFeesLayout = TextNode.asyncLayout(self.feesNode)
         let makeDateLayout = TextNode.asyncLayout(self.dateNode)
         
         let currentItem = self.item
         
         return { item, params, hasPrevious, hasNext, dateHeaderAtBottom in
-            var updatedTheme: PresentationTheme?
+            var updatedTheme: WalletTheme?
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
@@ -209,7 +225,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             if transferredValue <= 0 {
                 sign = ""
                 title = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.list.itemDestructiveColor
+                titleColor = item.theme.info.outgoingFundsTitleColor
                 switch item.walletTransaction {
                 case let .completed(transaction):
                     if transaction.outMessages.isEmpty {
@@ -246,7 +262,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             } else {
                 sign = ""
                 title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.chatList.secretTitleColor
+                titleColor = item.theme.info.incomingFundsTitleColor
                 directionText = item.strings.Wallet_Info_TransactionFrom
                 switch item.walletTransaction {
                 case let .completed(transaction):
@@ -261,24 +277,15 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 }
             }
             
+            var feeText: String = ""
             let dateText: String
             switch item.walletTransaction {
             case let .completed(transaction):
-                if transaction.storageFee != 0 {
-                    let feeText = item.strings.Wallet_Info_TransactionStorageFee(formatBalanceText(-transaction.storageFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
-                    if !description.isEmpty {
-                        description.append("\n")
-                    }
-                    description += "\(feeText)"
+                let fee = transaction.storageFee + transaction.otherFee
+                if fee != 0 {
+                    feeText = item.strings.Wallet_Info_TransactionBlockchainFee(formatBalanceText(-fee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
                 }
-                if transaction.otherFee != 0 {
-                    let feeText = item.strings.Wallet_Info_TransactionOtherFee(formatBalanceText(-transaction.otherFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
-                    if !description.isEmpty {
-                        description.append("\n")
-                    }
-                    description += "\(feeText)"
-                }
-            dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
+                dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
             case let .pending(transaction):
                 dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
             }
@@ -305,7 +312,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (feesLayout, feesApply) = makeFeesLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: feeText, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var contentSize: CGSize
             var insets: UIEdgeInsets
@@ -325,6 +334,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + titleSpacing + textLayout.size.height + bottomInset)
             if !descriptionLayout.size.width.isZero {
                 contentSize.height += descriptionLayout.size.height + textSpacing
+            }
+            if !feesLayout.size.width.isZero {
+                contentSize.height += feesLayout.size.height + textSpacing
             }
             insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             var topHighlightInset: CGFloat = 0.0
@@ -354,6 +366,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let _ = titleApply()
                     let _ = textApply()
                     let _ = descriptionApply()
+                    let _ = feesApply()
                     let _ = dateApply()
                     let _ = directionApply()
                     
@@ -374,7 +387,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let iconFrame = CGRect(origin: CGPoint(x: titleSignFrame.maxX + (titleSignFrame.width.isZero ? 0.0 : 1.0), y: titleSignFrame.minY + floor((titleLayout.size.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
                     strongSelf.iconNode.frame = iconFrame
                     
-                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 1.0, y: topInset), size: titleLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 3.0, y: topInset), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
                     
                     let directionFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.maxY - directionLayout.size.height - 1.0), size: directionLayout.size)
@@ -383,7 +396,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: textLayout.size)
                     strongSelf.textNode.frame = textFrame
                     
-                    strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textFrame.maxY + textSpacing), size: descriptionLayout.size)
+                    let descriptionFrame = CGRect(origin: CGPoint(x: leftInset, y: textFrame.maxY + textSpacing), size: descriptionLayout.size)
+                    strongSelf.descriptionNode.frame = descriptionFrame
+                    strongSelf.feesNode.frame = CGRect(origin: CGPoint(x: leftInset, y: descriptionFrame.maxY + textSpacing), size: feesLayout.size)
                     
                     let dateFrame = CGRect(origin: CGPoint(x: params.width - leftInset - dateLayout.size.width, y: topInset), size: dateLayout.size)
                     strongSelf.dateNode.frame = dateFrame
@@ -480,10 +495,10 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
     private let localTimestamp: Int32
     
     let id: Int64
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let theme: WalletTheme
+    let strings: WalletStrings
     
-    init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
+    init(timestamp: Int32, theme: WalletTheme, strings: WalletStrings) {
         self.timestamp = timestamp
         self.theme = theme
         self.strings = strings
@@ -509,45 +524,45 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
 
 private let sectionTitleFont = Font.semibold(17.0)
 
-private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
+private func monthAtIndex(_ index: Int, strings: WalletStrings) -> String {
     switch index {
     case 0:
-        return strings.Month_GenJanuary
+        return strings.Wallet_Month_GenJanuary
     case 1:
-        return strings.Month_GenFebruary
+        return strings.Wallet_Month_GenFebruary
     case 2:
-        return strings.Month_GenMarch
+        return strings.Wallet_Month_GenMarch
     case 3:
-        return strings.Month_GenApril
+        return strings.Wallet_Month_GenApril
     case 4:
-        return strings.Month_GenMay
+        return strings.Wallet_Month_GenMay
     case 5:
-        return strings.Month_GenJune
+        return strings.Wallet_Month_GenJune
     case 6:
-        return strings.Month_GenJuly
+        return strings.Wallet_Month_GenJuly
     case 7:
-        return strings.Month_GenAugust
+        return strings.Wallet_Month_GenAugust
     case 8:
-        return strings.Month_GenSeptember
+        return strings.Wallet_Month_GenSeptember
     case 9:
-        return strings.Month_GenOctober
+        return strings.Wallet_Month_GenOctober
     case 10:
-        return strings.Month_GenNovember
+        return strings.Wallet_Month_GenNovember
     case 11:
-        return strings.Month_GenDecember
+        return strings.Wallet_Month_GenDecember
     default:
         return ""
     }
 }
 
 final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
-    var theme: PresentationTheme
-    var strings: PresentationStrings
+    var theme: WalletTheme
+    var strings: WalletStrings
     let titleNode: ASTextNode
     let backgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, roundedTimestamp: Int32) {
+    init(theme: WalletTheme, strings: WalletStrings, roundedTimestamp: Int32) {
         self.theme = theme
         self.strings = strings
         
@@ -580,12 +595,12 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
             
             if timeinfo.tm_year == timeinfoNow.tm_year {
                 if timeinfo.tm_yday == timeinfoNow.tm_yday {
-                    text = strings.Weekday_Today
+                    text = strings.Wallet_Weekday_Today
                 } else {
-                    text = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").0
+                    text = strings.Wallet_Info_TransactionDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").0
                 }
             } else {
-                text = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+                text = strings.Wallet_Info_TransactionDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
             }
         }
         
@@ -597,7 +612,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         self.titleNode.truncationMode = .byTruncatingTail
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    func updateThemeAndStrings(theme: WalletTheme, strings: WalletStrings) {
         self.theme = theme
         if let attributedString = self.titleNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
             attributedString.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.list.itemPrimaryTextColor, range: NSMakeRange(0, attributedString.length))
@@ -643,14 +658,14 @@ private final class StatusClockNode: ASDisplayNode {
     private var clockFrameNode: ASImageNode
     private var clockMinNode: ASImageNode
     
-    init(theme: PresentationTheme) {
+    init(theme: WalletTheme) {
         self.clockFrameNode = ASImageNode()
         self.clockMinNode = ASImageNode()
         
         super.init()
         
-        self.clockFrameNode.image = PresentationResourcesChatList.clockFrameImage(theme)
-        self.clockMinNode.image = PresentationResourcesChatList.clockMinImage(theme)
+        self.clockFrameNode.image = clockFrameImage(theme)
+        self.clockMinNode.image = clockMinImage(theme)
         
         self.addSubnode(self.clockFrameNode)
         self.addSubnode(self.clockMinNode)

@@ -2,12 +2,15 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramUIPreferences
 import LegacyComponents
 import TextFormat
 import AccountContext
 import Emoji
+import SearchPeerMembers
+import DeviceLocationManager
 
 enum ChatContextQueryError {
     case inlineBotLocationRequest(PeerId)
@@ -242,7 +245,12 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
+                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager in
+                        return currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
+                        |> flatMap { coordinate -> (Double, Double) in
+                            return (coordinate.latitude, coordinate.longitude)
+                        }
+                    } ?? .single(nil), offset: "")
                     |> mapError { error -> ChatContextQueryError in
                         return .inlineBotLocationRequest(user.id)
                     }

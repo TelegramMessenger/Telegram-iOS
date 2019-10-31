@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 #if BUCK
 import MtProtoKit

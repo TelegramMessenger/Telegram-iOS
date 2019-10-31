@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -465,7 +466,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
-                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, close: { [weak self] in
+                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, close: { [weak self] in
                     self?.dismissAsOverlay()
                 })
                 overlayNavigationBar.peerView = self.peerView
@@ -1089,12 +1090,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     startPanelFrame.origin.y = referenceFrame.maxY - panelFrame.height
                 }
                 inputContextPanelNode.frame = startPanelFrame
-                inputContextPanelNode.updateLayout(size: startPanelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: startPanelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
             
             if !inputContextPanelNode.frame.equalTo(panelFrame) || inputContextPanelNode.theme !== self.chatPresentationInterfaceState.theme {
                 transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
-                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
@@ -1102,10 +1103,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let panelFrame = overlayContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if immediatelyLayoutOverlayContextPanelAndAnimateAppearance {
                 overlayContextPanelNode.frame = panelFrame
-                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             } else if !overlayContextPanelNode.frame.equalTo(panelFrame) {
                 transition.updateFrame(node: overlayContextPanelNode, frame: panelFrame)
-                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
@@ -1190,7 +1191,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             let panelFrame = dismissedInputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if !dismissedInputContextPanelNode.frame.equalTo(panelFrame) {
-                dismissedInputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                dismissedInputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
                 transition.updateFrame(node: dismissedInputContextPanelNode, frame: panelFrame, completion: { _ in
                     frameCompleted = true
                     completed()
@@ -1532,6 +1533,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             })
         }
         self.searchNavigationNode?.deactivate()
+        
+        self.view.window?.endEditing(true)
     }
     
     private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {
@@ -2119,6 +2122,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                     }
+                }
+
+                var forwardingToSameChat = false
+                if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    for messageId in forwardMessageIds {
+                        if messageId.peerId == id {
+                            forwardingToSameChat = true
+                        }
+                    }
+                }
+                if !messages.isEmpty && forwardingToSameChat {
+                    self.controllerInteraction.displaySwipeToReplyHint()
                 }
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {

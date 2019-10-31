@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import TelegramPresentationData
 import MergeLists
@@ -101,7 +102,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     private var currentEntries: [EmojisChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(EmojisChatInputContextPanelTransition, Bool)] = []
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.backgroundNode = ASImageNode()
@@ -220,9 +221,9 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (size, leftInset, rightInset)
+        self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         let sideInsets: CGFloat = 10.0 + leftInset
         let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries?.count ?? 0) * 45.0))

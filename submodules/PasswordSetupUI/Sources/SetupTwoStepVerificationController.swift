@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
@@ -122,7 +123,7 @@ public class SetupTwoStepVerificationController: ViewController {
                 case .none:
                     item = nil
                 case .activity:
-                    item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                    item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                 case let .button(title, _):
                     item = UIBarButtonItem(title: title, style: .done, target: strongSelf, action: #selector(strongSelf.nextPressed))
             }

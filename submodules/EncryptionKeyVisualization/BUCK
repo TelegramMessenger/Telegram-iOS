@@ -14,6 +14,7 @@ static_library(
     ], exclude = ["Sources/EncryptionKeyVisualization.h"]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

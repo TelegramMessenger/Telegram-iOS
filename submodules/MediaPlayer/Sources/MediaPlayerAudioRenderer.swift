@@ -3,6 +3,7 @@ import SwiftSignalKit
 import CoreMedia
 import AVFoundation
 import TelegramCore
+import SyncCore
 import TelegramAudio
 
 private enum AudioPlayerRendererState {

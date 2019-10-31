@@ -5,10 +5,12 @@ import ContextUI
 import AccountContext
 import Postbox
 import TelegramCore
+import SyncCore
 import Display
 import TelegramUIPreferences
 import OverlayStatusController
 import AlertUI
+import PresentationDataUtils
 
 func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chatListController: ChatListControllerImpl?) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
@@ -82,7 +84,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
             }
         }
         
-        if !isSavedMessages, let peer = peer as? TelegramUser, !peer.flags.contains(.isSupport) && peer.botInfo == nil {
+        if !isSavedMessages, let peer = peer as? TelegramUser, !peer.flags.contains(.isSupport) && peer.botInfo == nil && !peer.isDeleted {
             if !transaction.isPeerContact(peerId: peer.id) {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     context.sharedContext.openAddPersonContact(context: context, peerId: peerId, pushController: { controller in
@@ -179,7 +181,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                         var cancelImpl: (() -> Void)?
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                 cancelImpl?()
                             }))
                             chatListController?.present(controller, in: .window(.root))

@@ -15,8 +15,6 @@ public func renderedTotalUnreadCount(inAppNotificationSettings: InAppNotificatio
 public func renderedTotalUnreadCount(inAppSettings: InAppNotificationSettings, totalUnreadState: ChatListTotalUnreadState) -> (Int32, RenderedTotalUnreadCountType) {
     let type: RenderedTotalUnreadCountType
     switch inAppSettings.totalUnreadCountDisplayStyle {
-        case .raw:
-            type = .raw
         case .filtered:
             type = .filtered
     }
@@ -42,8 +40,6 @@ public func renderedTotalUnreadCount(accountManager: AccountManager, postbox: Po
         }
         let type: RenderedTotalUnreadCountType
         switch inAppSettings.totalUnreadCountDisplayStyle {
-            case .raw:
-                type = .raw
             case .filtered:
                 type = .filtered
         }

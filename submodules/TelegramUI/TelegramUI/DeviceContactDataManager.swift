@@ -2,11 +2,13 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import Contacts
 import AddressBook
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
+import PhoneNumberFormat
 
 private protocol DeviceContactDataContext {
     func personNameDisplayOrder() -> PresentationPersonNameOrder

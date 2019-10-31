@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -583,12 +584,18 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         switch stickerPack {
             case .none, .fetching:
                 self.installActionSeparatorNode.alpha = 0.0
+                self.shareActionSeparatorNode.alpha = 0.0
+                self.shareActionButtonNode.alpha = 0.0
+                self.installActionButtonNode.alpha = 0.0
                 self.installActionButtonNode.setTitle("", with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             case let .result(info, _, installed):
                 if self.stickerPackInitiallyInstalled == nil {
                     self.stickerPackInitiallyInstalled = installed
                 }
                 self.installActionSeparatorNode.alpha = 1.0
+                self.shareActionSeparatorNode.alpha = 1.0
+                self.shareActionButtonNode.alpha = 1.0
+                self.installActionButtonNode.alpha = 1.0
                 if installed {
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {

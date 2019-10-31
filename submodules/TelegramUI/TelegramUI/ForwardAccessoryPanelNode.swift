@@ -2,11 +2,13 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import AccountContext
+import LocalizedPeerData
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {

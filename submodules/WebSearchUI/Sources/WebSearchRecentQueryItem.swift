@@ -5,8 +5,10 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 
 private enum RevealOptionKey: Int32 {
     case delete

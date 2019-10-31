@@ -7,6 +7,8 @@ import TextFormat
 import TelegramPermissions
 import PeersNearbyIconNode
 import SolidRoundedButtonNode
+import PresentationDataUtils
+import Markdown
 
 public enum PermissionContentIcon {
     case image(UIImage?)

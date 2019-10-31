@@ -3,6 +3,7 @@ import UIKit
 import LegacyComponents
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import AccountContext
@@ -57,8 +58,8 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     controller.allowCaptionEntities = true
     controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
-    controller.recipientName = peer.displayTitle
+    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
+    controller.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule

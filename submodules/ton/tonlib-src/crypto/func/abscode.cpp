@@ -205,6 +205,9 @@ void VarDescr::clear_value() {
 }
 
 void VarDescrList::show(std::ostream& os) const {
+  if (unreachable) {
+    os << "<unreachable> ";
+  }
   os << "[";
   for (const auto& v : list) {
     os << ' ' << v;

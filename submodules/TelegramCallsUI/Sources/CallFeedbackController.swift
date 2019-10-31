@@ -4,8 +4,10 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 
@@ -147,7 +149,8 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: CallFeedbackControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! CallFeedbackControllerArguments
         switch self {
         case let .reasonsHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -238,7 +241,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     
     let signal = combineLatest(sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CallFeedbackControllerEntry>, CallFeedbackControllerEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
@@ -261,7 +264,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
                 let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, userInitiated: userInitiated, includeLogs: state.includeLogs).start()
                 dismissImpl?()
                 
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
@@ -272,6 +275,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     
     
     let controller = ItemListController(sharedContext: sharedContext, state: signal)
+    controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

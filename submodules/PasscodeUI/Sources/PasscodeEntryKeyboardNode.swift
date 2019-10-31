@@ -58,7 +58,7 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
                 titleOffset = -11.0
             }
             subtitleOffset = -54.0
-        } else {
+        } else if size.width > 70.0 {
             titleFont = regularTitleFont
             subtitleFont = regularSubtitleFont
             if subtitle.isEmpty {
@@ -67,6 +67,16 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
                 titleOffset = -10.0
             }
             subtitleOffset = -48.0
+        }
+        else {
+            titleFont = regularTitleFont
+            subtitleFont = regularSubtitleFont
+            if subtitle.isEmpty {
+                titleOffset = -11.0
+            } else {
+                titleOffset = -4.0
+            }
+            subtitleOffset = -41.0
         }
         
         let titlePath = CGMutablePath()
@@ -106,6 +116,8 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         self.subtitle = subtitle
         
         self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.isUserInteractionEnabled = false
         
         super.init()
@@ -236,36 +248,66 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
     }
     
     func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> (CGRect, CGSize) {
-        let origin = CGPoint(x: floor((layout.layout.size.width - layout.keyboard.size.width) / 2.0), y: layout.keyboard.topOffset)
+        let origin: CGPoint
+        let buttonSize: CGFloat
+        let horizontalSecond: CGFloat
+        let horizontalThird: CGFloat
+        let verticalSecond: CGFloat
+        let verticalThird: CGFloat
+        let verticalFourth: CGFloat
+        let keyboardSize: CGSize
+        
+        if layout.layout.orientation == .landscape && layout.layout.deviceMetrics.type != .tablet {
+            let horizontalSpacing: CGFloat = 20.0
+            let verticalSpacing: CGFloat = 12.0
+            buttonSize = 65.0
+            keyboardSize = CGSize(width: buttonSize * 3.0 + horizontalSpacing * 2.0, height: buttonSize * 4.0 + verticalSpacing * 3.0)
+            horizontalSecond = buttonSize + horizontalSpacing
+            horizontalThird = buttonSize * 2.0 + horizontalSpacing * 2.0
+            verticalSecond = buttonSize + verticalSpacing
+            verticalThird = buttonSize * 2.0 + verticalSpacing * 2.0
+            verticalFourth = buttonSize * 3.0 + verticalSpacing * 3.0
+            origin = CGPoint(x: floor(layout.layout.size.width / 2.0 + (layout.layout.size.width / 2.0 - keyboardSize.width) / 2.0) - layout.layout.safeInsets.right, y: floor((layout.layout.size.height - keyboardSize.height) / 2.0))
+        } else {
+            origin = CGPoint(x: floor((layout.layout.size.width - layout.keyboard.size.width) / 2.0), y: layout.keyboard.topOffset)
+            buttonSize = layout.keyboard.buttonSize
+            horizontalSecond = layout.keyboard.horizontalSecond
+            horizontalThird = layout.keyboard.horizontalThird
+            verticalSecond = layout.keyboard.verticalSecond
+            verticalThird = layout.keyboard.verticalThird
+            verticalFourth = layout.keyboard.verticalFourth
+            keyboardSize = layout.keyboard.size
+        }
+        
         if let subnodes = self.subnodes {
             for i in 0 ..< subnodes.count {
                 var origin = origin
                 if i % 3 == 0 {
                     origin.x += 0.0
                 } else if (i % 3 == 1) {
-                    origin.x += layout.keyboard.horizontalSecond
+                    origin.x += horizontalSecond
                 }
                 else {
-                    origin.x += layout.keyboard.horizontalThird
+                    origin.x += horizontalThird
                 }
                 
                 if i / 3 == 0 {
                     origin.y += 0.0
                 }
                 else if i / 3 == 1 {
-                    origin.y += layout.keyboard.verticalSecond
+                    origin.y += verticalSecond
                 }
                 else if i / 3 == 2 {
-                    origin.y += layout.keyboard.verticalThird
+                    origin.y += verticalThird
                 }
                 else if i / 3 == 3 {
-                    origin.x += layout.keyboard.horizontalSecond
-                    origin.y += layout.keyboard.verticalFourth
+                    origin.x += horizontalSecond
+                    origin.y += verticalFourth
                 }
-                transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: layout.keyboard.buttonSize, height: layout.keyboard.buttonSize)))
+                transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: buttonSize, height: buttonSize)))
             }
         }
-        return (CGRect(origin: origin, size: layout.keyboard.size), CGSize(width: layout.keyboard.buttonSize, height: layout.keyboard.buttonSize))
+        return (CGRect(origin: origin, size: keyboardSize), CGSize(width: buttonSize, height: buttonSize))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

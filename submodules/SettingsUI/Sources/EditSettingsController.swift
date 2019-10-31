@@ -5,9 +5,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import GalleryUI
 import LegacyUI
@@ -15,6 +17,7 @@ import ItemListAvatarAndNameInfoItem
 import WebSearchUI
 import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
+import PhoneNumberFormat
 
 private struct EditSettingsItemArguments {
     let context: AccountContext
@@ -188,7 +191,8 @@ private enum SettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: EditSettingsItemArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! EditSettingsItemArguments
         switch self {
             case let .userInfo(theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
                 return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
@@ -394,7 +398,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }
         
         var updateNameSignal: Signal<Void, NoError> = .complete()
-        if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+        if let updateName = updateName, case let .personName(firstName, lastName, _) = updateName {
             updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)
         }
         var updateBioSignal: Signal<Void, NoError> = .complete()
@@ -424,7 +428,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView)
-    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightNavigationButton: ItemListNavigationButton
         if state.updatingName != nil || state.updatingBioText {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})

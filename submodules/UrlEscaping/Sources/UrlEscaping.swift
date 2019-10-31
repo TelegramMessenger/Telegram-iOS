@@ -10,18 +10,6 @@ public func doesUrlMatchText(url: String, text: String, fullText: String) -> Boo
     return false
 }
 
-private let whitelistedHosts: Set<String> = Set([
-    "t.me",
-    "telegram.me"
-])
-
-public func isConcealedUrlWhitelisted(_ url: URL) -> Bool {
-    if let host = url.host, whitelistedHosts.contains(host) {
-        return true
-    }
-    return false
-}
-
 public extension CharacterSet {
     static let urlQueryValueAllowed: CharacterSet = {
         let generalDelimitersToEncode = ":#[]@"
@@ -51,7 +39,7 @@ public func isValidUrl(_ url: String, validSchemes: [String: Bool] = ["http": tr
 
 public func explicitUrl(_ url: String) -> String {
     var url = url
-    if !url.hasPrefix("http") && !url.hasPrefix("https") {
+    if !url.hasPrefix("http") && !url.hasPrefix("https") && url.range(of: "://") == nil {
         url = "https://\(url)"
     }
     return url

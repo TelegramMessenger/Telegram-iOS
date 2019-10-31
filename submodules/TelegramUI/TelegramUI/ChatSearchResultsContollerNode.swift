@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import MergeLists
@@ -105,7 +106,10 @@ private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatLi
 class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
-    private let messages: [Message]
+    private let location: SearchMessagesLocation
+    private let searchQuery: String
+    private var searchResult: SearchMessagesResult
+    private var searchState: SearchMessagesState
     
     private var interaction: ChatListNodeInteraction?
     
@@ -114,14 +118,23 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    var resultsUpdated: ((SearchMessagesResult, SearchMessagesState) -> Void)?
     var resultSelected: ((Int) -> Void)?
     
     private let presentationDataPromise: Promise<ChatListPresentationData>
     private let disposable = MetaDisposable()
     
-    init(context: AccountContext, searchQuery: String, messages: [Message]) {
+    private var isLoadingMore = false
+    private let loadMoreDisposable = MetaDisposable()
+    
+    private let previousEntries = Atomic<[ChatListSearchEntry]?>(value: nil)
+    
+    init(context: AccountContext, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState) {
         self.context = context
-        self.messages = messages
+        self.location = location
+        self.searchQuery = searchQuery
+        self.searchResult = searchResult
+        self.searchState = searchState
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
         
@@ -138,7 +151,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         |> map { presentationData -> [ChatListSearchEntry] in
             var entries: [ChatListSearchEntry] = []
             
-            for message in messages {
+            for message in searchResult.messages {
                 var peer = RenderedPeer(message: message)
                 if let group = message.peers[message.id.peerId] as? TelegramGroup, let migrationReference = group.migrationReference {
                     if let channelPeer = message.peers[migrationReference.peerId] {
@@ -156,8 +169,8 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
-                if let index = strongSelf.messages.firstIndex(where: { $0.index == message.index }) {
-                    strongSelf.resultSelected?(strongSelf.messages.count - index - 1)
+                if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
+                    strongSelf.resultSelected?(strongSelf.searchResult.messages.count - index - 1)
                 }
                 strongSelf.listNode.clearHighlightAnimated(true)
             }
@@ -175,16 +188,85 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction
         
-        let previousEntries = Atomic<[ChatListSearchEntry]?>(value: nil)
         self.disposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] entries in
             if let strongSelf = self {
-                let previousEntries = previousEntries.swap(entries)
+                let previousEntries = strongSelf.previousEntries.swap(entries)
                 
                 let firstTime = previousEntries == nil
                 let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
+        }))
+        
+        self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self else {
+                return
+            }
+            guard case let .known(value) = offset, value < 100.0 else {
+                return
+            }
+            if strongSelf.searchResult.completed {
+                return
+            }
+            if strongSelf.isLoadingMore {
+                return
+            }
+            strongSelf.loadMore()
+        }
+    }
+    
+    deinit {
+        self.disposable.dispose()
+        self.loadMoreDisposable.dispose()
+    }
+    
+    private func loadMore() {
+        self.isLoadingMore = true
+        
+        self.loadMoreDisposable.set((searchMessages(account: self.context.account, location: self.location, query: self.searchQuery, state: self.searchState)
+        |> deliverOnMainQueue).start(next: { [weak self] (updatedResult, updatedState) in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let interaction = strongSelf.interaction else {
+                return
+            }
+            
+            strongSelf.isLoadingMore = false
+            strongSelf.searchResult = updatedResult
+            strongSelf.searchState = updatedState
+            strongSelf.resultsUpdated?(updatedResult, updatedState)
+            
+            let context = strongSelf.context
+            
+            let signal = strongSelf.presentationDataPromise.get()
+            |> map { presentationData -> [ChatListSearchEntry] in
+                var entries: [ChatListSearchEntry] = []
+                
+                for message in updatedResult.messages {
+                    var peer = RenderedPeer(message: message)
+                    if let group = message.peers[message.id.peerId] as? TelegramGroup, let migrationReference = group.migrationReference {
+                        if let channelPeer = message.peers[migrationReference.peerId] {
+                            peer = RenderedPeer(peer: channelPeer)
+                        }
+                    }
+                    entries.append(.message(message, peer, nil, presentationData))
+                }
+                
+                return entries
+            }
+            
+            strongSelf.disposable.set((signal
+            |> deliverOnMainQueue).start(next: { entries in
+                if let strongSelf = self {
+                    let previousEntries = strongSelf.previousEntries.swap(entries)
+                    
+                    let firstTime = previousEntries == nil
+                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction)
+                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
+                }
+            }))
         }))
     }
     

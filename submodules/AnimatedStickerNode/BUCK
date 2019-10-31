@@ -1,0 +1,20 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "AnimatedStickerNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/YuvConversion:YuvConversion",
+        "//submodules/GZip:GZip",
+        "//submodules/rlottie:RLottieBinding",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

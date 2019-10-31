@@ -1,17 +1,17 @@
 import Foundation
 
-class Table {
-    final let valueBox: ValueBox
-    final let table: ValueBoxTable
+open class Table {
+    public final let valueBox: ValueBox
+    public final let table: ValueBoxTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable) {
+    public init(valueBox: ValueBox, table: ValueBoxTable) {
         self.valueBox = valueBox
         self.table = table
     }
     
-    func clearMemoryCache() {
+    open func clearMemoryCache() {
     }
     
-    func beforeCommit() {
+    open func beforeCommit() {
     }
 }

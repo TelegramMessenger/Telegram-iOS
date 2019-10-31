@@ -281,6 +281,8 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             }
             if validLayout.intrinsicInsets.bottom.isEqual(to: 21.0) {
                 safeInsets.bottom = 21.0
+            } else if validLayout.intrinsicInsets.bottom.isEqual(to: 34.0) {
+                safeInsets.bottom = 34.0
             }
             if controller.navigationPresentation == .modal {
                 safeInsets.top = 0.0
@@ -485,6 +487,7 @@ open class LegacyController: ViewController, PresentableController {
                 orientation = .landscapeRight
             }
             
+            legacyTelegramController.intrinsicSize = layout.size
             legacyTelegramController._updateInset(for: orientation, force: false, notify: true)
             if self.enableContainerLayoutUpdates {
                 legacyTelegramController.layoutController(for: layout.size, duration: duration)

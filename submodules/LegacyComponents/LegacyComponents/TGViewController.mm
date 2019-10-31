@@ -4,7 +4,6 @@
 #import "TGFont.h"
 #import "TGImageUtils.h"
 #import "Freedom.h"
-#import "TGPopoverController.h"
 
 #import "TGNavigationController.h"
 #import "TGOverlayControllerWindow.h"
@@ -114,7 +113,7 @@ static std::set<int> autorotationLockIds;
 
 @end
 
-@interface TGViewController () <UIPopoverControllerDelegate, UIPopoverPresentationControllerDelegate>
+@interface TGViewController ()
 {
     id<LegacyComponentsContext> _context;
     
@@ -416,8 +415,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillChangeStatusBarFrameNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillChangeFrameNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
-    
-    [_associatedPopoverController dismissPopoverAnimated:false];
 }
 
 - (id<LegacyComponentsContext>)context {
@@ -435,23 +432,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         _associatedWindowStack = [[NSMutableArray alloc] init];
     
     return _associatedWindowStack;
-}
-
-- (void)setAssociatedPopoverController:(TGPopoverController *)associatedPopoverController
-{
-    if (_associatedPopoverController != nil)
-        [_associatedPopoverController dismissPopoverAnimated:false];
-    
-    _associatedPopoverController = associatedPopoverController;
-    _associatedPopoverController.delegate = self;
-}
-
-- (void)popoverControllerDidDismissPopover:(UIPopoverController *)popoverController
-{
-    if (popoverController == _associatedPopoverController)
-    {
-        _associatedPopoverController = nil;
-    }
 }
 
 - (UINavigationController *)navigationController
@@ -552,16 +532,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (bool)willCaptureInputShortly
 {
     return false;
-}
-
-- (UIPopoverController *)popoverController
-{
-    if ([self.navigationController isKindOfClass:[TGNavigationController class]])
-    {
-        return ((TGNavigationController *)self.navigationController).parentPopoverController;
-    }
-    
-    return nil;
 }
 
 - (void)acquireRotationLock
@@ -732,7 +702,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (UIEdgeInsets)controllerInsetForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
     UIEdgeInsets safeAreaInset = _context.safeAreaInset;
-    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : [TGHacks statusBarHeightForOrientation:orientation];
+    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : 0.0;
     CGFloat keyboardHeight = [self _currentKeyboardHeight:orientation];
     
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
@@ -1482,21 +1452,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (void)updateSizeClass {
     [self _updateControllerInset:true];
-    
-    if (_associatedPopoverController != nil) {
-        [_associatedPopoverController dismissPopoverAnimated:false];
-        
-        if ([_associatedPopoverController.contentViewController isKindOfClass:[TGNavigationController class]]) {
-            TGNavigationController *contentViewController = (TGNavigationController *)_associatedPopoverController.contentViewController;
-            if (contentViewController.detachFromPresentingControllerInCompactMode) {
-                NSMutableArray *viewControllers = [[NSMutableArray alloc] initWithArray:self.navigationController.viewControllers];
-                [viewControllers addObjectsFromArray:contentViewController.viewControllers];
-                [self.navigationController setViewControllers:viewControllers animated:false];
-            }
-        }
-        
-        _associatedPopoverController = nil;
-    }
 }
 
 - (void)layoutControllerForSize:(CGSize)__unused size duration:(NSTimeInterval)__unused duration {

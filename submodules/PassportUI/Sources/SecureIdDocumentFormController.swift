@@ -5,10 +5,12 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 
 enum SecureIdDocumentFormScrollToSubject {
     case selfie
@@ -47,6 +49,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         
         super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(context: context, secureIdContext: secureIdContext), presentationData: self.presentationData)
         
+        self.navigationPresentation = .modal
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         switch requestedData {
@@ -117,7 +120,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
             if let strongSelf = self {
                 switch state {
                     case .inProgress:
-                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                     case .saveAvailable, .saveNotAvailable:
                         if strongSelf.navigationItem.rightBarButtonItem !== strongSelf.doneItem {
                             strongSelf.navigationItem.rightBarButtonItem = strongSelf.doneItem

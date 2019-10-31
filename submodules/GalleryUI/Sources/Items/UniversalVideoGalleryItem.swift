@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import Display
 import Postbox
 import TelegramPresentationData
@@ -33,8 +34,9 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
-    
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    let storeMediaPlaybackState: (MessageId, Double?) -> Void
+
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -50,6 +52,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
+        self.storeMediaPlaybackState = storeMediaPlaybackState
     }
     
     public func node() -> GalleryItemNode {
@@ -131,7 +134,7 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
     
     func updateLayout(_ size: CGSize, transition: ContainedViewLayoutTransition) {
         let iconSize = self.iconNode.image?.size ?? CGSize()
-        let textSize = self.textNode.measure(CGSize(width: size.width - 20.0, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.measure(CGSize(width: max(0.0, size.width - 20.0), height: CGFloat.greatestFiniteMagnitude))
         let spacing: CGFloat = 10.0
         let contentHeight = iconSize.height + spacing + textSize.height
         let contentVerticalOrigin = floor((size.height - contentHeight) / 2.0)
@@ -178,7 +181,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var item: UniversalVideoGalleryItem?
     
     private let statusDisposable = MetaDisposable()
-    
+    private let mediaPlaybackStateDisposable = MetaDisposable()
+
     private let fetchDisposable = MetaDisposable()
     private var fetchStatus: MediaResourceStatus?
     private var fetchControls: FetchControls?
@@ -303,6 +307,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     deinit {
         self.statusDisposable.dispose()
+        self.mediaPlaybackStateDisposable.dispose()
         self.scrubbingFrameDisposable?.dispose()
     }
     
@@ -400,6 +405,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                     disablePictureInPicture = true
+                } else {
+                    let throttledSignal = videoNode.status
+                    |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
+                        return .single(next) |> then(.complete() |> delay(4.0, queue: Queue.concurrentDefaultQueue()))
+                    }
+                    
+                    self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
+                        if let status = status, status.duration > 60.0 * 20.0 {
+                            var timestamp: Double?
+                            if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
+                                timestamp = status.timestamp
+                            }
+                            item.storeMediaPlaybackState(message.id, timestamp)
+                        }
+                    }))
                 }
                 
                 var file: TelegramMediaFile?

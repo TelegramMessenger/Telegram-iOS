@@ -10,7 +10,6 @@ typedef enum {
 
 @class TGLabel;
 @class TGNavigationController;
-@class TGPopoverController;
 
 typedef enum {
     TGViewControllerNavigationBarAnimationNone = 0,
@@ -63,7 +62,6 @@ typedef enum {
 + (void)disableUserInteractionFor:(NSTimeInterval)timeInterval;
 
 @property (nonatomic, strong) NSMutableArray *associatedWindowStack;
-@property (nonatomic, strong) TGPopoverController *associatedPopoverController;
 
 @property (nonatomic) TGViewControllerStyle style;
 
@@ -108,6 +106,8 @@ typedef enum {
 
 @property (nonatomic, readonly) UIUserInterfaceSizeClass currentSizeClass;
 
+@property (nonatomic) CGSize intrinsicSize;
+
 @property (nonatomic, copy) NSArray<id<UIPreviewActionItem>> *(^externalPreviewActionItems)(void);
 @property (nonatomic, copy) void (^customRemoveFromParentViewController)(void);
 @property (nonatomic, copy) void (^customDismissSelf)(void);
@@ -149,8 +149,6 @@ typedef enum {
 - (bool)inFormSheet;
 
 - (bool)willCaptureInputShortly;
-
-- (UIPopoverController *)popoverController;
 
 - (void)acquireRotationLock;
 - (void)releaseRotationLock;

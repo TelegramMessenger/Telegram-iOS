@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import AccountContext
 import LocalizedPeerData
 import ContextUI
@@ -189,7 +190,7 @@ final class ChatMessageAccessibilityData {
             }
         }
         
-        let authorName = item.message.author?.displayTitle
+        let authorName = item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
         
         if let chatPeer = item.message.peers[item.message.id.peerId] {
             let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
@@ -518,7 +519,7 @@ final class ChatMessageAccessibilityData {
         if label.isEmpty {
             if let author = item.message.author {
                 if isIncoming {
-                    label = author.displayTitle
+                    label = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 } else {
                     label = item.presentationData.strings.VoiceOver_Chat_YourMessage
                 }
@@ -558,7 +559,7 @@ final class ChatMessageAccessibilityData {
                 let replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
-                        replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(author.displayTitle).0
+                        replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0
                     } else {
                         replyLabel = item.presentationData.strings.VoiceOver_Chat_Reply
                     }

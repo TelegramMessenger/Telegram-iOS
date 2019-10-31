@@ -4,12 +4,15 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import PassKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import TelegramStringFormatting
 import PasswordSetupUI
@@ -159,7 +162,8 @@ enum BotCheckoutEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: BotCheckoutControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! BotCheckoutControllerArguments
         switch self {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
@@ -236,7 +240,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
     
     var botName = ""
     if let botPeer = botPeer {
-        botName = botPeer.displayTitle
+        botName = botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     }
     entries.append(.header(presentationData.theme, invoice, botName))
     
@@ -366,7 +370,7 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
     return methods
 }
 
-final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>, PKPaymentAuthorizationViewControllerDelegate {
+final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
     private let context: AccountContext
     private let messageId: MessageId
     private let present: (ViewController, Any?) -> Void
@@ -394,7 +398,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
     
-    init(controller: ItemListController<BotCheckoutEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.messageId = messageId
         self.present = present
@@ -414,8 +418,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
             openShippingMethodImpl?()
         })
         
-        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotCheckoutEntry>, BotCheckoutEntry.ItemGenerationArguments)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
-            |> map { presentationData, state, paymentFormAndInfo, botPeer -> (PresentationTheme, (ItemListNodeState<BotCheckoutEntry>, BotCheckoutEntry.ItemGenerationArguments)) in
+        let signal: Signal<(PresentationTheme, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
+            |> map { presentationData, state, paymentFormAndInfo, botPeer -> (PresentationTheme, (ItemListNodeState, Any)) in
                 let nodeState = ItemListNodeState(entries: botCheckoutControllerEntries(presentationData: presentationData, state: state, invoice: invoice, paymentForm: paymentFormAndInfo?.0, formInfo: paymentFormAndInfo?.1, validatedFormInfo: paymentFormAndInfo?.2, currentShippingOptionId: paymentFormAndInfo?.3, currentPaymentMethod: paymentFormAndInfo?.4, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
                 
                 return (presentationData.theme, (nodeState, arguments))
@@ -849,7 +853,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             }
                             
                             let amount = NSDecimalNumber(value: Double(totalAmount) * 0.01)
-                            items.append(PKPaymentSummaryItem(label: botPeer.displayTitle, amount: amount))
+                            items.append(PKPaymentSummaryItem(label: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), amount: amount))
                             
                             request.paymentSummaryItems = items
                             
@@ -882,7 +886,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AppBundle
@@ -208,7 +209,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
     
     func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
-        (view as? UITableViewHeaderFooterView)?.backgroundView?.backgroundColor = self.theme.list.plainBackgroundColor
+        (view as? UITableViewHeaderFooterView)?.tintColor = self.theme.list.plainBackgroundColor
         (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.list.itemPrimaryTextColor
     }
     

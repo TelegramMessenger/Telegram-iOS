@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import ItemListPeerItem
 import ItemListPeerActionItem
@@ -146,7 +148,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: SelectivePrivacyPeersControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! SelectivePrivacyPeersControllerArguments
         switch self {
             case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
                 var text: ItemListPeerItemText = .none
@@ -349,7 +352,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacyPeersEntry>, SelectivePrivacyPeersEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         if !peers.isEmpty {
             if state.editing {

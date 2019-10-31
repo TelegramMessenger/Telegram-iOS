@@ -4,9 +4,11 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import CountrySelectionUI
+import PhoneNumberFormat
 
 enum SecureIdRequestedIdentityDocument: Int32 {
     case passport

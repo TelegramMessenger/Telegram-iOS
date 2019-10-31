@@ -75,10 +75,17 @@ int exec_set_gas_limit(VmState* st) {
   return exec_set_gas_generic(st, gas);
 }
 
+int exec_commit(VmState* st) {
+  VM_LOG(st) << "execute COMMIT";
+  st->commit();
+  return 0;
+}
+
 void register_basic_gas_ops(OpcodeTable& cp0) {
   using namespace std::placeholders;
   cp0.insert(OpcodeInstr::mksimple(0xf800, 16, "ACCEPT", exec_accept))
-      .insert(OpcodeInstr::mksimple(0xf801, 16, "SETGASLIMIT", exec_set_gas_limit));
+      .insert(OpcodeInstr::mksimple(0xf801, 16, "SETGASLIMIT", exec_set_gas_limit))
+      .insert(OpcodeInstr::mksimple(0xf80f, 16, "COMMIT", exec_commit));
 }
 
 void register_ton_gas_ops(OpcodeTable& cp0) {
@@ -268,7 +275,7 @@ int exec_ed25519_check_signature(VmState* st, bool from_slice) {
   }
   td::Ed25519::PublicKey pub_key{td::SecureString(td::Slice{key, 32})};
   auto res = pub_key.verify_signature(td::Slice{data, data_len}, td::Slice{signature, 64});
-  stack.push_bool(res.is_ok());
+  stack.push_bool(res.is_ok() || st->get_chksig_always_succeed());
   return 0;
 }
 

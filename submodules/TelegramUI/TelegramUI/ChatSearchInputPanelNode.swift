@@ -3,8 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
+import TelegramNotices
 import TelegramPresentationData
 import ActivityIndicator
 
@@ -23,6 +25,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private let activityDisposable = MetaDisposable()
     private var displayActivity = false
+    
+    private var needsSearchResultsTooltip = true
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics)?
     
@@ -54,7 +58,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.membersButton = HighlightableButtonNode()
         self.measureResultsLabel = TextNode()
         self.resultsButton = HighlightableButtonNode()
-        self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme))
+        self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme.rootController.navigationBar.buttonColor))
         self.activityIndicator.isHidden = true
         
         super.init()
@@ -79,6 +83,26 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     @objc func upPressed() {
         self.interfaceInteraction?.navigateMessageSearch(.earlier)
+        
+        guard self.needsSearchResultsTooltip, let context = self.context else {
+            return
+        }
+        
+        let _ = (ApplicationSpecificNotice.getChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager)
+        |> deliverOnMainQueue).start(next: { [weak self] counter in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if counter >= 3 {
+                strongSelf.needsSearchResultsTooltip = false
+            } else if arc4random_uniform(4) == 1 {
+                strongSelf.needsSearchResultsTooltip = false
+                
+                let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager).start()
+                strongSelf.interfaceInteraction?.displaySearchResultsTooltip(strongSelf.resultsButton, strongSelf.resultsButton.bounds)
+            }
+        })
     }
     
     @objc func downPressed() {
@@ -95,6 +119,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     @objc func resultsPressed() {
         self.interfaceInteraction?.openSearchResults()
+        
+        if let context = self.context {
+            let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager, count: 4).start()
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
@@ -161,7 +189,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
         self.membersButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity || !canSearchMembers
         
-        let resultsEnabled = (resultCount ?? 0) > 5
+        let resultsEnabled = (resultCount ?? 0) > 0
         self.resultsButton.setTitle(resultsText ?? "", with: labelFont, with: resultsEnabled ? interfaceState.theme.chat.inputPanel.panelControlAccentColor : interfaceState.theme.chat.inputPanel.primaryTextColor, for: .normal)
         self.resultsButton.isUserInteractionEnabled = resultsEnabled
         

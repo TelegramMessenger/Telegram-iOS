@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 enum SelectivePrivacySettingsKind {
@@ -343,7 +345,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: SelectivePrivacySettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! SelectivePrivacySettingsControllerArguments
         switch self {
             case let .forwardsPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
@@ -927,12 +930,14 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }
     })
     
-    let peerName = context.account.postbox.transaction { transaction -> String in
-        return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.displayTitle ?? ""
+    let peer = context.account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(context.account.peerId) as? TelegramUser
     }
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerName) |> deliverOnMainQueue
-    |> map { presentationData, state, peerName -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peer) |> deliverOnMainQueue
+    |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        
+        let peerName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         
         let title: String
         switch kind {
@@ -950,7 +955,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = presentationData.strings.Privacy_PhoneNumber
         }
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? ""), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

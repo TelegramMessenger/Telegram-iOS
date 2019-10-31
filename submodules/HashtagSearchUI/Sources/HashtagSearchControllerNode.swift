@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ChatListUI
@@ -42,7 +43,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         if peer?.id == context.account.peerId {
             items.append(presentationData.strings.Conversation_SavedMessages)
         } else {
-            items.append(peer?.displayTitle ?? "")
+            items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }
         items.append(strings.HashtagSearch_AllChats)
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)

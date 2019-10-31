@@ -129,7 +129,7 @@
 
   // If our text-view's width is already the constrained width, we can use our existing TextKit stack for this sizing calculation.
   // Otherwise, we create a temporary stack to size for `constrainedWidth`.
-  /*if (CGRectGetWidth(components.textView.threadSafeBounds) != constrainedWidth)*/ {
+  if (CGRectGetWidth(components.textView.threadSafeBounds) != constrainedWidth) {
     components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth, CGFLOAT_MAX)];
   }
 

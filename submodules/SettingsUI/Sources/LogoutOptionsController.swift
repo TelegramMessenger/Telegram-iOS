@@ -4,12 +4,15 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import UrlHandling
 
 private struct LogoutOptionsItemArguments {
@@ -70,7 +73,8 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: LogoutOptionsItemArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! LogoutOptionsItemArguments
         switch self {
             case let .alternativeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
@@ -171,7 +175,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         
         let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
             |> take(1)
@@ -215,17 +219,14 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         presentControllerImpl?(alertController, nil)
     })
     
-    let hasWallets = availableWallets(postbox: context.account.postbox)
-    |> map { wallets in
-        return !wallets.wallets.isEmpty
-    }
+    let hasWallets = context.hasWallets
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         context.sharedContext.accountManager.accessChallengeData(),
         hasWallets
     )
-    |> map { presentationData, accessChallengeData, hasWallets -> (ItemListControllerState, (ItemListNodeState<LogoutOptionsEntry>, LogoutOptionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, accessChallengeData, hasWallets -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

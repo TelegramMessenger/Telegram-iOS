@@ -1,6 +1,8 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
+import SyncCore
 
 private func suggestedUserPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> Double {
     switch presence.status {

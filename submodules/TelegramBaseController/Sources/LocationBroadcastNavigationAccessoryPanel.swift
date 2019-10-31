@@ -3,9 +3,13 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
+import TelegramUIPreferences
 import TextFormat
+import Markdown
+import LocalizedPeerData
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -19,6 +23,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let accountPeerId: PeerId
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var nameDisplayOrder: PresentationPersonNameOrder
     
     private let tapAction: () -> Void
     private let close: () -> Void
@@ -35,10 +40,11 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode, Bool)?
     
-    init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
+    init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
         self.accountPeerId = accountPeerId
         self.theme = theme
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         
         self.tapAction = tapAction
         self.close = close
@@ -114,7 +120,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                 case .summary:
                     let text: String
                     if peers.count == 1 {
-                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle).0
+                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).0
                     } else {
                         text = self.strings.DialogList_LiveLocationChatsCount(Int32(peers.count))
                     }

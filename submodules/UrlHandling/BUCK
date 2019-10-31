@@ -9,9 +9,11 @@ static_library(
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/MtProtoKit:MtProtoKit#shared",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+	"//submodules/WalletUrl:WalletUrl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

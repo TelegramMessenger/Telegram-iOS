@@ -245,6 +245,10 @@
             
         case PHAssetCollectionSubtypeSmartAlbumAnimated:
             return TGMediaAssetGroupSubtypeAnimated;
+            
+        case PHAssetCollectionSubtypeSmartAlbumAllHidden:
+            return TGMediaAssetGroupSubtypeHidden;
+            
         default:
             return TGMediaAssetGroupSubtypeRegular;
     }
@@ -359,6 +363,12 @@
                     return false;
             }
         }
+            
+        case PHAssetCollectionSubtypeSmartAlbumAllHidden:
+        {
+            return true;
+        }
+            break;
             
         default:
         {

@@ -2,8 +2,10 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import SyncCore
 import AsyncDisplayKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 
 protocol InstantPageImageAttribute {
@@ -43,7 +45,7 @@ final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageImageNode(context: context, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, longPressMedia: longPressMedia)
     }
     

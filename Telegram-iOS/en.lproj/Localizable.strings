@@ -4213,6 +4213,13 @@ Unused sets are archived when you add more.";
 
 "ChatList.DeleteForCurrentUser" = "Delete just for me";
 "ChatList.DeleteForEveryone" = "Delete for me and %@";
+"ChatList.DeleteForEveryoneConfirmationTitle" = "Warning!";
+"ChatList.DeleteForEveryoneConfirmationText" = "This will **delete all messages** in this chat for **both participants**.";
+"ChatList.DeleteForEveryoneConfirmationAction" = "Delete All";
+
+"ChatList.DeleteSavedMessagesConfirmationTitle" = "Warning!";
+"ChatList.DeleteSavedMessagesConfirmationText" = "This will **delete all messages** in this chat.";
+"ChatList.DeleteSavedMessagesConfirmationAction" = "Delete All";
 
 "ChatList.ClearChatConfirmation" = "Are you sure you want to delete all\nmessages in the chat with %@?";
 
@@ -4631,12 +4638,12 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
-"Conversation.SelectedMessages_1" = "%@ Message Selected";
-"Conversation.SelectedMessages_2" = "%@ Messages Selected";
-"Conversation.SelectedMessages_3_10" = "%@ Messages Selected";
-"Conversation.SelectedMessages_any" = "%@ Messages Selected";
-"Conversation.SelectedMessages_many" = "%@ Messages Selected";
-"Conversation.SelectedMessages_0" = "%@ Messages Selected";
+"Conversation.SelectedMessages_1" = "%@ Selected";
+"Conversation.SelectedMessages_2" = "%@ Selected";
+"Conversation.SelectedMessages_3_10" = "%@ Selected";
+"Conversation.SelectedMessages_any" = "%@ Selected";
+"Conversation.SelectedMessages_many" = "%@ Selected";
+"Conversation.SelectedMessages_0" = "%@ Selected";
 
 "AccentColor.Title" = "Accent Color";
 
@@ -4756,28 +4763,29 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatSearch.ResultsTooltip" = "Tap to view as a list.";
 
-"Updated.JustNow" = "just now";
-"Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
-"Updated.MinutesAgo_1" = "1 minute ago"; //one
-"Updated.MinutesAgo_2" = "2 minutes ago"; //two
-"Updated.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
-"Updated.MinutesAgo_many" = "%@ minutes ago"; // more than ten
-"Updated.MinutesAgo_any" = "%@ minutes ago"; // more than ten
-"Updated.HoursAgo_0" = "%@ hours ago";
-"Updated.HoursAgo_1" = "1 hour ago";
-"Updated.HoursAgo_2" = "2 hours ago";
-"Updated.HoursAgo_3_10" = "%@ hours ago";
-"Updated.HoursAgo_any" = "%@ hours ago";
-"Updated.HoursAgo_many" = "%@ hours ago";
-"Updated.HoursAgo_0" = "%@ hours ago";
-"Updated.YesterdayAt" = "yesterday at %@";
-"Updated.AtDate" = "%@";
-"Updated.TodayAt" = "today at %@";
+"Wallet.Updated.JustNow" = "updated just now";
+"Wallet.Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Wallet.Updated.MinutesAgo_1" = "1 minute ago"; //one
+"Wallet.Updated.MinutesAgo_2" = "2 minutes ago"; //two
+"Wallet.Updated.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Wallet.Updated.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Wallet.Updated.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Wallet.Updated.HoursAgo_0" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_1" = "1 hour ago";
+"Wallet.Updated.HoursAgo_2" = "2 hours ago";
+"Wallet.Updated.HoursAgo_3_10" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_any" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_many" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_0" = "%@ hours ago";
+"Wallet.Updated.YesterdayAt" = "yesterday at %@";
+"Wallet.Updated.AtDate" = "%@";
+"Wallet.Updated.TodayAt" = "today at %@";
 
 "Wallet.Info.WalletCreated" = "Wallet Created";
 "Wallet.Info.Address" = "Your wallet address";
 "Wallet.Info.YourBalance" = "your balance";
 "Wallet.Info.Receive" = "Receive";
+"Wallet.Info.ReceiveGrams" = "Receive Grams";
 "Wallet.Info.Send" = "Send";
 "Wallet.Info.RefreshErrorTitle" = "No network";
 "Wallet.Info.RefreshErrorText" = "Couldn't refresh balance. Please make sure your internet connection is working and try again.";
@@ -4786,8 +4794,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.TransactionTo" = "to";
 "Wallet.Info.TransactionFrom" = "from";
 "Wallet.Info.Updating" = "updating";
-"Wallet.Info.TransactionStorageFee" = "%@ storage fee";
-"Wallet.Info.TransactionOtherFee" = "%@ transaction fee";
+"Wallet.Info.TransactionBlockchainFee" = "%@ blockchain fees";
 "Wallet.Info.TransactionPendingHeader" = "Pending";
 "Wallet.Qr.ScanCode" = "Scan QR Code";
 "Wallet.Qr.Title" = "QR Code";
@@ -4801,7 +4808,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them.";
 "Wallet.Receive.AmountHeader" = "AMOUNT";
 "Wallet.Receive.AmountText" = "Grams to receive";
-"Wallet.Receive.AmountInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+"Wallet.Receive.AmountInfo" = "You can specify the amount and purpose of the payment to save the sender some time.";
 "Wallet.Receive.CommentHeader" = "COMMENT (OPTIONAL)";
 "Wallet.Receive.CommentInfo" = "Description of the payment";
 "Wallet.Receive.AddressCopied" = "Address copied to clipboard.";
@@ -4813,23 +4820,31 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.AmountText" = "Grams to send";
 "Wallet.Send.Confirmation" = "Confirmation";
-"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?";
+"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?\n\nFees: ~%3$@ grams";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
+"Wallet.Send.OwnAddressAlertTitle" = "Warning";
+"Wallet.Send.OwnAddressAlertText" = "Sending Grams from a wallet to the same wallet doesn't make sense, you will simply waste a portion of the value on blockchain fees.";
+"Wallet.Send.OwnAddressAlertProceed" = "Proceed";
+"Wallet.Send.TransactionInProgress" = "Please wait until the current transaction is completed.";
+"Wallet.Send.SyncInProgress" = "Please wait while the wallet finishes syncing with the TON Blockchain.";
 "Wallet.Settings.Title" = "Wallet Settings";
+"Wallet.Settings.Configuration" = "Configuration";
+"Wallet.Settings.BackupWallet" = "Backup Wallet";
 "Wallet.Settings.DeleteWallet" = "Delete Wallet";
-"Wallet.Settings.DeleteWalletInfo" = "This will disconnect the wallet from this app. You will be able to restore your wallet using 24 secret words – or import another wallet.\n\nWallets are located in the TON Blockchain, which is not controlled by Telegram. If you want a wallet to be deleted, simply transfer all the grams from it and leave it empty.";
+"Wallet.Settings.DeleteWalletInfo" = "This will disconnect the wallet from this app. You will be able to restore your wallet using 24 secret words – or import another wallet.\n\nGram Wallets are located in the decentralized TON Blockchain. If you want a wallet to be deleted, simply transfer all the grams from it and leave it empty.";
 "Wallet.Intro.NotNow" = "Not Now";
 "Wallet.Intro.ImportExisting" = "Import existing wallet";
 "Wallet.Intro.CreateErrorTitle" = "An Error Occurred";
 "Wallet.Intro.CreateErrorText" = "Sorry. Please try again.";
 "Wallet.Intro.Title" = "Gram Wallet";
-"Wallet.Intro.Text" = "The gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.";
+"AppWallet.Intro.Text" = "The gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.";
+"Wallet.Intro.Text" = "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.";
 "Wallet.Intro.CreateWallet" = "Create My Wallet";
 "Wallet.Intro.Terms" = "By creating a wallet you accept the\n[Terms of Conditions]().";
-"Wallet.Intro.TermsUrl" = "https://telegram.org/tos/wallet";
+"TelegramWallet.Intro.TermsUrl" = "https://telegram.org/tos/wallet";
 "Wallet.Created.Title" = "Congratulations";
-"Wallet.Created.Text" = "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.";
+"Wallet.Created.Text" = "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down your secret words and\nset up a secure passcode.";
 "Wallet.Created.Proceed" = "Proceed";
 "Wallet.Created.ExportErrorTitle" = "Error";
 "Wallet.Created.ExportErrorText" = "Encryption error. Please make sure you have enabled a device passcode in iOS settings and try again.";
@@ -4863,13 +4878,15 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.TransactionInfo.SenderHeader" = "SENDER";
 "Wallet.TransactionInfo.CopyAddress" = "Copy Wallet Address";
 "Wallet.TransactionInfo.AddressCopied" = "Address copied to clipboard.";
-"Wallet.TransactionInfo.SendGrams" = "Send Grams";
+"Wallet.TransactionInfo.SendGrams" = "Send Grams to This Address";
 "Wallet.TransactionInfo.CommentHeader" = "COMMENT";
 "Wallet.TransactionInfo.StorageFeeHeader" = "STORAGE FEE";
 "Wallet.TransactionInfo.OtherFeeHeader" = "TRANSACTION FEE";
-"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet. [More info]()";
-"Wallet.TransactionInfo.OtherFeeInfo" = "Blockchain validators collect a tiny fee for processing your decentralized transactions. [More info]()";
-"Wallet.TransactionInfo.FeeInfoURL" = "https://telegram.org/wallet/fee";
+"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and processing your transactions.";
+"Wallet.TransactionInfo.StorageFeeInfoUrl" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and processing your transactions. [More info]()";
+"Wallet.TransactionInfo.OtherFeeInfo" = "Blockchain validators collect a tiny fee for processing your decentralized transactions.";
+"Wallet.TransactionInfo.OtherFeeInfoUrl" = "Blockchain validators collect a tiny fee for processing your decentralized transactions. [More info]()";
+"AppWallet.TransactionInfo.FeeInfoURL" = "https://telegram.org/wallet/fee";
 "Wallet.WordCheck.Title" = "Test Time!";
 "Wallet.WordCheck.Text" = "Let’s check that you wrote them down correctly. Please enter words\n**%1$@**, **%2$@** and **%3$@** below:";
 "Wallet.WordCheck.Continue" = "Continue";
@@ -4884,7 +4901,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.WordImport.IncorrectTitle" = "Incorrect words";
 "Wallet.WordImport.IncorrectText" = "Sorry, you have entered incorrect secret words. Please double check and try again.";
 "Wallet.Words.Title" = "24 Secret Words";
-"Wallet.Words.Text" = "Write down these 24 words in the correct order and store them in a secret place.\n\nUse these secret words to restore access to your wallet if you lose your passcode or Telegram account.";
+"Wallet.Words.Text" = "Write down these 24 words in the correct order and store them in a secret place.\n\nUse these secret words to restore access to your wallet if you lose your passcode or device.";
 "Wallet.Words.Done" = "Done";
 "Wallet.Words.NotDoneTitle" = "Sure Done?";
 "Wallet.Words.NotDoneText" = "You didn't have enough time to write those words down.";
@@ -4900,10 +4917,134 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.UninitializedText" = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?";
 "Wallet.Send.SendAnyway" = "Send Anyway";
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
-"Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+"Wallet.Receive.CreateInvoiceInfo" = "You can specify the amount and purpose of the payment to save the sender some time.";
+
 "Conversation.WalletRequiredTitle" = "Gram Wallet Required";
 "Conversation.WalletRequiredText" = "This link can be used to send money on the TON Blockchain. To do this, you need to set up a Gram wallet first.";
 "Conversation.WalletRequiredNotNow" = "Not Now";
 "Conversation.WalletRequiredSetup" = "Set Up";
 
+"Wallet.Configuration.Title" = "Configuration";
+"Wallet.Configuration.Apply" = "Save";
+
 "Wallet.CreateInvoice.Title" = "Create Invoice";
+
+"Wallet.Navigation.Close" = "Close";
+"Wallet.Navigation.Back" = "Back";
+"Wallet.Navigation.Done" = "Done";
+"Wallet.Navigation.Cancel" = "Cancel";
+"Wallet.Alert.OK" = "OK";
+"Wallet.Alert.Cancel" = "Cancel";
+
+"Wallet.Month.GenJanuary" = "January";
+"Wallet.Month.GenFebruary" = "February";
+"Wallet.Month.GenMarch" = "March";
+"Wallet.Month.GenApril" = "April";
+"Wallet.Month.GenMay" = "May";
+"Wallet.Month.GenJune" = "June";
+"Wallet.Month.GenJuly" = "July";
+"Wallet.Month.GenAugust" = "August";
+"Wallet.Month.GenSeptember" = "September";
+"Wallet.Month.GenOctober" = "October";
+"Wallet.Month.GenNovember" = "November";
+"Wallet.Month.GenDecember" = "December";
+"Wallet.Month.ShortJanuary" = "Jan";
+"Wallet.Month.ShortFebruary" = "Feb";
+"Wallet.Month.ShortMarch" = "Mar";
+"Wallet.Month.ShortApril" = "Apr";
+"Wallet.Month.ShortMay" = "May";
+"Wallet.Month.ShortJune" = "Jun";
+"Wallet.Month.ShortJuly" = "Jul";
+"Wallet.Month.ShortAugust" = "Aug";
+"Wallet.Month.ShortSeptember" = "Sep";
+"Wallet.Month.ShortOctober" = "Oct";
+"Wallet.Month.ShortNovember" = "Nov";
+"Wallet.Month.ShortDecember" = "Dec";
+
+"Wallet.Weekday.Today" = "Today";
+"Wallet.Weekday.Yesterday" = "Yesterday";
+
+"Wallet.Info.TransactionDateHeader" = "%1$@ %2$@";
+"Wallet.Info.TransactionDateHeaderYear" = "%1$@ %2$@, %3$@";
+
+"Wallet.UnknownError" = "An error occurred. Please try again later.";
+
+"Wallet.ContextMenuCopy" = "Copy";
+
+"Wallet.Time.PreciseDate_m1" = "Jan %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m2" = "Feb %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m3" = "Mar %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m4" = "Apr %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m5" = "May %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m6" = "Jun %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m7" = "Jul %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m8" = "Aug %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m9" = "Sep %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m10" = "Oct %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m11" = "Nov %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
+
+"Wallet.VoiceOver.Editing.ClearText" = "Clear text";
+
+"Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";
+
+"Settings.Wallet" = "Gram Wallet";
+"SettingsSearch.Synonyms.Wallet" = "TON Telegram Open Network Crypto";
+
+"Conversation.ClearCache" = "Clear Cache";
+"ClearCache.Description" = "Media files will be deleted from your phone, but available for re-downloading when necessary.";
+"ClearCache.FreeSpaceDescription" = "If you want to save space on your device, you don't need to delete anything.\n\nYou can use cache settings to remove unnecessary media — and re-download files if you need them again.";
+"ClearCache.FreeSpace" = "Free Space";
+"ClearCache.Success" = "**%@** freed on your %@!";
+
+"Conversation.ScheduleMessage.SendWhenOnline" = "Send When Online";
+"ScheduledMessages.ScheduledOnline" = "Scheduled until online";
+
+"Conversation.SwipeToReplyHintTitle" = "Swipe To Reply";
+"Conversation.SwipeToReplyHintText" = "Swipe left on any message to reply to it.";
+
+"TwoFactorSetup.Intro.Title" = "Additional Password";
+"TwoFactorSetup.Intro.Text" = "You can set a password that will be\nrequired when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.Intro.Action" = "Set Additional Password";
+
+"TwoFactorSetup.Password.Title" = "Create Password";
+"TwoFactorSetup.Password.PlaceholderPassword" = "Password";
+"TwoFactorSetup.Password.PlaceholderConfirmPassword" = "Re-enter Password";
+"TwoFactorSetup.Password.Action" = "Create Password";
+
+"TwoFactorSetup.Email.Title" = "Recovery Email";
+"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset you password and restore\n access to your Telegram account.";
+"TwoFactorSetup.Email.Placeholder" = "Your email address";
+"TwoFactorSetup.Email.Action" = "Continue";
+"TwoFactorSetup.Email.SkipAction" = "Skip setting email";
+"TwoFactorSetup.Email.SkipConfirmationTitle" = "No, seriously.";
+"TwoFactorSetup.Email.SkipConfirmationText" = "If you forget your password, you will lose access to your Telegram account. There will be no way to restore it.";
+"TwoFactorSetup.Email.SkipConfirmationSkip" = "Skip";
+
+"TwoFactorSetup.EmailVerification.Title" = "Recovery Email";
+"TwoFactorSetup.EmailVerification.Text" = "Please enter code we've just emailed at %@";
+"TwoFactorSetup.EmailVerification.Placeholder" = "Code";
+"TwoFactorSetup.EmailVerification.Action" = "Continue";
+"TwoFactorSetup.EmailVerification.ChangeAction" = "Change Email";
+"TwoFactorSetup.EmailVerification.ResendAction" = "Re-send Code";
+
+"TwoFactorSetup.Hint.Title" = "Hint";
+"TwoFactorSetup.Hint.Text" = "You can create an optional hint for\nyour password.";
+"TwoFactorSetup.Hint.Placeholder" = "Hint (optional)";
+"TwoFactorSetup.Hint.Action" = "Continue";
+"TwoFactorSetup.Hint.SkipAction" = "Skip setting hint";
+
+"TwoFactorSetup.Done.Title" = "Password Set!";
+"TwoFactorSetup.Done.Text" = "This password will be required when you log in on a new device in addition to the code you get via SMS.";
+"TwoFactorSetup.Done.Action" = "Return to Settings";
+
+"AutoNightTheme.System" = "System";
+
+"ChatSettings.OpenLinksIn" = "Open Links in";
+"SettingsSearch.Synonyms.ChatSettings.OpenLinksIn" = "Browser";
+
+"WebBrowser.Title" = "Web Browser";
+"WebBrowser.DefaultBrowser" = "DEFAULT WEB BROWSER";
+"WebBrowser.InAppSafari" = "In-App Safari";
+
+"Widget.ApplicationLocked" = "Unlock the app to use the widget";

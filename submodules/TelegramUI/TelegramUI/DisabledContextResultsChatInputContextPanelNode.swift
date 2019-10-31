@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
@@ -12,7 +13,7 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
     private let separatorNode: ASDisplayNode
     private let textNode: ImmediateTextNode
     
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.containerNode = ASDisplayNode()
@@ -31,10 +32,10 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
         self.addSubnode(self.containerNode)
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let firstLayout = self.validLayout == nil
         
-        self.validLayout = (size, leftInset, rightInset)
+        self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         self.containerNode.backgroundColor = interfaceState.theme.list.plainBackgroundColor
         self.separatorNode.backgroundColor = interfaceState.theme.list.itemPlainSeparatorColor

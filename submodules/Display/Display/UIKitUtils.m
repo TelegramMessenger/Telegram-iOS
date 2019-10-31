@@ -174,7 +174,7 @@ UIBlurEffect *makeCustomZoomBlurEffect() {
         CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
         
         setField(result, encodeText(@"tfuCmvsSbejvt;", -1), 10.0);
-        setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
+        //setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
         setNilField(result, encodeText(@"tfuDpmpsUjou;", -1));
         setField(result, encodeText(@"tfuDpmpsUjouBmqib;", -1), 0.0);
         setField(result, encodeText(@"tfuEbslfojohUjouBmqib;", -1), 0.0);

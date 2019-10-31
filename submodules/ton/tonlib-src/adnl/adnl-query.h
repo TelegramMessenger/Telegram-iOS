@@ -20,6 +20,7 @@
 
 #include "td/actor/actor.h"
 #include "common/bitstring.h"
+#include "common/errorcode.h"
 #include "td/utils/buffer.h"
 
 #include <functional>
@@ -52,6 +53,9 @@ class AdnlQuery : public td::actor::Actor {
   }
   void tear_down() override {
     destroy_(id_);
+    if (promise_) {
+      promise_.set_error(td::Status::Error(ErrorCode::cancelled, "Cancelled"));
+    }
   }
 
  private:

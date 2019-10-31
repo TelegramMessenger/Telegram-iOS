@@ -1,0 +1,5 @@
+/* Localized versions of Info.plist keys */
+
+"NSCameraUsageDescription" = "Please allow TON Wallet access to your camera for scanning QR codes.";
+"NSPhotoLibraryUsageDescription" = "Please allow TON Wallet access to your Photo Stream in case you need to scan a QR code from a picture.";
+"NSFaceIDUsageDescription" = "For better security, please allow TON Wallet to use your Face ID to authenticate payments.";

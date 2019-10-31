@@ -1,0 +1,13 @@
+() main(cs) impure {
+  int i = 0;
+  if (cs.slice_refs()) {
+    do {
+      i = i + 1;
+    } until(i > 10);
+  }
+  set_data(begin_cell()
+    .store_uint(1, 32)
+    .store_uint(2, 32)
+    .store_uint(i, 32)
+    .end_cell());
+}

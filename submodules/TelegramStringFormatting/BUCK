@@ -7,11 +7,13 @@ static_library(
     ]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Postbox:Postbox#shared",
 	    "//submodules/Display:Display#shared",
     	"//submodules/PlatformRestrictionMatching:PlatformRestrictionMatching",
     	"//submodules/LocalizedPeerData:LocalizedPeerData",
     	"//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AppBundle:AppBundle",

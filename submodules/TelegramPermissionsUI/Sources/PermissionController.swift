@@ -4,11 +4,12 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import DeviceAccess
 import AccountContext
 
-public final class PermissionController : ViewController {
+public final class PermissionController: ViewController {
     private let context: AccountContext
     private let splitTest: PermissionUISplitTest?
     private var state: PermissionControllerContent?
@@ -236,12 +237,5 @@ public final class PermissionController : ViewController {
     
     @objc private func nextPressed() {
         self.skip?()
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
 }

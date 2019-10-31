@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -97,7 +98,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
                 switch status {
                     case .verifying:
                         if strongSelf.activityItem == nil {
-                            strongSelf.activityItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                            strongSelf.activityItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                             strongSelf.navigationItem.setRightBarButton(strongSelf.activityItem, animated: false)
                         }
                     default:

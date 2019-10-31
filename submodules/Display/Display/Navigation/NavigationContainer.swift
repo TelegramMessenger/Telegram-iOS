@@ -269,6 +269,18 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         
             if controllers.last !== self.state.top?.value {
+                self.state.top?.value.statusBar.alphaUpdated = nil
+                if let controller = controllers.last {
+                    controller.statusBar.alphaUpdated = { [weak self, weak controller] transition in
+                        guard let strongSelf = self, let controller = controller else {
+                            return
+                        }
+                        if strongSelf.state.top?.value === controller && strongSelf.state.transition == nil {
+                            strongSelf.statusBarStyleUpdated?(transition)
+                        }
+                    }
+                }
+                
                 if controllers.last !== self.state.pending?.value.value {
                     self.state.pending = nil
                     if let last = controllers.last {
@@ -371,7 +383,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 switch transitionType {
                 case .push:
-                    strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
+                    if let _ = strongSelf.state.transition, let top = strongSelf.state.top, viewTreeContainsFirstResponder(view: top.value.view) {
+                        strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
+                    } else {
+                        strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
+                    }
                 case .pop:
                     strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
                 }

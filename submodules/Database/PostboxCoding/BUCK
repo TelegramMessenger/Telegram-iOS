@@ -1,0 +1,15 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "PostboxCoding",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/Database/Buffers:Buffers",
+        "//submodules/Database/MurmurHash:MurmurHash",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

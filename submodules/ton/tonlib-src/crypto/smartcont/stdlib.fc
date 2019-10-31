@@ -1,8 +1,25 @@
 ;; Standard library for funC
 ;;
 
+forall X -> tuple cons(X head, tuple tail) asm "CONS";
+forall X -> (X, tuple) uncons(tuple list) asm "UNCONS";
+forall X -> (tuple, X) list_next(tuple list) asm( -> 1 0) "UNCONS";
+forall X -> X car(tuple list) asm "CAR";
+tuple cdr(tuple list) asm "CDR";
+forall X, Y -> tuple pair(X x, Y y) asm "PAIR";
+forall X, Y -> (X, Y) unpair(tuple t) asm "UNPAIR";
+forall X, Y, Z -> tuple triple(X x, Y y, Z z) asm "TRIPLE";
+forall X, Y, Z -> (X, Y, Z) untriple(tuple t) asm "UNTRIPLE";
+forall X, Y, Z, W -> tuple tuple4(X x, Y y, Z z, W w) asm "4 TUPLE";
+forall X, Y, Z, W -> (X, Y, Z, W) untuple4(tuple t) asm "4 UNTUPLE";
+forall X -> X first(tuple t) asm "FIRST";
+forall X -> X second(tuple t) asm "SECOND";
+forall X -> X third(tuple t) asm "THIRD";
+forall X -> X fourth(tuple t) asm "3 INDEX";
+
 int now() asm "NOW";
 slice my_address() asm "MYADDR";
+tuple get_balance() asm "BALANCE";
 
 int cell_hash(cell c) asm "HASHCU";
 int slice_hash(slice s) asm "HASHSU";
@@ -17,8 +34,10 @@ int check_data_signature(slice data, slice signature, int public_key) asm "CHKSI
 
 cell get_data() asm "c4 PUSH";
 () set_data(cell c) impure asm "c4 POP";
+cell get_c3() impure asm "c3 PUSH";
 () set_c3(cell c) impure asm "c3 POP";
 () accept_message() impure asm "ACCEPT";
+() commit() impure asm "COMMIT";
 
 int min(int x, int y) asm "MIN";
 int max(int x, int y) asm "MAX";
@@ -36,6 +55,7 @@ cell preload_ref(slice s) asm "PLDREF";
 (slice, int) load_grams(slice s) asm( -> 1 0) "LDGRAMS";
 slice skip_bits(slice s, int len) asm "SDSKIPFIRST";
 slice first_bits(slice s, int len) asm "SDCUTFIRST";
+(slice, ()) skip_last_bits(slice s, int len) asm "SDSKIPLAST";
 (slice, cell) load_dict(slice s) asm( -> 1 0) "LDDICT";
 cell preload_dict(slice s) asm "PLDDICT";
 slice skip_dict(slice s) asm "SKIPDICT";
@@ -63,15 +83,30 @@ tuple parse_addr(slice s) asm "PARSEMSGADDR";
 
 cell idict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
 (cell, ()) ~idict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+cell udict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUSETREF";
+(cell, ()) ~udict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUSETREF";
 cell idict_get_ref(cell dict, int key_len, int index) asm(index dict key_len) "DICTIGETOPTREF";
+cell udict_get_ref(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGETOPTREF";
 (cell, cell) idict_set_get_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETGETOPTREF";
+(cell, cell) udict_set_get_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUSETGETOPTREF";
 (cell, int) idict_delete?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDEL";
+(cell, int) udict_delete?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDEL";
 (slice, int) idict_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIGET" "NULLSWAPIFNOT";
 (slice, int) udict_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGET" "NULLSWAPIFNOT";
 (cell, slice, int) idict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDELGET" "NULLSWAPIFNOT";
 (cell, slice, int) udict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
 (cell, (slice, int)) ~idict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDELGET" "NULLSWAPIFNOT";
 (cell, (slice, int)) ~udict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
+cell udict_set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSET";
+(cell, ()) ~udict_set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSET";
+cell idict_set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTISET";
+(cell, ()) ~idict_set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTISET";
+cell dict_set(cell dict, int key_len, slice index, slice value) asm(value index dict key_len) "DICTSET";
+(cell, ()) ~dict_set(cell dict, int key_len, slice index, slice value) asm(value index dict key_len) "DICTSET";
+(cell, int) udict_add?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUADD";
+(cell, int) udict_replace?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUREPLACE";
+(cell, int) idict_add?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTIADD";
+(cell, int) idict_replace?(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTIREPLACE";
 cell udict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUSETB";
 (cell, ()) ~udict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUSETB";
 cell idict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTISETB";
@@ -80,14 +115,28 @@ cell dict_set_builder(cell dict, int key_len, slice index, builder value) asm(va
 (cell, ()) ~dict_set_builder(cell dict, int key_len, slice index, builder value) asm(value index dict key_len) "DICTSETB";
 (cell, int) udict_add_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUADDB";
 (cell, int) udict_replace_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUREPLACEB";
+(cell, int) idict_add_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTIADDB";
+(cell, int) idict_replace_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTIREPLACEB";
 (cell, int, slice, int) udict_delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (cell, (int, slice, int)) ~udict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, int, slice, int) idict_delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTIREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (int, slice, int)) ~idict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTIREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (cell, slice, slice, int) dict_delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (cell, (slice, slice, int)) ~dict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, int, slice, int) udict_delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (int, slice, int)) ~udict::delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, int, slice, int) idict_delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTIREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (int, slice, int)) ~idict::delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTIREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, slice, slice, int) dict_delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (slice, slice, int)) ~dict::delete_get_max(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) udict_get_next?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETNEXT" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) udict_get_nexteq?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETNEXTEQ" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) udict_get_prev?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETPREV" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) udict_get_preveq?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETPREVEQ" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) idict_get_next?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETNEXT" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) idict_get_nexteq?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETNEXTEQ" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) idict_get_prev?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETPREV" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) idict_get_preveq?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETPREVEQ" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 cell new_dict() asm "NEWDICT";
 int dict_empty?(cell c) asm "DICTEMPTY";
 

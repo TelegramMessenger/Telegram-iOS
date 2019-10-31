@@ -3,8 +3,10 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import OverlayStatusController
 import AccountContext
+import PresentationDataUtils
 
 private let maximumNumberOfAccounts = 3
 
@@ -13,7 +15,7 @@ func openEditSettings(context: AccountContext, accountsAndPeers: Signal<((Accoun
     var cancelImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let progressSignal = Signal<Never, NoError> { subscriber in
-        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+        let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
             cancelImpl?()
         }))
         presentController(controller, nil)
@@ -50,7 +52,7 @@ func openEditSettings(context: AccountContext, accountsAndPeers: Signal<((Accoun
     }
     openEditingDisposable.set((signal
     |> deliverOnMainQueue).start(next: { peer, cachedData, canAddAccounts in
-        pushController(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: context.sharedContext.accountManager, canAddAccounts: canAddAccounts, focusOnItemTag: focusOnItemTag))
+        pushController(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phone: ""), currentBioText: cachedData.about ?? "", accountManager: context.sharedContext.accountManager, canAddAccounts: canAddAccounts, focusOnItemTag: focusOnItemTag))
     }))
     return openEditingDisposable
 }

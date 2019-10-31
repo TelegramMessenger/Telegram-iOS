@@ -4,9 +4,11 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import TelegramUIPreferences
 import TextFormat
 import TelegramStringFormatting
 import AccountContext
@@ -14,6 +16,7 @@ import RadialStatusNode
 import ShareController
 import OpenInExternalAppUI
 import AppBundle
+import LocalizedPeerData
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -105,6 +108,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var nameOrder: PresentationPersonNameOrder
     private var dateTimeFormat: PresentationDateTimeFormat
     
     private let deleteButton: UIButton
@@ -241,6 +245,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.nameOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.deleteButton = UIButton()
@@ -409,7 +414,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             self.requestLayout?(.immediate)
         }
         
-        self.deleteButton.isHidden = origin == nil
+        if origin == nil {
+            self.deleteButton.isHidden = true
+        }
     }
     
     func setMessage(_ message: Message) {
@@ -439,9 +446,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         var authorNameText: String?
         
         if let author = message.effectiveAuthor {
-            authorNameText = author.displayTitle
+            authorNameText = author.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         } else if let peer = message.peers[message.id.peerId] {
-            authorNameText = peer.displayTitle
+            authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         }
         
         let dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
@@ -826,7 +833,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if !ask && items.count == 1 {
                     let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
-                } else {
+                } else if !items.isEmpty {
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()

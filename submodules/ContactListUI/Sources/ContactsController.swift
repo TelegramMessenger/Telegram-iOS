@@ -5,11 +5,13 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramPermissions
 import TelegramNotices
 import ContactsPeerItem

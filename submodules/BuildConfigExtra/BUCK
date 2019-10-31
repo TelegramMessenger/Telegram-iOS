@@ -1,0 +1,20 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "BuildConfigExtra",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ]),
+    deps = [
+        "//submodules/PKCS:PKCS",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

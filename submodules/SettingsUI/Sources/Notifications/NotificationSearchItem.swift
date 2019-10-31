@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import SearchBarNode
 
 private let searchBarFont = Font.regular(14.0)

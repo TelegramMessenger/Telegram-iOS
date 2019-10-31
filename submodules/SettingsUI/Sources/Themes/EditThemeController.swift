@@ -4,10 +4,13 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AlertUI
+import PresentationDataUtils
 import LegacyMediaPickerUI
 import WallpaperResources
 import AccountContext
@@ -130,7 +133,8 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: EditThemeControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! EditThemeControllerArguments
         switch self {
             case let .title(theme, strings, title, text, _):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: title, type: .regular(capitalization: true, autocorrection: false), returnKeyType: .default, clearType: .onFocus, tag: EditThemeEntryTag.title, sectionId: self.section, textUpdated: { value in
@@ -331,7 +335,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), previewThemePromise.get())
-    |> map { presentationData, state, previewTheme -> (ItemListControllerState, (ItemListNodeState<EditThemeControllerEntry>, EditThemeControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, previewTheme -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

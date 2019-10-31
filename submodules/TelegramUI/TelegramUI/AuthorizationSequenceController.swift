@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 #if BUCK
 import MtProtoKit
@@ -17,6 +18,7 @@ import TextFormat
 import AccountContext
 import CountrySelectionUI
 import SettingsUI
+import PhoneNumberFormat
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)

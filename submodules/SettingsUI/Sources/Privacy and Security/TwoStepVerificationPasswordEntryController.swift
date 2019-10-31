@@ -4,10 +4,13 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 
 private final class TwoStepVerificationPasswordEntryControllerArguments {
     let updateEntryText: (String) -> Void
@@ -118,7 +121,8 @@ private enum TwoStepVerificationPasswordEntryEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: TwoStepVerificationPasswordEntryControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! TwoStepVerificationPasswordEntryControllerArguments
         switch self {
             case let .passwordEntryTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -393,7 +397,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()

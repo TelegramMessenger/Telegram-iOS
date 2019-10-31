@@ -65,10 +65,10 @@ struct NewOutMsg {
   NewOutMsg(ton::LogicalTime _lt, Ref<vm::Cell> _msg, Ref<vm::Cell> _trans)
       : lt(_lt), msg(std::move(_msg)), trans(std::move(_trans)) {
   }
-  bool operator<(const NewOutMsg& other) const & {
+  bool operator<(const NewOutMsg& other) const& {
     return lt < other.lt || (lt == other.lt && msg->get_hash() < other.msg->get_hash());
   }
-  bool operator>(const NewOutMsg& other) const & {
+  bool operator>(const NewOutMsg& other) const& {
     return lt > other.lt || (lt == other.lt && other.msg->get_hash() < msg->get_hash());
   }
 };
@@ -130,29 +130,6 @@ struct ComputePhaseConfig {
   }
   bool parse_GasLimitsPrices(Ref<vm::CellSlice> cs, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
   bool parse_GasLimitsPrices(Ref<vm::Cell> cell, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
-};
-
-// msg_fwd_fees = (lump_price + ceil((bit_price * msg.bits + cell_price * msg.cells)/2^16)) nanograms
-// ihr_fwd_fees = ceil((msg_fwd_fees * ihr_price_factor)/2^16) nanograms
-// bits in the root cell of a message are not included in msg.bits (lump_price pays for them)
-
-struct MsgPrices {
-  td::uint64 lump_price;
-  td::uint64 bit_price;
-  td::uint64 cell_price;
-  td::uint32 ihr_factor;
-  td::uint32 first_frac;
-  td::uint32 next_frac;
-  td::uint64 compute_fwd_fees(td::uint64 cells, td::uint64 bits) const;
-  std::pair<td::uint64, td::uint64> compute_fwd_ihr_fees(td::uint64 cells, td::uint64 bits,
-                                                         bool ihr_disabled = false) const;
-  MsgPrices() = default;
-  MsgPrices(td::uint64 lump, td::uint64 bitp, td::uint64 cellp, td::uint32 ihrf, td::uint32 firstf, td::uint32 nextf)
-      : lump_price(lump), bit_price(bitp), cell_price(cellp), ihr_factor(ihrf), first_frac(firstf), next_frac(nextf) {
-  }
-  td::RefInt256 get_first_part(td::RefInt256 total) const;
-  td::uint64 get_first_part(td::uint64 total) const;
-  td::RefInt256 get_next_part(td::RefInt256 total) const;
 };
 
 struct ActionPhaseConfig {

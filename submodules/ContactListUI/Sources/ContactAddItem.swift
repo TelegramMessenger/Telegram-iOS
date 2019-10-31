@@ -5,8 +5,10 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import AppBundle
+import PhoneNumberFormat
 
 private let titleFont = Font.regular(17.0)
 

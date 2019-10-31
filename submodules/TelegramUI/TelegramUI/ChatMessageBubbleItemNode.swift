@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -20,6 +21,7 @@ import ReactionSelectionNode
 import PersistentStringHash
 import GridMessageSelectionNode
 import AppBundle
+import Markdown
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -40,11 +42,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 result.append((message, ChatMessageMediaBubbleContentNode.self))
             } else if let file = media as? TelegramMediaFile {
                 var isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
-                #if DEBUG
-                if let fileName = file.fileName, fileName.hasSuffix(".mkv") {
-                    isVideo = true
-                }
-                #endif
                 if isVideo {
                     result.append((message, ChatMessageMediaBubbleContentNode.self))
                 } else {
@@ -1188,7 +1185,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 } else {
                     if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
                         forwardSource = nil
-                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle
+                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     } else {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = forwardInfo.authorSignature

@@ -4,6 +4,7 @@ import Display
 import Postbox
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import AccountContext
 
 public func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {

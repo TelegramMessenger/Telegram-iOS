@@ -1,11 +1,13 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import ActivityIndicator
 import AccountContext
 import AppBundle
@@ -52,6 +54,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let transparent: Bool
     private let rtl: Bool
     private var strings: PresentationStrings
+    private var nameDisplayOrder: PresentationPersonNameOrder
     private var theme: InstantPageTheme
     private let openPeer: (PeerId) -> Void
     
@@ -68,9 +71,10 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let joinDisposable = MetaDisposable()
     private var joinState: JoinState = .none
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.context = context
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.theme = theme
         self.peer = initialPeer
         self.safeInset = safeInset
@@ -208,7 +212,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private func applyThemeAndStrings(themeUpdated: Bool) {
         if let peer = self.peer {
             let textColor = self.transparent ? UIColor.white : self.theme.panelPrimaryColor
-            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: textColor)
+            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: textColor)
         }
         let accentColor = self.transparent ? UIColor.white : self.theme.panelAccentColor
         self.joinNode.setAttributedTitle(NSAttributedString(string: self.strings.Channel_JoinChannel, font: Font.medium(17.0), textColor: accentColor), for: [])

@@ -1,5 +1,21 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+apple_resource(
+    name = "WalletUIResources",
+    files = glob([
+        "Resources/**/*",
+    ], exclude = ["Resources/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
+apple_asset_catalog(
+    name = 'WalletUIAssets',
+    dirs = [
+        "WalletImages.xcassets",
+    ],
+    visibility = ["PUBLIC"],
+)
+
 static_library(
     name = "WalletUI",
     srcs = glob([
@@ -9,28 +25,24 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
-        "//submodules/Postbox:Postbox#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AppBundle:AppBundle",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        "//submodules/ItemListUI:ItemListUI",
-        "//submodules/AccountContext:AccountContext",
-        "//submodules/UndoUI:UndoUI",
         "//submodules/AlertUI:AlertUI",
-        "//submodules/TextFormat:TextFormat",
         "//submodules/Camera:Camera",
-        "//submodules/ShareController:ShareController",
-        "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/QrCode:QrCode",
         "//submodules/MergeLists:MergeLists",
-        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/GlassButtonNode:GlassButtonNode",
-        "//submodules/UrlHandling:UrlHandling",
         "//submodules/UrlEscaping:UrlEscaping",
-	"//submodules/LocalAuth:LocalAuth",
-	"//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
+        "//submodules/LocalAuth:LocalAuth",
+        "//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/WalletUrl:WalletUrl",
+        "//submodules/WalletCore:WalletCore",
+        "//submodules/StringPluralization:StringPluralization",
+        "//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

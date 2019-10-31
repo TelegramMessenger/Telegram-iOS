@@ -10,6 +10,7 @@ static_library(
     	"//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
     	"//submodules/Postbox:Postbox#shared",
     	"//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/SaveToCameraRoll:SaveToCameraRoll",
     	"//submodules/StickerResources:StickerResources",
     	"//submodules/UrlEscaping:UrlEscaping",

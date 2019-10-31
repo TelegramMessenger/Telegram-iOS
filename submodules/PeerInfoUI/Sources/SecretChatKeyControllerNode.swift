@@ -3,11 +3,13 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import Postbox
 import TelegramPresentationData
 import TextFormat
 import AccountContext
 import EncryptionKeyVisualization
+import LocalizedPeerData
 
 private func processHexString(_ string: String) -> String {
     var result = ""

@@ -193,21 +193,21 @@ void AsmOp::out(std::ostream& os) const {
         os << (b ? "SWAP" : "NOP");
         break;
       }
-      os << "s" << a << " s" << b << " XCHG";
+      os << SReg(a) << ' ' << SReg(b) << " XCHG";
       break;
     case a_push:
       if (!(a & -2)) {
         os << (a ? "OVER" : "DUP");
         break;
       }
-      os << "s" << a << " PUSH";
+      os << SReg(a) << " PUSH";
       break;
     case a_pop:
       if (!(a & -2)) {
         os << (a ? "NIP" : "DROP");
         break;
       }
-      os << "s" << a << " POP";
+      os << SReg(a) << " POP";
       break;
     default:
       throw src::Fatal{"unknown assembler operation"};

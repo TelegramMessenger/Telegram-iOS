@@ -34,6 +34,8 @@ AppBundle.xcworkspace/*
 tools/buck
 *.xcodeproj
 !*_Xcode.xcodeproj
+.idea
+*/.idea/*
 submodules/MtProtoKit/TON/macOS/lib/libtonlibjson.0.5.dylib
 submodules/MtProtoKit/TON/macOS/lib/libtonlibjson.dylib
 submodules/MtProtoKit/TON/macOS/lib/cmake/Tonlib/TonlibConfig.cmake

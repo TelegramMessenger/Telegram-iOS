@@ -2,12 +2,14 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 
 final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -112,6 +114,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
         }, openScheduledMessages: {
+        }, displaySearchResultsTooltip: { _, _ in
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

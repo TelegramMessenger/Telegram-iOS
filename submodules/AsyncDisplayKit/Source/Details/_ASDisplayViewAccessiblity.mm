@@ -209,14 +209,14 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
   
   ASDisplayNode *node = view.asyncdisplaykit_node;
 
-  static Class telegramListViewClass = nil;
+  static Class displayListViewClass = nil;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    telegramListViewClass = NSClassFromString(@"Display.ListView");
+    displayListViewClass = NSClassFromString(@"Display.ListView");
   });
   BOOL anySubNodeIsCollection = (nil != ASDisplayNodeFindFirstNode(node,
       ^BOOL(ASDisplayNode *nodeToCheck) {
-        if (telegramListViewClass != nil && [nodeToCheck isKindOfClass:telegramListViewClass]) {
+        if (displayListViewClass != nil && [nodeToCheck isKindOfClass:displayListViewClass]) {
           return true;
         }
     return false;

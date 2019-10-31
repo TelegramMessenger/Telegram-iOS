@@ -1,0 +1,265 @@
+;; Simple wallet smart contract
+
+_ unpack_state() inline_ref {
+  var ds = begin_parse(get_data());
+  var res = (ds~load_uint(8), ds~load_uint(8), ds~load_uint(64), ds~load_dict(), ds~load_dict());
+  ds.end_parse();
+  return res;
+}
+
+_ pack_state(cell pending_queries, cell public_keys, int last_cleaned, int k, int n) inline_ref {
+  return begin_cell()
+    .store_uint(n, 8)
+    .store_uint(k, 8)
+    .store_uint(last_cleaned, 64)
+    .store_dict(public_keys)
+    .store_dict(pending_queries)
+  .end_cell();
+}
+
+(int, int) check_signatures(cell public_keys, cell signatures, int hash, int cnt_bits) inline_ref {
+  int cnt = 0;
+  
+  do {
+    slice cs = signatures.begin_parse();
+    slice signature = cs~load_bits(512);
+
+    int i = cs~load_uint(8);
+    signatures = cs~load_dict();
+
+    (slice public_key, var found?) = public_keys.udict_get?(8, i);
+    throw_unless(37, found?);
+    throw_unless(38, check_signature(hash, signature, public_key.preload_uint(256)));
+
+    int mask = (1 << i);
+    int old_cnt_bits = cnt_bits;
+    cnt_bits |= mask;
+    int should_check = cnt_bits != old_cnt_bits;
+    cnt -= should_check;
+  } until (cell_null?(signatures));
+
+  return (cnt, cnt_bits);
+}
+
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+(int, int, slice) unpack_query_data(slice in_msg, int n, slice query, var found?) inline_ref {
+  if (found?) {
+    throw_unless(35, query~load_int(1));
+    (int cnt, int cnt_bits, slice msg) = (query~load_uint(8), query~load_uint(n), query);
+    throw_unless(36, slice_hash(msg) == slice_hash(in_msg));
+    return (cnt, cnt_bits, msg);
+  }
+  return (0, 0, in_msg);
+}
+
+() try_init() impure inline_ref {
+  ;; first query without signatures is always accepted
+  (int n, int k, int last_cleaned, cell public_keys, cell pending_queries) = unpack_state();
+  throw_if(37, last_cleaned);
+  accept_message();
+  set_data(pack_state(pending_queries, public_keys, 1, k, n));
+}
+
+cell update_pending_queries(cell pending_queries, slice msg, int query_id, int cnt, int cnt_bits, int n, int k) impure inline_ref {
+  if (cnt >= k) {
+    while (msg.slice_refs()) {
+      var mode = msg~load_uint(8);
+      send_raw_message(msg~load_ref(), mode);
+    }
+    pending_queries~udict_set_builder(64, query_id, begin_cell().store_int(0, 1));
+  } else {
+    pending_queries~udict_set_builder(64, query_id, begin_cell()
+      .store_uint(1, 1)
+      .store_uint(cnt, 8)
+      .store_uint(cnt_bits, n)
+      .store_slice(msg));
+  }
+  return pending_queries;
+}
+
+() recv_external(slice in_msg) impure {
+  ;; empty message triggers init
+  if (slice_empty?(in_msg)) {
+    return try_init();
+  }
+
+  ;; Check root signature
+  slice root_signature = in_msg~load_bits(512);
+  int root_hash = slice_hash(in_msg);
+  int root_i = in_msg~load_uint(8);
+
+  (int n, int k, int last_cleaned, cell public_keys, cell pending_queries) = unpack_state();
+  last_cleaned -= last_cleaned == 0;
+
+  (slice public_key, var found?) = public_keys.udict_get?(8, root_i);
+  throw_unless(31, found?);
+  throw_unless(32, check_signature(root_hash, root_signature, public_key.preload_uint(256)));
+
+  cell signatures = in_msg~load_dict();
+
+  var hash = slice_hash(in_msg);
+  int query_id = in_msg~load_uint(64);
+
+  var bound = (now() << 32);
+  throw_if(33, query_id < bound);
+
+  (slice query, var found?) = pending_queries.udict_get?(64, query_id);
+  (int cnt, int cnt_bits, slice msg) = unpack_query_data(in_msg, n, query, found?);
+  int mask = 1 << root_i;
+  throw_if(34, cnt_bits & mask);
+  cnt_bits |= mask;
+  cnt += 1;
+
+  ;; TODO: reserve some gas or FAIL
+  accept_message();
+
+  pending_queries = update_pending_queries(pending_queries, msg, query_id, cnt, cnt_bits, n, k);
+  set_data(pack_state(pending_queries, public_keys, last_cleaned, k, n));
+
+  commit();
+  
+  int need_save = 0;
+  ifnot (cell_null?(signatures) | (cnt >= k)) {
+    (int new_cnt, cnt_bits) = check_signatures(public_keys, signatures, hash, cnt_bits);
+    cnt += new_cnt;
+    pending_queries = update_pending_queries(pending_queries, msg, query_id, cnt, cnt_bits, n, k);
+    need_save = -1;
+  }
+
+  bound -= (64 << 32);   ;; clean up records expired more than 64 seconds ago
+  int old_last_cleaned = last_cleaned;
+  do {
+    var (pending_queries', i, _, f) = pending_queries.udict_delete_get_min(64);
+    f~touch();
+    if (f) {
+      f = (i < bound);
+    }
+    if (f) {
+      pending_queries = pending_queries';
+      last_cleaned = i;
+      need_save = -1;
+    }
+  } until (~ f);
+
+  if (need_save) {
+    set_data(pack_state(pending_queries, public_keys, last_cleaned, k, n));
+  }
+}
+
+;; Get methods
+;; returns -1 for processed queries, 0 for unprocessed, 1 for unknown (forgotten)
+(int, int) get_query_state(int query_id) method_id {
+  (int n, _, int last_cleaned, _, cell pending_queries) = unpack_state();
+  (slice cs, var found) = pending_queries.udict_get?(64, query_id);
+  if (found) {
+    if (cs~load_int(1)) {
+      cs~load_uint(8);
+      return (0, cs~load_uint(n));
+    } else {
+      return (-1, 0);
+    }
+  }  else {
+    return (-(query_id <= last_cleaned), 0);
+  }
+}
+
+int processed?(int query_id) method_id {
+  (int x, _) = get_query_state(query_id);
+  return x;
+}
+
+cell create_init_state(int n, int k, cell public_keys) method_id {
+  return pack_state(new_dict(), public_keys, 0, k, n);
+}
+
+cell merge_list(cell a, cell b) {
+  if (cell_null?(a)) {
+    return b;
+  }
+  if (cell_null?(b)) {
+    return a;
+  }
+  slice as = a.begin_parse();
+  if (as.slice_refs() != 0) {
+    cell tail = merge_list(as~load_ref(), b);
+    return begin_cell().store_slice(as).store_ref(tail).end_cell();
+  }
+  
+  as~skip_last_bits(1);
+  ;; as~skip_bits(1);
+  return begin_cell().store_slice(as).store_dict(b).end_cell();
+  
+}
+
+cell get_public_keys() method_id {
+  (_, _, _, cell public_keys, _) = unpack_state();
+  return public_keys;
+}
+
+(int, int) check_query_signatures(cell query) method_id {
+  slice cs = query.begin_parse();
+  slice root_signature = cs~load_bits(512);
+  int root_hash = slice_hash(cs);
+  int root_i = cs~load_uint(8);
+
+  cell public_keys = get_public_keys();
+  (slice public_key, var found?) = public_keys.udict_get?(8, root_i);
+  throw_unless(31, found?);
+  throw_unless(32, check_signature(root_hash, root_signature, public_key.preload_uint(256)));
+
+  int mask = 1 << root_i;
+
+  cell signatures = cs~load_dict();
+  if (cell_null?(signatures)) {
+    return (1, mask);
+  }
+  (int cnt, mask) = check_signatures(public_keys, signatures, slice_hash(cs), mask);
+  return (cnt + 1, mask);
+}
+
+cell messages_by_mask(int mask) method_id {
+  (int n, _, _, _, cell pending_queries) = unpack_state();
+  int i = -1;
+  cell a = new_dict();
+  do {
+    (i, var cs, var f) = pending_queries.udict_get_next?(64, i);
+    if (f) {
+      if (cs~load_int(1)) {
+        int cnt_bits = cs.skip_bits(8).preload_uint(n);
+        if (cnt_bits & mask) {
+          a~udict_set_builder(64, i, begin_cell().store_slice(cs));
+        }
+      }
+    }
+  } until (~ f);
+  return a;
+}
+
+cell get_messages_unsigned_by_id(int id) method_id {
+  return messages_by_mask(1 << id);
+}
+
+cell get_messages_unsigned() method_id {
+  return messages_by_mask(~ 0);
+}
+
+(int, int) get_n_k() method_id {
+  (int n, int k, _, _, _) = unpack_state();
+  return (n, k);
+}
+
+cell merge_inner_queries(cell a, cell b) method_id {
+  slice ca = a.begin_parse();
+  slice cb = b.begin_parse();
+  cell list_a = ca~load_dict();
+  cell list_b = cb~load_dict();
+  throw_unless(31, slice_hash(ca) == slice_hash(cb));
+  return begin_cell()
+    .store_dict(merge_list(list_a, list_b))
+    .store_slice(ca)
+  .end_cell();
+}

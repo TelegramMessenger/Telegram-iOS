@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 
 final class TooltipControllerNode: ASDisplayNode {
-    private let dismiss: () -> Void
+    private let dismiss: (Bool) -> Void
     
     private var validLayout: ContainerViewLayout?
     
@@ -19,7 +19,7 @@ final class TooltipControllerNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, dismiss: @escaping () -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+    init(content: TooltipControllerContent, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
@@ -30,7 +30,11 @@ final class TooltipControllerNode: ASDisplayNode {
         self.imageNode.image = content.image
         
         self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        if case let .attributedText(text) = content {
+            self.textNode.attributedText = text
+        } else {
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        }
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
@@ -125,15 +129,16 @@ final class TooltipControllerNode: ASDisplayNode {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {
+                let pointInside = self.containerNode.frame.contains(point)
                 if self.containerNode.frame.contains(point) || self.dismissByTapOutside {
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
-                        self.dismiss()
+                        self.dismiss(pointInside)
                     }
                 } else if self.dismissByTapOutsideSource, let sourceRect = self.sourceRect, !sourceRect.contains(point) {
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
-                        self.dismiss()
+                        self.dismiss(false)
                     }
                 }
                 return nil

@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -13,6 +14,7 @@ import CounterContollerTitleView
 import WallpaperResources
 import OverlayStatusController
 import AppBundle
+import PresentationDataUtils
 
 public enum ThemePreviewSource {
     case settings(PresentationThemeReference)
@@ -304,7 +306,7 @@ public final class ThemePreviewController: ViewController {
         
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                 cancelImpl?()
             }))
             self?.present(controller, in: .window(.root))

@@ -5,11 +5,13 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TextFormat
 import ProgressNavigationButtonNode
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PasswordSetupUI
 
 public enum SecureIdRequestResult: String {
@@ -39,6 +41,7 @@ public func secureIdCallbackUrl(with baseUrl: String, peerId: PeerId, result: Se
 final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
+    let push: (ViewController) -> Void
     let checkPassword: (String) -> Void
     let openPasswordHelp: () -> Void
     let setupPassword: () -> Void
@@ -47,9 +50,10 @@ final class SecureIdAuthControllerInteraction {
     let openMention: (TelegramPeerMention) -> Void
     let deleteAll: () -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, openPasswordHelp: @escaping () -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, checkPassword: @escaping (String) -> Void, openPasswordHelp: @escaping () -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
         self.updateState = updateState
         self.present = present
+        self.push = push
         self.checkPassword = checkPassword
         self.openPasswordHelp = openPasswordHelp
         self.setupPassword = setupPassword
@@ -65,7 +69,7 @@ public enum SecureIdAuthControllerMode {
     case list
 }
 
-public final class SecureIdAuthController: ViewController {
+public final class SecureIdAuthController: ViewController, StandalonePresentableController {
     private var controllerNode: SecureIdAuthControllerNode {
         return self.displayNode as! SecureIdAuthControllerNode
     }
@@ -101,7 +105,9 @@ public final class SecureIdAuthController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.navigationPresentation = .modal
+        if case .list = mode {
+            self.navigationPresentation = .modal
+        }
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -288,7 +294,7 @@ public final class SecureIdAuthController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if !self.didPlayPresentationAnimation {
+        if case .form = self.mode, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             self.controllerNode.animateIn()
         }
@@ -299,6 +305,8 @@ public final class SecureIdAuthController: ViewController {
             self?.updateState(f)
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, push: { [weak self] c in
+            self?.push(c)
         }, checkPassword: { [weak self] password in
             self?.checkPassword(password: password, inBackground: false, completion: {})
         }, openPasswordHelp: { [weak self] in
@@ -331,7 +339,7 @@ public final class SecureIdAuthController: ViewController {
                 return
             }
             
-            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
             strongSelf.navigationItem.rightBarButtonItem = item
             strongSelf.deleteDisposable.set((deleteSecureIdValues(network: strongSelf.context.account.network, keys: Set(values.map({ $0.value.key })))
             |> deliverOnMainQueue).start(completed: {
@@ -361,6 +369,17 @@ public final class SecureIdAuthController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        if case .form = self.mode {
+            self.controllerNode.animateOut(completion: { [weak self] in
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                completion?()
+            })
+        } else {
+            super.dismiss(completion: completion)
+        }
+    }
+    
     private func updateState(animated: Bool = true, _ f: (SecureIdAuthControllerState) -> SecureIdAuthControllerState) {
         let state = f(self.state)
         if state != self.state {
@@ -386,7 +405,7 @@ public final class SecureIdAuthController: ViewController {
             
             if previousHadProgress != updatedHasProgress {
                 if updatedHasProgress {
-                    let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: self.presentationData.theme))
+                    let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.controlColor))
                     self.navigationItem.rightBarButtonItem = item
                 } else {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))

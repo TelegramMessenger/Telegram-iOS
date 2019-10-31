@@ -4,17 +4,22 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import MessageUI
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import TelegramStringFormatting
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PhotoResources
 import MediaResources
 import ItemListAvatarAndNameInfoItem
 import Geocoding
 import ItemListAddressItem
+import LocalizedPeerData
+import PhoneNumberFormat
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -372,7 +377,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: DeviceContactInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
@@ -595,7 +601,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     var personName: (String, String) = (contactData.basicData.firstName, contactData.basicData.lastName)
     if let editingName = editingName {
         switch editingName {
-        case let .personName(firstName, lastName):
+        case let .personName(firstName, lastName, _):
             personName = (firstName, lastName)
         default:
             break
@@ -750,7 +756,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     return entries
 }
 
-private final class DeviceContactInfoController: ItemListController<DeviceContactInfoEntry>, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
+private final class DeviceContactInfoController: ItemListController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
     private var composer: MFMessageComposeViewController?
     func inviteContact(presentationData: PresentationData, numbers: [String]) {
         if MFMessageComposeViewController.canSendText() {
@@ -800,7 +806,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 initialState.nextPhoneNumber += 1
             }
         }
-        initialState.editingState = DeviceContactInfoEditingState(editingName: .personName(firstName: firstName, lastName: lastName))
+        initialState.editingState = DeviceContactInfoEditingState(editingName: .personName(firstName: firstName, lastName: lastName, phone: ""))
     }
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -1020,7 +1026,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
-    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
             case .vcard:
@@ -1050,7 +1056,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 }
             }
             var composedContactData: DeviceContactExtendedData?
-            if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
+            if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName, _) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
                 var urls = filteredData.urls
                 if let createForPeer = createForPeer {
                     let appProfile = DeviceContactUrlData(appProfile: createForPeer.id)

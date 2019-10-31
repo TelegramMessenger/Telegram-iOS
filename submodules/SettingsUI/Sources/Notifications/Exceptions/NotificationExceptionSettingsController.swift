@@ -4,9 +4,11 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import LocalizedPeerData
 import TelegramStringFormatting
@@ -154,7 +156,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
         return lhs.index < rhs.index
     }
     
-    func item(_ arguments: NotificationPeerExceptionArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! NotificationPeerExceptionArguments
         switch self {
         case let .remove(_, theme, strings):
             return ItemListActionItem(theme: theme, title: strings.Notification_Exceptions_RemoveFromExceptions, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
@@ -362,7 +365,7 @@ func notificationPeerExceptionController(context: AccountContext, peer: Peer, mo
     
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get() |> distinctUntilChanged)
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationPeerExceptionEntry>, NotificationPeerExceptionEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             arguments.cancel()
         })

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import SyncCore
 
 public func encodePresentationTheme(_ theme: PresentationTheme) -> String? {
     let encoding = PresentationThemeEncoding()
@@ -333,6 +334,10 @@ public func makePresentationTheme(data: Data, resolvedWallpaper: TelegramWallpap
     var currentLevel = topLevel
     
     for line in lines {
+        let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+        if trimmedLine.hasPrefix("#") || trimmedLine.hasPrefix("//") {
+            continue
+        }
         if let rangeOfColon = line.firstIndex(of: ":") {
             let key = line.prefix(upTo: rangeOfColon)
             

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramCallsUI
 import AccountContext
 
@@ -54,6 +55,7 @@ public final class SharedWakeupManager {
     private var hasActiveAudioSession: Bool = false
     private var activeExplicitExtensionTimer: SwiftSignalKit.Timer?
     private var allowBackgroundTimeExtensionDeadline: Double?
+    private var allowBackgroundTimeExtensionDeadlineTimer: SwiftSignalKit.Timer?
     private var isInBackgroundExtension: Bool = false
     
     private var inForegroundDisposable: Disposable?
@@ -83,6 +85,8 @@ public final class SharedWakeupManager {
             if value {
                 strongSelf.activeExplicitExtensionTimer?.invalidate()
                 strongSelf.activeExplicitExtensionTimer = nil
+                strongSelf.allowBackgroundTimeExtensionDeadlineTimer?.invalidate()
+                strongSelf.allowBackgroundTimeExtensionDeadlineTimer = nil
             }
             strongSelf.checkTasks()
         })
@@ -185,6 +189,18 @@ public final class SharedWakeupManager {
     func allowBackgroundTimeExtension(timeout: Double, extendNow: Bool = false) {
         let shouldCheckTasks = self.allowBackgroundTimeExtensionDeadline == nil
         self.allowBackgroundTimeExtensionDeadline = CACurrentMediaTime() + timeout
+        
+        self.allowBackgroundTimeExtensionDeadlineTimer?.invalidate()
+        self.allowBackgroundTimeExtensionDeadlineTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.allowBackgroundTimeExtensionDeadlineTimer?.invalidate()
+            strongSelf.allowBackgroundTimeExtensionDeadlineTimer = nil
+            strongSelf.checkTasks()
+        }, queue: .mainQueue())
+        self.allowBackgroundTimeExtensionDeadlineTimer?.start()
+        
         if extendNow {
             if self.activeExplicitExtensionTimer == nil {
                 self.activeExplicitExtensionTimer = SwiftSignalKit.Timer(timeout: 20.0, repeat: false, completion: { [weak self] in
@@ -323,7 +339,11 @@ public final class SharedWakeupManager {
     
     private func updateAccounts(hasTasks: Bool) {
         if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil {
+            Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
+            
             for (account, primary, tasks) in self.accountsAndTasks {
+                account.postbox.setCanBeginTransactions(true)
+                
                 if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
@@ -334,7 +354,13 @@ public final class SharedWakeupManager {
                 account.shouldKeepBackgroundDownloadConnections.set(.single(tasks.backgroundDownloads))
             }
         } else {
+            var enableBeginTransactions = false
+            if self.allowBackgroundTimeExtensionDeadlineTimer != nil {
+                enableBeginTransactions = true
+            }
+            Logger.shared.log("Wakeup", "enableBeginTransactions: \(enableBeginTransactions)")
             for (account, _, _) in self.accountsAndTasks {
+                account.postbox.setCanBeginTransactions(enableBeginTransactions)
                 account.shouldBeServiceTaskMaster.set(.single(.never))
                 account.shouldKeepOnlinePresence.set(.single(false))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(false))

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import SyncCore
 import Postbox
 import TextFormat
 import UrlEscaping
@@ -311,7 +312,7 @@ private struct ChatMessagePollOptionResult: Equatable {
 }
 
 private final class ChatMessagePollOptionNode: ASDisplayNode {
-    private let highlightedBackgroundNode: ASImageNode
+    private let highlightedBackgroundNode: ASDisplayNode
     private var radioNode: ChatMessagePollOptionRadioNode?
     private let percentageNode: ASDisplayNode
     private var percentageImage: UIImage?
@@ -325,10 +326,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     var pressed: (() -> Void)?
     
     override init() {
-        self.highlightedBackgroundNode = ASImageNode()
-        self.highlightedBackgroundNode.displayWithoutProcessing = true
-        self.highlightedBackgroundNode.displaysAsynchronously = false
-        self.highlightedBackgroundNode.isLayerBacked = true
+        self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.alpha = 0.0
         self.highlightedBackgroundNode.isUserInteractionEnabled = false
         
@@ -343,8 +341,6 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.percentageNode = ASDisplayNode()
         self.percentageNode.alpha = 0.0
         self.percentageNode.isLayerBacked = true
-        //self.percentageNode.displaysAsynchronously = false
-        //self.percentageNode.displayWithoutProcessing = true
         
         super.init()
         
@@ -406,7 +402,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     let previousResult = node.currentResult
                     node.currentResult = optionResult
                     
-                    node.highlightedBackgroundNode.backgroundColor = (incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor).withAlphaComponent(0.15)
+                    node.highlightedBackgroundNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.highlight : presentationData.theme.theme.chat.message.outgoing.polls.highlight
                     
                     node.buttonNode.accessibilityLabel = option.text
                     

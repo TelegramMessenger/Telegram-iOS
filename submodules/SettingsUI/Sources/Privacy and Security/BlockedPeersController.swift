@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import ItemListPeerItem
 import ItemListPeerActionItem
@@ -105,9 +107,9 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
         switch lhs {
             case .add:
                 if case .add = rhs {
-                    return true
-                } else {
                     return false
+                } else {
+                    return true
                 }
             case let .peerItem(index, _, _, _, _, _, _, _):
                 switch rhs {
@@ -119,7 +121,8 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! BlockedPeersControllerArguments
         switch self {
             case let .add(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
@@ -265,7 +268,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), blockedPeersContext.state)
     |> deliverOnMainQueue
-    |> map { presentationData, state, blockedPeersState -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, blockedPeersState -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         if !blockedPeersState.peers.isEmpty {
             if state.editing {

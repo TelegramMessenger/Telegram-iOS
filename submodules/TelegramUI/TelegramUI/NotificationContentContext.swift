@@ -3,6 +3,7 @@ import UserNotifications
 import UserNotificationsUI
 import Display
 import TelegramCore
+import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -11,7 +12,10 @@ import AccountContext
 import Tuples
 import StickerResources
 import PhotoResources
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import OpenSSLEncryptionProvider
+import AppLock
 
 private enum NotificationContentAuthorizationError {
     case unauthorized
@@ -111,7 +115,7 @@ public final class NotificationViewControllerImpl {
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
-            let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+            let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light).start(next: { value in
                 initialPresentationDataAndSettings = value
                 semaphore.signal()
             })
@@ -142,7 +146,15 @@ public final class NotificationViewControllerImpl {
                 f(false)
             })
             
-            sharedAccountContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData)), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+            let presentationDataPromise = Promise<PresentationData>()
+            
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
+                return nil
+            })
+            
+            sharedAccountContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+            
+            presentationDataPromise.set(sharedAccountContext!.presentationData)
         }
     }
     
@@ -313,7 +325,7 @@ public final class NotificationViewControllerImpl {
                         let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
                         let fittedDimensions = dimensions.aspectFitted(CGSize(width: 512.0, height: 512.0))
                         strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: fittedDimensions))
-                        animatedStickerNode.setup(account: accountAndImage.0, resource: .resource(fileReference.media.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: accountAndImage.0, resource: fileReference.media.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
                         animatedStickerNode.visibility = true
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))

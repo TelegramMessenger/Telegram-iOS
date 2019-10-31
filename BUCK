@@ -1,3 +1,7 @@
+load("//Config:utils.bzl",
+    "library_configs",
+)
+
 load("//Config:configs.bzl",
     "app_binary_configs",
     "share_extension_configs",
@@ -7,7 +11,6 @@ load("//Config:configs.bzl",
     "intents_extension_configs",
     "watch_extension_binary_configs",
     "watch_binary_configs",
-    "library_configs",
     "info_plist_substitutions",
     "app_info_plist_substitutions",
     "share_extension_info_plist_substitutions",
@@ -33,6 +36,8 @@ framework_dependencies = [
     "//submodules/MtProtoKit:MtProtoKit",
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     "//submodules/Postbox:Postbox",
+    "//submodules/TelegramApi:TelegramApi",
+    "//submodules/SyncCore:SyncCore",
     "//submodules/TelegramCore:TelegramCore",
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     "//submodules/Display:Display",
@@ -43,6 +48,11 @@ resource_dependencies = [
     "//submodules/LegacyComponents:LegacyComponentsResources",
     "//submodules/TelegramUI:TelegramUIAssets",
     "//submodules/TelegramUI:TelegramUIResources",
+    "//submodules/WalletUI:WalletUIAssets",
+    "//submodules/WalletUI:WalletUIResources",
+    "//submodules/PasswordSetupUI:PasswordSetupUIResources",
+    "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
+    "//submodules/OverlayStatusController:OverlayStatusControllerResources",
     "//:AppResources",
     "//:AppStringResources",
     "//:InfoPlistStringResources",
@@ -235,10 +245,9 @@ apple_binary(
         "@executable_path/../../Frameworks",
     ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/Postbox:Postbox#shared",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems",
+        "//submodules/AppLockState:AppLockState",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
@@ -308,10 +317,12 @@ apple_binary(
     name = "NotificationServiceBinary",
     srcs = glob([
         "NotificationService/**/*.m",
+        "NotificationService/**/*.swift",
     ]),
     headers = glob([
        "NotificationService/**/*.h", 
     ]),
+    bridging_header = "NotificationService/NotificationService-Bridging-Header.h",
     configs = notification_service_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
@@ -331,6 +342,17 @@ apple_binary(
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/Database/ValueBox:ValueBox",
+        "//submodules/Database/PostboxDataTypes:PostboxDataTypes",
+        "//submodules/Database/MessageHistoryReadStateTable:MessageHistoryReadStateTable",
+        "//submodules/Database/MessageHistoryMetadataTable:MessageHistoryMetadataTable",
+        "//submodules/Database/PreferencesTable:PreferencesTable",
+        "//submodules/Database/PeerTable:PeerTable",
+        "//submodules/sqlcipher:sqlcipher",
+        "//submodules/AppLockState:AppLockState",
+        "//submodules/NotificationsPresentationData:NotificationsPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
@@ -375,12 +397,16 @@ apple_binary(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramApi:TelegramApi#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     frameworks = [
-        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/Intents.framework",
+        "$SDKROOT/System/Library/Frameworks/Contacts.framework",
     ],
 )
 
@@ -428,6 +454,10 @@ apple_binary(
     ]),
     compiler_flags = [
         "-DTARGET_OS_WATCH=1",
+    ],
+    linker_flags = [
+        "-e",
+        "_NSExtensionMain",
     ],
     configs = watch_extension_binary_configs(),
     frameworks = [

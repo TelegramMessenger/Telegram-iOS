@@ -3,9 +3,11 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import DeviceAccess
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 
 func presentContactsWarningSuppressionImpl(context: AccountContext, present: (ViewController, Any?) -> Void) {

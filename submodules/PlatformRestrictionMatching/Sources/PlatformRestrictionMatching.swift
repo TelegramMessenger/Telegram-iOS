@@ -1,5 +1,7 @@
 import Foundation
 import TelegramCore
+import SyncCore
+import SyncCore
 
 public extension RestrictedContentMessageAttribute {
     func platformText(platform: String) -> String? {

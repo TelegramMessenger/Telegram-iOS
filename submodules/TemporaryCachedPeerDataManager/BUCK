@@ -7,9 +7,10 @@ static_library(
     ]),
     deps = [
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
-    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
-        "//submodules/TelegramCore:TelegramCore#dynamic",
-        "//submodules/Postbox:Postbox#dynamic",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/Postbox:Postbox#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

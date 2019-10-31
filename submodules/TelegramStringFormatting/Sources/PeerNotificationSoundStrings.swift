@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 
 private let modernSoundsNamePaths: [KeyPath<PresentationStrings, String>] = [

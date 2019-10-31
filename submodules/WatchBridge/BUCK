@@ -17,6 +17,7 @@ static_library(
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
         "//submodules/WatchCommon/Host:WatchCommon",
         "//submodules/WatchBridgeAudio:WatchBridgeAudio",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
@@ -27,6 +28,7 @@ static_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyUI:LegacyUI",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

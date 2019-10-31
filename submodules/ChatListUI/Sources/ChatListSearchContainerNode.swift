@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -14,6 +15,7 @@ import ContactsPeerItem
 import ChatListSearchItemHeader
 import ContactListUI
 import ContextUI
+import PhoneNumberFormat
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers

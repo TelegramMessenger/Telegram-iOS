@@ -4,10 +4,12 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import SyncCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import PresentationDataUtils
 
 class ChatSlowmodeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

@@ -4,8 +4,10 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 private enum NetworkUsageControllerSection {
@@ -253,7 +255,8 @@ private enum NetworkUsageStatsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: NetworkUsageStatsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! NetworkUsageStatsControllerArguments
         switch self {
             case let .messagesHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -411,7 +414,7 @@ func networkUsageStatsController(context: AccountContext) -> ViewController {
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, section.get(), stats.get()) |> deliverOnMainQueue
-        |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
+        |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl([presentationData.strings.NetworkUsageSettings_Cellular, presentationData.strings.NetworkUsageSettings_Wifi], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: networkUsageStatsControllerEntries(presentationData: presentationData, section: section, stats: stats), style: .blocks, emptyStateItem: nil, animateChanges: false)

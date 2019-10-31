@@ -4,9 +4,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 private final class RecentSessionsControllerArguments {
@@ -238,7 +240,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: RecentSessionsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! RecentSessionsControllerArguments
         switch self {
             case let .currentSessionHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -581,7 +584,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, websitesPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, mode, state, sessionsState, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, mode, state, sessionsState, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         let websites = websitesAndPeers?.0
         let peers = websitesAndPeers?.1

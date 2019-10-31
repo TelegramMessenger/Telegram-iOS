@@ -19,8 +19,27 @@
 #include "tonlib/ExtClient.h"
 
 #include "tonlib/LastBlock.h"
+#include "tonlib/LastConfig.h"
 
 namespace tonlib {
+ExtClient::~ExtClient() {
+  last_config_queries_.for_each([](auto id, auto &promise) { promise.set_error(TonlibError::Cancelled()); });
+  last_block_queries_.for_each([](auto id, auto &promise) { promise.set_error(TonlibError::Cancelled()); });
+  queries_.for_each([](auto id, auto &promise) { promise.set_error(TonlibError::Cancelled()); });
+}
+void ExtClient::with_last_config(td::Promise<LastConfigState> promise) {
+  auto query_id = last_config_queries_.create(std::move(promise));
+  td::Promise<LastConfigState> P = [query_id, self = this,
+                                    actor_id = td::actor::actor_id()](td::Result<LastConfigState> result) {
+    send_lambda(actor_id, [self, query_id, result = std::move(result)]() mutable {
+      self->last_config_queries_.extract(query_id).set_result(std::move(result));
+    });
+  };
+  if (client_.last_block_actor_.empty()) {
+    return P.set_error(TonlibError::NoLiteServers());
+  }
+  td::actor::send_closure(client_.last_config_actor_, &LastConfig::get_last_config, std::move(P));
+}
 void ExtClient::with_last_block(td::Promise<LastBlockState> promise) {
   auto query_id = last_block_queries_.create(std::move(promise));
   td::Promise<LastBlockState> P = [query_id, self = this,
