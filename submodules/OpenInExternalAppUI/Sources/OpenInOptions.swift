@@ -143,7 +143,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .openUrl(url: "alook://\(url)")
             }))
                 
-            options.append(OpenInOption(identifier: "onion", application: .other(title: "Onion Browser", identifier: 519296448, scheme: "onionhttp"), action: {
+            options.append(OpenInOption(identifier: "onion", application: .other(title: "Onion Browser", identifier: 519296448, scheme: "onionhttp", store: nil), action: {
                     if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                         components.scheme = components.scheme == "https" ? "onionhttps" : "onionhttp"
                         if let url = components.string {
@@ -153,7 +153,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .none
                 }))
 
-            options.append(OpenInOption(identifier: "ucbrowser", application: .other(title: "UC Browser", identifier: 1048518592, scheme: "ucbrowser"), action: {
+            options.append(OpenInOption(identifier: "ucbrowser", application: .other(title: "UC Browser", identifier: 1048518592, scheme: "ucbrowser", store: nil), action: {
                 return .openUrl(url: "ucbrowser://\(url)")
             }))
         
