@@ -142,6 +142,10 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
                 return .openUrl(url: "alook://\(url)")
             }))
+            
+            options.append(OpenInOption(identifier: "dolphin", application: .other(title: "Dolphin", identifier: 452204407, scheme: "dolphin", store: nil), action: {
+                return .openUrl(url: "dolphin://\(url)")
+            }))
                 
             options.append(OpenInOption(identifier: "onion", application: .other(title: "Onion Browser", identifier: 519296448, scheme: "onionhttp", store: nil), action: {
                     if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
