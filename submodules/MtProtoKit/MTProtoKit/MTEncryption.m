@@ -802,21 +802,18 @@ uint64_t MTRsaFingerprint(NSString *key) {
     NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
     BIO_write(keyBio, keyData.bytes, (int)keyData.length);
     RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
-    
-    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
-    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
-    
-    int nBytes = BN_num_bytes(rsaKeyN);
-    int eBytes = BN_num_bytes(rsaKeyE);
+
+    int nBytes = BN_num_bytes(RSA_get0_n(rsaKey));
+    int eBytes = BN_num_bytes(RSA_get0_e(rsaKey));
     
     MTBuffer *buffer = [[MTBuffer alloc] init];
     
     NSMutableData *nData = [[NSMutableData alloc] initWithLength:nBytes];
-    BN_bn2bin(rsaKeyN, nData.mutableBytes);
+    BN_bn2bin(RSA_get0_n(rsaKey), nData.mutableBytes);
     [buffer appendTLBytes:nData];
     
     NSMutableData *eData = [[NSMutableData alloc] initWithLength:eBytes];
-    BN_bn2bin(rsaKeyE, eData.mutableBytes);
+    BN_bn2bin(RSA_get0_e(rsaKey), eData.mutableBytes);
     [buffer appendTLBytes:eData];
     
     NSData *sha1Data = MTSha1(buffer.data);
@@ -888,12 +885,9 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
     BN_CTX *bnContext = BN_CTX_new();
     uint8_t *bytes = buffer;
     BN_bin2bn(bytes, 256, x);
-    
-    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
-    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
-    
+
     NSData *result = nil;
-    if (BN_mod_exp(y, x, rsaKeyE, rsaKeyN, bnContext) == 1) {
+    if (BN_mod_exp(y, x, RSA_get0_e(rsaKey), RSA_get0_n(rsaKey), bnContext) == 1) {
         unsigned l = 256 - BN_num_bytes(y);
         memset(bytes, 0, l);
         if (BN_bn2bin(y, bytes + l) == 256 - l) {

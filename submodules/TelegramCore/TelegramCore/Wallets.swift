@@ -642,7 +642,7 @@ public enum DeleteAllLocalWalletsDataError {
 public func deleteAllLocalWalletsData(postbox: Postbox, network: Network, tonInstance: TonInstance) -> Signal<Never, DeleteAllLocalWalletsDataError> {
     return tonInstance.deleteAllLocalWalletsData()
     |> then(
-        postbox.transaction { transaction -> Void in
+         postbox.transaction { transaction -> Void in
             transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
                 let walletCollection = WalletCollection(wallets: [])
                 return walletCollection
