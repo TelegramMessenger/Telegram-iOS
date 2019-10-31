@@ -687,7 +687,7 @@ unsigned long long BinTrie::build_submap(int depth, unsigned long long A[]) cons
   } else {
     std::memset(A + n, 0, n * 8);
   }
-  if (A[n] != A[n - 1] || (long)A[n] < 0) {
+  if (A[n] != A[n - 1] || (long long)A[n] < 0) {
     r2 |= 1;
   } else {
     r2 &= ~1;

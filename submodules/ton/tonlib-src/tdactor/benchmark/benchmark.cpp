@@ -1145,6 +1145,273 @@ void run_queue_bench(int n, int m) {
 #endif
 }
 
+struct Sem {
+ public:
+  void post() {
+    if (++cnt_ == 0) {
+      {
+        std::unique_lock<std::mutex> lk(mutex_);
+      }
+      cnd_.notify_one();
+    }
+  }
+  void wait(int cnt = 1) {
+    auto was = cnt_.fetch_sub(cnt);
+    if (was >= cnt) {
+      return;
+    }
+    std::unique_lock<std::mutex> lk(mutex_);
+    cnd_.wait(lk, [&] { return cnt_ >= 0; });
+  }
+
+ private:
+  std::mutex mutex_;
+  std::condition_variable cnd_;
+  std::atomic<int> cnt_{0};
+};
+
+class ChainedSpawn : public td::Benchmark {
+ public:
+  ChainedSpawn(bool use_io) : use_io_(use_io) {
+  }
+  std::string get_description() const {
+    return PSTRING() << "Chained create_actor use_io(" << use_io_ << ")";
+  }
+
+  void run(int n) {
+    class Task : public td::actor::Actor {
+     public:
+      Task(int n, Sem *sem) : n_(n), sem_(sem) {
+      }
+      void start_up() override {
+        if (n_ == 0) {
+          sem_->post();
+        } else {
+          td::actor::create_actor<Task>("Task", n_ - 1, sem_).release();
+        }
+        stop();
+      };
+
+     private:
+      int n_;
+      Sem *sem_{nullptr};
+    };
+    td::actor::Scheduler scheduler{{8}};
+    auto sch = td::thread([&] { scheduler.run(); });
+
+    Sem sem;
+    scheduler.run_in_context_external([&] {
+      for (int i = 0; i < n; i++) {
+        td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), 1000, &sem)
+            .release();
+        sem.wait();
+      }
+      td::actor::SchedulerContext::get()->stop();
+    });
+
+    sch.join();
+  }
+
+ private:
+  bool use_io_{false};
+};
+
+class ChainedSpawnInplace : public td::Benchmark {
+ public:
+  ChainedSpawnInplace(bool use_io) : use_io_(use_io) {
+  }
+  std::string get_description() const {
+    return PSTRING() << "Chained send_signal(self) use_io(" << use_io_ << ")";
+  }
+
+  void run(int n) {
+    class Task : public td::actor::Actor {
+     public:
+      Task(int n, Sem *sem) : n_(n), sem_(sem) {
+      }
+      void loop() override {
+        if (n_ == 0) {
+          sem_->post();
+          stop();
+        } else {
+          n_--;
+          send_signals(actor_id(this), td::actor::ActorSignals::wakeup());
+        }
+      };
+
+     private:
+      int n_;
+      Sem *sem_;
+    };
+    td::actor::Scheduler scheduler{{8}};
+    auto sch = td::thread([&] { scheduler.run(); });
+
+    Sem sem;
+    scheduler.run_in_context_external([&] {
+      for (int i = 0; i < n; i++) {
+        td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), 1000, &sem)
+            .release();
+        sem.wait();
+      }
+      td::actor::SchedulerContext::get()->stop();
+    });
+
+    sch.join();
+  }
+
+ private:
+  bool use_io_{false};
+};
+
+class PingPong : public td::Benchmark {
+ public:
+  PingPong(bool use_io) : use_io_(use_io) {
+  }
+  std::string get_description() const {
+    return PSTRING() << "PingPong use_io(" << use_io_ << ")";
+  }
+
+  void run(int n) {
+    if (n < 3) {
+      n = 3;
+    }
+    class Task : public td::actor::Actor {
+     public:
+      explicit Task(Sem *sem) : sem_(sem) {
+      }
+      void set_peer(td::actor::ActorId<Task> peer) {
+        peer_ = peer;
+      }
+      void ping(int n) {
+        if (n < 0) {
+          sem_->post();
+          stop();
+        }
+        send_closure(peer_, &Task::ping, n - 1);
+      }
+
+     private:
+      td::actor::ActorId<Task> peer_;
+      Sem *sem_;
+    };
+    td::actor::Scheduler scheduler{{8}};
+    auto sch = td::thread([&] { scheduler.run(); });
+
+    Sem sem;
+    scheduler.run_in_context_external([&] {
+      for (int i = 0; i < n; i++) {
+        auto a = td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), &sem)
+                     .release();
+        auto b = td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), &sem)
+                     .release();
+        send_closure(a, &Task::set_peer, b);
+        send_closure(b, &Task::set_peer, a);
+        send_closure(a, &Task::ping, 1000);
+        sem.wait(2);
+      }
+      td::actor::SchedulerContext::get()->stop();
+    });
+
+    sch.join();
+  }
+
+ private:
+  bool use_io_{false};
+};
+
+class SpawnMany : public td::Benchmark {
+ public:
+  SpawnMany(bool use_io) : use_io_(use_io) {
+  }
+  std::string get_description() const {
+    return PSTRING() << "Spawn many use_io(" << use_io_ << ")";
+  }
+
+  void run(int n) {
+    class Task : public td::actor::Actor {
+     public:
+      Task(Sem *sem) : sem_(sem) {
+      }
+      void start_up() override {
+        sem_->post();
+        stop();
+      };
+
+     private:
+      Sem *sem_;
+    };
+    td::actor::Scheduler scheduler{{8}};
+    Sem sem;
+    auto sch = td::thread([&] { scheduler.run(); });
+    scheduler.run_in_context_external([&] {
+      for (int i = 0; i < n; i++) {
+        int spawn_cnt = 10000;
+        for (int j = 0; j < spawn_cnt; j++) {
+          td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), &sem).release();
+        }
+        sem.wait(spawn_cnt);
+      }
+      td::actor::SchedulerContext::get()->stop();
+    });
+    sch.join();
+  }
+
+ private:
+  bool use_io_{false};
+};
+
+class YieldMany : public td::Benchmark {
+ public:
+  YieldMany(bool use_io) : use_io_(use_io) {
+  }
+  std::string get_description() const {
+    return PSTRING() << "Yield many use_io(" << use_io_ << ")";
+  }
+
+  void run(int n) {
+    int num_yield = 1000;
+    unsigned tasks_per_cpu = 50;
+    unsigned cpu_n = td::thread::hardware_concurrency();
+    class Task : public td::actor::Actor {
+     public:
+      explicit Task(int n, Sem *sem) : n_(n), sem_(sem) {
+      }
+      void loop() override {
+        if (n_ == 0) {
+          sem_->post();
+          stop();
+        } else {
+          n_--;
+          yield();
+        }
+      };
+
+     private:
+      int n_;
+      Sem *sem_;
+    };
+    td::actor::Scheduler scheduler{{cpu_n}};
+    auto sch = td::thread([&] { scheduler.run(); });
+    unsigned tasks = tasks_per_cpu * cpu_n;
+    Sem sem;
+    scheduler.run_in_context_external([&] {
+      for (int i = 0; i < n; i++) {
+        for (unsigned j = 0; j < tasks; j++) {
+          td::actor::create_actor<Task>(td::actor::ActorOptions().with_name("Task").with_poll(use_io_), num_yield, &sem)
+              .release();
+        }
+        sem.wait(tasks);
+      }
+    });
+
+    scheduler.run_in_context_external([&] { td::actor::SchedulerContext::get()->stop(); });
+    sch.join();
+  }
+
+ private:
+  bool use_io_{false};
+};
+
 int main(int argc, char **argv) {
   if (argc > 1) {
     if (argv[1][0] == 'a') {
@@ -1158,6 +1425,18 @@ int main(int argc, char **argv) {
     }
     return 0;
   }
+
+  bench(YieldMany(false));
+  bench(YieldMany(true));
+  bench(SpawnMany(false));
+  bench(SpawnMany(true));
+  bench(PingPong(false));
+  bench(PingPong(true));
+  bench(ChainedSpawnInplace(false));
+  bench(ChainedSpawnInplace(true));
+  bench(ChainedSpawn(false));
+  bench(ChainedSpawn(true));
+  return 0;
 
   bench(ActorDummyQuery());
   bench(ActorExecutorBenchmark());

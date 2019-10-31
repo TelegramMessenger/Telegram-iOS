@@ -51,8 +51,8 @@ public protocol TonNetworkProxy: class {
 private final class TonInstanceImpl {
     private let queue: Queue
     private let basePath: String
-    private let config: String
-    private let blockchainName: String
+    fileprivate var config: String
+    fileprivate var blockchainName: String
     private let proxy: TonNetworkProxy?
     private var instance: TON?
     fileprivate let syncStateProgress = ValuePromise<Float>(0.0)
@@ -122,11 +122,41 @@ public final class TonInstance {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
+                impl.config = config
+                impl.blockchainName = blockchainName
                 impl.withInstance { ton in
                     let cancel = ton.updateConfig(config, blockchainName: blockchainName).start(next: nil, error: { _ in
                     }, completed: {
                         subscriber.putCompletion()
                     })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            return disposable
+        }
+    }
+    
+    public func validateConfig(config: String, blockchainName: String) -> Signal<WalletValidateConfigResult, WalletValidateConfigError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.validateConfig(config, blockchainName: blockchainName).start(next: { result in
+                        guard let result = result as? TONValidatedConfig else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putNext(WalletValidateConfigResult(defaultWalletId: result.defaultWalletId))
+                        subscriber.putCompletion()
+                    }, error: { error in
+                        guard let _ = error as? TONError else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putError(.generic)
+                    }, completed: nil)
                     disposable.set(ActionDisposable {
                         cancel?.dispose()
                     })
@@ -226,28 +256,67 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func walletAddress(publicKey: WalletPublicKey) -> Signal<String, NoError> {
+    fileprivate func getInitialWalletId() -> Signal<Int64, WalletValidateConfigError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            
             self.impl.with { impl in
+                let config = impl.config
+                let blockchainName = impl.blockchainName
+                
                 impl.withInstance { ton in
-                    let cancel = ton.getWalletAccountAddress(withPublicKey: publicKey.rawValue).start(next: { address in
-                        guard let address = address as? String else {
+                    let cancel = ton.validateConfig(config, blockchainName: blockchainName).start(next: { result in
+                        guard let result = result as? TONValidatedConfig else {
+                            subscriber.putError(.generic)
                             return
                         }
-                        subscriber.putNext(address)
+                        subscriber.putNext(result.defaultWalletId)
                         subscriber.putCompletion()
-                    }, error: { _ in
-                    }, completed: {
-                    })
+                    }, error: { error in
+                        guard let _ = error as? TONError else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putError(.generic)
+                    }, completed: nil)
                     disposable.set(ActionDisposable {
                         cancel?.dispose()
                     })
                 }
             }
-            
             return disposable
+        }
+    }
+    
+    fileprivate func walletAddress(publicKey: WalletPublicKey) -> Signal<String, NoError> {
+        return self.getInitialWalletId()
+        |> `catch` { _ -> Signal<Int64, NoError> in
+            return .single(0)
+        }
+        |> mapToSignal { initialWalletId -> Signal<String, NoError> in
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                
+                self.impl.with { impl in
+                    impl.withInstance { ton in
+                        let cancel = ton.getWalletAccountAddress(withPublicKey: publicKey.rawValue, initialWalletId: initialWalletId).start(next: { address in
+                            guard let address = address as? String else {
+                                return
+                            }
+                            subscriber.putNext(address)
+                            subscriber.putCompletion()
+                        }, error: { _ in
+                            subscriber.putNext("ERROR")
+                            subscriber.putCompletion()
+                        }, completed: {
+                        })
+                        disposable.set(ActionDisposable {
+                            cancel?.dispose()
+                        })
+                    }
+                }
+                
+                return disposable
+            }
         }
     }
     
@@ -1262,4 +1331,13 @@ public protocol WalletStorageInterface {
     func updateWalletRecords(_ f: @escaping ([WalletStateRecord]) -> [WalletStateRecord]) -> Signal<[WalletStateRecord], NoError>
     func localWalletConfiguration() -> Signal<LocalWalletConfiguration, NoError>
     func updateLocalWalletConfiguration(_ f: @escaping (LocalWalletConfiguration) -> LocalWalletConfiguration) -> Signal<Never, NoError>
+}
+
+public struct WalletValidateConfigResult {
+    public var defaultWalletId: Int64
+}
+
+public enum WalletValidateConfigError {
+    case generic
+    
 }

@@ -128,7 +128,7 @@ class JavadocTlDocumentationGenerator extends TlDocumentationGenerator
 
         $this->addDocumentation('public class TdApi {', <<<EOT
 $nullable_type_import/**
- * This class contains as static nested classes all other TDLib interface
+ * This class contains as static nested classes all other tonlib interface
  * type-classes and function-classes.
  * <p>
  * It has no inner classes, functions or public members.
@@ -138,7 +138,7 @@ EOT
 
         $this->addDocumentation('    public abstract static class Object {', <<<EOT
     /**
-     * This class is a base class for all TDLib interface classes.
+     * This class is a base class for all tonlib interface classes.
      */
 EOT
 );
@@ -159,7 +159,7 @@ EOT
 
         $this->addDocumentation('    public abstract static class Function extends Object {', <<<EOT
     /**
-     * This class is a base class for all TDLib interface function-classes.
+     * This class is a base class for all tonlib interface function-classes.
      */
 EOT
 );

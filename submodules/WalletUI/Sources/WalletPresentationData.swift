@@ -324,6 +324,6 @@ func walletStringsFormattedNumber(_ count: Int32, _ groupingSeparator: String = 
     }
 }
 
-func OverlayStatusController(theme: WalletTheme, type: OverlayStatusControllerType) -> ViewController {
+public func OverlayStatusController(theme: WalletTheme, type: OverlayStatusControllerType) -> ViewController {
     return OverlayStatusController(style: theme.keyboardAppearance == .dark ? .dark : .light, type: type)
 }

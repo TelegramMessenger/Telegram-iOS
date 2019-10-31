@@ -80,13 +80,16 @@ apple_library(
     ],
     deps = [
         "//submodules/WalletUI:WalletUI",
+        "//submodules/WalletCore:WalletCore",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/OverlayStatusController:OverlayStatusController",
     ]
     + framework_binary_dependencies(framework_dependencies),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/VideoToolbox.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
     ],
 )
 

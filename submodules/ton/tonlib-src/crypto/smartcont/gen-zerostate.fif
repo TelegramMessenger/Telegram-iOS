@@ -225,6 +225,22 @@ Masterchain swap
 "config-master" +suffix +".addr" save-address-verbose
 // Other data
 
+/*
+ *
+ *  Initial wallets (test)
+ *
+ */
+ 
+// pubkey amount `create-wallet1` or pubkey amount `create-wallet2`
+PK'PuZPPXK5Rff9SvtoS7Y9lUuEixvy-J6aishYFj3Qn6P0pJMb GR$100000000 create-wallet1
+PK'PuYiB1zAWzr4p8j6I681+sGUrRGcn6Ylf7vXl0xaUl/w6Xfg GR$1700000000 create-wallet0
+
+/*
+ *
+ *  Create state
+ *
+ */
+
 create_state
 cr cr ."new state is:" cr dup <s csr. cr
 dup 31 boc+>B dup Bx. cr

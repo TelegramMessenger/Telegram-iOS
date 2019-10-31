@@ -28,13 +28,14 @@ private enum WalletSettingsSection: Int32 {
 
 private enum WalletSettingsEntry: ItemListNodeEntry {
     case configuration(WalletTheme, String)
+    case configurationInfo(WalletTheme, String)
     case exportWallet(WalletTheme, String)
     case deleteWallet(WalletTheme, String)
     case deleteWalletInfo(WalletTheme, String)
     
     var section: ItemListSectionId {
         switch self {
-        case .configuration:
+        case .configuration, .configurationInfo:
             return WalletSettingsSection.configuration.rawValue
         case .exportWallet:
             return WalletSettingsSection.exportWallet.rawValue
@@ -47,12 +48,14 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
         switch self {
         case .configuration:
             return 0
-        case .exportWallet:
+        case .configurationInfo:
             return 1
-        case .deleteWallet:
+        case .exportWallet:
             return 2
-        case .deleteWalletInfo:
+        case .deleteWallet:
             return 3
+        case .deleteWalletInfo:
+            return 4
         }
     }
     
@@ -67,6 +70,8 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.openConfiguration()
             })
+        case let .configurationInfo(theme, text):
+            return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         case let .exportWallet(theme, text):
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.exportWallet()
@@ -89,6 +94,7 @@ private func walletSettingsControllerEntries(presentationData: WalletPresentatio
     
     if supportsCustomConfigurations {
         entries.append(.configuration(presentationData.theme, presentationData.strings.Wallet_Settings_Configuration))
+        entries.append(.configurationInfo(presentationData.theme, presentationData.strings.Wallet_Settings_ConfigurationInfo))
     }
     entries.append(.exportWallet(presentationData.theme, presentationData.strings.Wallet_Settings_BackupWallet))
     entries.append(.deleteWallet(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWallet))

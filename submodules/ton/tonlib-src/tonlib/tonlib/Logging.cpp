@@ -32,10 +32,17 @@
 
 namespace tonlib {
 
-static std::mutex logging_mutex;
-static td::FileLog file_log;
-static td::TsLog ts_log(&file_log);
-static td::NullLog null_log;
+struct LogData {
+  std::mutex logging_mutex;
+  td::FileLog file_log;
+  td::TsLog ts_log{&file_log};
+  td::NullLog null_log;
+};
+
+auto &log_data() {
+  static LogData data;
+  return data;
+}
 
 #define ADD_TAG(tag) \
   { #tag, &VERBOSITY_NAME(tag) }
@@ -48,7 +55,7 @@ td::Status Logging::set_current_stream(tonlib_api::object_ptr<tonlib_api::LogStr
     return td::Status::Error("Log stream must not be empty");
   }
 
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   switch (stream->get_id()) {
     case tonlib_api::logStreamDefault::ID:
       td::log_interface = td::default_log_interface;
@@ -60,13 +67,13 @@ td::Status Logging::set_current_stream(tonlib_api::object_ptr<tonlib_api::LogStr
         return td::Status::Error("Max log file size should be positive");
       }
 
-      TRY_STATUS(file_log.init(file_stream->path_, max_log_file_size));
+      TRY_STATUS(log_data().file_log.init(file_stream->path_, max_log_file_size));
       std::atomic_thread_fence(std::memory_order_release);  // better than nothing
-      td::log_interface = &ts_log;
+      td::log_interface = &log_data().ts_log;
       return td::Status::OK();
     }
     case tonlib_api::logStreamEmpty::ID:
-      td::log_interface = &null_log;
+      td::log_interface = &log_data().null_log;
       return td::Status::OK();
     default:
       UNREACHABLE();
@@ -75,22 +82,22 @@ td::Status Logging::set_current_stream(tonlib_api::object_ptr<tonlib_api::LogStr
 }
 
 td::Result<tonlib_api::object_ptr<tonlib_api::LogStream>> Logging::get_current_stream() {
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   if (td::log_interface == td::default_log_interface) {
     return tonlib_api::make_object<tonlib_api::logStreamDefault>();
   }
-  if (td::log_interface == &null_log) {
+  if (td::log_interface == &log_data().null_log) {
     return tonlib_api::make_object<tonlib_api::logStreamEmpty>();
   }
-  if (td::log_interface == &ts_log) {
-    return tonlib_api::make_object<tonlib_api::logStreamFile>(file_log.get_path().str(),
-                                                              file_log.get_rotate_threshold());
+  if (td::log_interface == &log_data().ts_log) {
+    return tonlib_api::make_object<tonlib_api::logStreamFile>(log_data().file_log.get_path().str(),
+                                                              log_data().file_log.get_rotate_threshold());
   }
   return td::Status::Error("Log stream is unrecognized");
 }
 
 td::Status Logging::set_verbosity_level(int new_verbosity_level) {
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   if (0 <= new_verbosity_level && new_verbosity_level <= VERBOSITY_NAME(NEVER)) {
     SET_VERBOSITY_LEVEL(VERBOSITY_NAME(FATAL) + new_verbosity_level);
     return td::Status::OK();
@@ -100,7 +107,7 @@ td::Status Logging::set_verbosity_level(int new_verbosity_level) {
 }
 
 int Logging::get_verbosity_level() {
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   return GET_VERBOSITY_LEVEL();
 }
 
@@ -114,7 +121,7 @@ td::Status Logging::set_tag_verbosity_level(td::Slice tag, int new_verbosity_lev
     return td::Status::Error("Log tag is not found");
   }
 
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   *it->second = td::clamp(new_verbosity_level, 1, VERBOSITY_NAME(NEVER));
   return td::Status::OK();
 }
@@ -125,7 +132,7 @@ td::Result<int> Logging::get_tag_verbosity_level(td::Slice tag) {
     return td::Status::Error("Log tag is not found");
   }
 
-  std::lock_guard<std::mutex> lock(logging_mutex);
+  std::lock_guard<std::mutex> lock(log_data().logging_mutex);
   return *it->second;
 }
 

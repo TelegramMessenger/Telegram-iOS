@@ -1,6 +1,8 @@
 // automatically generated from `smartcont/stdlib.fc` `smartcont/config-code.fc` 
 PROGRAM{
   DECLPROC set_conf_param
+  DECLPROC load_data
+  DECLPROC store_data
   DECLPROC check_validator_set
   DECLPROC send_answer
   DECLPROC send_confirmation
@@ -9,6 +11,12 @@ PROGRAM{
   DECLPROC change_elector_code
   1666 DECLMETHOD after_code_upgrade
   DECLPROC perform_action
+  DECLPROC get_validator_descr
+  DECLPROC unpack_validator_descr
+  DECLPROC create_new_entry
+  DECLPROC unpack_suggestion
+  DECLPROC pack_suggestion
+  DECLPROC register_vote
   DECLPROC recv_external
   DECLPROC run_ticktock
   set_conf_param PROC:<{
@@ -26,22 +34,54 @@ PROGRAM{
     ENDC	//  _14
     c4 POP
   }>
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs
+    LDREF	//  _6 cs
+    32 LDU	//  _6 _8 cs
+    256 LDU	//  cfg_dict stored_seqno public_key cs
+    DUP	//  cfg_dict stored_seqno public_key cs cs
+    SEMPTY	//  cfg_dict stored_seqno public_key cs _15
+    IF:<{	//  cfg_dict stored_seqno public_key cs
+      NEWDICT	//  cfg_dict stored_seqno public_key cs _16
+    }>ELSE<{	//  cfg_dict stored_seqno public_key cs
+      LDDICT	//  cfg_dict stored_seqno public_key _16 cs
+      SWAP	//  cfg_dict stored_seqno public_key cs _16
+    }>	//  cfg_dict stored_seqno public_key cs vote_dict
+    SWAP	//  cfg_dict stored_seqno public_key vote_dict cs
+    ENDS
+  }>
+  store_data PROC:<{
+    //  cfg_dict stored_seqno public_key vote_dict
+    NEWC	//  cfg_dict stored_seqno public_key vote_dict _4
+    s1 s4 XCHG	//  vote_dict stored_seqno public_key cfg_dict _4
+    STREF	//  vote_dict stored_seqno public_key _5
+    s1 s2 XCHG	//  vote_dict public_key stored_seqno _5
+    32 STU	//  vote_dict public_key _7
+    256 STU	//  vote_dict _9
+    STDICT	//  _10
+    ENDC	//  _11
+    c4 POP
+  }>
   check_validator_set PROC:<{
     //  vset
     CTOS	//  cs
     8 LDU	//  _4 cs
     SWAP	//  cs _4
-    17 EQINT	//  cs _8
-    9 THROWIFNOT
+    -17 ADDCONST	//  cs _8
+    -2 PUSHINT	//  cs _8 _9=-2
+    AND	//  cs _10
+    9 THROWIF
     32 LDU	//  utime_since cs
     32 LDU	//  utime_since utime_until cs
     16 LDU	//  utime_since utime_until total cs
-    16 LDU	//  utime_since utime_until total _42 _41
+    16 LDU	//  utime_since utime_until total _44 _43
     DROP	//  utime_since utime_until total main
     DUP	//  utime_since utime_until total main main
-    0 GTINT	//  utime_since utime_until total main _28
+    0 GTINT	//  utime_since utime_until total main _30
     9 THROWIFNOT
-    GEQ	//  utime_since utime_until _31
+    GEQ	//  utime_since utime_until _33
     9 THROWIFNOT
   }>
   send_answer PROC:<{
@@ -188,7 +228,7 @@ PROGRAM{
     OVER
     1130778657 PUSHINT	//  cfg_dict public_key action cs action _4=1130778657
     EQUAL	//  cfg_dict public_key action cs _5
-    IF:<{	//  cfg_dict public_key action cs
+    IFJMP:<{	//  cfg_dict public_key action cs
       NIP	//  cfg_dict public_key cs
       32 LDU	//  cfg_dict public_key param_index cs
       LDREF	//  cfg_dict public_key param_index param_value cs
@@ -196,52 +236,139 @@ PROGRAM{
       s0 s1 s3 XCHG3
       32 PUSHINT	//  public_key param_value param_index cfg_dict _15=32
       DICTISETREF	//  public_key cfg_dict
-    }>ELSE<{	//  cfg_dict public_key action cs
+      SWAP	//  cfg_dict public_key
+    }>	//  cfg_dict public_key action cs
+    OVER
+    1313042276 PUSHINT	//  cfg_dict public_key action cs action _17=1313042276
+    EQUAL	//  cfg_dict public_key action cs _18
+    IFJMP:<{	//  cfg_dict public_key action cs
+      NIP	//  cfg_dict public_key cs
+      LDREF	//  cfg_dict public_key new_code cs
+      OVER	//  cfg_dict public_key new_code cs new_code
+      SETCODE
+      c3 PUSH	//  cfg_dict public_key new_code cs old_code
+      s0 s2 XCHG	//  cfg_dict public_key old_code cs new_code
+      c3 POP
+      SWAP	//  cfg_dict public_key cs old_code
+      after_code_upgrade CALLDICT
+      0 THROW
+    }>	//  cfg_dict public_key action cs
+    OVER
+    1348619041 PUSHINT	//  cfg_dict public_key action cs action _29=1348619041
+    EQUAL	//  cfg_dict public_key action cs _30
+    IFJMP:<{	//  cfg_dict public_key action cs
+      NIP
+      NIP	//  cfg_dict cs
+      256 LDU	//  cfg_dict public_key cs
+      ENDS
+    }>	//  cfg_dict public_key action cs
+    OVER
+    1313074949 PUSHINT	//  cfg_dict public_key action cs action _35=1313074949
+    EQUAL	//  cfg_dict public_key action cs _36
+    IFJMP:<{	//  cfg_dict public_key action cs
+      NIP	//  cfg_dict public_key cs
+      change_elector_code CALLDICT
+    }>	//  cfg_dict public_key action cs
+    DROP	//  cfg_dict public_key action
+    32 THROWIF
+  }>
+  get_validator_descr PROCREF:<{
+    //  idx
+    34 PUSHINT	//  idx _2=34
+    CONFIGOPTPARAM	//  idx vset
+    DUP	//  idx vset vset
+    ISNULL	//  idx vset _4
+    IFJMP:<{	//  idx vset
+      2DROP	// 
+      PUSHNULL	//  _5
+    }>	//  idx vset
+    CTOS	//  idx cs
+    104 PUSHINT	//  idx cs _17
+    SDSKIPFIRST	//  idx cs
+    NEWC	//  idx cs _20
+    SWAP	//  idx _20 cs
+    STSLICER	//  idx _21
+    ENDC	//  idx dict
+    16 PUSHINT	//  idx dict _25=16
+    DICTUGET
+    NULLSWAPIFNOT	//  _27 _28
+    DROP	//  value
+  }>
+  unpack_validator_descr PROC:<{
+    //  cs
+    8 LDU	//  _2 cs
+    32 PUSHINT	//  _2 cs _5=32
+    NOT	//  _2 cs _6
+    s1 s2 XCHG	//  cs _2 _6
+    AND	//  cs _7
+    83 EQINT	//  cs _9
+    41 THROWIFNOT
+    32 LDU	//  _12 cs
+    SWAP
+    2390828938 PUSHINT	//  cs _12 _15=2390828938
+    EQUAL	//  cs _16
+    41 THROWIFNOT
+    256 LDU	//  _18 cs
+    64 LDU	//  _18 _31 _30
+    DROP	//  _18 _21
+  }>
+  create_new_entry PROC:<{
+    //  cs
+    0 PUSHINT	//  cs _1=0
+    DUP	//  cs _1=0 _2=0
+    FALSE	//  cs _1=0 _2=0 _3
+    NEWC	//  cs _1=0 _2=0 _3 _4
+    1 STI	//  cs _1=0 _2=0 _6
+    64 STU	//  cs _1=0 _8
+    256 STU	//  cs _10
+    SWAP	//  _10 cs
+    STSLICER	//  _11
+    ENDC	//  _12
+    CTOS	//  _13
+  }>
+  unpack_suggestion PROC:<{
+    //  cs
+    LDDICT	//  _1 cs
+    64 LDU	//  _1 _3 cs
+    256 LDU	//  _1 _3 _6 cs
+  }>
+  pack_suggestion PROC:<{
+    //  voters sum_weight vset_id body
+    NEWC	//  voters sum_weight vset_id body _4
+    s1 s4 XCHG	//  body sum_weight vset_id voters _4
+    STDICT	//  body sum_weight vset_id _5
+    s1 s2 XCHG	//  body vset_id sum_weight _5
+    64 STU	//  body vset_id _7
+    256 STU	//  body _9
+    SWAP	//  _9 body
+    STSLICER	//  _10
+  }>
+  register_vote PROC:<{
+    //  vote_dict action cs idx weight
+    2DROP	//  vote_dict action cs
+    SWAP
+    1 PUSHINT	//  vote_dict cs action _9=1
+    AND	//  vote_dict cs _10
+    IF:<{	//  vote_dict cs
+      DUP	//  vote_dict cs cs
+      HASHSU	//  vote_dict cs _11
+      NIP	//  vote_dict hash
       OVER
-      1313042276 PUSHINT	//  cfg_dict public_key action cs action _17=1313042276
-      EQUAL	//  cfg_dict public_key action cs _18
-      IF:<{	//  cfg_dict public_key action cs
-        NIP	//  cfg_dict public_key cs
-        LDREF	//  cfg_dict public_key new_code cs
-        OVER	//  cfg_dict public_key new_code cs new_code
-        SETCODE
-        DUP	//  cfg_dict public_key new_code cs cs
-        SEMPTY	//  cfg_dict public_key new_code cs _23
-        IFNOT:<{	//  cfg_dict public_key new_code cs
-          c3 PUSH	//  cfg_dict public_key new_code cs old_code
-          s0 s2 XCHG	//  cfg_dict public_key old_code cs new_code
-          c3 POP
-          OVER	//  cfg_dict public_key old_code cs old_code
-          after_code_upgrade CALLDICT
-          c3 POP
-        }>ELSE<{
-          2DROP	//  cfg_dict public_key
-        }>
-      }>ELSE<{	//  cfg_dict public_key action cs
-        OVER
-        1348619041 PUSHINT	//  cfg_dict public_key action cs action _29=1348619041
-        EQUAL	//  cfg_dict public_key action cs _30
-        IF:<{	//  cfg_dict public_key action cs
-          NIP
-          NIP	//  cfg_dict cs
-          256 LDU	//  cfg_dict public_key cs
-          ENDS
-        }>ELSE<{	//  cfg_dict public_key action cs
-          OVER
-          1313074949 PUSHINT	//  cfg_dict public_key action cs action _35=1313074949
-          EQUAL	//  cfg_dict public_key action cs _36
-          IF:<{	//  cfg_dict public_key action cs
-            NIP	//  cfg_dict public_key cs
-            change_elector_code CALLDICT
-          }>ELSE<{	//  cfg_dict public_key action cs
-            DROP	//  cfg_dict public_key action
-            32 THROWIF
-          }>
-        }>
-      }>
-      SWAP	//  public_key cfg_dict
+      8 PUSHPOW2	//  vote_dict hash vote_dict _13=256
+      DICTUGET
+      NULLSWAPIFNOT	//  vote_dict _23 _24
+      NIP	//  vote_dict found?
+      IFNOT:<{	//  vote_dict
+      }>	//  vote_dict
+    }>ELSE<{	//  vote_dict cs
+      256 PLDU	//  vote_dict hash
+      OVER
+      8 PUSHPOW2	//  vote_dict hash vote_dict _19=256
+      DICTUGET
+      NULLSWAPIFNOT	//  vote_dict _25 _26
+      NIP	//  vote_dict found?
+      42 THROWIFNOT
     }>
-    SWAP	//  cfg_dict public_key
   }>
   recv_external PROC:<{
     //  in_msg
@@ -255,33 +382,55 @@ PROGRAM{
     s1 s2 XCHG	//  signature in_msg action msg_seqno cs valid_until _19
     LESS	//  signature in_msg action msg_seqno cs _20
     35 THROWIF
-    c4 PUSH	//  signature in_msg action msg_seqno cs _23
-    CTOS	//  signature in_msg action msg_seqno cs cs2
-    LDREF	//  signature in_msg action msg_seqno cs cfg_dict cs2
-    32 LDU	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno cs2
-    256 LDU	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno public_key cs2
-    ENDS
-    s4 s1 XCPU	//  signature in_msg action public_key cs cfg_dict stored_seqno msg_seqno stored_seqno
-    EQUAL	//  signature in_msg action public_key cs cfg_dict stored_seqno _38
+    load_data INLINECALLDICT	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno public_key vote_dict
+    s5 s2 XCPU	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key msg_seqno stored_seqno
+    EQUAL	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _28
     33 THROWIFNOT
-    s0 s5 XCHG	//  signature stored_seqno action public_key cs cfg_dict in_msg
-    HASHSU	//  signature stored_seqno action public_key cs cfg_dict _41
-    s0 s6 s3 XC2PU	//  cfg_dict stored_seqno action public_key cs _41 signature public_key
-    CHKSIGNU	//  cfg_dict stored_seqno action public_key cs _42
+    s5 PUSH
+    1450144869 PUSHINT	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key action _30=1450144869
+    SUB	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _31
+    -2 PUSHINT	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _31 _32=-2
+    AND	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key _33
+    IFNOTJMP:<{	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
+      s0 s3 XCHG	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno cs
+      16 LDU	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs
+      OVER	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs idx
+      get_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs vdescr
+      unpack_validator_descr INLINECALLDICT	//  signature in_msg action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey weight
+      s0 s9 XCHG	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey in_msg
+      HASHSU	//  signature weight action vote_dict public_key cfg_dict stored_seqno idx cs val_pubkey _44
+      s0 s10 s10 XCHG3	//  cs weight action vote_dict public_key cfg_dict stored_seqno idx _44 signature val_pubkey
+      CHKSIGNU	//  cs weight action vote_dict public_key cfg_dict stored_seqno idx _45
+      34 THROWIFNOT
+      ACCEPT
+      SWAP	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno
+      INC	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno
+      s2 s0 s3 PUSH3
+      s7 PUSH	//  cs weight action vote_dict public_key cfg_dict idx stored_seqno cfg_dict stored_seqno public_key vote_dict
+      store_data INLINECALLDICT
+      COMMIT
+      s3 s5 XCHG
+      s7 s1 s6 XCHG3	//  cfg_dict stored_seqno public_key vote_dict action cs idx weight
+      register_vote CALLDICT	//  cfg_dict stored_seqno public_key vote_dict
+      store_data INLINECALLDICT
+    }>	//  signature in_msg action vote_dict cs cfg_dict stored_seqno public_key
+    s0 s6 XCHG	//  signature public_key action vote_dict cs cfg_dict stored_seqno in_msg
+    HASHSU	//  signature public_key action vote_dict cs cfg_dict stored_seqno _55
+    s0 s7 s6 XC2PU	//  stored_seqno public_key action vote_dict cs cfg_dict _55 signature public_key
+    CHKSIGNU	//  stored_seqno public_key action vote_dict cs cfg_dict _56
     34 THROWIFNOT
     ACCEPT
-    s3 s4 XCHG
-    s1 s2 XCHG	//  stored_seqno cfg_dict public_key action cs
-    perform_action CALLDICT	//  stored_seqno cfg_dict public_key
-    s0 s2 XCHG	//  public_key cfg_dict stored_seqno
-    INC	//  public_key cfg_dict _47
-    NEWC	//  public_key cfg_dict _47 _48
-    s1 s2 XCHG	//  public_key _47 cfg_dict _48
-    STREF	//  public_key _47 _49
-    32 STU	//  public_key _51
-    256 STU	//  _53
-    ENDC	//  _54
-    c4 POP
+    s0 s5 XCHG	//  cfg_dict public_key action vote_dict cs stored_seqno
+    INC	//  cfg_dict public_key action vote_dict cs stored_seqno
+    s5 s0 s4 PUSH3
+    s5 PUSH	//  cfg_dict public_key action vote_dict cs stored_seqno cfg_dict stored_seqno public_key vote_dict
+    store_data INLINECALLDICT
+    COMMIT
+    s3 s5 XCHG
+    s4 s5 s5 XCHG3	//  stored_seqno vote_dict cfg_dict public_key action cs
+    perform_action CALLDICT	//  stored_seqno vote_dict cfg_dict public_key
+    s3 s0 s3 XCHG3	//  cfg_dict stored_seqno public_key vote_dict
+    store_data INLINECALLDICT
   }>
   run_ticktock PROC:<{
     //  is_tock

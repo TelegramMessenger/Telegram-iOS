@@ -208,7 +208,7 @@ TEST(Crypto, almost_zero) {
   td::SecureString sig(64);
   td::SecureString msg(1);
 
-  pub.as_mutable_slice()[31] = (char)128;
+  pub.as_mutable_slice().ubegin()[31] = static_cast<unsigned char>(128);
   for (td::int32 j = 0; j < 256; j++) {
     msg.as_mutable_slice()[0] = (char)j;
     if (td::Ed25519::PublicKey(pub.copy()).verify_signature(msg, sig).is_ok()) {

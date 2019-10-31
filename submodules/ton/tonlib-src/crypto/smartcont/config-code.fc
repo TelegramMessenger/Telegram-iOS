@@ -1,15 +1,32 @@
 ;; Simple configuration smart contract
 
 () set_conf_param(int index, cell value) impure {
-  var cs = begin_parse(get_data());
+  var cs = get_data().begin_parse();
   var cfg_dict = cs~load_ref();
   cfg_dict~idict_set_ref(32, index, value);
   set_data(begin_cell().store_ref(cfg_dict).store_slice(cs).end_cell());
 }
 
+(cell, int, int, cell) load_data() inline {
+  var cs = get_data().begin_parse();
+  var (cfg_dict, stored_seqno, public_key) = (cs~load_ref(), cs~load_uint(32), cs~load_uint(256));
+  var vote_dict = cs.slice_empty?() ? new_dict() : cs~load_dict(); 
+  cs.end_parse();
+  return (cfg_dict, stored_seqno, public_key, vote_dict);
+}
+
+() store_data(cfg_dict, stored_seqno, public_key, vote_dict) impure inline {
+  set_data(begin_cell()
+    .store_ref(cfg_dict)
+    .store_uint(stored_seqno, 32)
+    .store_uint(public_key, 256)
+    .store_dict(vote_dict)
+  .end_cell());
+}
+
 (int, int) check_validator_set(cell vset) {
   var cs = vset.begin_parse();
-  throw_unless(9, cs~load_uint(8) == 0x11);  ;; validators#11
+  throw_if(9, (cs~load_uint(8) - 0x11) & -2);  ;; validators#11 or validators_ext#12
   int utime_since = cs~load_uint(32);
   int utime_until = cs~load_uint(32);
   int total = cs~load_uint(16);
@@ -96,27 +113,79 @@ _ perform_action(cfg_dict, public_key, action, cs) {
     var param_value = cs~load_ref();
     cs.end_parse();
     cfg_dict~idict_set_ref(32, param_index, param_value);
+    return (cfg_dict, public_key);
   } elseif (action == 0x4e436f64) {
     ;; change configuration smart contract code
     var new_code = cs~load_ref();
     set_code(new_code);
-    ifnot(cs.slice_empty?()) {
-      var old_code = get_c3();
-      set_c3(new_code);
-      after_code_upgrade(cs, old_code);
-      set_c3(old_code);
-    }
+    var old_code = get_c3();
+    set_c3(new_code);
+    after_code_upgrade(cs, old_code);
+    throw(0);
+    return (cfg_dict, public_key);
   } elseif (action == 0x50624b21) {
     ;; change configuration master public key
     public_key = cs~load_uint(256);
     cs.end_parse();
+    return (cfg_dict, public_key);
   } elseif (action == 0x4e43ef05) {
     ;; change election smart contract code
     change_elector_code(cs);
+    return (cfg_dict, public_key);
   } else {
     throw_if(32, action);
+    return (cfg_dict, public_key);
   }
-  return (cfg_dict, public_key);
+}
+
+slice get_validator_descr(int idx) inline_ref {
+  var vset = config_param(34);
+  if (vset.null?()) {
+    return null();
+  }
+  var cs = begin_parse(vset);
+  cs~skip_bits(8 + 32 + 32 + 16 + 16);
+  var dict = begin_cell().store_slice(cs).end_cell();
+  var (value, _) = dict.udict_get?(16, idx);
+  return value;
+}
+
+(int, int) unpack_validator_descr(slice cs) inline {
+  ;; ed25519_pubkey#8e81278a pubkey:bits256 = SigPubKey;
+  ;; validator#53 public_key:SigPubKey weight:uint64 = ValidatorDescr;
+  ;; validator_addr#73 public_key:SigPubKey weight:uint64 adnl_addr:bits256 = ValidatorDescr;
+  throw_unless(41, (cs~load_uint(8) & ~ 0x20) == 0x53);
+  throw_unless(41, cs~load_uint(32) == 0x8e81278a);
+  return (cs~load_uint(256), cs~load_uint(64));
+}
+
+slice create_new_entry(cs) inline {
+  return begin_cell().store_int(false, 1).store_uint(0, 64).store_uint(0, 256).store_slice(cs).end_cell().begin_parse();
+}
+
+(cell, int, int, slice) unpack_suggestion(slice cs) inline {
+  return (cs~load_dict(), cs~load_uint(64), cs~load_uint(256), cs);
+}
+
+builder pack_suggestion(cell voters, int sum_weight, int vset_id, slice body) inline {
+  return begin_cell().store_dict(voters).store_uint(sum_weight, 64).store_uint(vset_id, 256).store_slice(body);
+}
+
+cell register_vote(vote_dict, action, cs, idx, weight) {
+  int hash = 0;
+  var entry = null();
+  if (action & 1) {
+    hash = slice_hash(cs);
+    (entry, var found?) = vote_dict.udict_get?(256, hash);
+    ifnot (found?) {
+      entry = create_new_entry(cs);
+    }
+  } else {
+    hash = cs.preload_uint(256);
+    (entry, var found?) = vote_dict.udict_get?(256, hash);
+    throw_unless(42, found?);
+  }
+  return vote_dict;
 }
 
 () recv_external(slice in_msg) impure {
@@ -126,16 +195,28 @@ _ perform_action(cfg_dict, public_key, action, cs) {
   int msg_seqno = cs~load_uint(32);
   var valid_until = cs~load_uint(32);
   throw_if(35, valid_until < now());
-  var cs2 = begin_parse(get_data());
-  var cfg_dict = cs2~load_ref();
-  var stored_seqno = cs2~load_uint(32);
-  var public_key = cs2~load_uint(256);
-  cs2.end_parse();
+  var (cfg_dict, stored_seqno, public_key, vote_dict) = load_data();
   throw_unless(33, msg_seqno == stored_seqno);
+  ifnot ((action - 0x566f7465) & -2) {
+    var idx = cs~load_uint(16);
+    var vdescr = get_validator_descr(idx);
+    var (val_pubkey, weight) = unpack_validator_descr(vdescr);
+    throw_unless(34, check_signature(slice_hash(in_msg), signature, val_pubkey));
+    accept_message();
+    stored_seqno += 1;
+    store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+    commit();
+    vote_dict = register_vote(vote_dict, action, cs, idx, weight);
+    store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+    return ();
+  }
   throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
   accept_message();
+  stored_seqno += 1;
+  store_data(cfg_dict, stored_seqno, public_key, vote_dict);
+  commit();
   (cfg_dict, public_key) = perform_action(cfg_dict, public_key, action, cs);
-  set_data(begin_cell().store_ref(cfg_dict).store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
+  store_data(cfg_dict, stored_seqno, public_key, vote_dict);
 }
 
 () run_ticktock(int is_tock) impure {

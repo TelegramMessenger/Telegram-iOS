@@ -31,6 +31,8 @@ namespace td {
 class StringBuilder {
  public:
   explicit StringBuilder(MutableSlice slice, bool use_buffer = false);
+  StringBuilder() : StringBuilder({}, true) {
+  }
 
   void clear() {
     current_ptr_ = begin_ptr_;

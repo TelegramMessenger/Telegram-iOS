@@ -134,7 +134,7 @@ class Client::Impl final {
 };
 
 Client::Client() : impl_(std::make_unique<Impl>()) {
-  // At least it should be enough for everybody who uses TDLib
+  // At least it should be enough for everybody who uses tonlib
   // FIXME
   //td::init_openssl_threads();
 }

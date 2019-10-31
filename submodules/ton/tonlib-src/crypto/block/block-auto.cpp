@@ -13514,34 +13514,80 @@ const ValidatorDescr t_ValidatorDescr;
 //
 // code for type `ValidatorSet`
 //
-constexpr unsigned char ValidatorSet::cons_tag[1];
+constexpr unsigned char ValidatorSet::cons_tag[2];
+
+int ValidatorSet::get_tag(const vm::CellSlice& cs) const {
+  switch (cs.bselect(6, 0x30)) {
+  case 0:
+    return cs.bit_at(6) ? validators_ext : validators;
+  default:
+    return -1;
+  }
+}
 
 int ValidatorSet::check_tag(const vm::CellSlice& cs) const {
-  return cs.prefetch_ulong(8) == 17 ? validators : -1;
+  switch (get_tag(cs)) {
+  case validators:
+    return cs.prefetch_ulong(8) == 17 ? validators : -1;
+  case validators_ext:
+    return cs.prefetch_ulong(8) == 18 ? validators_ext : -1;
+  }
+  return -1;
 }
 
 bool ValidatorSet::skip(vm::CellSlice& cs) const {
-  int total, main;
-  return cs.advance(72)
-      && cs.fetch_uint_to(16, total)
-      && cs.fetch_uint_to(16, main)
-      && main <= total
-      && 1 <= main
-      && t_Hashmap_16_ValidatorDescr.skip(cs);
+  switch (get_tag(cs)) {
+  case validators: {
+    int total, main;
+    return cs.advance(72)
+        && cs.fetch_uint_to(16, total)
+        && cs.fetch_uint_to(16, main)
+        && main <= total
+        && 1 <= main
+        && t_Hashmap_16_ValidatorDescr.skip(cs);
+    }
+  case validators_ext: {
+    int total, main;
+    return cs.advance(72)
+        && cs.fetch_uint_to(16, total)
+        && cs.fetch_uint_to(16, main)
+        && main <= total
+        && 1 <= main
+        && cs.advance(64)
+        && t_HashmapE_16_ValidatorDescr.skip(cs);
+    }
+  }
+  return false;
 }
 
 bool ValidatorSet::validate_skip(vm::CellSlice& cs, bool weak) const {
-  int total, main;
-  return cs.fetch_ulong(8) == 17
-      && cs.advance(64)
-      && cs.fetch_uint_to(16, total)
-      && cs.fetch_uint_to(16, main)
-      && main <= total
-      && 1 <= main
-      && t_Hashmap_16_ValidatorDescr.validate_skip(cs, weak);
+  switch (get_tag(cs)) {
+  case validators: {
+    int total, main;
+    return cs.fetch_ulong(8) == 17
+        && cs.advance(64)
+        && cs.fetch_uint_to(16, total)
+        && cs.fetch_uint_to(16, main)
+        && main <= total
+        && 1 <= main
+        && t_Hashmap_16_ValidatorDescr.validate_skip(cs, weak);
+    }
+  case validators_ext: {
+    int total, main;
+    return cs.fetch_ulong(8) == 18
+        && cs.advance(64)
+        && cs.fetch_uint_to(16, total)
+        && cs.fetch_uint_to(16, main)
+        && main <= total
+        && 1 <= main
+        && cs.advance(64)
+        && t_HashmapE_16_ValidatorDescr.validate_skip(cs, weak);
+    }
+  }
+  return false;
 }
 
-bool ValidatorSet::unpack(vm::CellSlice& cs, ValidatorSet::Record& data) const {
+bool ValidatorSet::unpack(vm::CellSlice& cs, ValidatorSet::Record_validators& data) const {
   return cs.fetch_ulong(8) == 17
       && cs.fetch_uint_to(32, data.utime_since)
       && cs.fetch_uint_to(32, data.utime_until)
@@ -13552,13 +13598,31 @@ bool ValidatorSet::unpack(vm::CellSlice& cs, ValidatorSet::Record& data) const {
       && t_Hashmap_16_ValidatorDescr.fetch_to(cs, data.list);
 }
 
-bool ValidatorSet::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorSet::Record& data) const {
+bool ValidatorSet::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorSet::Record_validators& data) const {
   if (cell_ref.is_null()) { return false; }
   auto cs = load_cell_slice(std::move(cell_ref));
   return unpack(cs, data) && cs.empty_ext();
 }
 
-bool ValidatorSet::pack(vm::CellBuilder& cb, const ValidatorSet::Record& data) const {
+bool ValidatorSet::unpack(vm::CellSlice& cs, ValidatorSet::Record_validators_ext& data) const {
+  return cs.fetch_ulong(8) == 18
+      && cs.fetch_uint_to(32, data.utime_since)
+      && cs.fetch_uint_to(32, data.utime_until)
+      && cs.fetch_uint_to(16, data.total)
+      && cs.fetch_uint_to(16, data.main)
+      && data.main <= data.total
+      && 1 <= data.main
+      && cs.fetch_uint_to(64, data.total_weight)
+      && t_HashmapE_16_ValidatorDescr.fetch_to(cs, data.list);
+}
+
+bool ValidatorSet::cell_unpack(Ref<vm::Cell> cell_ref, ValidatorSet::Record_validators_ext& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool ValidatorSet::pack(vm::CellBuilder& cb, const ValidatorSet::Record_validators& data) const {
   return cb.store_long_bool(17, 8)
       && cb.store_ulong_rchk_bool(data.utime_since, 32)
       && cb.store_ulong_rchk_bool(data.utime_until, 32)
@@ -13569,26 +13633,65 @@ bool ValidatorSet::pack(vm::CellBuilder& cb, const ValidatorSet::Record& data) c
       && t_Hashmap_16_ValidatorDescr.store_from(cb, data.list);
 }
 
-bool ValidatorSet::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorSet::Record& data) const {
+bool ValidatorSet::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorSet::Record_validators& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool ValidatorSet::pack(vm::CellBuilder& cb, const ValidatorSet::Record_validators_ext& data) const {
+  return cb.store_long_bool(18, 8)
+      && cb.store_ulong_rchk_bool(data.utime_since, 32)
+      && cb.store_ulong_rchk_bool(data.utime_until, 32)
+      && cb.store_ulong_rchk_bool(data.total, 16)
+      && cb.store_ulong_rchk_bool(data.main, 16)
+      && data.main <= data.total
+      && 1 <= data.main
+      && cb.store_ulong_rchk_bool(data.total_weight, 64)
+      && t_HashmapE_16_ValidatorDescr.store_from(cb, data.list);
+}
+
+bool ValidatorSet::cell_pack(Ref<vm::Cell>& cell_ref, const ValidatorSet::Record_validators_ext& data) const {
   vm::CellBuilder cb;
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
 bool ValidatorSet::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
-  int total, main;
-  return cs.fetch_ulong(8) == 17
-      && pp.open("validators")
-      && pp.fetch_uint_field(cs, 32, "utime_since")
-      && pp.fetch_uint_field(cs, 32, "utime_until")
-      && cs.fetch_uint_to(16, total)
-      && pp.field_int(total, "total")
-      && cs.fetch_uint_to(16, main)
-      && pp.field_int(main, "main")
-      && main <= total
-      && 1 <= main
-      && pp.field("list")
-      && t_Hashmap_16_ValidatorDescr.print_skip(pp, cs)
-      && pp.close();
+  switch (get_tag(cs)) {
+  case validators: {
+    int total, main;
+    return cs.fetch_ulong(8) == 17
+        && pp.open("validators")
+        && pp.fetch_uint_field(cs, 32, "utime_since")
+        && pp.fetch_uint_field(cs, 32, "utime_until")
+        && cs.fetch_uint_to(16, total)
+        && pp.field_int(total, "total")
+        && cs.fetch_uint_to(16, main)
+        && pp.field_int(main, "main")
+        && main <= total
+        && 1 <= main
+        && pp.field("list")
+        && t_Hashmap_16_ValidatorDescr.print_skip(pp, cs)
+        && pp.close();
+    }
+  case validators_ext: {
+    int total, main;
+    return cs.fetch_ulong(8) == 18
+        && pp.open("validators_ext")
+        && pp.fetch_uint_field(cs, 32, "utime_since")
+        && pp.fetch_uint_field(cs, 32, "utime_until")
+        && cs.fetch_uint_to(16, total)
+        && pp.field_int(total, "total")
+        && cs.fetch_uint_to(16, main)
+        && pp.field_int(main, "main")
+        && main <= total
+        && 1 <= main
+        && pp.fetch_uint_field(cs, 64, "total_weight")
+        && pp.field("list")
+        && t_HashmapE_16_ValidatorDescr.print_skip(pp, cs)
+        && pp.close();
+    }
+  }
+  return pp.fail("unknown constructor for ValidatorSet");
 }
 
 const ValidatorSet t_ValidatorSet;
@@ -17308,6 +17411,7 @@ const HashmapE t_HashmapE_16_CryptoSignaturePair{16, t_CryptoSignaturePair};
 const Maybe t_Maybe_Ref_InMsg{t_Ref_InMsg};
 const RefT t_Ref_TYPE_1673{t_McBlockExtra_aux};
 const Hashmap t_Hashmap_16_ValidatorDescr{16, t_ValidatorDescr};
+const HashmapE t_HashmapE_16_ValidatorDescr{16, t_ValidatorDescr};
 const Hashmap t_Hashmap_32_True{32, t_True};
 const NatWidth t_natwidth_12{12};
 const NatWidth t_natwidth_32{32};

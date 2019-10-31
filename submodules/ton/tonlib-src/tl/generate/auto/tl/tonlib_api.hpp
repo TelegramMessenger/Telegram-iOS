@@ -41,8 +41,8 @@ bool downcast_call(Object &obj, const T &func) {
     case fees::ID:
       func(static_cast<fees &>(obj));
       return true;
-    case inputKey::ID:
-      func(static_cast<inputKey &>(obj));
+    case inputKeyRegular::ID:
+      func(static_cast<inputKeyRegular &>(obj));
       return true;
     case inputKeyFake::ID:
       func(static_cast<inputKeyFake &>(obj));
@@ -104,6 +104,9 @@ bool downcast_call(Object &obj, const T &func) {
     case generic_accountStateWallet::ID:
       func(static_cast<generic_accountStateWallet &>(obj));
       return true;
+    case generic_accountStateWalletV3::ID:
+      func(static_cast<generic_accountStateWalletV3 &>(obj));
+      return true;
     case generic_accountStateTestGiver::ID:
       func(static_cast<generic_accountStateTestGiver &>(obj));
       return true;
@@ -115,6 +118,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case liteServer_info::ID:
       func(static_cast<liteServer_info &>(obj));
+      return true;
+    case options_configInfo::ID:
+      func(static_cast<options_configInfo &>(obj));
       return true;
     case query_fees::ID:
       func(static_cast<query_fees &>(obj));
@@ -137,6 +143,18 @@ bool downcast_call(Object &obj, const T &func) {
     case raw_transactions::ID:
       func(static_cast<raw_transactions &>(obj));
       return true;
+    case smc_info::ID:
+      func(static_cast<smc_info &>(obj));
+      return true;
+    case smc_methodIdNumber::ID:
+      func(static_cast<smc_methodIdNumber &>(obj));
+      return true;
+    case smc_methodIdName::ID:
+      func(static_cast<smc_methodIdName &>(obj));
+      return true;
+    case smc_runResult::ID:
+      func(static_cast<smc_runResult &>(obj));
+      return true;
     case testGiver_accountState::ID:
       func(static_cast<testGiver_accountState &>(obj));
       return true;
@@ -146,6 +164,27 @@ bool downcast_call(Object &obj, const T &func) {
     case testWallet_initialAccountState::ID:
       func(static_cast<testWallet_initialAccountState &>(obj));
       return true;
+    case tvm_cell::ID:
+      func(static_cast<tvm_cell &>(obj));
+      return true;
+    case tvm_numberDecimal::ID:
+      func(static_cast<tvm_numberDecimal &>(obj));
+      return true;
+    case tvm_slice::ID:
+      func(static_cast<tvm_slice &>(obj));
+      return true;
+    case tvm_stackEntrySlice::ID:
+      func(static_cast<tvm_stackEntrySlice &>(obj));
+      return true;
+    case tvm_stackEntryCell::ID:
+      func(static_cast<tvm_stackEntryCell &>(obj));
+      return true;
+    case tvm_stackEntryNumber::ID:
+      func(static_cast<tvm_stackEntryNumber &>(obj));
+      return true;
+    case tvm_stackEntryUnsupported::ID:
+      func(static_cast<tvm_stackEntryUnsupported &>(obj));
+      return true;
     case uninited_accountState::ID:
       func(static_cast<uninited_accountState &>(obj));
       return true;
@@ -154,6 +193,12 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case wallet_initialAccountState::ID:
       func(static_cast<wallet_initialAccountState &>(obj));
+      return true;
+    case wallet_v3_accountState::ID:
+      func(static_cast<wallet_v3_accountState &>(obj));
+      return true;
+    case wallet_v3_initialAccountState::ID:
+      func(static_cast<wallet_v3_initialAccountState &>(obj));
       return true;
     default:
       return false;
@@ -253,6 +298,9 @@ bool downcast_call(Function &obj, const T &func) {
     case options_setConfig::ID:
       func(static_cast<options_setConfig &>(obj));
       return true;
+    case options_validateConfig::ID:
+      func(static_cast<options_validateConfig &>(obj));
+      return true;
     case packAccountAddress::ID:
       func(static_cast<packAccountAddress &>(obj));
       return true;
@@ -298,6 +346,21 @@ bool downcast_call(Function &obj, const T &func) {
     case setLogVerbosityLevel::ID:
       func(static_cast<setLogVerbosityLevel &>(obj));
       return true;
+    case smc_getCode::ID:
+      func(static_cast<smc_getCode &>(obj));
+      return true;
+    case smc_getData::ID:
+      func(static_cast<smc_getData &>(obj));
+      return true;
+    case smc_getState::ID:
+      func(static_cast<smc_getState &>(obj));
+      return true;
+    case smc_load::ID:
+      func(static_cast<smc_load &>(obj));
+      return true;
+    case smc_runGetMethod::ID:
+      func(static_cast<smc_runGetMethod &>(obj));
+      return true;
     case sync::ID:
       func(static_cast<sync &>(obj));
       return true;
@@ -337,6 +400,9 @@ bool downcast_call(Function &obj, const T &func) {
     case wallet_sendGrams::ID:
       func(static_cast<wallet_sendGrams &>(obj));
       return true;
+    case wallet_v3_getAccountAddress::ID:
+      func(static_cast<wallet_v3_getAccountAddress &>(obj));
+      return true;
     default:
       return false;
   }
@@ -351,8 +417,8 @@ bool downcast_call(Function &obj, const T &func) {
 template <class T>
 bool downcast_call(InputKey &obj, const T &func) {
   switch (obj.get_id()) {
-    case inputKey::ID:
-      func(static_cast<inputKey &>(obj));
+    case inputKeyRegular::ID:
+      func(static_cast<inputKeyRegular &>(obj));
       return true;
     case inputKeyFake::ID:
       func(static_cast<inputKeyFake &>(obj));
@@ -463,11 +529,60 @@ bool downcast_call(generic_AccountState &obj, const T &func) {
     case generic_accountStateWallet::ID:
       func(static_cast<generic_accountStateWallet &>(obj));
       return true;
+    case generic_accountStateWalletV3::ID:
+      func(static_cast<generic_accountStateWalletV3 &>(obj));
+      return true;
     case generic_accountStateTestGiver::ID:
       func(static_cast<generic_accountStateTestGiver &>(obj));
       return true;
     case generic_accountStateUninited::ID:
       func(static_cast<generic_accountStateUninited &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(smc_MethodId &obj, const T &func) {
+  switch (obj.get_id()) {
+    case smc_methodIdNumber::ID:
+      func(static_cast<smc_methodIdNumber &>(obj));
+      return true;
+    case smc_methodIdName::ID:
+      func(static_cast<smc_methodIdName &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(tvm_StackEntry &obj, const T &func) {
+  switch (obj.get_id()) {
+    case tvm_stackEntrySlice::ID:
+      func(static_cast<tvm_stackEntrySlice &>(obj));
+      return true;
+    case tvm_stackEntryCell::ID:
+      func(static_cast<tvm_stackEntryCell &>(obj));
+      return true;
+    case tvm_stackEntryNumber::ID:
+      func(static_cast<tvm_stackEntryNumber &>(obj));
+      return true;
+    case tvm_stackEntryUnsupported::ID:
+      func(static_cast<tvm_stackEntryUnsupported &>(obj));
       return true;
     default:
       return false;

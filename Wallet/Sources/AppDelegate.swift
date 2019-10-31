@@ -1,5 +1,6 @@
 import UIKit
 import Display
+import OverlayStatusController
 import SwiftSignalKit
 import BuildConfig
 import WalletUI
@@ -334,7 +335,10 @@ private final class WalletStorageInterfaceImpl: WalletStorageInterface {
 }
 
 private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-    let storage: WalletStorageInterface
+    var storage: WalletStorageInterface {
+        return self.storageImpl
+    }
+    private let storageImpl: WalletStorageInterfaceImpl
     let tonInstance: TonInstance
     let keychain: TonKeychain
     let presentationData: WalletPresentationData
@@ -352,6 +356,23 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
     
     func getServerSalt() -> Signal<Data, WalletContextGetServerSaltError> {
         return .single(Data())
+    }
+    
+    func downloadFile(url: URL) -> Signal<Data, WalletDownloadFileError> {
+        return download(url: url)
+        |> mapError { _ in
+            return .generic
+        }
+    }
+    
+    func updateResolvedWalletConfiguration(source: LocalWalletConfigurationSource, blockchainName: String, resolvedValue: String) -> Signal<Never, NoError> {
+        return self.storageImpl.updateMergedLocalWalletConfiguration { configuration in
+            var configuration = configuration
+            configuration.configuration.source = source
+            configuration.configuration.blockchainName = blockchainName
+            configuration.resolved = ResolvedLocalWalletConfiguration(source: source, value: resolvedValue)
+            return configuration
+        }
     }
     
     func presentNativeController(_ controller: UIViewController) {
@@ -417,9 +438,9 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         picker.presentingViewController?.dismiss(animated: true, completion: nil)
     }
     
-    init(basePath: String, storage: WalletStorageInterfaceImpl, config: String, blockchainName: String, navigationBarTheme: NavigationBarTheme, window: Window1) {
+    init(basePath: String, storage: WalletStorageInterfaceImpl, config: String, blockchainName: String, presentationData: WalletPresentationData, navigationBarTheme: NavigationBarTheme, window: Window1) {
         let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: basePath + "/keys"), withIntermediateDirectories: true, attributes: nil)
-        self.storage = storage
+        self.storageImpl = storage
         
         self.window = window
         
@@ -481,8 +502,42 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
             }
         })
         #endif
+        
+        self.presentationData = presentationData
+        
+        super.init()
+    }
+}
+
+@objc(AppDelegate)
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    var window: UIWindow?
+    
+    private var mainWindow: Window1?
+    private var walletContext: WalletContextImpl?
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        let statusBarHost = ApplicationStatusBarHost()
+        let (window, hostView) = nativeWindowHostView()
+        let mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
+        self.mainWindow = mainWindow
+        hostView.containerView.backgroundColor = UIColor.white
+        self.window = window
+        
         let accentColor = UIColor(rgb: 0x007ee5)
-        self.presentationData = WalletPresentationData(
+        
+        let navigationBarTheme = NavigationBarTheme(
+            buttonColor: accentColor,
+            disabledButtonColor: UIColor(rgb: 0xd0d0d0),
+            primaryTextColor: .black,
+            backgroundColor: UIColor(rgb: 0xf7f7f7),
+            separatorColor: UIColor(rgb: 0xb1b1b1),
+            badgeBackgroundColor: UIColor(rgb: 0xff3b30),
+            badgeStrokeColor: UIColor(rgb: 0xff3b30),
+            badgeTextColor: .white
+        )
+        
+        let presentationData = WalletPresentationData(
             theme: WalletTheme(
                 info: WalletInfoTheme(
                     buttonBackgroundColor: accentColor,
@@ -566,37 +621,6 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
             )
         )
         
-        super.init()
-    }
-}
-
-@objc(AppDelegate)
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    var window: UIWindow?
-    
-    private var mainWindow: Window1?
-    private var walletContext: WalletContextImpl?
-    
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        let statusBarHost = ApplicationStatusBarHost()
-        let (window, hostView) = nativeWindowHostView()
-        let mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
-        self.mainWindow = mainWindow
-        hostView.containerView.backgroundColor = UIColor.white
-        self.window = window
-        
-        let accentColor = UIColor(rgb: 0x007ee5)
-        let navigationBarTheme = NavigationBarTheme(
-            buttonColor: accentColor,
-            disabledButtonColor: UIColor(rgb: 0xd0d0d0),
-            primaryTextColor: .black,
-            backgroundColor: UIColor(rgb: 0xf7f7f7),
-            separatorColor: UIColor(rgb: 0xb1b1b1),
-            badgeBackgroundColor: UIColor(rgb: 0xff3b30),
-            badgeStrokeColor: UIColor(rgb: 0xff3b30),
-            badgeTextColor: .white
-        )
-        
         let navigationController = NavigationController(
             mode: .single,
             theme: NavigationControllerTheme(
@@ -607,6 +631,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
         
         mainWindow.viewController = navigationController
+        
+        navigationController.setViewControllers([WalletApplicationSplashScreen(theme: presentationData.theme)], animated: false)
         
         self.window?.makeKeyAndVisible()
         
@@ -634,7 +660,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                 guard let parsedUrl = URL(string: url) else {
                     return .complete()
                 }
-                return downloadFile(url: parsedUrl)
+                return download(url: parsedUrl)
                 |> retry(1.0, maxDelay: 5.0, onQueue: .mainQueue())
                 |> mapToSignal { data -> Signal<(ResolvedLocalWalletConfiguration, String), NoError> in
                     if let string = String(data: data, encoding: .utf8) {
@@ -666,13 +692,38 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         
         let _ = (resolvedInitialConfig
         |> deliverOnMainQueue).start(next: { (initialResolvedConfig, initialConfigBlockchainName) in
-            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialResolvedConfig.value, blockchainName: initialConfigBlockchainName, navigationBarTheme: navigationBarTheme, window: mainWindow)
+            let walletContext = WalletContextImpl(basePath: documentsPath, storage: storage, config: initialResolvedConfig.value, blockchainName: initialConfigBlockchainName, presentationData: presentationData, navigationBarTheme: navigationBarTheme, window: mainWindow)
             self.walletContext = walletContext
             
-            let _ = (updatedConfigValue
-            |> deliverOnMainQueue).start(next: { resolved, blockchainName in
-                let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
-            })
+            let beginWithController: (ViewController) -> Void = { controller in
+                navigationController.setViewControllers([controller], animated: false)
+                
+                var previousBlockchainName = initialConfigBlockchainName
+                
+                let _ = (updatedConfigValue
+                |> deliverOnMainQueue).start(next: { resolved, blockchainName in
+                    let _ = walletContext.tonInstance.validateConfig(config: resolved.value, blockchainName: blockchainName).start(error: { _ in
+                    }, completed: {
+                        let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
+                        
+                        if previousBlockchainName != blockchainName {
+                            previousBlockchainName = blockchainName
+                            
+                            let overlayController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                            mainWindow.present(overlayController, on: .root)
+                            
+                            let _ = (deleteAllLocalWalletsData(storage: walletContext.storage, tonInstance: walletContext.tonInstance)
+                            |> deliverOnMainQueue).start(error: { [weak overlayController] _ in
+                                overlayController?.dismiss()
+                            }, completed: { [weak overlayController] in
+                                overlayController?.dismiss()
+                                
+                                navigationController.setViewControllers([WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)], animated: true)
+                            })
+                        }
+                    })
+                })
+            }
             
             let _ = (combineLatest(queue: .mainQueue(),
                 walletContext.storage.getWalletRecords(),
@@ -681,39 +732,32 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             |> deliverOnMainQueue).start(next: { records, publicKey in
                 if let record = records.first {
                     if let publicKey = publicKey {
-                        print("publicKey = \(publicKey.base64EncodedString())")
                         if record.info.encryptedSecret.publicKey == publicKey {
                             if record.exportCompleted {
                                 let _ = (walletAddress(publicKey: record.info.publicKey, tonInstance: walletContext.tonInstance)
                                 |> deliverOnMainQueue).start(next: { address in
                                     let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: record.info, address: address, enableDebugActions: false)
-
-                                    navigationController.setViewControllers([infoScreen], animated: false)
+                                    beginWithController(infoScreen)
                                 })
                             } else {
                                 let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(record.info, nil), walletCreatedPreloadState: nil)
-                                
-                                navigationController.setViewControllers([createdScreen], animated: false)
+                                beginWithController(createdScreen)
                             }
                         } else {
                             let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil)
-                            
-                            navigationController.setViewControllers([splashScreen], animated: false)
+                            beginWithController(splashScreen)
                         }
                     } else {
                         let splashScreen = WalletSplashScreen(context: walletContext, mode: WalletSplashMode.secureStorageReset(.notAvailable), walletCreatedPreloadState: nil)
-                        
-                        navigationController.setViewControllers([splashScreen], animated: false)
+                        beginWithController(splashScreen)
                     }
                 } else {
                     if publicKey != nil {
                         let splashScreen = WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)
-                        
-                        navigationController.setViewControllers([splashScreen], animated: false)
+                        beginWithController(splashScreen)
                     } else {
                         let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil)
-                        
-                        navigationController.setViewControllers([splashScreen], animated: false)
+                        beginWithController(splashScreen)
                     }
                 }
             })
@@ -727,7 +771,7 @@ private enum DownloadFileError {
     case network
 }
 
-private func downloadFile(url: URL) -> Signal<Data, DownloadFileError> {
+private func download(url: URL) -> Signal<Data, DownloadFileError> {
     return Signal { subscriber in
         let completed = Atomic<Bool>(value: false)
         let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
@@ -761,6 +805,6 @@ struct MergedLocalWalletConfiguration: Codable, Equatable {
 
 private extension MergedLocalWalletConfiguration {
     static var `default`: MergedLocalWalletConfiguration {
-        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testchain"), resolved: nil)
+        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet"), resolved: nil)
     }
 }

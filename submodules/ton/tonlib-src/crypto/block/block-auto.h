@@ -5912,35 +5912,50 @@ extern const ValidatorDescr t_ValidatorDescr;
 //
 
 struct ValidatorSet final : TLB_Complex {
-  enum { validators };
+  enum { validators, validators_ext };
   static constexpr int cons_len_exact = 8;
-  static constexpr unsigned char cons_tag[1] = { 17 };
-  struct Record;
+  static constexpr unsigned char cons_tag[2] = { 17, 18 };
+  struct Record_validators;
+  struct Record_validators_ext;
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(vm::CellSlice& cs, bool weak = false) const override;
-  bool unpack(vm::CellSlice& cs, Record& data) const;
-  bool cell_unpack(Ref<vm::Cell> cell_ref, Record& data) const;
-  bool pack(vm::CellBuilder& cb, const Record& data) const;
-  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record& data) const;
+  bool unpack(vm::CellSlice& cs, Record_validators& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_validators& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_validators& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_validators& data) const;
+  bool unpack(vm::CellSlice& cs, Record_validators_ext& data) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_validators_ext& data) const;
+  bool pack(vm::CellBuilder& cb, const Record_validators_ext& data) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_validators_ext& data) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
     return os << "ValidatorSet";
   }
   int check_tag(const vm::CellSlice& cs) const override;
-  int get_tag(const vm::CellSlice& cs) const override {
-    return 0;
-  }
+  int get_tag(const vm::CellSlice& cs) const override;
 };
 
-struct ValidatorSet::Record {
+struct ValidatorSet::Record_validators {
   typedef ValidatorSet type_class;
   unsigned utime_since;  	// utime_since : uint32
   unsigned utime_until;  	// utime_until : uint32
   int total;  	// total : ## 16
   int main;  	// main : ## 16
   Ref<CellSlice> list;  	// list : Hashmap 16 ValidatorDescr
-  Record() = default;
-  Record(unsigned _utime_since, unsigned _utime_until, int _total, int _main, Ref<CellSlice> _list) : utime_since(_utime_since), utime_until(_utime_until), total(_total), main(_main), list(std::move(_list)) {}
+  Record_validators() = default;
+  Record_validators(unsigned _utime_since, unsigned _utime_until, int _total, int _main, Ref<CellSlice> _list) : utime_since(_utime_since), utime_until(_utime_until), total(_total), main(_main), list(std::move(_list)) {}
+};
+
+struct ValidatorSet::Record_validators_ext {
+  typedef ValidatorSet type_class;
+  unsigned utime_since;  	// utime_since : uint32
+  unsigned utime_until;  	// utime_until : uint32
+  int total;  	// total : ## 16
+  int main;  	// main : ## 16
+  unsigned long long total_weight;  	// total_weight : uint64
+  Ref<CellSlice> list;  	// list : HashmapE 16 ValidatorDescr
+  Record_validators_ext() = default;
+  Record_validators_ext(unsigned _utime_since, unsigned _utime_until, int _total, int _main, unsigned long long _total_weight, Ref<CellSlice> _list) : utime_since(_utime_since), utime_until(_utime_until), total(_total), main(_main), total_weight(_total_weight), list(std::move(_list)) {}
 };
 
 extern const ValidatorSet t_ValidatorSet;
@@ -7438,6 +7453,8 @@ extern const Maybe t_Maybe_Ref_InMsg;
 extern const RefT t_Ref_TYPE_1673;
 // Hashmap 16 ValidatorDescr
 extern const Hashmap t_Hashmap_16_ValidatorDescr;
+// HashmapE 16 ValidatorDescr
+extern const HashmapE t_HashmapE_16_ValidatorDescr;
 // Hashmap 32 True
 extern const Hashmap t_Hashmap_32_True;
 // ## 12

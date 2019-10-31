@@ -202,6 +202,18 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @end
 
+@implementation TONValidatedConfig
+
+- (instancetype)initWithDefaultWalletId:(int64_t)defaultWalletId {
+    self = [super init];
+    if (self != nil) {
+        _defaultWalletId = defaultWalletId;
+    }
+    return self;
+}
+
+@end
+
 using tonlib_api::make_object;
 
 @interface TONReceiveThreadParams : NSObject
@@ -477,6 +489,39 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
+- (SSignal *)validateConfig:(NSString *)config blockchainName:(NSString *)blockchainName {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::options_configInfo::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::options_configInfo>(object);
+                [subscriber putNext:[[TONValidatedConfig alloc] initWithDefaultWalletId:result->default_wallet_id_]];
+                [subscriber putCompletion];
+            } else {
+                assert(false);
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::options_validateConfig>(
+            make_object<tonlib_api::config>(
+                config.UTF8String,
+                blockchainName.UTF8String,
+                _enableExternalRequests,
+                false
+            )
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
 - (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
@@ -513,7 +558,7 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey {
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
@@ -537,9 +582,10 @@ typedef enum {
             }
         }];
         
-        auto query = make_object<tonlib_api::wallet_getAccountAddress>(
-            make_object<tonlib_api::wallet_initialAccountState>(
-                makeString(publicKeyData)
+        auto query = make_object<tonlib_api::wallet_v3_getAccountAddress>(
+            make_object<tonlib_api::wallet_v3_initialAccountState>(
+                makeString(publicKeyData),
+                initialWalletId
             )
         );
         _client->send({ requestId, std::move(query) });
@@ -574,7 +620,15 @@ typedef enum {
                 }
                 [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
                 [subscriber putCompletion];
-            } else {
+             } else if (object->get_id() == tonlib_api::generic_accountStateWalletV3::ID) {
+                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateWalletV3>(object);
+                 TONTransactionId *lastTransactionId = nil;
+                 if (result->account_state_->last_transaction_id_ != nullptr) {
+                     lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                 }
+                 [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
+                 [subscriber putCompletion];
+             }else {
                 assert(false);
             }
         }];
@@ -628,7 +682,7 @@ typedef enum {
         }];
         
         auto query = make_object<tonlib_api::generic_createSendGramsQuery>(
-            make_object<tonlib_api::inputKey>(
+            make_object<tonlib_api::inputKeyRegular>(
                 make_object<tonlib_api::key>(
                     makeString(publicKeyData),
                     makeSecureString(key.secret)
@@ -777,7 +831,7 @@ typedef enum {
             }
         }];
         auto query = make_object<tonlib_api::exportKey>(
-            make_object<tonlib_api::inputKey>(
+            make_object<tonlib_api::inputKeyRegular>(
                 make_object<tonlib_api::key>(
                     makeString(publicKeyData),
                     makeSecureString(key.secret)

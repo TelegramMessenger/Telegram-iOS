@@ -169,18 +169,20 @@ td::Result<KeyStorage::Key> KeyStorage::import_pem_key(td::Slice local_password,
   return save_key(DecryptedKey({}, std::move(key)), local_password);
 }
 
-static std::string dummy_secret = "dummy secret of 32 bytes length!";
+td::SecureString get_dummy_secret() {
+  return td::SecureString("dummy secret of 32 bytes length!");
+}
 td::Result<KeyStorage::ExportedEncryptedKey> KeyStorage::export_encrypted_key(InputKey input_key,
                                                                               td::Slice key_password) {
   TRY_RESULT(decrypted_key, export_decrypted_key(std::move(input_key)));
-  auto res = decrypted_key.encrypt(key_password, dummy_secret);
+  auto res = decrypted_key.encrypt(key_password, get_dummy_secret());
   return ExportedEncryptedKey{std::move(res.encrypted_data)};
 }
 
 td::Result<KeyStorage::Key> KeyStorage::import_encrypted_key(td::Slice local_password, td::Slice key_password,
                                                              ExportedEncryptedKey exported_key) {
   EncryptedKey encrypted_key{std::move(exported_key.data), td::Ed25519::PublicKey(td::SecureString()),
-                             td::SecureString(dummy_secret)};
+                             get_dummy_secret()};
   TRY_RESULT_PREFIX(decrypted_key, encrypted_key.decrypt(key_password, false), TonlibError::KeyDecrypt());
   return save_key(std::move(decrypted_key), local_password);
 }

@@ -1,0 +1,157 @@
+diff --git a/.gitignore b/.gitignore
+index 78ce658b9a..30c0369ab7 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,6 +3,7 @@
+ 
+ # IntelliJ build
+ /intellij-out/
++/.idea/
+ 
+ # Buck
+ /buck-out
+diff --git a/.idea/modules.xml b/.idea/modules.xml
+deleted file mode 100644
+index 7ff823b554..0000000000
+--- a/.idea/modules.xml
++++ /dev/null
+@@ -1,16 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="ProjectModuleManager">
+-    <modules>
+-      <module fileurl="file://$PROJECT_DIR$/buck.iml" filepath="$PROJECT_DIR$/buck.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/tools/consistency_checker/consistency_checker.iml" filepath="$PROJECT_DIR$/tools/consistency_checker/consistency_checker.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/tools/documentation_generator/documentation_generator.iml" filepath="$PROJECT_DIR$/tools/documentation_generator/documentation_generator.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/tools/build/modules/modules.iml" filepath="$PROJECT_DIR$/tools/build/modules/modules.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/src/com/facebook/buck/multitenant/multitenant.iml" filepath="$PROJECT_DIR$/src/com/facebook/buck/multitenant/multitenant.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/programs/programs.iml" filepath="$PROJECT_DIR$/programs/programs.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/skunkworks/protobuck/protobuck.iml" filepath="$PROJECT_DIR$/skunkworks/protobuck/protobuck.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/python-dsl/python-dsl.iml" filepath="$PROJECT_DIR$/python-dsl/python-dsl.iml" />
+-      <module fileurl="file://$PROJECT_DIR$/scripts/scripts.iml" filepath="$PROJECT_DIR$/scripts/scripts.iml" />
+-    </modules>
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/src/com/facebook/buck/apple/AppleBundle.java b/src/com/facebook/buck/apple/AppleBundle.java
+index d895ab9a79..ad42beb302 100644
+--- a/src/com/facebook/buck/apple/AppleBundle.java
++++ b/src/com/facebook/buck/apple/AppleBundle.java
+@@ -992,7 +992,11 @@ public class AppleBundle extends AbstractBuildRuleWithDeclaredAndExtraDeps
+     keys.put("DTPlatformName", new NSString(platform.getName()));
+     keys.put("DTPlatformVersion", new NSString(sdkVersion));
+     keys.put("DTSDKName", new NSString(sdkName + sdkVersion));
+-    keys.put("MinimumOSVersion", new NSString(minOSVersion));
++    if (infoPlistSubstitutions.containsKey("MinimumOSVersion")) {
++      keys.put("MinimumOSVersion", new NSString(infoPlistSubstitutions.get("MinimumOSVersion")));
++    } else {
++      keys.put("MinimumOSVersion", new NSString(minOSVersion));
++    }
+     if (platformBuildVersion.isPresent()) {
+       keys.put("DTPlatformBuild", new NSString(platformBuildVersion.get()));
+       keys.put("DTSDKBuild", new NSString(platformBuildVersion.get()));
+@@ -1185,9 +1189,10 @@ public class AppleBundle extends AbstractBuildRuleWithDeclaredAndExtraDeps
+ 
+   // .framework bundles will be code-signed when they're copied into the containing bundle.
+   private boolean needCodeSign() {
+-    return binary.isPresent()
++    return false;
++    /*return binary.isPresent()
+         && ApplePlatform.needsCodeSign(platform.getName())
+-        && !extension.equals(FRAMEWORK_EXTENSION);
++        && !extension.equals(FRAMEWORK_EXTENSION);*/
+   }
+ 
+   @Override
+diff --git a/src/com/facebook/buck/apple/MultiarchFileInfos.java b/src/com/facebook/buck/apple/MultiarchFileInfos.java
+index c078b2e134..030f9fc289 100644
+--- a/src/com/facebook/buck/apple/MultiarchFileInfos.java
++++ b/src/com/facebook/buck/apple/MultiarchFileInfos.java
+@@ -177,7 +177,12 @@ public class MultiarchFileInfos {
+               cxxBuckConfig.shouldCacheLinks(),
+               BuildTargetPaths.getGenPath(
+                   projectFilesystem, buildTarget, multiarchOutputPathFormat));
+-      graphBuilder.addToIndex(multiarchFile);
++      Optional<BuildRule> existingRule2 = graphBuilder.getRuleOptional(multiarchFile.getBuildTarget());
++      if (existingRule2.isPresent()) {
++        return existingRule2.get();
++      } else {
++        graphBuilder.addToIndex(multiarchFile);
++      }
+       return multiarchFile;
+     } else {
+       return new NoopBuildRule(buildTarget, projectFilesystem);
+diff --git a/src/com/facebook/buck/features/apple/project/ProjectGenerator.java b/src/com/facebook/buck/features/apple/project/ProjectGenerator.java
+index 8db968b982..b10f793d8e 100644
+--- a/src/com/facebook/buck/features/apple/project/ProjectGenerator.java
++++ b/src/com/facebook/buck/features/apple/project/ProjectGenerator.java
+@@ -825,6 +825,7 @@ public class ProjectGenerator {
+             Optional.of(xcodeDescriptions.getXCodeDescriptions()));
+     if (bundleRequiresRemovalOfAllTransitiveFrameworks(targetNode)) {
+       copiedRules = rulesWithoutFrameworkBundles(copiedRules);
++      copiedRules = rulesWithoutDylibs(copiedRules);
+     } else if (bundleRequiresAllTransitiveFrameworks(binaryNode, bundleLoaderNode)) {
+       copiedRules =
+           ImmutableSet.<TargetNode<?>>builder()
+@@ -954,6 +955,22 @@ public class ProjectGenerator {
+         .toImmutableList();
+   }
+ 
++  private ImmutableList<TargetNode<?>> rulesWithoutDylibs(
++      Iterable<TargetNode<?>> copiedRules) {
++    return RichStream.from(copiedRules)
++        .filter(
++            input ->
++                TargetNodes.castArg(input, AppleLibraryDescriptionArg.class)
++                    .map(argTargetNode -> {
++                      if (argTargetNode.getBuildTarget().getFlavors().contains(CxxDescriptionEnhancer.SHARED_FLAVOR)) {
++                        return false;
++                      }
++                      return true;
++                    })
++                    .orElse(true))
++        .toImmutableList();
++  }
++
+   private ImmutableList<TargetNode<?>> rulesWithoutBundleLoader(
+       Iterable<TargetNode<?>> copiedRules, TargetNode<?> bundleLoader) {
+     return RichStream.from(copiedRules).filter(x -> !bundleLoader.equals(x)).toImmutableList();
+@@ -2316,8 +2333,9 @@ public class ProjectGenerator {
+                     .transform(
+                         bundleExtension -> {
+                           switch (bundleExtension) {
+-                            case APP:
+                             case APPEX:
++                              return false;
++                            case APP:
+                             case PLUGIN:
+                             case BUNDLE:
+                             case XCTEST:
+@@ -2515,7 +2533,7 @@ public class ProjectGenerator {
+ 
+       librarySearchPaths.add("$DT_TOOLCHAIN_DIR/usr/lib/swift/$PLATFORM_NAME");
+       if (options.shouldLinkSystemSwift()) {
+-        librarySearchPaths.add("$DT_TOOLCHAIN_DIR/usr/lib/swift-5.0/$PLATFORM_NAME");
++        //librarySearchPaths.add("$DT_TOOLCHAIN_DIR/usr/lib/swift-5.0/$PLATFORM_NAME");
+       }
+     }
+ 
+@@ -3444,7 +3462,7 @@ public class ProjectGenerator {
+ 
+       PBXFileReference fileReference = getLibraryFileReference(targetNode);
+       PBXBuildFile buildFile = new PBXBuildFile(fileReference);
+-      if (fileReference.getExplicitFileType().equals(Optional.of("wrapper.framework"))) {
++      if (fileReference.getExplicitFileType().equals(Optional.of("wrapper.framework")) || fileReference.getExplicitFileType().equals(Optional.of("compiled.mach-o.dylib"))) {
+         UnflavoredBuildTargetView buildTarget =
+             targetNode.getBuildTarget().getUnflavoredBuildTarget();
+         if (frameworkTargets.contains(buildTarget)) {
+@@ -4696,6 +4714,9 @@ public class ProjectGenerator {
+ 
+   private static boolean bundleRequiresRemovalOfAllTransitiveFrameworks(
+       TargetNode<? extends HasAppleBundleFields> targetNode) {
++    if (targetNode.getConstructorArg().getXcodeProductType().equals(Optional.of("com.apple.product-type.app-extension"))) {
++      return true;
++    }
+     return isFrameworkBundle(targetNode.getConstructorArg());
+   }
+ 

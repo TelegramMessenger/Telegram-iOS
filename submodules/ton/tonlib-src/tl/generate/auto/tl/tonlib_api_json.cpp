@@ -16,7 +16,7 @@ namespace tonlib_api{
   using namespace td;
 Result<int32> tl_constructor_from_string(tonlib_api::InputKey *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
-    {"inputKey", 869287093},
+    {"inputKeyRegular", -555399522},
     {"inputKeyFake", -1074054722}
   };
   auto it = m.find(str);
@@ -75,8 +75,33 @@ Result<int32> tl_constructor_from_string(tonlib_api::generic_AccountState *objec
     {"generic.accountStateRaw", -1387096685},
     {"generic.accountStateTestWallet", -1041955397},
     {"generic.accountStateWallet", 942582925},
+    {"generic.accountStateWalletV3", -281349583},
     {"generic.accountStateTestGiver", 1134654598},
     {"generic.accountStateUninited", -908702008}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(tonlib_api::smc_MethodId *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"smc.methodIdNumber", -1541162500},
+    {"smc.methodIdName", -249036908}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
+Result<int32> tl_constructor_from_string(tonlib_api::tvm_StackEntry *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"tvm.stackEntrySlice", 1395485477},
+    {"tvm.stackEntryCell", 1303473952},
+    {"tvm.stackEntryNumber", 1358642622},
+    {"tvm.stackEntryUnsupported", 378880498}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -95,7 +120,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"exportedKey", -1449248297},
     {"exportedPemKey", 1425473725},
     {"fees", 1676273340},
-    {"inputKey", 869287093},
+    {"inputKeyRegular", -555399522},
     {"inputKeyFake", -1074054722},
     {"key", -1978362923},
     {"keyStoreTypeDirectory", -378990038},
@@ -116,10 +141,12 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"generic.accountStateRaw", -1387096685},
     {"generic.accountStateTestWallet", -1041955397},
     {"generic.accountStateWallet", 942582925},
+    {"generic.accountStateWalletV3", -281349583},
     {"generic.accountStateTestGiver", 1134654598},
     {"generic.accountStateUninited", -908702008},
     {"internal.transactionId", -989527262},
     {"liteServer.info", -1250165133},
+    {"options.configInfo", 165216422},
     {"query.fees", 725267759},
     {"query.info", 1588635915},
     {"raw.accountState", 1205935434},
@@ -127,12 +154,25 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"raw.message", -906281442},
     {"raw.transaction", 1887601793},
     {"raw.transactions", -2063931155},
+    {"smc.info", 1134270012},
+    {"smc.methodIdNumber", -1541162500},
+    {"smc.methodIdName", -249036908},
+    {"smc.runResult", 1413805043},
     {"testGiver.accountState", 860930426},
     {"testWallet.accountState", 305698744},
     {"testWallet.initialAccountState", -1231516227},
+    {"tvm.cell", -859530316},
+    {"tvm.numberDecimal", 1172477619},
+    {"tvm.slice", -1069968387},
+    {"tvm.stackEntrySlice", 1395485477},
+    {"tvm.stackEntryCell", 1303473952},
+    {"tvm.stackEntryNumber", 1358642622},
+    {"tvm.stackEntryUnsupported", 378880498},
     {"uninited.accountState", -918880075},
     {"wallet.accountState", -1919815977},
-    {"wallet.initialAccountState", -1079249978}
+    {"wallet.initialAccountState", -1079249978},
+    {"wallet.v3.accountState", 1977698154},
+    {"wallet.v3.initialAccountState", 283460879}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -170,6 +210,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"onLiteServerQueryError", -677427533},
     {"onLiteServerQueryResult", 2056444510},
     {"options.setConfig", 646497241},
+    {"options.validateConfig", -346965447},
     {"packAccountAddress", -1388561940},
     {"query.estimateFees", -957002175},
     {"query.forget", -1211985313},
@@ -185,6 +226,11 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"setLogStream", -1364199535},
     {"setLogTagVerbosityLevel", -2095589738},
     {"setLogVerbosityLevel", -303429678},
+    {"smc.getCode", -2115626088},
+    {"smc.getData", -427601079},
+    {"smc.getState", -214390293},
+    {"smc.load", -903491521},
+    {"smc.runGetMethod", -255261270},
     {"sync", -1617065525},
     {"testGiver.getAccountAddress", -540100768},
     {"testGiver.getAccountState", 267738275},
@@ -197,7 +243,8 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"wallet.getAccountAddress", -1004103180},
     {"wallet.getAccountState", 462294850},
     {"wallet.init", -395706309},
-    {"wallet.sendGrams", 297317621}
+    {"wallet.sendGrams", 297317621},
+    {"wallet.v3.getAccountAddress", 1011655671}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -328,7 +375,7 @@ Status from_json(tonlib_api::fees &to, JsonObject &from) {
   }
   return Status::OK();
 }
-Status from_json(tonlib_api::inputKey &to, JsonObject &from) {
+Status from_json(tonlib_api::inputKeyRegular &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
@@ -547,6 +594,15 @@ Status from_json(tonlib_api::generic_accountStateWallet &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::generic_accountStateWalletV3 &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_state_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::generic_accountStateTestGiver &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "account_state", JsonValue::Type::Null, true));
@@ -597,6 +653,15 @@ Status from_json(tonlib_api::liteServer_info &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "capabilities", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.capabilities_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::options_configInfo &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "default_wallet_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.default_wallet_id_, value));
     }
   }
   return Status::OK();
@@ -808,6 +873,54 @@ Status from_json(tonlib_api::raw_transactions &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::smc_info &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_methodIdNumber &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "number", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.number_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_methodIdName &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "name", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.name_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_runResult &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "gas_used", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.gas_used_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "stack", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.stack_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "exit_code", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.exit_code_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::testGiver_accountState &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "balance", JsonValue::Type::Null, true));
@@ -871,6 +984,63 @@ Status from_json(tonlib_api::testWallet_initialAccountState &to, JsonObject &fro
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::tvm_cell &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bytes", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.bytes_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_numberDecimal &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "number", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.number_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_slice &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bytes", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.bytes_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_stackEntrySlice &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "slice", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.slice_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_stackEntryCell &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "cell", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.cell_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_stackEntryNumber &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "number", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.number_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::tvm_stackEntryUnsupported &to, JsonObject &from) {
+  return Status::OK();
+}
 Status from_json(tonlib_api::uninited_accountState &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "balance", JsonValue::Type::Null, true));
@@ -930,6 +1100,54 @@ Status from_json(tonlib_api::wallet_initialAccountState &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.public_key_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_v3_accountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "balance", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.balance_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "wallet_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.wallet_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "last_transaction_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.last_transaction_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "sync_utime", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.sync_utime_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_v3_initialAccountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.public_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "wallet_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.wallet_id_, value));
     }
   }
   return Status::OK();
@@ -1330,6 +1548,15 @@ Status from_json(tonlib_api::options_setConfig &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::options_validateConfig &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::packAccountAddress &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "account_address", JsonValue::Type::Null, true));
@@ -1513,6 +1740,63 @@ Status from_json(tonlib_api::setLogVerbosityLevel &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::smc_getCode &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_getData &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_getState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_load &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_address_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::smc_runGetMethod &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "method", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.method_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "stack", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.stack_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::sync &to, JsonObject &from) {
   return Status::OK();
 }
@@ -1684,6 +1968,15 @@ Status from_json(tonlib_api::wallet_sendGrams &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::wallet_v3_getAccountAddress &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.initital_account_state_, value));
+    }
+  }
+  return Status::OK();
+}
 void to_json(JsonValueScope &jv, const tonlib_api::accountAddress &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "accountAddress");
@@ -1739,9 +2032,9 @@ void to_json(JsonValueScope &jv, const tonlib_api::fees &object) {
 void to_json(JsonValueScope &jv, const tonlib_api::InputKey &object) {
   tonlib_api::downcast_call(const_cast<tonlib_api::InputKey &>(object), [&jv](const auto &object) { to_json(jv, object); });
 }
-void to_json(JsonValueScope &jv, const tonlib_api::inputKey &object) {
+void to_json(JsonValueScope &jv, const tonlib_api::inputKeyRegular &object) {
   auto jo = jv.enter_object();
-  jo << ctie("@type", "inputKey");
+  jo << ctie("@type", "inputKeyRegular");
   if (object.key_) {
     jo << ctie("key", ToJson(object.key_));
   }
@@ -1878,6 +2171,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateWallet &o
     jo << ctie("account_state", ToJson(object.account_state_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateWalletV3 &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "generic.accountStateWalletV3");
+  if (object.account_state_) {
+    jo << ctie("account_state", ToJson(object.account_state_));
+  }
+}
 void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateTestGiver &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "generic.accountStateTestGiver");
@@ -1904,6 +2204,11 @@ void to_json(JsonValueScope &jv, const tonlib_api::liteServer_info &object) {
   jo << ctie("now", ToJson(object.now_));
   jo << ctie("version", ToJson(object.version_));
   jo << ctie("capabilities", ToJson(JsonInt64{object.capabilities_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::options_configInfo &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "options.configInfo");
+  jo << ctie("default_wallet_id", ToJson(object.default_wallet_id_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::query_fees &object) {
   auto jo = jv.enter_object();
@@ -1976,6 +2281,31 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_transactions &object) {
     jo << ctie("previous_transaction_id", ToJson(object.previous_transaction_id_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::smc_info &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.info");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_MethodId &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::smc_MethodId &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_methodIdNumber &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.methodIdNumber");
+  jo << ctie("number", ToJson(object.number_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_methodIdName &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.methodIdName");
+  jo << ctie("name", ToJson(object.name_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_runResult &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.runResult");
+  jo << ctie("gas_used", ToJson(object.gas_used_));
+  jo << ctie("stack", ToJson(object.stack_));
+  jo << ctie("exit_code", ToJson(object.exit_code_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::testGiver_accountState &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "testGiver.accountState");
@@ -2001,6 +2331,49 @@ void to_json(JsonValueScope &jv, const tonlib_api::testWallet_initialAccountStat
   jo << ctie("@type", "testWallet.initialAccountState");
   jo << ctie("public_key", ToJson(object.public_key_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_cell &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.cell");
+  jo << ctie("bytes", ToJson(object.bytes_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_numberDecimal &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.numberDecimal");
+  jo << ctie("number", ToJson(object.number_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_slice &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.slice");
+  jo << ctie("bytes", ToJson(object.bytes_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_StackEntry &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::tvm_StackEntry &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_stackEntrySlice &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.stackEntrySlice");
+  if (object.slice_) {
+    jo << ctie("slice", ToJson(object.slice_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_stackEntryCell &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.stackEntryCell");
+  if (object.cell_) {
+    jo << ctie("cell", ToJson(object.cell_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_stackEntryNumber &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.stackEntryNumber");
+  if (object.number_) {
+    jo << ctie("number", ToJson(object.number_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::tvm_stackEntryUnsupported &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tvm.stackEntryUnsupported");
+}
 void to_json(JsonValueScope &jv, const tonlib_api::uninited_accountState &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "uninited.accountState");
@@ -2025,6 +2398,23 @@ void to_json(JsonValueScope &jv, const tonlib_api::wallet_initialAccountState &o
   auto jo = jv.enter_object();
   jo << ctie("@type", "wallet.initialAccountState");
   jo << ctie("public_key", ToJson(object.public_key_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_v3_accountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.v3.accountState");
+  jo << ctie("balance", ToJson(JsonInt64{object.balance_}));
+  jo << ctie("wallet_id", ToJson(object.wallet_id_));
+  jo << ctie("seqno", ToJson(object.seqno_));
+  if (object.last_transaction_id_) {
+    jo << ctie("last_transaction_id", ToJson(object.last_transaction_id_));
+  }
+  jo << ctie("sync_utime", ToJson(object.sync_utime_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_v3_initialAccountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.v3.initialAccountState");
+  jo << ctie("public_key", ToJson(object.public_key_));
+  jo << ctie("wallet_id", ToJson(object.wallet_id_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::addLogMessage &object) {
   auto jo = jv.enter_object();
@@ -2226,6 +2616,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::options_setConfig &object) {
     jo << ctie("config", ToJson(object.config_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::options_validateConfig &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "options.validateConfig");
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
+}
 void to_json(JsonValueScope &jv, const tonlib_api::packAccountAddress &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "packAccountAddress");
@@ -2325,6 +2722,37 @@ void to_json(JsonValueScope &jv, const tonlib_api::setLogVerbosityLevel &object)
   jo << ctie("@type", "setLogVerbosityLevel");
   jo << ctie("new_verbosity_level", ToJson(object.new_verbosity_level_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::smc_getCode &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.getCode");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_getData &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.getData");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_getState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.getState");
+  jo << ctie("id", ToJson(object.id_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_load &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.load");
+  if (object.account_address_) {
+    jo << ctie("account_address", ToJson(object.account_address_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::smc_runGetMethod &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "smc.runGetMethod");
+  jo << ctie("id", ToJson(object.id_));
+  if (object.method_) {
+    jo << ctie("method", ToJson(object.method_));
+  }
+  jo << ctie("stack", ToJson(object.stack_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::sync &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "sync");
@@ -2420,6 +2848,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::wallet_sendGrams &object) {
   jo << ctie("valid_until", ToJson(object.valid_until_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
   jo << ctie("message", ToJson(JsonBytes{object.message_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_v3_getAccountAddress &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.v3.getAccountAddress");
+  if (object.initital_account_state_) {
+    jo << ctie("initital_account_state", ToJson(object.initital_account_state_));
+  }
 }
 }  // namespace tonlib_api
 }  // namespace ton
