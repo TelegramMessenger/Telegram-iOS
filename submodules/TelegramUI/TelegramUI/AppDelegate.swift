@@ -981,8 +981,6 @@ final class SharedApplicationContext {
                         |> deliverOnMainQueue).start(next: { context in
                             if let context = context {
                                 self.registerForNotifications(context: context.context, authorize: false)
-                                
-                                self.resetIntentsIfNeeded(context: context.context)
                             }
                         })
                     })
@@ -1126,6 +1124,8 @@ final class SharedApplicationContext {
                         authorizeNotifications = false
                     }
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
+                    
+                    self.resetIntentsIfNeeded(context: context.context)
                 }))
             } else {
                 self.mainWindow.viewController = nil
@@ -1970,7 +1970,7 @@ final class SharedApplicationContext {
     }
     
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
-        let _ = context.sharedContext.accountManager.transaction { transaction in
+        let _ = (context.sharedContext.accountManager.transaction { transaction in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
             if !settings.initiallyReset {
                 if #available(iOS 10.0, *) {
@@ -1982,7 +1982,7 @@ final class SharedApplicationContext {
                     return IntentsSettings(initiallyReset: true)
                 })
             }
-        }
+        }).start()
     }
 }
 
