@@ -278,6 +278,16 @@ public class ShareRootControllerImpl {
                         |> then(.single(.done))
                     }
                     
+                    var immediatePeerId: PeerId?
+                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
+                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                            if let userId = Int32(string) {
+                                immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            }
+                        }
+                    }
+                    
                     let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
                         if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                             let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
@@ -307,7 +317,7 @@ public class ShareRootControllerImpl {
                         } else {
                             return .single(.done)
                         }
-                    }), externalShare: false, switchableAccounts: otherAccounts)
+                    }), externalShare: false, switchableAccounts: otherAccounts, immediatePeerId: immediatePeerId)
                     shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                     shareController.dismissed = { _ in
                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -326,16 +336,7 @@ public class ShareRootControllerImpl {
                         strongSelf.currentShareController = shareController
                         strongSelf.mainWindow?.present(shareController, on: .root)
                     }
-                    
-                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
-                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
-                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                            if let userId = Int32(string) {
-                                shareController.sendImmediately(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
-                            }
-                        }
-                    }
-                    
+                                        
                     context.account.resetStateManagement()
                 }
                 

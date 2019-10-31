@@ -519,7 +519,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         self.inputFieldNode.deactivateInput()
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+        let transition: ContainedViewLayoutTransition
+        if peerId == nil {
+            transition = .animated(duration: 0.12, curve: .easeInOut)
+        } else {
+            transition = .immediate
+        }
         transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
         transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)

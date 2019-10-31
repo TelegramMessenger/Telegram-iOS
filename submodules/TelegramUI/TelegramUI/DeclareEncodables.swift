@@ -51,6 +51,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ChatArchiveSettings.self, f: { ChatArchiveSettings(decoder: $0) })
     declareEncodable(MediaPlaybackStoredState.self, f: { MediaPlaybackStoredState(decoder: $0) })
     declareEncodable(WebBrowserSettings.self, f: { WebBrowserSettings(decoder: $0) })
+    declareEncodable(IntentsSettings.self, f: { IntentsSettings(decoder: $0) })
     return
 }()
 
