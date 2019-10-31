@@ -279,6 +279,7 @@ public final class ShareController: ViewController {
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
     private let switchableAccounts: [AccountWithInfo]
+    private let immediatePeerId: PeerId?
     
     private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
     private let peersDisposable = MetaDisposable()
@@ -289,11 +290,11 @@ public final class ShareController: ViewController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
-        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts)
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts, immediatePeerId: immediatePeerId)
     }
     
-    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil) {
         self.sharedContext = sharedContext
         self.currentContext = currentContext
         self.currentAccount = currentContext.account
@@ -301,6 +302,7 @@ public final class ShareController: ViewController {
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.switchableAccounts = switchableAccounts
+        self.immediatePeerId = immediatePeerId
         
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
@@ -701,12 +703,16 @@ public final class ShareController: ViewController {
             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
         self.displayNodeDidLoad()
-        self.peersDisposable.set((self.peers.get()
-        |> deliverOnMainQueue).start(next: { [weak self] next in
-            if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-            }
-        }))
+        
+        if let _ = self.immediatePeerId {
+        } else {
+            self.peersDisposable.set((self.peers.get()
+            |> deliverOnMainQueue).start(next: { [weak self] next in
+                if let strongSelf = self {
+                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                }
+            }))
+        }
         self._ready.set(self.controllerNode.ready.get())
     }
     
@@ -821,27 +827,31 @@ public final class ShareController: ViewController {
                 return (resultPeers, accountPeer)
             }
         })
-        self.peersDisposable.set((self.peers.get()
-        |> deliverOnMainQueue).start(next: { [weak self] next in
-            if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-                
-                if animateIn {
-                    strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
-                    |> filter({ $0 })
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] _ in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.controllerNode.animateIn()
-                    }))
+        if let immediatePeerId = self.immediatePeerId {
+            self.sendImmediately(peerId: immediatePeerId)
+        } else {
+            self.peersDisposable.set((self.peers.get()
+            |> deliverOnMainQueue).start(next: { [weak self] next in
+                if let strongSelf = self {
+                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                    
+                    if animateIn {
+                        strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
+                        |> filter({ $0 })
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.controllerNode.animateIn()
+                        }))
+                    }
                 }
-            }
-        }))
+            }))
+        }
     }
     
-    public func sendImmediately(peerId: PeerId) {
+    private func sendImmediately(peerId: PeerId) {
         self.controllerNode.send(peerId: peerId)
     }
 }
