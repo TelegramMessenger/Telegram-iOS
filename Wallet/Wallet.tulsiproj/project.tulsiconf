@@ -1,0 +1,14 @@
+{
+  "configDefaults" : {
+    "optionSet" : {
+      "ProjectPrioritizesSwift" : {
+        "p" : "YES"
+      }
+    }
+  },
+  "packages" : [
+    "Wallet"
+  ],
+  "projectName" : "Wallet",
+  "workspaceRoot" : "../.."
+}

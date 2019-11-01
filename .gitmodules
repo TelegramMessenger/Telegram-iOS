@@ -2,3 +2,12 @@
 [submodule "submodules/rlottie/rlottie"]
 	path = submodules/rlottie/rlottie
 	url = https://github.com/laktyushin/rlottie.git
+[submodule "build-system/bazel-rules/rules_apple"]
+	path = build-system/bazel-rules/rules_apple
+	url = https://github.com/bazelbuild/rules_apple.git
+[submodule "build-system/bazel-rules/rules_swift"]
+	path = build-system/bazel-rules/rules_swift
+	url = https://github.com/bazelbuild/rules_swift.git
+[submodule "build-system/bazel-rules/apple_support"]
+	path = build-system/bazel-rules/apple_support
+	url = https://github.com/bazelbuild/apple_support.git

@@ -7,6 +7,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#import <AsyncDisplayKit/Base/ASAvailability.h>
 #import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASHashing.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>

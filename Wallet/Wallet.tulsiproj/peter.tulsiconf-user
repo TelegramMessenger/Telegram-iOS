@@ -1,0 +1,10 @@
+{
+  "optionSet" : {
+    "BazelPath" : {
+      "p" : "/usr/local/bin/bazel"
+    },
+    "WorkspaceRootPath" : {
+      "p" : "/Users/peter/build/telegram-temp/telegram-ios"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "additionalFilePaths" : [
+    "Wallet/BUILD"
+  ],
+  "buildTargets" : [
+    "//Wallet:Lib",
+    "//Wallet:Main",
+    "//Wallet:Wallet",
+  ],
+  "optionSet" : {
+    "BazelBuildOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildOptionsRelease" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsDebug" : {
+      "p" : "$(inherited)"
+    },
+    "BazelBuildStartupOptionsRelease" : {
+      "p" : "$(inherited)"
+    },
+    "BuildActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "BuildActionPreActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "CommandlineArguments" : {
+      "p" : "$(inherited)"
+    },
+    "EnvironmentVariables" : {
+      "p" : "$(inherited)"
+    },
+    "LaunchActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "LaunchActionPreActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "ProjectGenerationBazelStartupOptions" : {
+      "p" : "$(inherited)"
+    },
+    "ProjectPrioritizesSwift" : {
+      "p" : "YES"
+    },
+    "TestActionPostActionScript" : {
+      "p" : "$(inherited)"
+    },
+    "TestActionPreActionScript" : {
+      "p" : "$(inherited)"
+    }
+  },
+  "projectName" : "Wallet",
+  "sourceFilters" : [
+    "Wallet",
+    "Wallet/Sources",
+    "Wallet/SupportFiles",
+    "submodules/...",
+  ]
+}
