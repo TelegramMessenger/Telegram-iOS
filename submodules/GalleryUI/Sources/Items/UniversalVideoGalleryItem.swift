@@ -31,12 +31,13 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let fromPlayingVideo: Bool
     let landscape: Bool
     let timecode: Double?
+    let configuration: GalleryConfiguration?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     let storeMediaPlaybackState: (MessageId, Double?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -49,6 +50,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.fromPlayingVideo = fromPlayingVideo
         self.landscape = landscape
         self.timecode = timecode
+        self.configuration = configuration
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -351,6 +353,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.dismissOnOrientationChange = item.landscape
             
             var disablePictureInPicture = false
+    
             var disablePlayerControls = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
@@ -358,8 +361,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
-            } else if let content = item.content as? WebEmbedVideoContent, case .iframe = webEmbedType(content: content.webpageContent) {
-                disablePlayerControls = true
+            } else if let content = item.content as? WebEmbedVideoContent {
+                let type = webEmbedType(content: content.webpageContent)
+                switch type {
+                    case .youtube:
+                        disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
+                    case .iframe:
+                        disablePlayerControls = true
+                    default:
+                        break
+                }
             }
             
             if let videoNode = self.videoNode {

@@ -263,6 +263,7 @@
 		<string>brave</string>
 		<string>onionhttp</string>
 		<string>ucbrowser</string>
+		<string>dolphin</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

@@ -126,9 +126,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     )
 
     let switchColors = PresentationThemeSwitch(
-        frameColor: UIColor(rgb: 0x5a5a5e),
+        frameColor: UIColor(rgb: 0x39393d),
         handleColor: UIColor(rgb: 0x121212),
-        contentColor: UIColor(rgb: 0x77d572),
+        contentColor: UIColor(rgb: 0x67ce67),
         positiveColor: constructiveColor,
         negativeColor: destructiveColor
     )
@@ -137,8 +137,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         blocksBackgroundColor: UIColor(rgb: 0x000000),
         plainBackgroundColor: UIColor(rgb: 0x000000),
         itemPrimaryTextColor: UIColor(rgb: 0xffffff),
-        itemSecondaryTextColor: UIColor(rgb: 0x8f8f8f),
-        itemDisabledTextColor: UIColor(rgb: 0x4d4d4d),
+        itemSecondaryTextColor: UIColor(rgb: 0x98989e),
+        itemDisabledTextColor: UIColor(rgb: 0x8f8f8f),
         itemAccentColor: accentColor,
         itemHighlightedColor: UIColor(rgb: 0x28b772),
         itemDestructiveColor: destructiveColor,
