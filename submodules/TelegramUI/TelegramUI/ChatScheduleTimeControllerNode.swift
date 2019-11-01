@@ -245,7 +245,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     }
     
     @objc func onlineButtonPressed() {
-        self.completion?(0x7FFFFFFE)
+        self.completion?(scheduleWhenOnlineTimestamp)
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

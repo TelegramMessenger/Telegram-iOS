@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import Postbox
+import SyncCore
 import AccountContext
 
 private let timezoneOffset: Int32 = {
@@ -32,8 +33,8 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         self.presentationData = presentationData
         self.context = context
         self.action = action
-        if timestamp == 0x7FFFFFFE {
-            self.roundedTimestamp = 0x7FFFFFFE
+        if timestamp == scheduleWhenOnlineTimestamp {
+            self.roundedTimestamp = scheduleWhenOnlineTimestamp
         } else if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
         } else {
@@ -153,7 +154,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         
         if scheduled {
-            if localTimestamp == 0x7FFFFFFE {
+            if localTimestamp == scheduleWhenOnlineTimestamp {
                 text = presentationData.strings.ScheduledMessages_ScheduledOnline
             } else if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.ScheduledMessages_ScheduledToday

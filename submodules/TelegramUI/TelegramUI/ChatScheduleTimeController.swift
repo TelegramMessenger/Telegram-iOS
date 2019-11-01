@@ -64,7 +64,7 @@ final class ChatScheduleTimeController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
-            self?.completion(time != 0x7FFFFFFE ? time + 5 : time)
+            self?.completion(time != scheduleWhenOnlineTimestamp ? time + 5 : time)
             self?.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in

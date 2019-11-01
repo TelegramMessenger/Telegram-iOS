@@ -5,6 +5,8 @@ import Foundation
     import Postbox
 #endif
 
+public let scheduleWhenOnlineTimestamp: Int32 = 0x7ffffffe
+
 public class OutgoingScheduleInfoMessageAttribute: MessageAttribute {
     public let scheduleTime: Int32
     
