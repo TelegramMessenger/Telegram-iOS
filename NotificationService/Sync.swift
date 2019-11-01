@@ -42,17 +42,17 @@ enum SyncProviderImpl {
         }
     }
     
-    static func addIncomingMessage(withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
-        Queue.mainQueue().async {
+    static func addIncomingMessage(queue: Queue, withRootPath rootPath: String, accountId: Int64, encryptionParameters: DeviceSpecificEncryptionParameters, peerId: Int64, messageId: Int32, completion: @escaping (Int32) -> Void) {
+        queue.async {
             let _ = registeredTypes
             
             let sharedBasePath = rootPath + "/accounts-metadata"
             let basePath = rootPath + "/" + accountRecordIdPathName(accountId) + "/postbox"
             
-            let sharedValueBox = SqliteValueBox(basePath: sharedBasePath + "/db", queue: Queue.mainQueue(), logger: ValueBoxLoggerImpl(), encryptionParameters: nil, disableCache: true, upgradeProgress: { _ in
+            let sharedValueBox = SqliteValueBox(basePath: sharedBasePath + "/db", queue: queue, logger: ValueBoxLoggerImpl(), encryptionParameters: nil, disableCache: true, upgradeProgress: { _ in
             })
             
-            let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: Queue.mainQueue(), logger: ValueBoxLoggerImpl(), encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: encryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: encryptionParameters.salt)!), disableCache: true, upgradeProgress: { _ in
+            let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, logger: ValueBoxLoggerImpl(), encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: encryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: encryptionParameters.salt)!), disableCache: true, upgradeProgress: { _ in
             })
             
             let metadataTable = MessageHistoryMetadataTable(valueBox: valueBox, table: MessageHistoryMetadataTable.tableSpec(10))

@@ -76,6 +76,7 @@ shutil.copytree('Config', destination + '/' + 'Config')
 shutil.copytree('tools/buck', destination + '/' + 'tools/buck')
 
 shutil.copy('Wallet/README.md', destination + '/' + 'README.md')
+os.remove(destination + '/Wallet/' + 'README.md')
 
 copy_files = [
     '.buckconfig',

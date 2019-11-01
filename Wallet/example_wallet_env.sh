@@ -23,7 +23,9 @@ export APP_SPECIFIC_URL_SCHEME=""
 export API_ID="0"
 export API_HASH=""
 
-export DEVELOPMENT_CODE_SIGN_IDENTITY="iPhone Developer: AAAAA AAAAA (XXXXXXXXXX)"
+if [ -z "$DEVELOPMENT_CODE_SIGN_IDENTITY" ]; then
+	export DEVELOPMENT_CODE_SIGN_IDENTITY="iPhone Developer: AAAAA AAAAA (XXXXXXXXXX)"
+fi
 if [ -z "$DISTRIBUTION_CODE_SIGN_IDENTITY" ]; then
 	export DISTRIBUTION_CODE_SIGN_IDENTITY="iPhone Distribution: AAAAA AAAAA (XXXXXXXXXX)"
 fi
@@ -41,7 +43,9 @@ if [ -z "$BUILD_NUMBER" ]; then
 fi
 
 export WALLET_ENTITLEMENTS_APP="Wallet.entitlements"
-export WALLET_DEVELOPMENT_PROVISIONING_PROFILE_APP="development profile name"
+if [ -z "$WALLET_DEVELOPMENT_PROVISIONING_PROFILE_APP" ]; then
+	export WALLET_DEVELOPMENT_PROVISIONING_PROFILE_APP="development profile name"
+fi
 if [ -z "$WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP" ]; then
 	export WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP="distribution profile name"
 fi
@@ -55,10 +59,9 @@ if [ -z "$CODESIGNING_SOURCE_DATA_PATH" ]; then
 	exit 1
 fi
 
-if [ ! -d "$CODESIGNING_SOURCE_DATA_PATH/profiles" ] || [ ! -d "$CODESIGNING_SOURCE_DATA_PATH/certs" ]; then
+if [ ! -d "$CODESIGNING_SOURCE_DATA_PATH/profiles" ]; then
 	echo "Expected codesigning directory layout:"
 	echo "$CODESIGNING_SOURCE_DATA_PATH/profiles/appstore/*.mobileprovision"
-	echo "$CODESIGNING_SOURCE_DATA_PATH/certs/distribution/*.{cer,p12}"
 	exit 1
 fi
 
