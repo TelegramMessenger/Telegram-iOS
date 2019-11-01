@@ -110,9 +110,9 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     )
     
     let switchColors = PresentationThemeSwitch(
-        frameColor: UIColor(rgb: 0xe0e0e0),
+        frameColor: UIColor(rgb: 0xe9e9ea),
         handleColor: UIColor(rgb: 0xffffff),
-        contentColor: UIColor(rgb: 0x77d572),
+        contentColor: UIColor(rgb: 0x35c759),
         positiveColor: constructiveColor,
         negativeColor: destructiveColor
     )

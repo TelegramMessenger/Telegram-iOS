@@ -1613,24 +1613,79 @@ final class SharedApplicationContext {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         if #available(iOS 10.0, *) {
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
+                guard let context = self.contextValue?.context else {
+                    return true
+                }
+                let startCall: (Int32) -> Void = { userId in
+                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                }
+                
+                func cleanPhoneNumber(_ text: String) -> String {
+                    var result = ""
+                    for c in text {
+                        if c == "+" {
+                            if result.isEmpty {
+                                result += String(c)
+                            }
+                        } else if c >= "0" && c <= "9" {
+                            result += String(c)
+                        }
+                    }
+                    return result
+                }
+                
+                func matchPhoneNumbers(_ lhs: String, _ rhs: String) -> Bool {
+                    if lhs.count < 10 && lhs.count == rhs.count {
+                        return lhs == rhs
+                    } else if lhs.count >= 10 && rhs.count >= 10 && lhs.suffix(10) == rhs.suffix(10) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                
                 if let contact = startCallIntent.contacts?.first {
                     var processed = false
-                    if let handle = contact.personHandle?.value {
-                        if let userId = Int32(handle) {
-                            if let context = self.contextValue {
-                                let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
-                                processed = true
-                            }
-                        }
-                    }
-                    if !processed, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                    if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                         let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                         if let userId = Int32(string) {
-                            if let context = self.contextValue {
-                                let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
-                            }
+                            startCall(userId)
+                            processed = true
                         }
                     }
+                    if !processed, let handle = contact.personHandle, let value = handle.value {
+                        switch handle.type {
+                            case .unknown:
+                                if let userId = Int32(value) {
+                                    startCall(userId)
+                                    processed = true
+                                }
+                            case .phoneNumber:
+                                let phoneNumber = cleanPhoneNumber(value)
+                                if !phoneNumber.isEmpty {
+                                    let _ = (context.account.postbox.transaction { transaction -> PeerId? in
+                                        var result: PeerId?
+                                        for peerId in transaction.getContactPeerIds() {
+                                            if let peer = transaction.getPeer(peerId) as? TelegramUser, let peerPhoneNumber = peer.phone {
+                                                if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+                                                    result = peer.id
+                                                    break
+                                                }
+                                            }
+                                        }
+                                        return result
+                                    } |> deliverOnMainQueue).start(next: { peerId in
+                                        if let peerId = peerId {
+                                            startCall(peerId.id)
+                                        }
+                                    })
+                                    processed = true
+                                }
+                            default:
+                                break
+                        }
+                    }
+
                 }
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {

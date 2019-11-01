@@ -187,6 +187,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let enqueueMediaMessageDisposable = MetaDisposable()
     private var resolvePeerByNameDisposable: MetaDisposable?
     private var shareStatusDisposable: MetaDisposable?
+    private var clearCacheDisposable: MetaDisposable?
     
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -2314,6 +2315,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.enqueueMediaMessageDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
+        self.clearCacheDisposable?.dispose()
         self.botCallbackAlertMessageDisposable?.dispose()
         self.selectMessagePollOptionDisposables?.dispose()
         for (_, info) in self.contextQueryStates {
@@ -5117,7 +5119,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .dismiss:
             self.dismiss()
         case .clearCache:
-            let clearDisposable = MetaDisposable()
+            let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
+            self.present(controller, in: .window(.root))
+            
+            let disposable: MetaDisposable
+            if let currentDisposable = self.clearCacheDisposable {
+                disposable = currentDisposable
+            } else {
+                disposable = MetaDisposable()
+                self.clearCacheDisposable = disposable
+            }
         
             switch self.chatLocationInfoData {
             case let .peer(peerView):
@@ -5130,8 +5141,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let peerId = peer.id
                     
                     let cacheUsageStats = (collectCacheUsageStats(account: strongSelf.context.account, peerId: peer.id)
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let strongSelf = self,  case let .result(stats) = result, var categories = stats.media[peer.id] else {
+                    |> deliverOnMainQueue).start(next: { [weak self, weak controller] result in
+                        controller?.dismiss()
+                        
+                        guard let strongSelf = self, case let .result(stats) = result, var categories = stats.media[peer.id] else {
                             return
                         }
                         let presentationData = strongSelf.presentationData
@@ -5274,9 +5287,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 cancelImpl = {
-                                    clearDisposable.set(nil)
+                                    disposable.set(nil)
                                 }
-                                clearDisposable.set((signal
+                                disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
                                         let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
@@ -5285,8 +5298,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }))
 
                                 dismissAction()
-                                
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                            }))
+                            
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.ClearCache_StorageUsage, action: { [weak self] in
+                                dismissAction()
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                                
+                                if let strongSelf = self {
+                                    let controller = storageUsageController(context: strongSelf.context, isModal: true)
+                                    strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                }
                             }))
                             
                             controller.setItemGroups([
@@ -7766,7 +7788,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         ])])
         self.chatDisplayNode.dismissInput()
-        self.present(actionSheet, in: .window(.root))
+        self.presentInGlobalOverlay(actionSheet)
+        //self.present(actionSheet, in: .window(.root))
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
