@@ -1252,17 +1252,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         )
     )
     
-    let hasWatchApp = Promise<Bool>(false)
-    hasWatchApp.set(
-        contextValue.get()
-        |> mapToSignal { context -> Signal<Bool, NoError> in
-            if let watchManager = context.watchManager {
-                return watchManager.watchAppInstalled
-            } else {
-                return .single(false)
-            }
+    let hasWatchApp = contextValue.get()
+    |> mapToSignal { context -> Signal<Bool, NoError> in
+        if let watchManager = context.watchManager {
+            return watchManager.watchAppInstalled
+        } else {
+            return .single(false)
         }
-    )
+    }
     
     let updatedPresentationData = contextValue.get()
     |> mapToSignal { context -> Signal<PresentationData, NoError> in
@@ -1280,7 +1277,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp), accountsAndPeers.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
