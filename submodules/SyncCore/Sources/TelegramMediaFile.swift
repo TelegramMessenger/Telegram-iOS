@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 private let typeFileName: Int32 = 0
 private let typeSticker: Int32 = 1
@@ -112,9 +111,9 @@ public struct StickerMaskCoords: PostboxCoding {
 public enum TelegramMediaFileAttribute: PostboxCoding {
     case FileName(fileName: String)
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
-    case ImageSize(size: CGSize)
+    case ImageSize(size: PixelDimensions)
     case Animated
-    case Video(duration: Int, size: CGSize, flags: TelegramMediaVideoFlags)
+    case Video(duration: Int, size: PixelDimensions, flags: TelegramMediaVideoFlags)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: MemoryBuffer?)
     case HasLinkedStickers
     
@@ -126,11 +125,11 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
             case typeSticker:
                 self = .Sticker(displayText: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference, maskData: decoder.decodeObjectForKey("mc", decoder: { StickerMaskCoords(decoder: $0) }) as? StickerMaskCoords)
             case typeImageSize:
-                self = .ImageSize(size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("h", orElse: 0))))
+                self = .ImageSize(size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)))
             case typeAnimated:
                 self = .Animated
             case typeVideo:
-                self = .Video(duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), size: CGSize(width: CGFloat(decoder.decodeInt32ForKey("w", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("h", orElse: 0))), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)))
+                self = .Video(duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: MemoryBuffer?

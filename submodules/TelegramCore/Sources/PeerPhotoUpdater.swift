@@ -1,20 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import SwiftSignalKit
-    import TelegramApi
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-    import UIKit
-#endif
+import Postbox
+import SwiftSignalKit
+import MtProtoKit
+import TelegramApi
 
 import SyncCore
 
@@ -98,7 +86,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                             case let .photoSize(_, location, w, h, _):
                                                                 switch location {
                                                                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId)))
+                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId)))
                                                                 }
                                                             default:
                                                                 break

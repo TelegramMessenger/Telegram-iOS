@@ -56,16 +56,8 @@
 
 #import "MTTime.h"
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTSignal.h>
-#   import <MTProtoKitDynamic/MTQueue.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTSignal.h>
-#   import <MTProtoKitMac/MTQueue.h>
-#else
-#   import <MtProtoKit/MTSignal.h>
-#   import <MtProtoKit/MTQueue.h>
-#endif
+#import <MtProtoKit/MTSignal.h>
+#import <MtProtoKit/MTQueue.h>
 
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,

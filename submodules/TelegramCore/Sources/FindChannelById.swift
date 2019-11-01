@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-import PostboxMac
-import TelegramApiMac
-#else
 import SwiftSignalKit
 import Postbox
 import TelegramApi
-#endif
 
 public func findChannelById(postbox: Postbox, network: Network, channelId: Int32) -> Signal<Peer?, NoError> {
     return network.request(Api.functions.channels.getChannels(id: [.inputChannel(channelId: channelId, accessHash: 0)]))

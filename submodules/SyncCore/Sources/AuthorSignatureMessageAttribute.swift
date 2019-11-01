@@ -1,9 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
+
 
 public class AuthorSignatureMessageAttribute: MessageAttribute {
     public let signature: String

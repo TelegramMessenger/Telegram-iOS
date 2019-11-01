@@ -29,16 +29,8 @@
 
 #import "MTTransportSchemeStats.h"
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTDisposable.h>
-#   import <MTProtoKitDynamic/MTSignal.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTDisposable.h>
-#   import <MTProtoKitMac/MTSignal.h>
-#else
-#   import <MtProtoKit/MTDisposable.h>
-#   import <MtProtoKit/MTSignal.h>
-#endif
+#import <MtProtoKit/MTDisposable.h>
+#import <MtProtoKit/MTSignal.h>
 
 @implementation MTContextBlockChangeListener
 

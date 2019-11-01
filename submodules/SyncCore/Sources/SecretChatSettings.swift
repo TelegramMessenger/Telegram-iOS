@@ -1,9 +1,6 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
+
 
 public struct SecretChatSettings: Equatable, PreferencesEntry {
     public private(set) var acceptOnThisDevice: Bool

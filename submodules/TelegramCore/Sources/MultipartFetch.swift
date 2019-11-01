@@ -1,27 +1,12 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import SwiftSignalKit
-    import TelegramApi
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import Postbox
+import SwiftSignalKit
+import TelegramApi
+import MtProtoKit
 
 import SyncCore
 
-#if os(macOS)
-    private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
-    private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
+private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 private final class MultipartDownloadState {
     let aesKey: Data

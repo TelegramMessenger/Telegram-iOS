@@ -1,25 +1,11 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import MtProtoKitMac
-import TelegramApiMac
-#else
 import TelegramApi
 import Postbox
 import SwiftSignalKit
-#if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import MtProtoKit
 
-#if os(macOS)
-private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
 private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
+
 
 private final class NotificationAutolockReportManagerImpl {
     private let queue: Queue

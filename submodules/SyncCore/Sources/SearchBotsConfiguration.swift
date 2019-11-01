@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public struct SearchBotsConfiguration: Equatable, PreferencesEntry {
     public let imageBotUsername: String?

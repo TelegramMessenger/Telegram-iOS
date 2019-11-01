@@ -628,7 +628,7 @@ typedef enum {
         }];
         
         auto query = make_object<tonlib_api::generic_createSendGramsQuery>(
-            make_object<tonlib_api::inputKey>(
+            make_object<tonlib_api::inputKeyRegular>(
                 make_object<tonlib_api::key>(
                     makeString(publicKeyData),
                     makeSecureString(key.secret)
@@ -777,7 +777,7 @@ typedef enum {
             }
         }];
         auto query = make_object<tonlib_api::exportKey>(
-            make_object<tonlib_api::inputKey>(
+            make_object<tonlib_api::inputKeyRegular>(
                 make_object<tonlib_api::key>(
                     makeString(publicKeyData),
                     makeSecureString(key.secret)

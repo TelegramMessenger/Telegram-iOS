@@ -1,10 +1,5 @@
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-#else
-    import Postbox
-    import SwiftSignalKit
-#endif
+import Postbox
+import SwiftSignalKit
 
 public struct ChannelAdminEventLogEntry: Comparable {
     public let stableId: UInt32

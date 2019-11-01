@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let url: String
@@ -11,7 +10,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let text: String?
     public let embedUrl: String?
     public let embedType: String?
-    public let embedSize: CGSize?
+    public let embedSize: PixelDimensions?
     public let duration: Int?
     public let author: String?
     
@@ -20,7 +19,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let files: [TelegramMediaFile]?
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, files: [TelegramMediaFile]?, instantPage: InstantPage?) {
+    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, files: [TelegramMediaFile]?, instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
         self.hash = hash
@@ -50,7 +49,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.embedUrl = decoder.decodeOptionalStringForKey("eu")
         self.embedType = decoder.decodeOptionalStringForKey("et")
         if let embedSizeWidth = decoder.decodeOptionalInt32ForKey("esw"), let embedSizeHeight = decoder.decodeOptionalInt32ForKey("esh") {
-            self.embedSize = CGSize(width: CGFloat(embedSizeWidth), height: CGFloat(embedSizeHeight))
+            self.embedSize = PixelDimensions(width: embedSizeWidth, height: embedSizeHeight)
         } else {
             self.embedSize = nil
         }

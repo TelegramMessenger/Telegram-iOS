@@ -1,12 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#endif
+import Postbox
+import TelegramApi
 
 import SyncCore
 

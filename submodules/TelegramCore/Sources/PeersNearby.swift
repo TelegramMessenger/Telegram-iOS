@@ -1,21 +1,12 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-import PostboxMac
-import TelegramApiMac
-#else
 import SwiftSignalKit
 import Postbox
 import TelegramApi
-#endif
 
 import SyncCore
 
-#if os(macOS)
-private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
 private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
+
 
 
 public struct PeerNearby {

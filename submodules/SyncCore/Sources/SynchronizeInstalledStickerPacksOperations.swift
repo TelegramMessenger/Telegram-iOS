@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public enum SynchronizeInstalledStickerPacksOperationNamespace: Int32 {
     case stickers = 0

@@ -1,9 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
+
 
 public class EditedMessageAttribute: MessageAttribute {
     public let date: Int32

@@ -24,13 +24,8 @@
 
 #import <Foundation/Foundation.h>
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/AFURLConnectionOperation.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/AFURLConnectionOperation.h>
-#else
-#   import <MtProtoKit/AFURLConnectionOperation.h>
-#endif
+#import <MtProtoKit/AFURLConnectionOperation.h>
+
 
 /**
  `AFHTTPRequestOperation` is a subclass of `AFURLConnectionOperation` for requests using the HTTP or HTTPS protocols. It encapsulates the concept of acceptable status codes and content types, which determine the success or failure of a request.

@@ -1,12 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#endif
+import Postbox
+import TelegramApi
 
 import SyncCore
 
@@ -135,9 +129,9 @@ extension InstantPageBlock {
             case let .pageBlockCover(cover):
                 self = .cover(InstantPageBlock(apiBlock: cover))
             case let .pageBlockEmbed(flags, url, html, posterPhotoId, w, h, caption):
-                var dimensions: CGSize?
+                var dimensions: PixelDimensions?
                 if let w = w, let h = h {
-                    dimensions = CGSize(width: CGFloat(w), height: CGFloat(h))
+                    dimensions = PixelDimensions(width: w, height: h)
                 }
                 self = .webEmbed(url: url, html: html, dimensions: dimensions, caption: InstantPageCaption(apiCaption: caption), stretchToWidth: (flags & (1 << 0)) != 0, allowScrolling: (flags & (1 << 3)) != 0, coverId: posterPhotoId.flatMap { MediaId(namespace: Namespaces.Media.CloudImage, id: $0) })
             case let .pageBlockEmbedPost(url, webpageId, authorPhotoId, author, date, blocks, caption):
@@ -165,7 +159,7 @@ extension InstantPageBlock {
             case let .pageBlockMap(geo, zoom, w, h, caption):
                 switch geo {
                     case let .geoPoint(long, lat, _):
-                        self = .map(latitude: lat, longitude: long, zoom: zoom, dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), caption: InstantPageCaption(apiCaption: caption))
+                        self = .map(latitude: lat, longitude: long, zoom: zoom, dimensions: PixelDimensions(width: w, height: h), caption: InstantPageCaption(apiCaption: caption))
                     default:
                         self = .unsupported
                 }

@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public enum SecretChatKeyValidity: PostboxCoding, Equatable {
     case indefinite

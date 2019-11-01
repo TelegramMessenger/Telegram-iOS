@@ -1,15 +1,8 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import MtProtoKitMac
-import TelegramApiMac
-#else
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
 import TelegramApi
-#endif
 
 public enum GetServerWalletSaltError {
     case generic

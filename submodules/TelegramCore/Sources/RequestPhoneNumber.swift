@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import TelegramApiMac
-#else
 import Postbox
 import SwiftSignalKit
 import TelegramApi
-#endif
 
 public func requestPhoneNumber(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     return .never()

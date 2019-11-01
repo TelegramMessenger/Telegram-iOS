@@ -402,8 +402,7 @@ typedef enum {
                         arc4random_buf(&random, 1);
                         [dataWithHash appendBytes:&random length:1];
                     }
-                    
-                    NSData *encryptedData = MTRsaEncrypt([publicKey objectForKey:@"key"], dataWithHash);
+                    NSData *encryptedData = MTRsaEncrypt(_encryptionProvider, [publicKey objectForKey:@"key"], dataWithHash);
                     if (encryptedData.length < 256)
                     {
                         NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
@@ -440,7 +439,7 @@ typedef enum {
                         [dataWithHash appendBytes:&random length:1];
                     }
                     
-                    NSData *encryptedData = MTRsaEncrypt([publicKey objectForKey:@"key"], dataWithHash);
+                    NSData *encryptedData = MTRsaEncrypt(_encryptionProvider, [publicKey objectForKey:@"key"], dataWithHash);
                     if (encryptedData.length < 256)
                     {
                         NSMutableData *newEncryptedData = [[NSMutableData alloc] init];

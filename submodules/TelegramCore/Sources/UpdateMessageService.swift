@@ -1,19 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import SwiftSignalKit
-    import TelegramApi
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import Postbox
+import SwiftSignalKit
+import TelegramApi
+import MtProtoKit
 
 class UpdateMessageService: NSObject, MTMessageService {
     var peerId: PeerId!

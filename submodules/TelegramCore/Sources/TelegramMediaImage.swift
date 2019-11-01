@@ -1,12 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#endif
+import Postbox
+import TelegramApi
 
 import SyncCore
 
@@ -19,13 +13,13 @@ func telegramMediaImageRepresentationsFromApiSizes(datacenterId: Int32, photoId:
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
             case let .photoSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudPhotoSizeMediaResource(datacenterId: datacenterId, photoId: photoId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()
