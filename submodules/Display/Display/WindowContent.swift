@@ -1168,11 +1168,15 @@ public class Window1 {
     }
     
     public func forEachViewController(_ f: (ContainableController) -> Bool) {
+        if let navigationController = self._rootController as? NavigationController, let controller = navigationController.topOverlayController {
+            !f(controller)
+        }
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {
                 break
             }
         }
+        
         for controller in self.topLevelOverlayControllers {
             if !f(controller) {
                 break

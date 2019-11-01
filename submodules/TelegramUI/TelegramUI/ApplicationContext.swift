@@ -21,6 +21,7 @@ import PasscodeUI
 import ImageBlur
 import WatchBridge
 import SettingsUI
+import AppLock
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -74,7 +75,6 @@ final class AuthorizedApplicationContext {
     
     private var inAppNotificationSettings: InAppNotificationSettings?
     
-    private var isLocked: Bool = true
     var passcodeController: PasscodeEntryController?
     
     private var currentAppUpdateInfo: AppUpdateInfo?
@@ -128,193 +128,30 @@ final class AuthorizedApplicationContext {
         
         if KeyShortcutsController.isAvailable {
             let keyShortcutsController = KeyShortcutsController { [weak self] f in
-                if let strongSelf = self {
-                    if strongSelf.isLocked {
-                        return
-                    }
-                    if let tabController = strongSelf.rootController.rootTabController {
-                        let controller = tabController.controllers[tabController.selectedIndex]
-                        if !f(controller) {
+                if let strongSelf = self, let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
+                    let _ = (appLockContext.isCurrentlyLocked
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { locked in
+                        guard !locked else {
                             return
                         }
-                        if let controller = strongSelf.rootController.topViewController as? ViewController {
-                            if !f(controller) {
+                        if let tabController = strongSelf.rootController.rootTabController {
+                            let selectedController = tabController.controllers[tabController.selectedIndex]
+                            if !f(selectedController) {
                                 return
                             }
+                            if let controller = strongSelf.rootController.topViewController as? ViewController, controller !== selectedController {
+                                if !f(controller) {
+                                    return
+                                }
+                            }
                         }
-                    }
-                    strongSelf.mainWindow.forEachViewController(f)
+                        strongSelf.mainWindow.forEachViewController(f)
+                    })
                 }
             }
             context.keyShortcutsController = keyShortcutsController
         }
-        
-        /*let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
-        let passcodeStatusData = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
-        let passcodeState = passcodeStatusData
-        |> map { sharedData, accessChallengeDataView, isActive -> PasscodeState in
-            let accessChallengeData = accessChallengeDataView.data
-            let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings
-            return PasscodeState(isActive: isActive, challengeData: accessChallengeData, autolockTimeout: passcodeSettings?.autolockTimeout, enableBiometrics: passcodeSettings?.enableBiometrics ?? false, biometricsDomainState: passcodeSettings?.biometricsDomainState)
-        }
-        self.passcodeStatusDisposable.set(passcodeState.start(next: { [weak self] updatedState in
-            guard let strongSelf = self else {
-                return
-            }
-            let previousState = previousPasscodeState.swap(updatedState)
-            
-            var updatedAutolockDeadline: Int32?
-            if updatedState.isActive != previousState?.isActive, let autolockTimeout = updatedState.autolockTimeout {
-                updatedAutolockDeadline = Int32(CFAbsoluteTimeGetCurrent()) + max(10, autolockTimeout)
-            }
-            
-            var effectiveAutolockDeadline = updatedState.challengeData.autolockDeadline
-            if updatedState.isActive {
-            } else if previousState != nil && previousState!.autolockTimeout != updatedState.autolockTimeout {
-                effectiveAutolockDeadline = updatedAutolockDeadline
-            }
-            
-            if let previousState = previousState, previousState.isActive, !updatedState.isActive, effectiveAutolockDeadline != 0 {
-                effectiveAutolockDeadline = updatedAutolockDeadline
-            }
-            
-            var isLocked = false
-            if isAccessLocked(data: updatedState.challengeData.withUpdatedAutolockDeadline(effectiveAutolockDeadline), at: Int32(CFAbsoluteTimeGetCurrent())) {
-                isLocked = true
-                updatedAutolockDeadline = 0
-            }
-            
-            let isLockable: Bool
-            switch updatedState.challengeData {
-                case .none:
-                    isLockable = false
-                default:
-                    isLockable = true
-            }
-            
-            if previousState?.isActive != updatedState.isActive || isLocked != strongSelf.isLocked {
-                if updatedAutolockDeadline != previousState?.challengeData.autolockDeadline {
-                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                        let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(updatedAutolockDeadline)
-                        transaction.setAccessChallengeData(data)
-                    }).start()
-                }
-                
-                strongSelf.isLocked = isLocked
-                
-                if isLocked {
-                    if updatedState.isActive {
-                        if strongSelf.passcodeController == nil {
-                            let presentAnimated = previousState != nil && previousState!.isActive
-                            
-                            let biometrics: PasscodeEntryControllerBiometricsMode
-                            if updatedState.enableBiometrics {
-                                biometrics = .enabled(updatedState.biometricsDomainState)
-                            } else {
-                                biometrics = .none
-                            }
-                            
-                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: presentAnimated, lockIconInitialFrame: { [weak self] in
-                                if let strongSelf = self, let lockViewFrame = strongSelf.rootController.chatListController?.lockViewFrame {
-                                    return lockViewFrame
-                                } else {
-                                    return CGRect()
-                                }
-                            }))
-                            strongSelf.passcodeController = controller
-                            
-                            strongSelf.unlockedStatePromise.set(.single(false))
-                            controller.presentationCompleted = {
-                                strongSelf.rootController.view.isHidden = true
-                                strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
-                                strongSelf.notificationController.view.isHidden = true
-                            }
-                            strongSelf.mainWindow.present(controller, on: .passcode)
-                            
-                            if !presentAnimated {
-                                controller.requestBiometrics()
-                            }
-                        } else if previousState?.isActive != updatedState.isActive, updatedState.isActive, let passcodeController = strongSelf.passcodeController {
-                            passcodeController.requestBiometrics()
-                        }
-                        strongSelf.updateCoveringViewSnaphot(false)
-                        strongSelf.mainWindow.coveringView = nil
-                    } else {
-                        strongSelf.unlockedStatePromise.set(.single(false))
-                        strongSelf.updateCoveringViewSnaphot(true)
-                        strongSelf.mainWindow.coveringView = strongSelf.passcodeController == nil ? strongSelf.lockedCoveringView : nil
-                        strongSelf.rootController.view.isHidden = true
-                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
-                        strongSelf.notificationController.view.isHidden = true
-                    }
-                } else {
-                    if !updatedState.isActive && isLockable {
-                        strongSelf.updateCoveringViewSnaphot(true)
-                        strongSelf.mainWindow.coveringView = strongSelf.passcodeController == nil ? strongSelf.lockedCoveringView : nil
-                        strongSelf.rootController.view.isHidden = true
-                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
-                        strongSelf.notificationController.view.isHidden = true
-                    } else {
-                        strongSelf.updateCoveringViewSnaphot(false)
-                        strongSelf.mainWindow.coveringView = nil
-                        strongSelf.rootController.view.isHidden = false
-                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = false
-                        strongSelf.notificationController.view.isHidden = false
-                        if strongSelf.rootController.rootTabController == nil {
-                            strongSelf.rootController.addRootControllers(showCallsTab: strongSelf.showCallsTab)
-                            if let (peerId, messageId, activateInput) = strongSelf.scheduledOperChatWithPeerId {
-                                strongSelf.scheduledOperChatWithPeerId = nil
-                                strongSelf.openChatWithPeerId(peerId: peerId, messageId: messageId, activateInput: activateInput)
-                            }
-                            
-                            if let url = strongSelf.scheduledOpenExternalUrl {
-                                strongSelf.scheduledOpenExternalUrl = nil
-                                strongSelf.openUrl(url)
-                            }
-                            
-                            if #available(iOS 10.0, *) {
-                            } else {
-                                DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
-                                })
-                            }
-                            
-                            if let passcodeController = strongSelf.passcodeController {
-                                if let chatListController = strongSelf.rootController.chatListController {
-                                    let _ = chatListController.ready.get().start(next: { [weak passcodeController] _ in
-                                        if let strongSelf = self, let passcodeController = passcodeController, strongSelf.passcodeController === passcodeController {
-                                            strongSelf.passcodeController = nil
-                                            strongSelf.rootController.chatListController?.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                                            passcodeController.dismiss()
-                                        }
-                                    })
-                                } else {
-                                    strongSelf.passcodeController = nil
-                                    strongSelf.rootController.chatListController?.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                                    passcodeController.dismiss()
-                                }
-                            }
-                        } else {
-                            if let passcodeController = strongSelf.passcodeController {
-                                strongSelf.passcodeController = nil
-                                passcodeController.dismiss()
-                            }
-                        }
-                    }
-                    
-                    strongSelf.unlockedStatePromise.set(.single(true))
-                }
-            }
-            if let tabsController = strongSelf.rootController.viewControllers.first as? TabBarController, !tabsController.controllers.isEmpty, tabsController.selectedIndex >= 0 {
-                let controller = tabsController.controllers[tabsController.selectedIndex]
-                let combinedReady = combineLatest(tabsController.ready.get(), controller.ready.get())
-                |> map { $0 && $1 }
-                |> filter { $0 }
-                |> take(1)
-                strongSelf.isReady.set(combinedReady)
-            } else {
-                strongSelf.isReady.set(.single(true))
-            }
-        }))*/
         
         if self.rootController.rootTabController == nil {
             self.rootController.addRootControllers(showCallsTab: self.showCallsTab)
@@ -392,25 +229,32 @@ final class AuthorizedApplicationContext {
                         inAppNotificationSettings = InAppNotificationSettings.defaultSettings
                     }
                     
-                    if !strongSelf.isLocked {
-                        let isMuted = firstMessage.attributes.contains(where: { attribute in
-                            if let attribute = attribute as? NotificationInfoMessageAttribute {
-                                return attribute.flags.contains(.muted)
-                            } else {
-                                return false
+                    if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
+                        let _ = (appLockContext.isCurrentlyLocked
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { locked in
+                            guard !locked else {
+                                return
+                            }
+                            let isMuted = firstMessage.attributes.contains(where: { attribute in
+                                if let attribute = attribute as? NotificationInfoMessageAttribute {
+                                    return attribute.flags.contains(.muted)
+                                } else {
+                                    return false
+                                }
+                            })
+                            if !isMuted {
+                                if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
+                                } else {
+                                    if inAppNotificationSettings.playSounds {
+                                        serviceSoundManager.playIncomingMessageSound()
+                                    }
+                                    if inAppNotificationSettings.vibrate {
+                                        serviceSoundManager.playVibrationSound()
+                                    }
+                                }
                             }
                         })
-                        if !isMuted {
-                            if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
-                            } else {
-                                if inAppNotificationSettings.playSounds {
-                                    serviceSoundManager.playIncomingMessageSound()
-                                }
-                                if inAppNotificationSettings.vibrate {
-                                    serviceSoundManager.playVibrationSound()
-                                }
-                            }
-                        }
                     }
                     
                     if chatIsVisible {

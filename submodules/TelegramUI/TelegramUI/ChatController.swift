@@ -8072,7 +8072,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId else {
             return
         }
-        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+        if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
             let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
             |> mapToSignal { peer -> Signal<(Peer, UIImage?), NoError> in
                 let avatarImage = peerAvatarImage(account: self.context.account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil)

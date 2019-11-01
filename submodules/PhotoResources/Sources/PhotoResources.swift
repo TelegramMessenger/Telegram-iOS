@@ -2991,9 +2991,8 @@ public func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(T
                     }
                     
                     if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                        let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
                         context.withFlippedContext { c in
-                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
+                            c.draw(cgImage, in: CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
                             drawOpenInAppIconBorder(into: c, arguments: arguments)
                         }
                     } else {
