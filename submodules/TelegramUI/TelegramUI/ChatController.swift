@@ -5765,7 +5765,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                         }
                     }, enqueueMediaMessages: { [weak self] signals in
-                        if let strongSelf = self {
+                        if let strongSelf = self, !signals.isEmpty {
                             if editingMessage {
                                 strongSelf.editMessageMediaWithLegacySignals(signals)
                             } else {
