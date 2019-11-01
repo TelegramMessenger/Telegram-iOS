@@ -264,6 +264,10 @@
 
 - (void)_adjustContentOffsetToBottom
 {
+    if (!self.isViewLoaded) {
+        return;
+    }
+    
     UIEdgeInsets contentInset = [self controllerInsetForInterfaceOrientation:self.interfaceOrientation];
     
     bool hasOnScreenNavigation = false;
@@ -308,6 +312,9 @@
     _collectionViewWidth = frame.size.width;
     _collectionView.frame = frame;
     
+    [_collectionView.collectionViewLayout invalidateLayout];
+    [_collectionView layoutSubviews];
+    
     if (lastInverseOffset < 45)
     {
         [self _adjustContentOffsetToBottom];
@@ -319,9 +326,6 @@
         CGPoint contentOffset = CGPointMake(0, -contentInset.top);
         [_collectionView setContentOffset:contentOffset animated:false];
     }
-    
-    [_collectionView.collectionViewLayout invalidateLayout];
-    [_collectionView layoutSubviews];
 }
 
 #pragma mark - Gallery
