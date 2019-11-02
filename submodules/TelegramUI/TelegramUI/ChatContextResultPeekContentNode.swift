@@ -159,7 +159,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                 } else if let thumbnail = thumbnail {
                     imageResource = thumbnail.resource
                 }
-                imageDimensions = content?.dimensions
+                imageDimensions = content?.dimensions?.cgSize
                 if let content = content, type == "gif", let thumbnailResource = imageResource
                     , let dimensions = content.dimensions {
                     videoFileReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
@@ -168,14 +168,14 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
             case let .internalReference(_, _, _, title, _, image, file, _):
                 if let image = image {
                     if let largestRepresentation = largestImageRepresentation(image.representations) {
-                        imageDimensions = largestRepresentation.dimensions
+                        imageDimensions = largestRepresentation.dimensions.cgSize
                     }
-                    imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0))?.resource
+                    imageResource = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 200, height: 100))?.resource
                 } else if let file = file {
                     if let dimensions = file.dimensions {
-                        imageDimensions = dimensions
+                        imageDimensions = dimensions.cgSize
                     } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
-                        imageDimensions = largestRepresentation.dimensions
+                        imageDimensions = largestRepresentation.dimensions.cgSize
                     }
                     imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
                 }
@@ -224,7 +224,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         
         if updatedImageResource {
             if let imageResource = imageResource {
-                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: fittedImageDimensions.width * 2.0, height: fittedImageDimensions.height * 2.0), resource: imageResource)
+                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(fittedImageDimensions.width * 2.0), height: Int32(fittedImageDimensions.height * 2.0)), resource: imageResource)
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
                 updateImageSignal = chatMessagePhoto(postbox: self.account.postbox, photoReference: .standalone(media: tmpImage))
             } else {

@@ -1206,9 +1206,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     var dimensions: CGSize?
                     if let contentImageMedia = contentImageMedia as? TelegramMediaImage {
-                        dimensions = largestRepresentationForPhoto(contentImageMedia)?.dimensions
+                        dimensions = largestRepresentationForPhoto(contentImageMedia)?.dimensions.cgSize
                     } else if let contentImageMedia = contentImageMedia as? TelegramMediaFile {
-                        dimensions = contentImageMedia.dimensions
+                        dimensions = contentImageMedia.dimensions?.cgSize
                     }
                     
                     var contentImageNodeAppeared = false

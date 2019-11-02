@@ -361,7 +361,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             for item in self.files {
                 let aspectRatio: CGFloat
                 if let dimensions = item.media.dimensions {
-                    aspectRatio = dimensions.width / dimensions.height
+                    aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
                 } else {
                     aspectRatio = 1.0
                 }
@@ -398,7 +398,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 while j < n {
                     let aspectRatio: CGFloat
                     if let dimensions = self.files[j].media.dimensions {
-                        aspectRatio = dimensions.width / dimensions.height
+                        aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
                     } else {
                         aspectRatio = 1.0
                     }
@@ -424,7 +424,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 while j < n {
                     let aspectRatio: CGFloat
                     if let dimensions = self.files[j].media.dimensions {
-                        aspectRatio = dimensions.width / dimensions.height
+                        aspectRatio = dimensions.cgSize.width / dimensions.cgSize.height
                     } else {
                         aspectRatio = 1.0
                     }

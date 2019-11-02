@@ -295,7 +295,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         |> mapToSignal { wallpaper -> Signal<TelegramWallpaper?, NoError> in
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                                 return wallpaperDatas(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                 |> mapToSignal { _, fullSizeData, complete -> Signal<TelegramWallpaper?, NoError> in
                                     guard complete, let fullSizeData = fullSizeData else {

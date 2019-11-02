@@ -244,8 +244,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
+                    let dimensions = telegramFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
                     self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
@@ -257,12 +257,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
             if self.emojiFile?.id != emojiFile.id {
                 self.emojiFile = emojiFile
-                let dimensions = emojiFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                let dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                 var fitzModifier: EmojiFitzModifier?
                 if let fitz = fitz {
                     fitzModifier = EmojiFitzModifier(emoji: fitz)
                 }
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
                 self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 self.updateVisibility()
             }
@@ -314,8 +314,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 if let file = file {
-                    let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    let fittedSize = isEmoji ? dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     self.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
@@ -348,18 +348,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var isEmoji = false
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
-                    imageSize = dimensions.aspectFitted(displaySize)
+                    imageSize = dimensions.cgSize.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
-                    imageSize = thumbnailSize.aspectFitted(displaySize)
+                    imageSize = thumbnailSize.cgSize.aspectFitted(displaySize)
                 }
             } else if let emojiFile = emojiFile {
                 isEmoji = true
                 
                 let displaySize = CGSize(width: floor(displaySize.width * item.presentationData.animatedEmojiScale), height: floor(displaySize.height * item.presentationData.animatedEmojiScale))
                 if let dimensions = emojiFile.dimensions {
-                    imageSize = CGSize(width: displaySize.width * dimensions.width / 512.0, height: displaySize.height * dimensions.height / 512.0)
+                    imageSize = CGSize(width: displaySize.width * CGFloat(dimensions.width) / 512.0, height: displaySize.height * CGFloat(dimensions.height) / 512.0)
                 } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
-                    imageSize = thumbnailSize.aspectFitted(displaySize)
+                    imageSize = thumbnailSize.cgSize.aspectFitted(displaySize)
                 }
             }
             

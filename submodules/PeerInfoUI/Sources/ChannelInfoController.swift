@@ -732,7 +732,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                     if let data = image.jpegData(compressionQuality: 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
                         updateState {
                             $0.withUpdatedUpdatingAvatar(.image(representation, true))
                         }

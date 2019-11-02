@@ -107,7 +107,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
                     self.imageNode.setSignal(wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .file(file):
                     self.imageNode.isHidden = false
@@ -138,8 +138,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     }
                     self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
                     
-                    let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
+                    let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
                     apply()
             }
         } else if let wallpaper = self.wallpaper {
@@ -148,11 +148,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .image(representations, _):
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .file(file):
-                    let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
+                    let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
                     apply()
             }
         }

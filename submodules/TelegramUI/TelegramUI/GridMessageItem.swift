@@ -212,7 +212,7 @@ final class GridMessageItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== context || !self.currentState!.1.isEqual(to: media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
-                mediaDimensions = largestSize
+                mediaDimensions = largestSize.cgSize
                
                 self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
@@ -223,7 +223,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.mediaBadgeNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
-                mediaDimensions = file.dimensions
+                mediaDimensions = file.dimensions?.cgSize
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
                 self.mediaBadgeNode.isHidden = false

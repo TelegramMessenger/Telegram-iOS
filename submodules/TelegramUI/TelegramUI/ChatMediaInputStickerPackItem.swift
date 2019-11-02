@@ -156,7 +156,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
-                        let imageSize = representation.dimensions.aspectFitted(boundingImageSize)
+                        let imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource))

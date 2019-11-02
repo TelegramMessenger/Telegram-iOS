@@ -165,12 +165,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let imageReference = candidateMediaReference?.concrete(TelegramMediaImage.self) {
                 updatedMediaReference = imageReference.abstract
                 if let representation = largestRepresentationForPhoto(imageReference.media) {
-                    imageDimensions = representation.dimensions
+                    imageDimensions = representation.dimensions.cgSize
                 }
             } else if let fileReference = candidateMediaReference?.concrete(TelegramMediaFile.self) {
                 updatedMediaReference = fileReference.abstract
                 if !fileReference.media.isInstantVideo, let representation = largestImageRepresentation(fileReference.media.previewRepresentations), !fileReference.media.isSticker {
-                    imageDimensions = representation.dimensions
+                    imageDimensions = representation.dimensions.cgSize
                 }
             }
         }

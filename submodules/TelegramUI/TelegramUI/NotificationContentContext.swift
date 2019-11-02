@@ -193,13 +193,13 @@ public final class NotificationViewControllerImpl {
         
         let messageId = MessageId(peerId: PeerId(peerIdValue), namespace: messageIdNamespace, id: messageIdId)
         
-        if let image = media as? TelegramMediaImage, let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 120.0, height: 120.0)), let largestRepresentation = largestImageRepresentation(image.representations) {
+        if let image = media as? TelegramMediaImage, let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 120, height: 120)), let largestRepresentation = largestImageRepresentation(image.representations) {
             let dimensions = largestRepresentation.dimensions
-            let fittedSize = dimensions.fitted(CGSize(width: view.bounds.width, height: 1000.0))
+            let fittedSize = dimensions.cgSize.fitted(CGSize(width: view.bounds.width, height: 1000.0))
             view.frame = CGRect(origin: view.frame.origin, size: fittedSize)
             self.setPreferredContentSize(fittedSize)
             
-            self.imageInfo = (false, dimensions)
+            self.imageInfo = (false, dimensions.cgSize)
             self.updateImageLayout(boundingSize: view.bounds.size)
             
             let mediaBoxPath = accountsPath + "/" + accountRecordIdPathName(AccountRecordId(rawValue: accountIdValue)) + "/postbox/media"
@@ -263,11 +263,11 @@ public final class NotificationViewControllerImpl {
                 return
             }
             
-            let fittedSize = dimensions.fitted(CGSize(width: min(256.0, view.bounds.width), height: 256.0))
+            let fittedSize = dimensions.cgSize.fitted(CGSize(width: min(256.0, view.bounds.width), height: 256.0))
             view.frame = CGRect(origin: view.frame.origin, size: fittedSize)
             self.setPreferredContentSize(fittedSize)
             
-            self.imageInfo = (true, dimensions)
+            self.imageInfo = (true, dimensions.cgSize)
             self.updateImageLayout(boundingSize: view.bounds.size)
             
             self.applyDisposable.set((sharedAccountContext.activeAccounts
@@ -322,8 +322,8 @@ public final class NotificationViewControllerImpl {
                             }
                             view?.addSubnode(animatedStickerNode)
                         }
-                        let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                        let fittedDimensions = dimensions.aspectFitted(CGSize(width: 512.0, height: 512.0))
+                        let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
+                        let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
                         strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: fittedDimensions))
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: accountAndImage.0, resource: fileReference.media.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
                         animatedStickerNode.visibility = true

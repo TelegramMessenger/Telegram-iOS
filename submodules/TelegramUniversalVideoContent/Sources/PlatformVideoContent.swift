@@ -61,7 +61,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
-        self.dimensions = fileReference.media.dimensions ?? CGSize(width: 128.0, height: 128.0)
+        self.dimensions = fileReference.media.dimensions?.cgSize ?? CGSize(width: 128.0, height: 128.0)
         self.duration = fileReference.media.duration ?? 0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
@@ -158,7 +158,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
             return AVPlayerLayer(player: player)
         })
         
-        self.intrinsicDimensions = fileReference.media.dimensions ?? CGSize()
+        self.intrinsicDimensions = fileReference.media.dimensions?.cgSize ?? CGSize()
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
         

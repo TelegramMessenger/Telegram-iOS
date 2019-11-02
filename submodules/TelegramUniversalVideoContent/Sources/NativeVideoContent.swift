@@ -44,10 +44,10 @@ public final class NativeVideoContent: UniversalVideoContent {
                 let dimensionsVertical = dimensions.width < dimensions.height
                 let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
                 if dimensionsVertical != thumbnailVertical {
-                    dimensions = CGSize(width: dimensions.height, height: dimensions.width)
+                    dimensions = PixelDimensions(width: dimensions.height, height: dimensions.width)
                 }
             }
-            self.dimensions = dimensions
+            self.dimensions = dimensions.cgSize
         } else {
             self.dimensions = CGSize(width: 128.0, height: 128.0)
         }
@@ -136,7 +136,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.playerNode = MediaPlayerNode(backgroundThread: false)
         self.player.attachPlayerNode(self.playerNode)
         
-        self.dimensions = fileReference.media.dimensions
+        self.dimensions = fileReference.media.dimensions?.cgSize
         if let dimensions = self.dimensions {
             self.dimensionsPromise.set(dimensions)
         }

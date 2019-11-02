@@ -376,12 +376,12 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
         case let .image(id, caption, url, webpageId):
             if let image = media[id] as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                 let imageSize = largest.dimensions
-                var filledSize = imageSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
+                var filledSize = imageSize.cgSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
                 
                 if let size = fillToSize {
                     filledSize = size
                 } else if isCover {
-                    filledSize = imageSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
+                    filledSize = imageSize.cgSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
                     if !filledSize.height.isZero {
                         filledSize = filledSize.cropped(CGSize(width: boundingWidth - safeInset * 2.0, height: floor((boundingWidth - safeInset * 2.0) * 3.0 / 5.0)))
                     }
@@ -416,12 +416,12 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
         case let .video(id, caption, autoplay, loop):
             if let file = media[id] as? TelegramMediaFile, let dimensions = file.dimensions {
                 let imageSize = dimensions
-                var filledSize = imageSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
+                var filledSize = imageSize.cgSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
                 
                 if let size = fillToSize {
                     filledSize = size
                 } else if isCover {
-                    filledSize = imageSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
+                    filledSize = imageSize.cgSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
                     if !filledSize.height.isZero {
                         filledSize = filledSize.cropped(CGSize(width: boundingWidth - safeInset * 2.0, height: floor((boundingWidth - safeInset * 2.0) * 3.0 / 5.0)))
                     }
@@ -462,11 +462,11 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 switch subItem {
                     case let .image(id, _, _, _):
                         if let image = media[id] as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-                            size = largest.dimensions
+                            size = largest.dimensions.cgSize
                         }
                     case let .video(id, _, _, _):
                         if let file = media[id] as? TelegramMediaFile, let dimensions = file.dimensions {
-                            size = dimensions
+                            size = dimensions.cgSize
                         }
                     default:
                         break
@@ -577,7 +577,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                             let mediaIndex = mediaIndexCounter
                             mediaIndexCounter += 1
                             
-                            let filledSize = imageSize.fitted(CGSize(width: boundingWidth, height: 1200.0))
+                            let filledSize = imageSize.cgSize.fitted(CGSize(width: boundingWidth, height: 1200.0))
                             contentSize.height = max(contentSize.height, filledSize.height)
                             
                             var mediaUrl: InstantPageUrlItem?
@@ -610,10 +610,10 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             
             let size: CGSize
             if let dimensions = dimensions {
-                if dimensions.width.isLessThanOrEqualTo(0.0) {
-                    size = CGSize(width: embedBoundingWidth, height: dimensions.height)
+                if dimensions.width <= 0 {
+                    size = CGSize(width: embedBoundingWidth, height: dimensions.cgSize.height)
                 } else {
-                    size = dimensions.aspectFitted(CGSize(width: embedBoundingWidth, height: embedBoundingWidth))
+                    size = dimensions.cgSize.aspectFitted(CGSize(width: embedBoundingWidth, height: embedBoundingWidth))
                 }
             } else {
                 if let height = webEmbedHeights[embedIndex] {
@@ -628,7 +628,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             let frame = CGRect(origin: CGPoint(x: floor((boundingWidth - size.width) / 2.0), y: 0.0), size: size)
             let item: InstantPageItem
             if let url = url, let coverId = coverId, let image = media[coverId] as? TelegramMediaImage {
-                let loadedContent = TelegramMediaWebpageLoadedContent(url: url, displayUrl: url, hash: 0, type: "video", websiteName: nil, title: nil, text: nil, embedUrl: url, embedType: "video", embedSize: size, duration: nil, author: nil, image: image, file: nil, files: nil, instantPage: nil)
+                let loadedContent = TelegramMediaWebpageLoadedContent(url: url, displayUrl: url, hash: 0, type: "video", websiteName: nil, title: nil, text: nil, embedUrl: url, embedType: "video", embedSize: PixelDimensions(size), duration: nil, author: nil, image: image, file: nil, files: nil, instantPage: nil)
                 let content = TelegramMediaWebpageContent.Loaded(loadedContent)
                 
                 item = InstantPageImageItem(frame: frame, webPage: webpage, media: InstantPageMedia(index: embedIndex, media: TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: -1), content: content), url: nil, caption: nil, credit: nil), attributes: [], interactive: true, roundCorners: false, fit: false)
@@ -805,19 +805,19 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             return InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
         case let .map(latitude, longitude, zoom, dimensions, caption):
             let imageSize = dimensions
-            var filledSize = imageSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
+            var filledSize = imageSize.cgSize.aspectFitted(CGSize(width: boundingWidth - safeInset * 2.0, height: 1200.0))
             
             if let size = fillToSize {
                 filledSize = size
             } else if isCover {
-                filledSize = imageSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
+                filledSize = imageSize.cgSize.aspectFilled(CGSize(width: boundingWidth - safeInset * 2.0, height: 1.0))
                 if !filledSize.height.isZero {
                     filledSize = filledSize.cropped(CGSize(width: boundingWidth - safeInset * 2.0, height: floor((boundingWidth - safeInset * 2.0) * 3.0 / 5.0)))
                 }
             }
             
             let map = TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)
-            let attributes: [InstantPageImageAttribute] = [InstantPageMapAttribute(zoom: zoom, dimensions: dimensions)]
+            let attributes: [InstantPageImageAttribute] = [InstantPageMapAttribute(zoom: zoom, dimensions: dimensions.cgSize)]
             
             var contentSize = CGSize(width: boundingWidth - safeInset * 2.0, height: 0.0)
             var items: [InstantPageItem] = []

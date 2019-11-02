@@ -148,9 +148,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var imageSize: CGSize = CGSize(width: 100.0, height: 100.0)
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
-                    imageSize = dimensions.aspectFitted(displaySize)
+                    imageSize = dimensions.cgSize.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
-                    imageSize = thumbnailSize.aspectFitted(displaySize)
+                    imageSize = thumbnailSize.cgSize.aspectFitted(displaySize)
                 }
             }
             

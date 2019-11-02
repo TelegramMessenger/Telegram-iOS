@@ -90,14 +90,14 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         if let image = media as? TelegramMediaImage {
                             updatedMediaReference = .message(message: MessageReference(message), media: image)
                             if let representation = largestRepresentationForPhoto(image) {
-                                imageDimensions = representation.dimensions
+                                imageDimensions = representation.dimensions.cgSize
                             }
                             break
                         } else if let file = media as? TelegramMediaFile {
                             updatedMediaReference = .message(message: MessageReference(message), media: file)
                             isRoundImage = file.isInstantVideo
                             if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker && !file.isAnimatedSticker {
-                                imageDimensions = representation.dimensions
+                                imageDimensions = representation.dimensions.cgSize
                             }
                             break
                         }

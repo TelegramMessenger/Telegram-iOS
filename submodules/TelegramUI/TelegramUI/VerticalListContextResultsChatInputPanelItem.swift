@@ -202,7 +202,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     }
                 case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
-                        imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 200.0))?.resource
+                        imageResource = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 200, height: 200))?.resource
                     } else if let file = file {
                         if file.isSticker {
                             stickerFile = file
@@ -225,7 +225,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 let boundingSize = CGSize(width: 55.0, height: 55.0)
                 let iconSize: CGSize
                 if let stickerFile = stickerFile, let dimensions = stickerFile.dimensions {
-                    iconSize = dimensions.fitted(boundingSize)
+                    iconSize = dimensions.cgSize.fitted(boundingSize)
                 } else {
                     iconSize = boundingSize
                 }
@@ -251,7 +251,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     if let stickerFile = stickerFile {
                         updateIconImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false, fetched: true)
                     } else {
-                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
+                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 55, height: 55), resource: imageResource)
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
                         updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
                     }
