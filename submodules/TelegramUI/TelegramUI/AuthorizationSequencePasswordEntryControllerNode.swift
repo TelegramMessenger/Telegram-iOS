@@ -111,11 +111,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         insets.top = navigationBarHeight
         
         if let inputHeight = layout.inputHeight {
-            if abs(inputHeight - (layout.standardInputHeight - 44.0)) < 2.0 {
-                insets.bottom += layout.standardInputHeight
-            } else {
-                insets.bottom += inputHeight
-            }
+            insets.bottom += max(inputHeight, layout.standardInputHeight)
         }
         
         if max(layout.size.width, layout.size.height) > 1023.0 {

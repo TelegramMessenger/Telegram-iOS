@@ -272,11 +272,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         var insets = state.layout.layout.insets(options: [.statusBar])
         let visibleInsets = state.layout.layout.insets(options: [.statusBar, .input])
         if let inputHeight = state.layout.layout.inputHeight {
-            if inputHeight.isEqual(to: state.layout.layout.standardInputHeight - 44.0) {
-                insets.bottom += state.layout.layout.standardInputHeight
-            } else {
-                insets.bottom += inputHeight
-            }
+            insets.bottom += max(inputHeight, state.layout.layout.standardInputHeight)
         }
         let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
         if state.data.state?.kind != self.contentNode?.kind {
