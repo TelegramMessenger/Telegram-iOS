@@ -1,22 +1,14 @@
 import Foundation
 
-public struct AccessChallengeAttempts: PostboxCoding, Equatable {
+public struct AccessChallengeAttempts: Equatable {
     public let count: Int32
-    public let timestamp: Int32
+    public var bootTimestamp: Int32
+    public var uptime: Int32
     
-    public init(count: Int32, timestamp: Int32) {
+    public init(count: Int32, bootTimestamp: Int32, uptime: Int32) {
         self.count = count
-        self.timestamp = timestamp
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
-        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.count, forKey: "c")
-        encoder.encodeInt32(self.timestamp, forKey: "t")
+        self.bootTimestamp = bootTimestamp
+        self.uptime = uptime
     }
 }
 
