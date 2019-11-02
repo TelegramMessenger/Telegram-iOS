@@ -749,11 +749,19 @@ public final class ManagedAudioSession {
     private func activate() {
         if let (type, outputMode) = self.currentTypeAndOutputMode {
             do {
+                let startTime = CFAbsoluteTimeGetCurrent()
+                
                 try AVAudioSession.sharedInstance().setActive(true, options: [.notifyOthersOnDeactivation])
+                
+                print("AudioSession activate: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 self.updateCurrentAudioRouteInfo()
                 
+                print("AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                
                 try self.setupOutputMode(outputMode, type: type)
+                
+                print("AudioSession setupOutputMode: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 if case .voiceCall = type {
                     try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)
