@@ -402,7 +402,7 @@ final class MutableChatListView {
             index = self.entries[self.entries.count / 2].index
         }
         
-        let (entries, earlier, later) = postbox.fetchAroundChatEntries(groupId: self.groupId, index: index, count: self.entries.count)
+        let (entries, earlier, later) = postbox.fetchAroundChatEntries(groupId: self.groupId, index: index, count: self.count)
         let currentGroupEntries = self.groupEntries
         
         self.reloadGroups(postbox: postbox)
