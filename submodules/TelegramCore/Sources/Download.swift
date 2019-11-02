@@ -119,6 +119,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -162,6 +166,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
@@ -210,6 +218,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -253,6 +265,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -290,6 +306,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
