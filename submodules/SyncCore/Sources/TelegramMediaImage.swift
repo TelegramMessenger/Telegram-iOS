@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 public enum TelegramMediaImageReference: PostboxCoding, Equatable {
     case cloud(imageId: Int64, accessHash: Int64, fileReference: Data?)
@@ -90,7 +89,7 @@ public final class TelegramMediaImage: Media, Equatable {
         }
     }
     
-    public func representationForDisplayAtSize(_ size: CGSize) -> TelegramMediaImageRepresentation? {
+    public func representationForDisplayAtSize(_ size: PixelDimensions) -> TelegramMediaImageRepresentation? {
         if self.representations.count == 0 {
             return nil
         } else {
@@ -100,7 +99,7 @@ public final class TelegramMediaImage: Media, Equatable {
             for i in 0 ..< self.representations.count {
                 let representationDimensions = self.representations[i].dimensions
                 
-                if dimensions.width >= size.width - CGFloat.ulpOfOne && dimensions.height >= size.height - CGFloat.ulpOfOne {
+                if dimensions.width >= size.width && dimensions.height >= size.height {
                     if representationDimensions.width >= size.width && representationDimensions.height >= dimensions.height && representationDimensions.width < dimensions.width && representationDimensions.height < dimensions.height {
                         dimensions = representationDimensions
                         index = i
@@ -168,22 +167,22 @@ public final class TelegramMediaImage: Media, Equatable {
 }
 
 public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, CustomStringConvertible {
-    public let dimensions: CGSize
+    public let dimensions: PixelDimensions
     public let resource: TelegramMediaResource
     
-    public init(dimensions: CGSize, resource: TelegramMediaResource) {
+    public init(dimensions: PixelDimensions, resource: TelegramMediaResource) {
         self.dimensions = dimensions
         self.resource = resource
     }
     
     public init(decoder: PostboxDecoder) {
-        self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("dy", orElse: 0)))
+        self.dimensions = PixelDimensions(width: decoder.decodeInt32ForKey("dx", orElse: 0), height: decoder.decodeInt32ForKey("dy", orElse: 0))
         self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(Int32(self.dimensions.width), forKey: "dx")
-        encoder.encodeInt32(Int32(self.dimensions.height), forKey: "dy")
+        encoder.encodeInt32(self.dimensions.width, forKey: "dx")
+        encoder.encodeInt32(self.dimensions.height, forKey: "dy")
         encoder.encodeObject(self.resource, forKey: "r")
     }
     

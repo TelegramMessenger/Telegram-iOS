@@ -1,12 +1,6 @@
 #import <Foundation/Foundation.h>
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTDatacenterAuthInfo.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTDatacenterAuthInfo.h>
-#else
-#   import <MtProtoKit/MTDatacenterAuthInfo.h>
-#endif
+#import <MtProtoKit/MTDatacenterAuthInfo.h>
 
 #import <EncryptionProvider/EncryptionProvider.h>
 

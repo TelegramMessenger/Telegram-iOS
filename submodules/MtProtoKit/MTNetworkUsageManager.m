@@ -3,25 +3,11 @@
 #include <sys/mman.h>
 #import <libkern/OSAtomic.h>
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTNetworkUsageCalculationInfo.h>
-#   import <MTProtoKitDynamic/MTSignal.h>
-#   import <MTProtoKitDynamic/MTTimer.h>
-#   import <MTProtoKitDynamic/MTQueue.h>
-#   import <MTProtoKitDynamic/MTAtomic.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTNetworkUsageCalculationInfo.h>
-#   import <MTProtoKitMac/MTSignal.h>
-#   import <MTProtoKitMac/MTTimer.h>
-#   import <MTProtoKitMac/MTQueue.h>
-#   import <MTProtoKitMac/MTAtomic.h>
-#else
-#   import <MtProtoKit/MTNetworkUsageCalculationInfo.h>
-#   import <MtProtoKit/MTSignal.h>
-#   import <MtProtoKit/MTTimer.h>
-#   import <MtProtoKit/MTQueue.h>
-#   import <MtProtoKit/MTAtomic.h>
-#endif
+#import <MtProtoKit/MTNetworkUsageCalculationInfo.h>
+#import <MtProtoKit/MTSignal.h>
+#import <MtProtoKit/MTTimer.h>
+#import <MtProtoKit/MTQueue.h>
+#import <MtProtoKit/MTAtomic.h>
 
 static int offsetForInterface(MTNetworkUsageCalculationInfo *info, MTNetworkUsageManagerInterface interface, bool incoming) {
     switch (interface) {

@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public final class AccountSortOrderAttribute: AccountRecordAttribute {
     public let order: Int32

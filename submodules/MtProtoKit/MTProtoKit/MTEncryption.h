@@ -28,7 +28,7 @@ void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableD
 void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv);
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv);
-NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);
+NSData *MTRsaEncrypt(id<EncryptionProvider> provider, NSString *publicKey, NSData *data);
 NSData *MTExp(id<EncryptionProvider> provider, NSData *base, NSData *exp, NSData *modulus);
 NSData *MTModSub(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus);
 NSData *MTModMul(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus);

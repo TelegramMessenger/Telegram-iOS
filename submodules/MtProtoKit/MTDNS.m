@@ -8,55 +8,21 @@
 #import <netinet/in.h>
 #import <net/if.h>
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTQueue.h>
-#   import <MTProtoKitDynamic/MTSignal.h>
-#   import <MTProtoKitDynamic/MTBag.h>
-#   import <MTProtoKitDynamic/MTAtomic.h>
-#   import <MTProtoKitDynamic/MTHttpRequestOperation.h>
-#   import <MTProtoKitDynamic/MTEncryption.h>
-#   import <MTProtoKitDynamic/MTRequestMessageService.h>
-#   import <MTProtoKitDynamic/MTRequest.h>
-#   import <MTProtoKitDynamic/MTContext.h>
-#   import <MTProtoKitDynamic/MTApiEnvironment.h>
-#   import <MTProtoKitDynamic/MTDatacenterAddress.h>
-#   import <MTProtoKitDynamic/MTDatacenterAddressSet.h>
-#   import <MTProtoKitDynamic/MTProto.h>
-#   import <MTProtoKitDynamic/MTSerialization.h>
-#   import <MTProtoKitDynamic/MTLogging.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTQueue.h>
-#   import <MTProtoKitMac/MTSignal.h>
-#   import <MTProtoKitMac/MTBag.h>
-#   import <MTProtoKitMac/MTAtomic.h>
-#   import <MTProtoKitMac/MTHttpRequestOperation.h>
-#   import <MTProtoKitMac/MTEncryption.h>
-#   import <MTProtoKitMac/MTRequestMessageService.h>
-#   import <MTProtoKitMac/MTRequest.h>
-#   import <MTProtoKitMac/MTContext.h>
-#   import <MTProtoKitMac/MTApiEnvironment.h>
-#   import <MTProtoKitMac/MTDatacenterAddress.h>
-#   import <MTProtoKitMac/MTDatacenterAddressSet.h>
-#   import <MTProtoKitMac/MTProto.h>
-#   import <MTProtoKitMac/MTSerialization.h>
-#   import <MTProtoKitMac/MTLogging.h>
-#else
-#   import <MtProtoKit/MTQueue.h>
-#   import <MtProtoKit/MTSignal.h>
-#   import <MtProtoKit/MTBag.h>
-#   import <MtProtoKit/MTAtomic.h>
-#   import <MtProtoKit/MTHttpRequestOperation.h>
-#   import <MtProtoKit/MTEncryption.h>
-#   import <MtProtoKit/MTRequestMessageService.h>
-#   import <MtProtoKit/MTRequest.h>
-#   import <MtProtoKit/MTContext.h>
-#   import <MtProtoKit/MTApiEnvironment.h>
-#   import <MtProtoKit/MTDatacenterAddress.h>
-#   import <MtProtoKit/MTDatacenterAddressSet.h>
-#   import <MtProtoKit/MTProto.h>
-#   import <MtProtoKit/MTSerialization.h>
-#   import <MtProtoKit/MTLogging.h>
-#endif
+#import <MtProtoKit/MTQueue.h>
+#import <MtProtoKit/MTSignal.h>
+#import <MtProtoKit/MTBag.h>
+#import <MtProtoKit/MTAtomic.h>
+#import <MtProtoKit/MTHttpRequestOperation.h>
+#import <MtProtoKit/MTEncryption.h>
+#import <MtProtoKit/MTRequestMessageService.h>
+#import <MtProtoKit/MTRequest.h>
+#import <MtProtoKit/MTContext.h>
+#import <MtProtoKit/MTApiEnvironment.h>
+#import <MtProtoKit/MTDatacenterAddress.h>
+#import <MtProtoKit/MTDatacenterAddressSet.h>
+#import <MtProtoKit/MTProto.h>
+#import <MtProtoKit/MTSerialization.h>
+#import <MtProtoKit/MTLogging.h>
 
 #import <netinet/in.h>
 #import <arpa/inet.h>

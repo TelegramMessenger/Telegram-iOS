@@ -12,13 +12,8 @@
 @class MTNetworkUsageCalculationInfo;
 @class MTSocksProxySettings;
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTMessageService.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTMessageService.h>
-#else
-#   import <MtProtoKit/MTMessageService.h>
-#endif
+#import <MtProtoKit/MTMessageService.h>
+
 
 @protocol MTTransportDelegate <NSObject>
 

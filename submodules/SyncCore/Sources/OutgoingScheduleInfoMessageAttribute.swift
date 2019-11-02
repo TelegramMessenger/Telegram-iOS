@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public class OutgoingScheduleInfoMessageAttribute: MessageAttribute {
     public let scheduleTime: Int32

@@ -1,8 +1,9 @@
 #if os(macOS)
 
-import TelegramApiMac
-import SwiftSignalKitMac
-import PostboxMac
+import TelegramApi
+import SwiftSignalKit
+import Postbox
+import SyncCore
 
 public enum InternalUpdaterError {
     case generic

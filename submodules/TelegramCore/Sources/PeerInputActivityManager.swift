@@ -1,17 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-#else
-    import Postbox
-    import SwiftSignalKit
-#endif
+import Postbox
+import SwiftSignalKit
 
-#if os(macOS)
-    private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
-    private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
+private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 private struct ActivityRecord {
     let peerId: PeerId

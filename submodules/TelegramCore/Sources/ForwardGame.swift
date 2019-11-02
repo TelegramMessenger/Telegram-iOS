@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    import SwiftSignalKit
-#endif
+import Postbox
+import TelegramApi
+import SwiftSignalKit
 
 public func forwardGameWithScore(account: Account, messageId: MessageId, to peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in

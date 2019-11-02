@@ -1,14 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import TelegramApi
-    import Postbox
-    import SwiftSignalKit
-    import UIKit
-#endif
+import TelegramApi
+import Postbox
+import SwiftSignalKit
 
 import SyncCore
 
@@ -16,7 +9,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
         if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
-            let leeway: CGFloat = 4.0
+            let leeway: Int32 = 4
             let widthDifference = fromSmallestRepresentation.dimensions.width - toSmallestRepresentation.dimensions.width
             let heightDifference = fromSmallestRepresentation.dimensions.height - toSmallestRepresentation.dimensions.height
             if abs(widthDifference) < leeway && abs(heightDifference) < leeway {

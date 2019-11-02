@@ -1,15 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import MtProtoKitMac
-#else
-    import Postbox
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import Postbox
+import MtProtoKit
 
 import SyncCore
 

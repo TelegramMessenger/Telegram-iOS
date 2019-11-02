@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    import SwiftSignalKit
-#endif
+import Postbox
+import TelegramApi
+import SwiftSignalKit
 
 public func groupsInCommon(account:Account, peerId:PeerId) -> Signal<[PeerId], NoError> {
     return account.postbox.transaction { transaction -> Signal<[PeerId], NoError> in

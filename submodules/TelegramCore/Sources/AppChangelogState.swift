@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import MtProtoKitMac
-#else
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-#endif
 
 import SyncCore
 

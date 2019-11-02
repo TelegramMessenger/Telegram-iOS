@@ -370,6 +370,35 @@ NS_ASSUME_NONNULL_BEGIN
     return [[MTRsaPublicKeyImpl alloc] initWithValue:rsaKey];
 }
 
+-(NSData *)macosRSAEncrypt:(NSString *) publicKey data: (NSData *)data {
+    BIO *keyBio = BIO_new(BIO_s_mem());
+    const char *keyData = [publicKey UTF8String];
+    BIO_write(keyBio, keyData, (int)publicKey.length);
+    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
+    BIO_free(keyBio);
+    
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *a = BN_bin2bn(data.bytes, (int)data.length, NULL);
+    BIGNUM *r = BN_new();
+    
+    
+    
+    BN_mod_exp(r, a, RSA_get0_e(rsaKey), RSA_get0_n(rsaKey), ctx);
+    
+    unsigned char *res = malloc((size_t)BN_num_bytes(r));
+    int resLen = BN_bn2bin(r, res);
+    
+    BN_CTX_free(ctx);
+    BN_free(a);
+    BN_free(r);
+    
+    RSA_free(rsaKey);
+    
+    NSData *result = [[NSData alloc] initWithBytesNoCopy:res length:(NSUInteger)resLen freeWhenDone:true];
+    
+    return result;
+}
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -1,17 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import MtProtoKitMac
-    import SwiftSignalKitMac
-#else
-    import Postbox
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-    import SwiftSignalKit
-#endif
+import Postbox
+import MtProtoKit
+import SwiftSignalKit
 
 private enum GenerateSecureSecretError {
     case generic

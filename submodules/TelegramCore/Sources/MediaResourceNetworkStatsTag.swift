@@ -1,8 +1,4 @@
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public enum MediaResourceStatsCategory {
     case generic

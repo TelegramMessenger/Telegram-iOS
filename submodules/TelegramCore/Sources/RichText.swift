@@ -1,12 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#endif
+import Postbox
+import TelegramApi
 
 import SyncCore
 
@@ -42,7 +36,7 @@ extension RichText {
             case let .textPhone(text, phone):
                 self = .phone(text: RichText(apiText: text), phone: phone)
             case let .textImage(documentId, w, h):
-                self = .image(id: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)))
+                self = .image(id: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), dimensions: PixelDimensions(width: w, height: h))
             case let .textAnchor(text, name):
                 self = .anchor(text: RichText(apiText: text), name: name)
         }

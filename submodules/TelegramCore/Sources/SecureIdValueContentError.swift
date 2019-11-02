@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import TelegramApiMac
-#else
 import TelegramApi
-#endif
 
 
 public enum SecureIdValueContentErrorKey: Hashable {
