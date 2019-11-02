@@ -73,7 +73,7 @@ with open(destination + '/BUCK', 'w+b') as file:
     pass
 
 shutil.copytree('Config', destination + '/' + 'Config')
-shutil.copytree('tools/buck', destination + '/' + 'tools/buck')
+shutil.copytree('tools/buck-build', destination + '/' + 'tools/buck-build')
 
 shutil.copy('Wallet/README.md', destination + '/' + 'README.md')
 os.remove(destination + '/Wallet/' + 'README.md')
