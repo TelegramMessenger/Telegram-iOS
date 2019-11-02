@@ -5065,3 +5065,5 @@ Any member of this group will be able to see messages in the channel.";
 "WebBrowser.InAppSafari" = "In-App Safari";
 
 "Widget.ApplicationLocked" = "Unlock the app to use the widget";
+
+"Group.ErrorSupergroupConversionNotPossible" = "Sorry, you are a member of too many groups and channels. Please leave some before creating a new one.";
