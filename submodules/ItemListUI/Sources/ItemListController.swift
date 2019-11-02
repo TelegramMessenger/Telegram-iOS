@@ -209,6 +209,19 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
+    public func setReorderCompleted<T: ItemListNodeEntry>(_ f: @escaping ([T]) -> Void) {
+        self.reorderCompleted = { list in
+            f(list.map { $0 as! T })
+        }
+    }
+    private var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode).reorderCompleted = self.reorderCompleted
+            }
+        }
+    }
+    
     public var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
     public var commitPreview: ((UIViewController) -> Void)?
     
@@ -431,6 +444,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         displayNode.contentScrollingEnded = self.contentScrollingEnded
         displayNode.searchActivated = self.searchActivated
         displayNode.reorderEntry = self.reorderEntry
+        displayNode.reorderCompleted = self.reorderCompleted
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
         displayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)

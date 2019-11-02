@@ -249,6 +249,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
     
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
+    public final var reorderCompleted: (Any?) -> Void = { _ in }
     
     private final var animations: [ListViewAnimation] = []
     private final var actionsForVSync: [() -> ()] = []
@@ -439,6 +440,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 reorderNode.removeFromSupernode()
             }
         }
+        self.reorderCompleted(self.opaqueTransactionState)
     }
     
     private func updateReordering(offset: CGFloat) {
@@ -2680,6 +2682,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if highlightedItemNode.index != self.highlightedItemIndex {
                 highlightedItemNode.setHighlighted(false, at: CGPoint(), animated: false)
                 self.highlightedItemIndex = nil
+                self.selectionTouchLocation = nil
             }
         } else if self.highlightedItemIndex != nil {
             self.highlightedItemIndex = nil
