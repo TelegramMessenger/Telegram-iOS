@@ -17,12 +17,12 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
     } else if let autolockTimeout = passcodeSettings.autolockTimeout {
         var bootTimestamp: Int32 = 0
         let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        let timestamp = MonotonicTimestamp(bootTimestap: bootTimestamp, uptime: uptime)
+        let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
         
         let applicationActivityTimestamp = state.applicationActivityTimestamp
         
         if let applicationActivityTimestamp = applicationActivityTimestamp {
-            if timestamp.bootTimestap != applicationActivityTimestamp.bootTimestap {
+            if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
             if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {
@@ -249,7 +249,7 @@ public final class AppLockContextImpl: AppLockContext {
             let uptime = getDeviceUptimeSeconds(&bootTimestamp)
             
             var state = state
-            state.applicationActivityTimestamp = MonotonicTimestamp(bootTimestap: bootTimestamp, uptime: uptime)
+            state.applicationActivityTimestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
             return state
         }
     }
@@ -276,7 +276,7 @@ public final class AppLockContextImpl: AppLockContext {
         return self.currentState.get()
         |> map { state in
             return state.unlockAttemts.flatMap { unlockAttemts in
-                return AccessChallengeAttempts(count: unlockAttemts.count, timestamp: unlockAttemts.wallClockTimestamp)
+                return AccessChallengeAttempts(count: unlockAttemts.count, bootTimestamp: unlockAttemts.timestamp.bootTimestamp, uptime: unlockAttemts.timestamp.uptime)
             }
         }
     }
@@ -299,7 +299,7 @@ public final class AppLockContextImpl: AppLockContext {
             
             var bootTimestamp: Int32 = 0
             let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            let timestamp = MonotonicTimestamp(bootTimestap: bootTimestamp, uptime: uptime)
+            let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
             state.applicationActivityTimestamp = timestamp
             
             return state
@@ -309,9 +309,15 @@ public final class AppLockContextImpl: AppLockContext {
     public func failedUnlockAttempt() {
         self.updateLockState { state in
             var state = state
-            var unlockAttemts = state.unlockAttemts ?? UnlockAttempts(count: 0, wallClockTimestamp: 0)
+            var unlockAttemts = state.unlockAttemts ?? UnlockAttempts(count: 0, timestamp: MonotonicTimestamp(bootTimestamp: 0, uptime: 0))
+            
             unlockAttemts.count += 1
-            unlockAttemts.wallClockTimestamp = Int32(CFAbsoluteTimeGetCurrent())
+            
+            var bootTimestamp: Int32 = 0
+            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+            let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+            
+            unlockAttemts.timestamp = timestamp
             state.unlockAttemts = unlockAttemts
             return state
         }

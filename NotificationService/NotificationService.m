@@ -226,13 +226,16 @@ static void reportMemory() {
             silent = [silentString intValue] != 0;
         }
         
-        NSString *attachmentDataString = decryptedPayload[@"attachb64"];
         NSData *attachmentData = nil;
         id parsedAttachment = nil;
-        if ([attachmentDataString isKindOfClass:[NSString class]]) {
-            attachmentData = parseBase64(attachmentDataString);
-            if (attachmentData != nil) {
-                parsedAttachment = parseAttachment(attachmentData);
+        
+        if (_isLockedValue) {
+            NSString *attachmentDataString = decryptedPayload[@"attachb64"];
+            if ([attachmentDataString isKindOfClass:[NSString class]]) {
+                attachmentData = parseBase64(attachmentDataString);
+                if (attachmentData != nil) {
+                    parsedAttachment = parseAttachment(attachmentData);
+                }
             }
         }
         
@@ -324,6 +327,7 @@ static void reportMemory() {
                 }
                 _bestAttemptContent.title = title;
                 if (_isLockedValue) {
+                    _bestAttemptContent.title = @"";
                     _bestAttemptContent.subtitle = @"";
                     if (_lockedMessageTextValue != nil) {
                         _bestAttemptContent.body = _lockedMessageTextValue;
@@ -348,37 +352,45 @@ static void reportMemory() {
                 }
             }
             
-            NSString *threadIdString = aps[@"thread-id"];
-            if ([threadIdString isKindOfClass:[NSString class]]) {
-                _bestAttemptContent.threadIdentifier = threadIdString;
+            if (_isLockedValue) {
+                _bestAttemptContent.threadIdentifier = @"locked";
+            } else {
+                NSString *threadIdString = aps[@"thread-id"];
+                if ([threadIdString isKindOfClass:[NSString class]]) {
+                    _bestAttemptContent.threadIdentifier = threadIdString;
+                }
             }
             NSString *soundString = aps[@"sound"];
             if ([soundString isKindOfClass:[NSString class]]) {
                 _bestAttemptContent.sound = [UNNotificationSound soundNamed:soundString];
             }
-            NSString *categoryString = aps[@"category"];
-            if ([categoryString isKindOfClass:[NSString class]]) {
-                _bestAttemptContent.categoryIdentifier = categoryString;
-                if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
-                    userInfo[@"peerId"] = @(peerId);
-                    userInfo[@"messageId.namespace"] = @(0);
-                    userInfo[@"messageId.id"] = @(messageId);
-                    
-                    userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
-                    
-                    if (isExpandableMedia) {
-                        if ([categoryString isEqualToString:@"r"]) {
-                            _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
-                        } else if ([categoryString isEqualToString:@"m"]) {
-                            _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
+            if (_isLockedValue) {
+                _bestAttemptContent.categoryIdentifier = @"locked";
+            } else {
+                NSString *categoryString = aps[@"category"];
+                if ([categoryString isKindOfClass:[NSString class]]) {
+                    _bestAttemptContent.categoryIdentifier = categoryString;
+                    if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
+                        userInfo[@"peerId"] = @(peerId);
+                        userInfo[@"messageId.namespace"] = @(0);
+                        userInfo[@"messageId.id"] = @(messageId);
+                        
+                        userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
+                        
+                        if (isExpandableMedia) {
+                            if ([categoryString isEqualToString:@"r"]) {
+                                _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
+                            } else if ([categoryString isEqualToString:@"m"]) {
+                                _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
+                            }
                         }
                     }
                 }
-            }
-            
-            if (accountInfos.accounts.count > 1) {
-                if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
-                    _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                
+                if (accountInfos.accounts.count > 1) {
+                    if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
+                        _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                    }
                 }
             }
         }

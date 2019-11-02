@@ -2,22 +2,22 @@ import Foundation
 import MonotonicTime
 
 public struct MonotonicTimestamp: Codable, Equatable {
-    public var bootTimestap: Int32
+    public var bootTimestamp: Int32
     public var uptime: Int32
 
-    public init(bootTimestap: Int32, uptime: Int32) {
-        self.bootTimestap = bootTimestap
+    public init(bootTimestamp: Int32, uptime: Int32) {
+        self.bootTimestamp = bootTimestamp
         self.uptime = uptime
     }
 }
 
 public struct UnlockAttempts: Codable, Equatable {
     public var count: Int32
-    public var wallClockTimestamp: Int32
+    public var timestamp: MonotonicTimestamp
 
-    public init(count: Int32, wallClockTimestamp: Int32) {
+    public init(count: Int32, timestamp: MonotonicTimestamp) {
         self.count = count
-        self.wallClockTimestamp = wallClockTimestamp
+        self.timestamp = timestamp
     }
 }
 
@@ -45,10 +45,10 @@ public func isAppLocked(state: LockState) -> Bool {
     } else if let autolockTimeout = state.autolockTimeout {
         var bootTimestamp: Int32 = 0
         let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        let timestamp = MonotonicTimestamp(bootTimestap: bootTimestamp, uptime: uptime)
+        let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
         
         if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-            if timestamp.bootTimestap != applicationActivityTimestamp.bootTimestap {
+            if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
             if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {

@@ -899,6 +899,8 @@ public class Window1 {
         self.presentationContext.updateToInterfaceOrientation(orientation)
         self.overlayPresentationContext.updateToInterfaceOrientation(orientation)
         
+         self.topPresentationContext.updateToInterfaceOrientation(orientation)
+        
         for controller in self.topLevelOverlayControllers {
             controller.updateToInterfaceOrientation(orientation)
         }
@@ -972,6 +974,8 @@ public class Window1 {
                     }
                     self.presentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                     self.overlayPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
+                    
+                    self.topPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                 
                     for controller in self.topLevelOverlayControllers {
                         updatingLayout.transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(), size: self.windowLayout.size))
