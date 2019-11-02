@@ -1300,6 +1300,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var errorImpl: (() -> Void)?
     var clearHighlightImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -2264,6 +2265,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
             }, pushController: { c in
                 pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
             })
         }
         
@@ -2305,6 +2308,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.view.endEditing(true)
         controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         let _ = (context.account.postbox.transaction { transaction -> Peer? in

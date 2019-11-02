@@ -17,19 +17,21 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     let cancel: () -> Void
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     let pushController: (ViewController) -> Void
+    let dismissInput: () -> Void
     let searchMode: ChannelMembersSearchMode
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, searchContext: GroupMembersSearchContext?, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: PeerId, searchContext: GroupMembersSearchContext?, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.searchContext = searchContext
         self.cancel = cancel
         self.openPeer = openPeer
         self.pushController = pushController
+        self.dismissInput = dismissInput
         self.searchMode = searchMode
         activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
@@ -77,14 +79,14 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
             self?.activity.set(value)
         }, pushController: { [weak self] c in
             self?.pushController(c)
-        })
+        }, dismissInput: self.dismissInput)
     }
 }
 
 private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void) {
         self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], searchContext: searchContext, openPeer: { peer, participant in
             openPeer(peer, participant)
         }, updateActivity: updateActivity, pushController: pushController)
@@ -95,6 +97,10 @@ private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
         super.init()
         
         self.addSubnode(self.containerNode)
+        
+        self.containerNode.dismissInput = {
+            dismissInput()
+        }
     }
     
     override func queryUpdated(_ query: String) {
