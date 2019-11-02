@@ -12,6 +12,8 @@ import AccountContext
 import StickerPackPreviewUI
 import PeerInfoUI
 import SettingsUI
+import ContextUI
+import GalleryUI
 
 private struct PeerSpecificPackData {
     let peer: Peer
@@ -466,6 +468,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         var paneDidScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void)?
         var fixPaneScrollImpl: ((ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void)?
+        var openGifContextMenuImpl: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void)?
         
         self.stickerPane = ChatMediaInputStickerPane(theme: theme, strings: strings, paneDidScroll: { pane, state, transition in
             paneDidScrollImpl?(pane, state, transition)
@@ -476,6 +479,8 @@ final class ChatMediaInputNode: ChatInputNode {
             paneDidScrollImpl?(pane, state, transition)
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
+        }, openGifContextMenu: { fileReference, sourceNode, sourceRect, gesture in
+            openGifContextMenuImpl?(fileReference, sourceNode, sourceRect, gesture)
         })
         
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
@@ -806,6 +811,37 @@ final class ChatMediaInputNode: ChatInputNode {
         fixPaneScrollImpl = { [weak self] pane, state in
             self?.fixPaneScroll(pane: pane, state: state)
         }
+        
+        openGifContextMenuImpl = { [weak self] fileReference, sourceNode, sourceRect, gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [fileReference.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            
+            let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
+            }, baseNavigationController: nil)
+            gallery.setHintWillBePresentedInPreviewingContext(true)
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: strings.MediaPicker_Send, icon: { _ in nil }, action: { _, f in
+                f(.default)
+                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
+            })))
+            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { _ in nil }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: fileReference.media.fileId).start()
+            })))
+            
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let contextController = ContextController(account: strongSelf.context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(items), reactionItems: [], gesture: gesture)
+            strongSelf.controllerInteraction.presentGlobalOverlayController(contextController, nil)
+        }
     }
     
     deinit {
@@ -903,7 +939,8 @@ final class ChatMediaInputNode: ChatInputNode {
                                 }
                             }
                         } else if let file = item as? FileMediaReference {
-                            return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
+                            return nil
+                            /*return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                 PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                     if let strongSelf = self {
                                         return strongSelf.controllerInteraction.sendGif(file, node, rect)
@@ -917,7 +954,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     }
                                     return true
                                 })
-                            ])))
+                            ])))*/
                         }
                     }
                 } else {
@@ -932,7 +969,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
                             if let (file, _) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
-                                return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
+                                return nil
+                                /*return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                     PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
                                             return strongSelf.controllerInteraction.sendGif(file, node, rect)
@@ -946,7 +984,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                         }
                                         return true
                                     })
-                                ])))
+                                ])))*/
                             }
                         } else if pane is ChatMediaInputStickerPane || pane is ChatMediaInputTrendingPane {
                             var itemNodeAndItem: (ASDisplayNode, StickerPackItem)?
@@ -1203,6 +1241,8 @@ final class ChatMediaInputNode: ChatInputNode {
         if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = self.validLayout, case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {
             searchMode = mode
         }
+        
+        let wasVisible = self.validLayout?.10 ?? false
         
         self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
         
@@ -1463,6 +1503,12 @@ final class ChatMediaInputNode: ChatInputNode {
             panRecognizer.isEnabled = !displaySearch
         }
         
+        if isVisible && !wasVisible {
+            transition.updateFrame(node: self.gifPane, frame: self.gifPane.frame, force: true, completion: { [weak self] _ in
+                self?.gifPane.initializeIfNeeded()
+            })
+        }
+        
         return (standardInputHeight, max(0.0, panelHeight - standardInputHeight))
     }
     
@@ -1656,5 +1702,39 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             })
         }).start()
+    }
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    let sourceRect: CGRect
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool = false
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?, sourceRect: CGRect) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.sourceRect = sourceRect
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceRect)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+        if let controller = self.controller as? GalleryController {
+            controller.viewDidAppear(false)
+        }
     }
 }

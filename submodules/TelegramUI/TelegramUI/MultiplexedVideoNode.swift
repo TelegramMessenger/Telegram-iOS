@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import AVFoundation
+import ContextUI
 
 private final class MultiplexedVideoTrackingNode: ASDisplayNode {
     var inHierarchyUpdated: ((Bool) -> Void)?
@@ -34,7 +35,7 @@ private final class VisibleVideoItem {
     }
 }
 
-final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
+final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
     private let trackingNode: MultiplexedVideoTrackingNode
     var didScroll: ((CGFloat, CGFloat) -> Void)?
@@ -67,6 +68,9 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     private var visibleThumbnailLayers: [MediaId: SoftwareVideoThumbnailLayer] = [:]
     private var statusDisposable: [MediaId : MetaDisposable] = [:]
 
+    private let contextContainerNode: ContextControllerSourceNode
+    let scrollNode: ASScrollNode
+    
     private var visibleLayers: [MediaId: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
     
     private var displayLink: CADisplayLink!
@@ -76,6 +80,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     private let timebase: CMTimebase
     
     var fileSelected: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
+    var fileContextMenu: ((FileMediaReference, ASDisplayNode, CGRect, ContextGesture) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account) {
@@ -88,14 +93,19 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
+        self.contextContainerNode = ContextControllerSourceNode()
+        self.scrollNode = ASScrollNode()
+        
         super.init()
         
         self.isOpaque = true
-        self.view.showsVerticalScrollIndicator = false
-        self.view.showsHorizontalScrollIndicator = false
-        self.view.alwaysBounceVertical = true
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.alwaysBounceVertical = true
         
         self.addSubnode(self.trackingNode)
+        self.addSubnode(self.contextContainerNode)
+        self.contextContainerNode.addSubnode(self.scrollNode)
         
         class DisplayLinkProxy: NSObject {
             weak var target: MultiplexedVideoNode?
@@ -135,10 +145,49 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
             }
         }
         
-        self.view.delegate = self
+        self.scrollNode.view.delegate = self
         
         let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.view.addGestureRecognizer(recognizer)
+        
+        var gestureLocation: CGPoint?
+        
+        self.contextContainerNode.shouldBegin = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            gestureLocation = point
+            return strongSelf.fileAt(point: point) != nil
+        }
+        
+        self.contextContainerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self, let gestureLocation = gestureLocation else {
+                return
+            }
+            if let (file, rect) = strongSelf.fileAt(point: gestureLocation) {
+                strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture)
+            } else {
+                gesture.cancel()
+            }
+        }
+        
+        self.contextContainerNode.customActivationProgress = { [weak self] progress, update in
+            guard let strongSelf = self, let gestureLocation = gestureLocation else {
+                return
+            }
+            /*let minScale: CGFloat = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
+            let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+            switch update {
+            case .update:
+                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
+            case .begin:
+                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
+            case let .ended(previousProgress):
+                let previousScale = 1.0 * (1.0 - previousProgress) + minScale * previousProgress
+                strongSelf.layer.sublayerTransform = CATransform3DMakeScale(currentScale, currentScale, 1.0)
+                strongSelf.layer.animateSpring(from: previousScale as NSNumber, to: currentScale as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 90.0)
+            }*/
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -168,6 +217,8 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         if self.validSize == nil || !self.validSize!.equalTo(size) {
             self.validSize = size
+            self.contextContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
             self.updateVisibleItems(transition: transition)
         }
     }
@@ -189,7 +240,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     
     private var validVisibleItemsOffset: CGFloat?
     private func updateImmediatelyVisibleItems(ensureFrames: Bool = false) {
-        let visibleBounds = self.bounds
+        let visibleBounds = self.scrollNode.bounds
         let visibleThumbnailBounds = visibleBounds.insetBy(dx: 0.0, dy: -350.0)
         
         if let validVisibleItemsOffset = self.validVisibleItemsOffset, validVisibleItemsOffset.isEqual(to: visibleBounds.origin.y) {
@@ -222,7 +273,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
             } else {
                 let thumbnailLayer = SoftwareVideoThumbnailLayer(account: self.account, fileReference: item.fileReference)
                 thumbnailLayer.frame = item.frame
-                self.layer.addSublayer(thumbnailLayer)
+                self.scrollNode.layer.addSublayer(thumbnailLayer)
                 self.visibleThumbnailLayers[item.fileReference.media.fileId] = thumbnailLayer
             }
             
@@ -236,51 +287,6 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
                 continue
             }
             
-            /*if self.statusDisposable[item.fileReference.media.fileId] == nil {
-                let statusDisposable = MetaDisposable()
-                let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
-                self.statusDisposable[item.fileReference.media.fileId] = statusDisposable
-                statusDisposable.set((updatedStatusSignal
-                |> deliverOnMainQueue).start(next: { [weak self] status in
-                    guard let `self` = self else {return}
-                    
-                    let state: RadialStatusNodeState
-                    
-                    switch status {
-                        case let .Fetching(_, progress):
-                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
-                        case .Remote:
-                            state = .progress(color: .white, lineWidth: nil, value: 0, cancelEnabled: false)
-                        case .Local:
-                            state = .none
-                    }
-                    
-                    /*if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
-                        if state == .none {
-                            self.visibleProgressNodes.removeValue(forKey: item.fileReference.media.fileId)
-                            statusNode.transitionToState(state, completion: { [weak statusNode] in
-                                statusNode?.isHidden = true
-                            })
-                        } else {
-                            statusNode.isHidden = false
-                            statusNode.transitionToState(state, completion: {})
-                        }
-                    }*/
-                }))
-            }*/
-            
-            /*if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
-                if ensureFrames {
-                    visibleProgressNode.frame = progressFrame
-                }
-            } else {
-                let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
-                statusNode.isHidden = true
-                statusNode.frame = progressFrame
-                self.visibleProgressNodes[item.fileReference.media.fileId] = statusNode
-                self.addSubnode(statusNode)
-            }*/
-            
             visibleIds.insert(item.fileReference.media.fileId)
             
             if let (_, layerHolder) = self.visibleLayers[item.fileReference.media.fileId] {
@@ -291,7 +297,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
                 let layerHolder = takeSampleBufferLayer()
                 layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
                 layerHolder.layer.frame = item.frame
-                self.layer.addSublayer(layerHolder.layer)
+                self.scrollNode.layer.addSublayer(layerHolder.layer)
                 let manager = SoftwareVideoLayerFrameManager(account: self.account, fileReference: item.fileReference, resource: item.fileReference.media.resource, layerHolder: layerHolder)
                 self.visibleLayers[item.fileReference.media.fileId] = (manager, layerHolder)
                 self.visibleThumbnailLayers[item.fileReference.media.fileId]?.ready = { [weak self] in
@@ -344,7 +350,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     }
     
     private func updateVisibleItems(transition: ContainedViewLayoutTransition = .immediate) {
-        let drawableSize = self.bounds.size
+        let drawableSize = self.scrollNode.bounds.size
         if !drawableSize.width.isZero {
             var displayItems: [VisibleVideoItem] = []
             
@@ -447,7 +453,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
                 i += row.count
             }
             let contentSize = CGSize(width: drawableSize.width, height: contentMaxValueInScrollDirection + self.bottomInset)
-            self.view.contentSize = contentSize
+            self.scrollNode.view.contentSize = contentSize
             
             self.displayItems = displayItems
             
@@ -475,7 +481,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     }
     
     func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
-        let offsetPoint = point.offsetBy(dx: 0.0, dy: self.bounds.minY)
+        let offsetPoint = point.offsetBy(dx: 0.0, dy: self.scrollNode.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
