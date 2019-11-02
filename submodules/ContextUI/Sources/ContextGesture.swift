@@ -56,6 +56,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     private var animator: DisplayLinkAnimator?
     private var isValidated: Bool = false
     
+    public var shouldBegin: ((CGPoint) -> Bool)?
     public var activationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
     public var activated: ((ContextGesture) -> Void)?
     public var externalUpdated: ((UIView?, CGPoint) -> Void)?
@@ -91,6 +92,13 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
+        
+        if let shouldBegin = self.shouldBegin, let touch = touches.first {
+            if !shouldBegin(touch.location(in: self.view)) {
+                self.state = .failed
+                return
+            }
+        }
         
         if self.delayTimer == nil {
             let delayTimer = Timer(timeInterval: beginDelay, target: TimerTargetWrapper { [weak self] in

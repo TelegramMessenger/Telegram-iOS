@@ -211,7 +211,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 if strongSelf.didCompleteAnimationIn {
                     if !strongSelf.didMoveFromInitialGesturePoint {
                         let distance = abs(localPoint.y - initialPoint.y)
-                        if distance > 4.0 {
+                        if distance > 12.0 {
                             strongSelf.didMoveFromInitialGesturePoint = true
                         }
                     }
@@ -580,6 +580,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                     
                     self.contentContainerNode.layer.animateSpring(from: min(localSourceFrame.width / self.contentContainerNode.frame.width, localSourceFrame.height / self.contentContainerNode.frame.height) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                    
+                    switch self.source {
+                    case let .controller(controller):
+                        controller.animatedIn()
+                    default:
+                        break
+                    }
                     
                     let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
                     if let contentNode = self.contentContainerNode.contentNode, case let .controller(controller) = contentNode {
@@ -1099,7 +1106,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             case let .controller(contentParentNode):
-                let projectedFrame = convertFrame(contentParentNode.sourceNode.bounds, from: contentParentNode.sourceNode.view, to: self.view)
+                var projectedFrame: CGRect = convertFrame(contentParentNode.sourceNode.bounds, from: contentParentNode.sourceNode.view, to: self.view)
+                switch self.source {
+                case let .controller(source):
+                    let transitionInfo = source.transitionInfo()
+                    if let (sourceNode, sourceRect) = transitionInfo?.sourceNode() {
+                        projectedFrame = convertFrame(sourceRect, from: sourceNode.view, to: self.view)
+                    }
+                default:
+                    break
+                }
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
@@ -1149,8 +1165,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     var contentHeight: CGFloat
                     if case .compact = layout.metrics.widthClass {
                         if layout.size.width < layout.size.height {
-                            originalActionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
-                            originalContentFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
+                            let sideInset = floor((layout.size.width - max(contentSize.width, actionsSize.width)) / 2.0)
+                            originalActionsFrame = CGRect(origin: CGPoint(x: sideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
+                            originalContentFrame = CGRect(origin: CGPoint(x: sideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
                             if originalContentFrame.minY < topEdge {
                                 let requiredOffset = topEdge - originalContentFrame.minY
                                 let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
@@ -1271,12 +1288,21 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             case let .controller(controller):
-                let controllerPoint = self.view.convert(point, to: controller.controller.view)
-                if let result = controller.controller.view.hitTest(controllerPoint, with: event) {
-                    #if DEBUG
-                    //return controller.view
-                    #endif
-                    return result
+                var passthrough = false
+                switch self.source {
+                case let .controller(controllerSource):
+                    passthrough = controllerSource.passthroughTouches
+                default:
+                    break
+                }
+                if passthrough {
+                    let controllerPoint = self.view.convert(point, to: controller.controller.view)
+                    if let result = controller.controller.view.hitTest(controllerPoint, with: event) {
+                        #if DEBUG
+                        //return controller.view
+                        #endif
+                        return result
+                    }
                 }
             }
         }
@@ -1325,8 +1351,11 @@ public protocol ContextExtractedContentSource: class {
 public protocol ContextControllerContentSource: class {
     var controller: ViewController { get }
     var navigationController: NavigationController? { get }
+    var passthroughTouches: Bool { get }
     
     func transitionInfo() -> ContextControllerTakeControllerInfo?
+    
+    func animatedIn()
 }
 
 public enum ContextContentSource {

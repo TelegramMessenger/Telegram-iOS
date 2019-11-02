@@ -75,6 +75,8 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     
     let navigationController: NavigationController?
     
+    let passthroughTouches: Bool = true
+    
     init(controller: ViewController, sourceNode: ASDisplayNode?, navigationController: NavigationController?) {
         self.controller = controller
         self.sourceNode = sourceNode
@@ -90,6 +92,9 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
                 return nil
             }
         })
+    }
+    
+    func animatedIn() {
     }
 }
 
