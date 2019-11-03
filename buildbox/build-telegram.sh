@@ -150,15 +150,24 @@ if [ "$BUILD_MACHINE" == "linux" ]; then
 	done
 elif [ "$BUILD_MACHINE" == "macOS" ]; then
 	if [ -z "$RUNNING_VM" ]; then
-		SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
-		if [ -z "$SNAPSHOT_ID" ]; then
-			echo "$VM_BASE_NAME is required to have one snapshot"
-			exit 1
-		fi
-		prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
-		prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
+		prlctl clone "$VM_BASE_NAME" --linked --name "$VM_NAME"
+		prlctl start "$VM_NAME"
+
+		echo "Getting VM IP"
+
+		while [ 1 ]; do
+			TEST_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'" || echo "")
+			if [ ! -z "$TEST_IP" ]; then
+				RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+				if [ "$RESPONSE" == "1" ]; then
+					VM_IP="$TEST_IP"
+					break
+				fi
+			fi
+			sleep 1
+		done
 	fi
-	VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
+	echo "VM_IP=$VM_IP"
 fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
