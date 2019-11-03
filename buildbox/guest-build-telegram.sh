@@ -128,13 +128,5 @@ else
 	cp "build/Telegram_signed.ipa" "./$OUTPUT_PATH/Telegram.ipa"
 	cp "build/DSYMs.zip" "./$OUTPUT_PATH/Telegram.DSYMs.zip"
 
-	export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
-	if [ "$1" == "appstore" ]; then
-		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" xcrun altool --upload-app --type ios --file "$RESULT_IPA_NAME" --username "$FASTLANE_ITC_USERNAME" --password "@env:FASTLANE_PASSWORD"
-		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1 skip_pilot:1
-	else
-		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1
-	fi
-
 	cd "$BASE_DIR"
 fi
