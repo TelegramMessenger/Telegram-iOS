@@ -17,12 +17,9 @@ internal:
     - tags
   script:
     - bash buildbox/build-telegram.sh hockeyapp
+    - bash buildbox/deploy-telegram.sh hockeyapp
   environment:
     name: internal
-  artifacts:
-    paths:
-      - build/artifacts
-    expire_in: 1 week
 
 beta_testflight:
   tags:
@@ -44,7 +41,7 @@ beta_testflight:
 deploy_internal:
   tags:
     - ios_internal
-  stage: deploy
+  stage: deploy_unused
   only:
     - master
   except:
