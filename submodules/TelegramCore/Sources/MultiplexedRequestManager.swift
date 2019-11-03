@@ -1,19 +1,8 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import MtProtoKitMac
-import TelegramApiMac
-#else
 import TelegramApi
 import Postbox
 import SwiftSignalKit
-#if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import MtProtoKit
 
 enum MultiplexedRequestTarget: Equatable, Hashable {
     case main(Int)
@@ -78,11 +67,8 @@ private struct MultiplexedRequestTargetTimerKey: Equatable, Hashable {
     let id: Int32
 }
 
-#if os(macOS)
-private typealias SignalKitTimer = SwiftSignalKitMac.Timer
-#else
 private typealias SignalKitTimer = SwiftSignalKit.Timer
-#endif
+
 
 private final class MultiplexedRequestManagerContext {
     private let queue: Queue

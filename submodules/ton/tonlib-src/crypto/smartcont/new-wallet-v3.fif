@@ -1,0 +1,63 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> <wallet-id> [<filename-base>]" cr
+  ."Creates a new advanced wallet with unique 32-bit identifier <wallet-id> in specified workchain, with private key saved to or loaded from <filename-base>.pk" cr
+  ."('new-wallet.pk' by default)" cr 1 halt
+} : usage
+$# 2- -2 and ' usage if
+
+$1 parse-workchain-id =: wc    // set workchain id from command line argument
+$2 parse-int =: subwallet-id
+def? $3 { @' $3 } { "new-wallet" } cond constant file-base
+
+."Creating new advanced v3 wallet in workchain " wc . cr
+."with unique wallet id " subwallet-id . cr
+
+// Create new advanced wallet; code adapted from `auto/wallet3-code.fif`
+<{ SETCP0 DUP IFNOTRET // return if recv_internal
+   DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
+     DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
+   }>
+   INC 32 THROWIF	// fail unless recv_external
+   9 PUSHPOW2 LDSLICEX DUP 32 LDU 32 LDU 32 LDU 	//  signature in_msg subwallet_id valid_until msg_seqno cs
+   NOW s1 s3 XCHG LEQ 35 THROWIF	//  signature in_msg subwallet_id cs msg_seqno
+   c4 PUSH CTOS 32 LDU 32 LDU 256 LDU ENDS	//  signature in_msg subwallet_id cs msg_seqno stored_seqno stored_subwallet public_key
+   s3 s2 XCPU EQUAL 33 THROWIFNOT	//  signature in_msg subwallet_id cs public_key stored_seqno stored_subwallet
+   s4 s4 XCPU EQUAL 34 THROWIFNOT	//  signature in_msg stored_subwallet cs public_key stored_seqno
+   s0 s4 XCHG HASHSU	//  signature stored_seqno stored_subwallet cs public_key msg_hash
+   s0 s5 s5 XC2PU	//  public_key stored_seqno stored_subwallet cs msg_hash signature public_key
+   CHKSIGNU 35 THROWIFNOT	//  public_key stored_seqno stored_subwallet cs
+   ACCEPT
+   WHILE:<{
+     DUP SREFS	//  public_key stored_seqno stored_subwallet cs _51
+   }>DO<{	//  public_key stored_seqno stored_subwallet cs
+     8 LDU LDREF s0 s2 XCHG	//  public_key stored_seqno stored_subwallet cs _56 mode
+     SENDRAWMSG
+   }>	//  public_key stored_seqno stored_subwallet cs
+   ENDS SWAP INC	//  public_key stored_subwallet seqno'
+   NEWC 32 STU 32 STU 256 STU ENDC c4 POP
+}>c // >libref
+// code
+<b 0 32 u, subwallet-id 32 u,
+   file-base +".pk" load-generate-keypair
+   constant wallet_pk
+   B, 
+b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new wallet address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b subwallet-id 32 u, -1 32 i, 0 32 u, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint rot
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved wallet creating query to file " type .")" cr

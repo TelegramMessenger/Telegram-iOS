@@ -207,6 +207,7 @@ set(SMC_ENVELOPE_SOURCE
   smc-envelope/TestGiver.cpp
   smc-envelope/TestWallet.cpp
   smc-envelope/Wallet.cpp
+  smc-envelope/WalletV3.cpp
 
   smc-envelope/GenericAccount.h
   smc-envelope/MultisigWallet.h
@@ -215,6 +216,7 @@ set(SMC_ENVELOPE_SOURCE
   smc-envelope/TestGiver.h
   smc-envelope/TestWallet.h
   smc-envelope/Wallet.h
+  smc-envelope/WalletV3.h
 )
 
 set(ED25519_TEST_SOURCE
@@ -350,6 +352,7 @@ if (NOT CMAKE_CROSSCOMPILING)
 
   GenFif(DEST smartcont/auto/config-code SOURCE smartcont/config-code.fc NAME config)
   GenFif(DEST smartcont/auto/wallet-code SOURCE smartcont/wallet-code.fc NAME wallet)
+  GenFif(DEST smartcont/auto/wallet3-code SOURCE smartcont/wallet3-code.fc NAME wallet3)
   GenFif(DEST smartcont/auto/simple-wallet-code SOURCE smartcont/simple-wallet-code.fc NAME simple-wallet)
   GenFif(DEST smartcont/auto/highload-wallet-code SOURCE smartcont/highload-wallet-code.fc NAME highload-wallet)
   GenFif(DEST smartcont/auto/highload-wallet-v2-code SOURCE smartcont/highload-wallet-v2-code.fc NAME highoad-wallet-v2)

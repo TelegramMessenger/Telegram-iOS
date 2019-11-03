@@ -19,6 +19,7 @@
 
 #include "block/block.h"
 #include "block/block-auto.h"
+#include "block/mc-config.h"
 
 #include "vm/cells.h"
 #include "vm/boc.h"
@@ -246,6 +247,17 @@ TEST(Tonlib, ParseAddres) {
   ASSERT_EQ("Uf9Tj6fMJP-OqhAdhKXxq36DL-HYSzCc3-9O6UNzqsgPfdyS", addr_str2->account_address_);
 }
 
+TEST(Tonlib, ConfigParseBug) {
+  td::Slice literal =
+      "D1000000000000006400000000000186A0DE0000000003E8000000000000000F424000000000000F42400000000000002710000000000098"
+      "96800000000005F5E100000000003B9ACA00";
+  unsigned char buff[128];
+  int bits = (int)td::bitstring::parse_bitstring_hex_literal(buff, sizeof(buff), literal.begin(), literal.end());
+  CHECK(bits >= 0);
+  auto slice = vm::CellBuilder().store_bits(td::ConstBitPtr{buff}, bits).finalize();
+  block::Config::do_get_gas_limits_prices(std::move(slice), 21).ensure();
+}
+
 TEST(Tonlib, EncryptionApi) {
   using tonlib_api::make_object;
   Client client;
@@ -296,15 +308,15 @@ TEST(Tonlib, KeysApi) {
                                                                      td::SecureString{}))
                  .move_as_ok();
 
-  sync_send(client, make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKey>(
+  sync_send(client, make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKeyRegular>(
                         make_object<tonlib_api::key>(key->public_key_, key->secret_.copy()),
                         td::SecureString("wrong password"))))
       .ensure_error();
 
-  //exportKey input_key:inputKey = ExportedKey;
+  //exportKey input_key:inputKeyRegular = ExportedKey;
   auto exported_key =
       sync_send(client,
-                make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKey>(
+                make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKeyRegular>(
                     make_object<tonlib_api::key>(key->public_key_, key->secret_.copy()), local_password.copy())))
           .move_as_ok();
   LOG(ERROR) << to_string(exported_key);
@@ -316,20 +328,20 @@ TEST(Tonlib, KeysApi) {
     return word_list_copy;
   };
 
-  //changeLocalPassword input_key:inputKey new_local_password:bytes = Key;
+  //changeLocalPassword input_key:inputKeyRegular new_local_password:bytes = Key;
   auto new_key =
       sync_send(client,
                 make_object<tonlib_api::changeLocalPassword>(
-                    make_object<tonlib_api::inputKey>(
+                    make_object<tonlib_api::inputKeyRegular>(
                         make_object<tonlib_api::key>(key->public_key_, key->secret_.copy()), local_password.copy()),
                     td::SecureString("tmp local password")))
           .move_as_ok();
   sync_send(client,
-            make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKey>(
+            make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKeyRegular>(
                 make_object<tonlib_api::key>(key->public_key_, new_key->secret_.copy()), local_password.copy())))
       .ensure_error();
 
-  auto exported_key2 = sync_send(client, make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKey>(
+  auto exported_key2 = sync_send(client, make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKeyRegular>(
                                              make_object<tonlib_api::key>(key->public_key_, new_key->secret_.copy()),
                                              td::SecureString("tmp local password"))))
                            .move_as_ok();
@@ -347,7 +359,7 @@ TEST(Tonlib, KeysApi) {
     auto wrong_export_password = td::SecureString("wrong_export password");
     auto exported_encrypted_key =
         sync_send(client, make_object<tonlib_api::exportEncryptedKey>(
-                              make_object<tonlib_api::inputKey>(
+                              make_object<tonlib_api::inputKeyRegular>(
                                   make_object<tonlib_api::key>(key->public_key_, new_key->secret_.copy()),
                                   td::SecureString("tmp local password")),
                               export_password.copy()))
@@ -392,12 +404,12 @@ TEST(Tonlib, KeysApi) {
   CHECK(imported_key->public_key_ == key->public_key_);
   CHECK(imported_key->secret_ != key->secret_);
 
-  //exportPemKey input_key:inputKey key_password:bytes = ExportedPemKey;
+  //exportPemKey input_key:inputKeyRegular key_password:bytes = ExportedPemKey;
   auto pem_password = td::SecureString("pem password");
   auto r_exported_pem_key = sync_send(
       client,
       make_object<tonlib_api::exportPemKey>(
-          make_object<tonlib_api::inputKey>(
+          make_object<tonlib_api::inputKeyRegular>(
               make_object<tonlib_api::key>(key->public_key_, imported_key->secret_.copy()), new_local_password.copy()),
           pem_password.copy()));
   if (r_exported_pem_key.is_error() && r_exported_pem_key.error().message() == "INTERNAL Not supported") {

@@ -1437,6 +1437,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
+            
+            if case .format = self.inputMenu.state {
+                self.inputMenu.deactivate()
+                UIMenuController.shared.update()
+            }
+            
             let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
         }
@@ -1478,7 +1484,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func _showTextStyleOptions(_ sender: Any) {
-        self.inputMenu.format()
+        if let textInputNode = self.textInputNode {
+            self.inputMenu.format(view: textInputNode.view, rect: textInputNode.selectionRect.insetBy(dx: 0.0, dy: -1.0))
+        }
     }
     
     @objc func formatAttributesBold(_ sender: Any) {

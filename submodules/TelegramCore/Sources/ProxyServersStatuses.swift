@@ -1,15 +1,6 @@
 import Foundation
-#if os(macOS)
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-#else
-    import SwiftSignalKit
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-#endif
+import SwiftSignalKit
+import MtProtoKit
 
 import SyncCore
 

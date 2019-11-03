@@ -1,6 +1,0 @@
-[
-  "^plans/",
-  "^docs/",
-  "^CI/exclude-from-build.json$",
-  "^**/*.md$"
-]

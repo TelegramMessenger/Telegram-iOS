@@ -520,10 +520,10 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             }
             var dimensions = dimensions
             if let boundingWidth = boundingWidth {
-                dimensions = dimensions.fittedToWidthOrSmaller(boundingWidth)
+                dimensions = PixelDimensions(dimensions.cgSize.fittedToWidthOrSmaller(boundingWidth))
             }
             let extentBuffer = UnsafeMutablePointer<RunStruct>.allocate(capacity: 1)
-            extentBuffer.initialize(to: RunStruct(ascent: 0.0, descent: 0.0, width: dimensions.width))
+            extentBuffer.initialize(to: RunStruct(ascent: 0.0, descent: 0.0, width: dimensions.cgSize.width))
             var callbacks = CTRunDelegateCallbacks(version: kCTRunDelegateVersion1, dealloc: { (pointer) in
             }, getAscent: { (pointer) -> CGFloat in
                 let d = pointer.assumingMemoryBound(to: RunStruct.self)

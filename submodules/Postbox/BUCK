@@ -3,14 +3,14 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "Postbox",
     srcs = glob([
-        "Postbox/*.swift",
-        "Postbox/*.m",
+        "Sources/*.swift",
+        "Sources/*.m",
     ]),
     headers = [
-        "Postbox/MurMurHash32.h",
+        "Sources/MurMurHash32.h",
     ],
     exported_headers = [
-        "Postbox/MurMurHash32.h",
+        "Sources/MurMurHash32.h",
     ],
     deps = [
     	"//submodules/Crc32:Crc32",

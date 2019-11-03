@@ -273,7 +273,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     if let type = webpage.type, ["photo", "video", "embed", "gif", "document", "telegram_album"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
-                            if largest.dimensions.width >= 256.0 {
+                            if largest.dimensions.width >= 256 {
                                 flags.insert(.preferMediaBeforeText)
                             }
                         } else if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {

@@ -7,11 +7,8 @@
 //
 
 #import <Foundation/Foundation.h>
-#if TARGET_OS_IOS
 #import <libphonenumber/NBPhoneNumberDefines.h>
-#else
-#import <libphonenumbermac/NBPhoneNumberDefines.h>
-#endif
+
 
 @class NBPhoneMetaData, NBPhoneNumber;
 

@@ -1,14 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-#else
-    import Postbox
-    import SwiftSignalKit
-    import MtProtoKit
-#endif
-
+import Postbox
+import SwiftSignalKit
+import MtProtoKit
 import SyncCore
 
 public func updateLoggingSettings(accountManager: AccountManager, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {

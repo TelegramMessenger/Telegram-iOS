@@ -339,6 +339,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var dismissInputImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -506,6 +507,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                 }
             }, pushController: { c in
                 pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
             })
         }
         
@@ -536,6 +539,9 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {

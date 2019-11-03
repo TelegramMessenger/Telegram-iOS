@@ -566,6 +566,15 @@
   _textKitComponents.textView.selectedRange = selectedRange;
 }
 
+- (CGRect)selectionRect {
+    UITextRange *range = [_textKitComponents.textView selectedTextRange];
+    if (range != nil) {
+        return [_textKitComponents.textView firstRectForRange:range];
+    } else {
+        return [_textKitComponents.textView bounds];
+    }
+}
+
 #pragma mark - Placeholder
 - (BOOL)isDisplayingPlaceholder
 {

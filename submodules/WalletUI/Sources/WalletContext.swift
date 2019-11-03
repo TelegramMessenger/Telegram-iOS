@@ -8,6 +8,10 @@ public enum WalletContextGetServerSaltError {
     case generic
 }
 
+public enum WalletDownloadFileError {
+    case generic
+}
+
 public protocol WalletContext {
     var storage: WalletStorageInterface { get }
     var tonInstance: TonInstance { get }
@@ -21,6 +25,9 @@ public protocol WalletContext {
     var inForeground: Signal<Bool, NoError> { get }
     
     func getServerSalt() -> Signal<Data, WalletContextGetServerSaltError>
+    func downloadFile(url: URL) -> Signal<Data, WalletDownloadFileError>
+    
+    func updateResolvedWalletConfiguration(source: LocalWalletConfigurationSource, blockchainName: String, resolvedValue: String) -> Signal<Never, NoError>
     
     func presentNativeController(_ controller: UIViewController)
     

@@ -1,8 +1,7 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-#else
 import SwiftSignalKit
+import MtProtoKit
+#if os(iOS)
 import CoreTelephony
 #endif
 

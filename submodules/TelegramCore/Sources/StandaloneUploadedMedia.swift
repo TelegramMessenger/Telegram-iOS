@@ -1,14 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import TelegramApi
-    import Postbox
-    import SwiftSignalKit
-    import UIKit
-#endif
+import TelegramApi
+import Postbox
+import SwiftSignalKit
 
 import SyncCore
 
@@ -60,7 +53,7 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, data: Data) -
     }
 }
 
-public func standaloneUploadedImage(account: Account, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: CGSize) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
+public func standaloneUploadedImage(account: Account, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
     return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in

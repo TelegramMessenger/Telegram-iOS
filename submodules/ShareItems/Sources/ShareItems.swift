@@ -53,9 +53,10 @@ private func scalePhotoImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
 
 private func preparedShareItem(account: Account, to peerId: PeerId, value: [String: Any]) -> Signal<PreparedShareItem, Void> {
     if let imageData = value["scaledImageData"] as? Data, let dimensions = value["scaledImageDimensions"] as? NSValue {
+        let diminsionsSize = dimensions.cgSizeValue
         return .single(.preparing)
         |> then(
-            standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: dimensions.cgSizeValue)
+            standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(diminsionsSize.width), height: Int32(diminsionsSize.height)))
             |> mapError { _ -> Void in
                 return Void()
             }
@@ -73,7 +74,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         let dimensions = nativeImageSize.fitted(CGSize(width: 1280.0, height: 1280.0))
         if let scaledImage = scalePhotoImage(image, dimensions: dimensions), let imageData = scaledImage.jpegData(compressionQuality: 0.52) {
             return .single(.preparing)
-                |> then(standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: dimensions)
+                |> then(standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)))
                 |> mapError { _ -> Void in
                     return Void()
                 }
@@ -126,7 +127,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         }
         
         let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: finalDimensions, flags: flags)], hintFileIsLarge: finalDuration > 3.0 * 60.0)
+        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: finalDuration > 3.0 * 60.0)
         |> mapError { _ -> Void in
             return Void()
         }
@@ -180,10 +181,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                     let mimeType: String
                     if converted {
                         mimeType = "video/mp4"
-                        attributes = [.Video(duration: Int(duration), size: dimensions, flags: [.supportsStreaming]), .Animated, .FileName(fileName: "animation.mp4")]
+                        attributes = [.Video(duration: Int(duration), size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)), flags: [.supportsStreaming]), .Animated, .FileName(fileName: "animation.mp4")]
                     } else {
                         mimeType = "animation/gif"
-                        attributes = [.ImageSize(size: dimensions), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
+                        attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
                     }
                     return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 5 * 1024 * 1024)
                     |> mapError { _ -> Void in return Void() }
@@ -199,7 +200,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             } else {
                 let scaledImage = TGScaleImageToPixelSize(image, CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale).fitted(CGSize(width: 1280.0, height: 1280.0)))!
                 let imageData = scaledImage.jpegData(compressionQuality: 0.54)!
-                return standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: scaledImage.size)
+                return standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(scaledImage.size.width), height: Int32(scaledImage.size.height)))
                 |> mapError { _ -> Void in return Void() }
                 |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                     switch event {

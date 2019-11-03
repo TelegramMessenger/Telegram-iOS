@@ -6,7 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NotificationServiceImpl : NSObject
 
-- (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage isLocked:(bool (^)(NSString *))isLocked lockedMessageText:(NSString *(^)(NSString *))lockedMessageText;
+- (instancetype)initWithSerialDispatch:(void (^)(dispatch_block_t))serialDispatch countIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage isLocked:(bool (^)(NSString *))isLocked lockedMessageText:(NSString *(^)(NSString *))lockedMessageText;
 
 - (void)updateUnreadCount:(int32_t)unreadCount;
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler;

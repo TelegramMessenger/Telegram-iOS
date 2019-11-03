@@ -1,18 +1,11 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    import SwiftSignalKit
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
+
+import Postbox
+import TelegramApi
+import SwiftSignalKit
+import MtProtoKit
+
+#if os(iOS)
     import CloudData
 #endif
 
@@ -423,8 +416,9 @@ public struct NetworkInitializationArguments {
         self.encryptionProvider = encryptionProvider
     }
 }
-
+#if os(iOS)
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
+#endif
 
 func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in

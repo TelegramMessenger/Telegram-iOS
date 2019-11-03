@@ -98,7 +98,7 @@ struct Key {
   std::string public_key;
   td::SecureString secret;
   tonlib_api::object_ptr<tonlib_api::InputKey> get_input_key() const {
-    return tonlib_api::make_object<tonlib_api::inputKey>(
+    return tonlib_api::make_object<tonlib_api::inputKeyRegular>(
         tonlib_api::make_object<tonlib_api::key>(public_key, secret.copy()), td::SecureString("local"));
   }
   tonlib_api::object_ptr<tonlib_api::InputKey> get_fake_input_key() const {
@@ -133,9 +133,11 @@ void sync(Client& client) {
   sync_send(client, make_object<tonlib_api::sync>()).ensure();
 }
 
+static td::uint32 default_wallet_id{0};
 std::string wallet_address(Client& client, const Key& key) {
-  return sync_send(client, make_object<tonlib_api::wallet_getAccountAddress>(
-                               make_object<tonlib_api::wallet_initialAccountState>(key.public_key)))
+  return sync_send(client,
+                   make_object<tonlib_api::wallet_v3_getAccountAddress>(
+                       make_object<tonlib_api::wallet_v3_initialAccountState>(key.public_key, default_wallet_id)))
       .move_as_ok()
       ->account_address_;
 }
@@ -171,6 +173,7 @@ AccountState get_account_state(Client& client, std::string address) {
     case tonlib_api::generic_accountStateUninited::ID:
       res.type = AccountState::Empty;
       break;
+    case tonlib_api::generic_accountStateWalletV3::ID:
     case tonlib_api::generic_accountStateWallet::ID:
       res.type = AccountState::Wallet;
       break;
@@ -358,8 +361,9 @@ Wallet create_empty_wallet(Client& client) {
   Wallet wallet{"", {key->public_key_, std::move(key->secret_)}};
 
   auto account_address =
-      sync_send(client, make_object<tonlib_api::wallet_getAccountAddress>(
-                            make_object<tonlib_api::wallet_initialAccountState>(wallet.key.public_key)))
+      sync_send(client,
+                make_object<tonlib_api::wallet_v3_getAccountAddress>(
+                    make_object<tonlib_api::wallet_v3_initialAccountState>(wallet.key.public_key, default_wallet_id)))
           .move_as_ok();
 
   wallet.address = account_address->account_address_;
@@ -462,29 +466,31 @@ void test_multisig(Client& client, const Wallet& giver_wallet) {
   transfer_grams(client, giver_wallet, address, 1 * Gramm).ensure();
   auto init_state = ms->get_init_state();
 
-  // Just transfer all (some) money back in one query
-  vm::CellBuilder icb;
-  ton::GenericAccount::store_int_message(icb, block::StdAddress::parse(giver_wallet.address).move_as_ok(),
-                                         5 * Gramm / 10);
-  icb.store_bytes("\0\0\0\0", 4);
-  vm::CellString::store(icb, "Greatings from multisig", 35 * 8).ensure();
-  ton::MultisigWallet::QueryBuilder qb(-1, icb.finalize());
-  for (int i = 0; i < k - 1; i++) {
-    qb.sign(i, private_keys[i]);
+  for (int i = 0; i < 2; i++) {
+    // Just transfer all (some) money back in one query
+    vm::CellBuilder icb;
+    ton::GenericAccount::store_int_message(icb, block::StdAddress::parse(giver_wallet.address).move_as_ok(), 1);
+    icb.store_bytes("\0\0\0\0", 4);
+    vm::CellString::store(icb, "Greatings from multisig", 35 * 8).ensure();
+    ton::MultisigWallet::QueryBuilder qb(-1 - i, icb.finalize());
+    for (int i = 0; i < k - 1; i++) {
+      qb.sign(i, private_keys[i]);
+    }
+
+    auto query_id =
+        create_raw_query(client, address,
+                         i == 0 ? vm::std_boc_serialize(ms->get_state().code).move_as_ok().as_slice().str() : "",
+                         i == 0 ? vm::std_boc_serialize(ms->get_state().data).move_as_ok().as_slice().str() : "",
+                         vm::std_boc_serialize(qb.create(k - 1, private_keys[k - 1])).move_as_ok().as_slice().str())
+            .move_as_ok();
+    auto fees = query_estimate_fees(client, query_id);
+
+    LOG(INFO) << "Expected src fees: " << fees.first;
+    LOG(INFO) << "Expected dst fees: " << fees.second;
+    auto a_state = get_account_state(client, address);
+    query_send(client, query_id);
+    auto new_a_state = wait_state_change(client, a_state, a_state.sync_utime + 30).move_as_ok();
   }
-
-  auto query_id =
-      create_raw_query(client, address, vm::std_boc_serialize(ms->get_state().code).move_as_ok().as_slice().str(),
-                       vm::std_boc_serialize(ms->get_state().data).move_as_ok().as_slice().str(),
-                       vm::std_boc_serialize(qb.create(k - 1, private_keys[k - 1])).move_as_ok().as_slice().str())
-          .move_as_ok();
-  auto fees = query_estimate_fees(client, query_id);
-
-  LOG(INFO) << "Expected src fees: " << fees.first;
-  LOG(INFO) << "Expected dst fees: " << fees.second;
-  auto a_state = get_account_state(client, address);
-  query_send(client, query_id);
-  auto new_a_state = wait_state_change(client, a_state, a_state.sync_utime + 30).move_as_ok();
 }
 
 int main(int argc, char* argv[]) {
@@ -515,8 +521,8 @@ int main(int argc, char* argv[]) {
 
   if (reset_keystore_dir) {
     td::rmrf(keystore_dir).ignore();
-    td::mkdir(keystore_dir).ensure();
   }
+  td::mkdir(keystore_dir).ensure();
 
   SET_VERBOSITY_LEVEL(VERBOSITY_NAME(INFO));
   static_send(make_object<tonlib_api::setLogTagVerbosityLevel>("tonlib_query", 4)).ensure();
@@ -527,6 +533,10 @@ int main(int argc, char* argv[]) {
 
   Client client;
   {
+    auto info = sync_send(client, make_object<tonlib_api::options_validateConfig>(
+                                      make_object<tonlib_api::config>(global_config_str, "", false, false)))
+                    .move_as_ok();
+    default_wallet_id = static_cast<td::uint32>(info->default_wallet_id_);
     sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
                           make_object<tonlib_api::config>(global_config_str, "", false, false),
                           make_object<tonlib_api::keyStoreTypeDirectory>(keystore_dir))))

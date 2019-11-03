@@ -113,14 +113,23 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface TONValidatedConfig : NSObject
+
+@property (nonatomic, readonly) int64_t defaultWalletId;
+
+- (instancetype)initWithDefaultWalletId:(int64_t)defaultWalletId;
+
+@end
+
 @interface TON : NSObject
 
 - (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest enableExternalRequests:(bool)enableExternalRequests syncStateUpdated:(void (^)(float))syncStateUpdated;
 
 - (SSignal *)updateConfig:(NSString *)config blockchainName:(NSString *)blockchainName;
+- (SSignal *)validateConfig:(NSString *)config blockchainName:(NSString *)blockchainName;
 
 - (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
-- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey initialWalletId:(int64_t)initialWalletId;
 - (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
 - (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
 - (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout;

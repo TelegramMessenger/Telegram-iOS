@@ -9,7 +9,7 @@ get_filename_component(TON_REAL_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" REALPAT
 get_filename_component(TON_REAL_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" REALPATH)
 
 if (TON_REAL_BINARY_DIR STREQUAL TON_REAL_SOURCE_DIR)
-  message("  Out-of-source build should be used to build TDLib.")
+  message("  Out-of-source build should be used to build TON.")
   message("  You need to remove the files already created by CMake and")
   message("  rerun CMake from a new directory:")
   message("  rm -rf CMakeFiles CMakeCache.txt")
@@ -341,7 +341,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   if (TDUTILS_MIME_TYPE)
     set(TDMIME_AUTO tdmime_auto)
   endif()
-  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_common tlb_generate_block ${TDMIME_AUTO})
+  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_common tlb_generate_block gen_fif ${TDMIME_AUTO})
 endif()
 
 #TESTS

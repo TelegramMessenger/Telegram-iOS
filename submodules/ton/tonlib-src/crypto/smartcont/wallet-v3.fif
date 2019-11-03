@@ -1,0 +1,50 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base> <dest-addr> <subwallet_id> <seqno> <amount> [-B <body-boc>] [<savefile>]" cr
+  ."Creates a request to advanced wallet created by new-wallet-v3.fif, with private key loaded from file <filename-base>.pk "
+  ."and address from <filename-base>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)" cr 1 halt
+} : usage
+def? $7 { @' $6 "-B" $= { @' $7 =: body-boc-file [forget] $7 def? $8 { @' $8 =: $6 [forget] $8 } { [forget] $6 } cond
+  @' $# 2- =: $# } if } if
+$# dup 5 < swap 6 > or ' usage if
+
+true constant bounce
+
+$1 =: file-base
+$2 bounce parse-load-address =: bounce 2=: dest_addr
+$3 parse-int =: subwallet_id
+$4 parse-int =: seqno
+$5 $>GR =: amount
+def? $6 { @' $6 } { "wallet-query" } cond constant savefile
+3 constant send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
+60 constant timeout   // external message expires in 60 seconds
+
+file-base +".addr" load-address
+2dup 2constant wallet_addr
+."Source wallet address = " 2dup .addr cr 6 .Addr cr
+file-base +".pk" load-keypair nip constant wallet_pk
+
+def? body-boc-file { @' body-boc-file file>B B>boc } { <b 0 32 u, "TESTv3" $, b> } cond
+constant body-cell
+
+."Transferring " amount .GR ."to account "
+dest_addr 2dup bounce 7 + .Addr ." = " .addr 
+."subwallet_id=0x" subwallet_id x.
+."seqno=0x" seqno x. ."bounce=" bounce . cr
+."Body of transfer message is " body-cell <s csr. cr
+  
+// create a message
+<b b{01} s, bounce 1 i, b{000100} s, dest_addr addr, amount Gram, 0 9 64 32 + + 1+ u, 
+  body-cell <s 2dup s-fits? not rot over 1 i, -rot { drop body-cell ref, } { s, } cond
+b>
+<b subwallet_id 32 u, now timeout + 32 u, seqno 32 u, send-mode 8 u, swap ref, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint
+<b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
+   swap B, swap <s s, b>
+dup ."resulting external message: " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile +".boc" tuck B>file
+."Query expires in " timeout . ."seconds" cr
+."(Saved to file " type .")" cr

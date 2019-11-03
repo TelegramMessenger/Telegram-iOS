@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-    import SwiftSignalKitMac
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import SwiftSignalKit
-    import Postbox
-    import TelegramApi
-#endif
+import SwiftSignalKit
+import Postbox
+import TelegramApi
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 

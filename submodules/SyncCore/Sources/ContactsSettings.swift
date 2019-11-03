@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public struct ContactsSettings: Equatable, PreferencesEntry {
     public var synchronizeContacts: Bool

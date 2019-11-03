@@ -60,13 +60,13 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         switch self.thumbnail {
             case let .image(imageReference):
                 if let representation = largestImageRepresentation(imageReference.media.representations) {
-                    return (mediaGridMessagePhoto(account: self.account, photoReference: imageReference), representation.dimensions)
+                    return (mediaGridMessagePhoto(account: self.account, photoReference: imageReference), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
             case let .video(fileReference):
                 if let representation = largestImageRepresentation(fileReference.media.previewRepresentations) {
-                    return (mediaGridMessageVideo(postbox: self.account.postbox, videoReference: fileReference), representation.dimensions)
+                    return (mediaGridMessageVideo(postbox: self.account.postbox, videoReference: fileReference), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
@@ -220,10 +220,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate func setImage(imageReference: ImageMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
-                let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
+                let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize.dimensions, self.imageNode)
+                self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
                 
                 self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: imageReference.resourceReference(largestSize.resource)).start())
                 self.setupStatus(resource: largestSize.resource)
@@ -237,18 +237,18 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     func setFile(context: AccountContext, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
-                var displaySize = largestSize.dividedByScreenScale()
+                var displaySize = largestSize.cgSize.dividedByScreenScale()
                 if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
-                    let previewAspect = previewDimensions.width / previewDimensions.height
+                    let previewAspect = CGFloat(previewDimensions.width) / CGFloat(previewDimensions.height)
                     let aspect = displaySize.width / displaySize.height
                     if abs(previewAspect - 1.0 / aspect) < 0.1 {
                         displaySize = CGSize(width: displaySize.height, height: displaySize.width)
-                        largestSize = CGSize(width: largestSize.height, height: largestSize.width)
+                        largestSize = PixelDimensions(width: largestSize.height, height: largestSize.width)
                     }
                 }
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize, self.imageNode)
+                self.zoomableContent = (largestSize.cgSize, self.imageNode)
                 self.setupStatus(resource: fileReference.media.resource)
             } else {
                 self._ready.set(.single(Void()))

@@ -124,6 +124,14 @@ final class WalletContextImpl: WalletContext {
         return self.context.sharedContext.applicationBindings.applicationInForeground
     }
     
+    func downloadFile(url: URL) -> Signal<Data, WalletDownloadFileError> {
+        return .fail(.generic)
+    }
+    
+    func updateResolvedWalletConfiguration(source: LocalWalletConfigurationSource, blockchainName: String, resolvedValue: String) -> Signal<Never, NoError> {
+        return .complete()
+    }
+    
     init(context: AccountContext, tonContext: TonContext) {
         self.context = context
         

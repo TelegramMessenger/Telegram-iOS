@@ -57,7 +57,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let textSpacing: CGFloat = 10.0
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
             
-            let imageSize = dimensitons.aspectFitted(boundingSize)
+            let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: (layout.size.height - imageSize.height - textSpacing - textSize.height) / 4.0), size: imageSize)
             self.imageNode.frame = imageFrame

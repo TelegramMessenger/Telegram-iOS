@@ -288,7 +288,7 @@ std::string wycheproof_ed25519() {
           "sig" : "7c38e026f29e14aabd059a0f2db8b0cd783040609a8be684db12f82a27774ab07a9155711ecfaf7f99f277bad0c6ae7e39d4eef676573336a5c51eb6f946b30d2020",
           "result" : "invalid",
           "flags" : []
-        },
+        },)abcd" R"abcd(
         {
           "tcId" : 34,
           "comment" : "include pk in signature",
@@ -570,7 +570,7 @@ std::string wycheproof_ed25519() {
           "flags" : [
             "SignatureMalleability"
           ]
-        },
+        },)abcd" R"abcd(
         {
           "tcId" : 68,
           "comment" : "checking malleability ",
@@ -858,7 +858,7 @@ std::string wycheproof_ed25519() {
           "flags" : []
         }
       ]
-    },
+    },)abcd" R"abcd(
     {
       "key" : {
         "curve" : "edwards25519",

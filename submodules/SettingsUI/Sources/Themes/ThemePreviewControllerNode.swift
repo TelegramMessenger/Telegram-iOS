@@ -204,8 +204,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             if case let .file(file) = wallpaper {
-                let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                let displaySize = dimensions.dividedByScreenScale().integralFloor
+                let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
+                let displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
 
                 var convertedRepresentations: [ImageRepresentationWithReference] = []
                 for representation in file.file.previewRepresentations {

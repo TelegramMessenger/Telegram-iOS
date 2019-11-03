@@ -91,16 +91,16 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let image = media as? TelegramMediaImage {
                         updatedMediaReference = .message(message: MessageReference(message), media: image)
                         if let representation = largestRepresentationForPhoto(image) {
-                            imageDimensions = representation.dimensions
+                            imageDimensions = representation.dimensions.cgSize
                         }
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {
-                            imageDimensions = dimensions
+                            imageDimensions = dimensions.cgSize
                         } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
-                            imageDimensions = representation.dimensions
+                            imageDimensions = representation.dimensions.cgSize
                         }
                         if file.isInstantVideo {
                             hasRoundImage = true

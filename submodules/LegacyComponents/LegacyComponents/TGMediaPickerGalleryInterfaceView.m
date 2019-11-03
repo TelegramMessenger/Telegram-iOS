@@ -64,6 +64,7 @@
     
     TGModernButton *_muteButton;
     TGCheckButtonView *_checkButton;
+    bool _ignoreSetSelected;
     TGMediaPickerPhotoCounterButton *_photoCounterButton;
     TGMediaPickerGroupButton *_groupButton;
     TGMediaPickerCameraButton *_cameraButton;
@@ -531,7 +532,9 @@
         if ([_currentItem conformsToProtocol:@protocol(TGModernGallerySelectableItem)])
             selectableItem = ((id<TGModernGallerySelectableItem>)_currentItem).selectableMediaItem;
         
-        [_checkButton setSelected:[_selectionContext isItemSelected:selectableItem] animated:false];
+        if (!_ignoreSetSelected) {
+            [_checkButton setSelected:[_selectionContext isItemSelected:selectableItem] animated:false];
+        }
         [_checkButton setNumber:[_selectionContext indexOfItem:selectableItem]];
         signal = [_selectionContext itemInformativeSelectedSignal:selectableItem];
         [_itemSelectedDisposable setDisposable:[signal startWithNext:^(TGMediaSelectionChange *next)
@@ -669,15 +672,17 @@
     if ([_currentItem conformsToProtocol:@protocol(TGModernGallerySelectableItem)])
         selectableItem = ((id<TGModernGallerySelectableItem>)_currentItem).selectableMediaItem;
     
-    [_checkButton setSelected:!_checkButton.selected animated:true];
+    _ignoreSetSelected = true;
     
     if (selectableItem != nil) {
-        [_selectionContext setItem:selectableItem selected:_checkButton.selected animated:animated sender:_checkButton];
+        [_selectionContext setItem:selectableItem selected:!_checkButton.selected animated:animated sender:_checkButton];
         bool value = [_selectionContext isItemSelected:selectableItem];
-        if (value != _checkButton.selected) {
-            [_checkButton setSelected:value animated:true];
-        }
+        [_checkButton setSelected:value animated:true];
+    } else {
+        [_checkButton setSelected:!_checkButton.selected animated:true];
     }
+    
+    _ignoreSetSelected = false;
 }
 
 - (void)photoCounterButtonPressed

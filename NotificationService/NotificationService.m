@@ -51,6 +51,7 @@ static void reportMemory() {
 #endif
 
 @interface NotificationServiceImpl () {
+    void (^_serialDispatch)(dispatch_block_t);
     void (^_countIncomingMessage)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t);
     
     NSString * _Nullable _rootPath;
@@ -70,13 +71,14 @@ static void reportMemory() {
 
 @implementation NotificationServiceImpl
 
-- (instancetype)initWithCountIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage isLocked:(nonnull bool (^)(NSString * _Nonnull))isLocked lockedMessageText:(NSString *(^)(NSString *))lockedMessageText {
+- (instancetype)initWithSerialDispatch:(void (^)(dispatch_block_t))serialDispatch countIncomingMessage:(void (^)(NSString *, int64_t, DeviceSpecificEncryptionParameters *, int64_t, int32_t))countIncomingMessage isLocked:(nonnull bool (^)(NSString * _Nonnull))isLocked lockedMessageText:(NSString *(^)(NSString *))lockedMessageText {
     self = [super init];
     if (self != nil) {
         #if DEBUG
         reportMemory();
         #endif
         
+        _serialDispatch = [serialDispatch copy];
         _countIncomingMessage = [countIncomingMessage copy];
         
         NSString *appBundleIdentifier = [NSBundle mainBundle].bundleIdentifier;
@@ -127,27 +129,32 @@ static void reportMemory() {
     reportMemory();
     #endif
     
-    #ifdef __IPHONE_13_0
-    if (_baseAppBundleId != nil) {
-        BGAppRefreshTaskRequest *request = [[BGAppRefreshTaskRequest alloc] initWithIdentifier:[_baseAppBundleId stringByAppendingString:@".refresh"]];
-        request.earliestBeginDate = nil;
-        NSError *error = nil;
-        [[BGTaskScheduler sharedScheduler] submitTaskRequest:request error:&error];
-        if (error != nil) {
-            NSLog(@"Error: %@", error);
-        }
-    }
-    #endif
+    NSString *baseAppBundleId = _baseAppBundleId;
+    void (^contentHandler)(UNNotificationContent *) = [_contentHandler copy];
+    UNMutableNotificationContent *bestAttemptContent = _bestAttemptContent;
+    NSNumber *updatedUnreadCount = updatedUnreadCount;
     
-    if (_bestAttemptContent && _contentHandler) {
-        if (_updatedUnreadCount != nil) {
-            int32_t unreadCount = (int32_t)[_updatedUnreadCount intValue];
-            if (unreadCount > 0) {
-                _bestAttemptContent.badge = @(unreadCount);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        #ifdef __IPHONE_13_0
+        if (baseAppBundleId != nil && false) {
+            BGAppRefreshTaskRequest *request = [[BGAppRefreshTaskRequest alloc] initWithIdentifier:[baseAppBundleId stringByAppendingString:@".refresh"]];
+            request.earliestBeginDate = nil;
+            NSError *error = nil;
+            [[BGTaskScheduler sharedScheduler] submitTaskRequest:request error:&error];
+            if (error != nil) {
+                NSLog(@"Error: %@", error);
             }
         }
-        _contentHandler(_bestAttemptContent);
-    }
+        #endif
+        
+        if (updatedUnreadCount != nil) {
+            int32_t unreadCount = (int32_t)[updatedUnreadCount intValue];
+            if (unreadCount > 0) {
+                bestAttemptContent.badge = @(unreadCount);
+            }
+        }
+        contentHandler(bestAttemptContent);
+    });
 }
 
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler {
@@ -219,13 +226,16 @@ static void reportMemory() {
             silent = [silentString intValue] != 0;
         }
         
-        NSString *attachmentDataString = decryptedPayload[@"attachb64"];
         NSData *attachmentData = nil;
         id parsedAttachment = nil;
-        if ([attachmentDataString isKindOfClass:[NSString class]]) {
-            attachmentData = parseBase64(attachmentDataString);
-            if (attachmentData != nil) {
-                parsedAttachment = parseAttachment(attachmentData);
+        
+        if (_isLockedValue) {
+            NSString *attachmentDataString = decryptedPayload[@"attachb64"];
+            if ([attachmentDataString isKindOfClass:[NSString class]]) {
+                attachmentData = parseBase64(attachmentDataString);
+                if (attachmentData != nil) {
+                    parsedAttachment = parseAttachment(attachmentData);
+                }
             }
         }
         
@@ -317,11 +327,12 @@ static void reportMemory() {
                 }
                 _bestAttemptContent.title = title;
                 if (_isLockedValue) {
+                    _bestAttemptContent.title = @"";
                     _bestAttemptContent.subtitle = @"";
                     if (_lockedMessageTextValue != nil) {
                         _bestAttemptContent.body = _lockedMessageTextValue;
                     } else {
-                        _bestAttemptContent.body = @"You have a new message";
+                        _bestAttemptContent.body = @"^You have a new message";
                     }
                 } else {
                     _bestAttemptContent.subtitle = subtitle;
@@ -334,44 +345,52 @@ static void reportMemory() {
                     if (_lockedMessageTextValue != nil) {
                         _bestAttemptContent.body = _lockedMessageTextValue;
                     } else {
-                        _bestAttemptContent.body = @"You have a new message";
+                        _bestAttemptContent.body = @"^You have a new message";
                     }
                 } else {
                     _bestAttemptContent.body = alert;
                 }
             }
             
-            NSString *threadIdString = aps[@"thread-id"];
-            if ([threadIdString isKindOfClass:[NSString class]]) {
-                _bestAttemptContent.threadIdentifier = threadIdString;
+            if (_isLockedValue) {
+                _bestAttemptContent.threadIdentifier = @"locked";
+            } else {
+                NSString *threadIdString = aps[@"thread-id"];
+                if ([threadIdString isKindOfClass:[NSString class]]) {
+                    _bestAttemptContent.threadIdentifier = threadIdString;
+                }
             }
             NSString *soundString = aps[@"sound"];
             if ([soundString isKindOfClass:[NSString class]]) {
                 _bestAttemptContent.sound = [UNNotificationSound soundNamed:soundString];
             }
-            NSString *categoryString = aps[@"category"];
-            if ([categoryString isKindOfClass:[NSString class]]) {
-                _bestAttemptContent.categoryIdentifier = categoryString;
-                if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
-                    userInfo[@"peerId"] = @(peerId);
-                    userInfo[@"messageId.namespace"] = @(0);
-                    userInfo[@"messageId.id"] = @(messageId);
-                    
-                    userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
-                    
-                    if (isExpandableMedia) {
-                        if ([categoryString isEqualToString:@"r"]) {
-                            _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
-                        } else if ([categoryString isEqualToString:@"m"]) {
-                            _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
+            if (_isLockedValue) {
+                _bestAttemptContent.categoryIdentifier = @"locked";
+            } else {
+                NSString *categoryString = aps[@"category"];
+                if ([categoryString isKindOfClass:[NSString class]]) {
+                    _bestAttemptContent.categoryIdentifier = categoryString;
+                    if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
+                        userInfo[@"peerId"] = @(peerId);
+                        userInfo[@"messageId.namespace"] = @(0);
+                        userInfo[@"messageId.id"] = @(messageId);
+                        
+                        userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
+                        
+                        if (isExpandableMedia) {
+                            if ([categoryString isEqualToString:@"r"]) {
+                                _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
+                            } else if ([categoryString isEqualToString:@"m"]) {
+                                _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
+                            }
                         }
                     }
                 }
-            }
-            
-            if (accountInfos.accounts.count > 1) {
-                if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
-                    _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                
+                if (accountInfos.accounts.count > 1) {
+                    if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
+                        _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                    }
                 }
             }
         }
@@ -402,9 +421,11 @@ static void reportMemory() {
             } else {
                 BuildConfig *buildConfig = [[BuildConfig alloc] initWithBaseAppBundleId:_baseAppBundleId];
                 
+                void (^serialDispatch)(dispatch_block_t) = _serialDispatch;
+                
                 __weak typeof(self) weakSelf = self;
                 _cancelFetch = fetchImage(buildConfig, accountInfos.proxy, account, inputFileLocation, fileDatacenterId, ^(NSData * _Nullable data) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
+                    serialDispatch(^{
                         __strong typeof(weakSelf) strongSelf = weakSelf;
                         if (strongSelf == nil) {
                             return;

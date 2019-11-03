@@ -92,7 +92,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
                     }
                 case let .internalReference(_, _, _, _, _, image, _, _):
                     if let image = image {
-                        if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
+                        if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
                             imageResource = imageRepresentation.resource
                         }
                     }
@@ -162,7 +162,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             
             let apply: () -> Void = {
                 let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), color: nil, intensity: nil)
-                let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)], settings)
+                let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource)], settings)
                 updateWallpaper(wallpaper)
                 DispatchQueue.main.async {
                     completion()

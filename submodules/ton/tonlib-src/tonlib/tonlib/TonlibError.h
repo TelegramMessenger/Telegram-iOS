@@ -28,6 +28,7 @@
 // INVALID_BAG_OF_CELLS
 // INVALID_PUBLIC_KEY
 // INVALID_QUERY_ID
+// INVALID_SMC_ID
 // INVALID_ACCOUNT_ADDRESS
 // INVALID_CONFIG
 // INVALID_PEM_KEY
@@ -69,11 +70,17 @@ struct TonlibError {
   static td::Status InvalidQueryId() {
     return td::Status::Error(400, "INVALID_QUERY_ID");
   }
+  static td::Status InvalidSmcId() {
+    return td::Status::Error(400, "INVALID_SMC_ID");
+  }
   static td::Status InvalidConfig(td::Slice reason) {
     return td::Status::Error(400, PSLICE() << "INVALID_CONFIG: " << reason);
   }
   static td::Status InvalidPemKey() {
     return td::Status::Error(400, "INVALID_PEM_KEY");
+  }
+  static td::Status NeedConfig() {
+    return td::Status::Error(400, "NeedConfig");
   }
   static td::Status MessageTooLong() {
     return td::Status::Error(400, "MESSAGE_TOO_LONG");

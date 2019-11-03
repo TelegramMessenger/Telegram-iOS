@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-import SwiftSignalKitMac
-import PostboxMac
-import TelegramApiMac
-#else
 import SwiftSignalKit
 import Postbox
 import TelegramApi
-#endif
 
 public func chatOnlineMembers(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in

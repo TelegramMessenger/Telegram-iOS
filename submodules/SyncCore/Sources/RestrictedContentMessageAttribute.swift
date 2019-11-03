@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public class RestrictedContentMessageAttribute: MessageAttribute {
     public let rules: [RestrictionRule]

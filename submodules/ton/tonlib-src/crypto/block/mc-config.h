@@ -540,6 +540,7 @@ class Config {
   static td::Result<std::unique_ptr<ValidatorSet>> unpack_validator_set(Ref<vm::Cell> valset_root);
   td::Result<std::vector<StoragePrices>> get_storage_prices() const;
   td::Result<GasLimitsPrices> get_gas_limits_prices(bool is_masterchain = false) const;
+  static td::Result<GasLimitsPrices> do_get_gas_limits_prices(td::Ref<vm::Cell> cell, int id);
   td::Result<MsgPrices> get_msg_prices(bool is_masterchain = false) const;
   static CatchainValidatorsConfig unpack_catchain_validators_config(Ref<vm::Cell> cell);
   CatchainValidatorsConfig get_catchain_validators_config() const;

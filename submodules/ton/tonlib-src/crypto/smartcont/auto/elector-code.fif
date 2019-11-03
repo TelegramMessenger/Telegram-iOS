@@ -845,7 +845,7 @@ PROGRAM{
     CONFIGOPTPARAM	//  credits members min_stake max_stake min_total_stake max_stake_factor _8
     CTOS	//  credits members min_stake max_stake min_total_stake max_stake_factor cs
     16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 cs
-    16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 _253 _252
+    16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 _258 _257
     NIP	//  credits members min_stake max_stake min_total_stake max_stake_factor _13 cs
     16 LDU	//  credits members min_stake max_stake min_total_stake max_stake_factor max_validators min_validators cs
     ENDS
@@ -910,44 +910,44 @@ PROGRAM{
     IFJMP:<{	//  credits members min_stake max_stake min_total_stake sdict min_validators n
       7 BLKDROP	//  credits
       NEWDICT	//  credits _86
-      NEWDICT	//  credits _86 _87
-      0 PUSHINT	//  credits _86 _87 _88=0
-      DUP	//  credits _86 _87 _88=0 _89=0
+      0 PUSHINT	//  credits _86 _87=0
+      NEWDICT	//  credits _86 _87=0 _88
+      s1 s1 PUSH2	//  credits _86 _87=0 _88 _89=0 _90=0
     }>	//  credits members min_stake max_stake min_total_stake sdict min_validators n
     PUSHNULL	//  credits members min_stake max_stake min_total_stake sdict min_validators n l
     UNTIL:<{
       s0 s3 XCHG
-      416 PUSHINT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _100
+      416 PUSHINT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _101
       DICTREMMIN
       NULLSWAPIFNOT
       NULLSWAPIFNOT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f
       DUP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f f
       IF:<{	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs key f
         SWAP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key
-        128 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _105 key
-        s1 s9 XCPU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _105 max_stake
-        MIN	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _108
-        SWAP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 key
-        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 _279 _278
-        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _108 key
+        128 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _106 key
+        s1 s9 XCPU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _106 max_stake
+        MIN	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f key _109
+        SWAP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _109 key
+        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _109 _284 _283
+        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f _109 key
         256 PLDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict cs f stake pubkey
         s0 s3 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake cs
-        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 cs
-        256 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 _283 _282
-        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _117 cs
+        32 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _118 cs
+        256 LDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _118 _288 _287
+        NIP	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake _118 cs
         256 PLDU	//  credits members min_stake max_stake min_total_stake l min_validators n sdict pubkey f stake max_f adnl_addr
         s1 s3 s0 XCHG3
         s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f stake max_f pubkey adnl_addr
-        4 TUPLE	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f _125
-        s0 s5 XCHG2	//  credits members min_stake max_stake min_total_stake f min_validators n sdict _125 l
+        4 TUPLE	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f _126
+        s0 s5 XCHG2	//  credits members min_stake max_stake min_total_stake f min_validators n sdict _126 l
         CONS	//  credits members min_stake max_stake min_total_stake f min_validators n sdict l
       }>ELSE<{
         s6 s1 s6 XCHG3
         2DROP	//  credits members min_stake max_stake min_total_stake f min_validators n sdict l
       }>
       s0 s4 XCHG	//  credits members min_stake max_stake min_total_stake l min_validators n sdict f
-      NOT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _127
-      s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake sdict min_validators n l _127
+      NOT	//  credits members min_stake max_stake min_total_stake l min_validators n sdict _128
+      s1 s4 XCHG	//  credits members min_stake max_stake min_total_stake sdict min_validators n l _128
     }>	//  credits members min_stake max_stake min_total_stake sdict min_validators n l
     s3 POP
     s4 POP	//  credits members min_stake n min_total_stake l min_validators
@@ -956,22 +956,22 @@ PROGRAM{
     REPEAT:<{	//  credits members min_stake n min_total_stake l i l1
       CDR	//  credits members min_stake n min_total_stake l i l1
     }>
-    0 PUSHINT	//  credits members min_stake n min_total_stake l i l1 _135=0
+    0 PUSHINT	//  credits members min_stake n min_total_stake l i l1 _136=0
     DUP	//  credits members min_stake n min_total_stake l i l1 best_stake=0 m=0
     UNTIL:<{
       s0 s2 XCHG	//  credits members min_stake n min_total_stake l i m best_stake l1
-      UNCONS	//  credits members min_stake n min_total_stake l i m best_stake _138 l1
-      SWAP	//  credits members min_stake n min_total_stake l i m best_stake l1 _138
+      UNCONS	//  credits members min_stake n min_total_stake l i m best_stake _139 l1
+      SWAP	//  credits members min_stake n min_total_stake l i m best_stake l1 _139
       0 INDEX	//  credits members min_stake n min_total_stake l i m best_stake l1 stake
       s0 s4 XCHG	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
       INC	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
       s4 s8 PUSH2	//  credits members min_stake n min_total_stake l stake m best_stake l1 i stake min_stake
-      GEQ	//  credits members min_stake n min_total_stake l stake m best_stake l1 i _144
+      GEQ	//  credits members min_stake n min_total_stake l stake m best_stake l1 i _145
       IF:<{	//  credits members min_stake n min_total_stake l stake m best_stake l1 i
         s5 s(-1) s4 PU2XC	//  credits members min_stake n min_total_stake l i m best_stake l1 l i stake
         compute_total_stake CALLDICT	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake
         s0 s2 PUSH2	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake tot_stake best_stake
-        GREATER	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake _147
+        GREATER	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake _148
         IF:<{	//  credits members min_stake n min_total_stake l i m best_stake l1 tot_stake
           s2 POP
           s2 POP	//  credits members min_stake n min_total_stake l i l1 tot_stake
@@ -985,144 +985,149 @@ PROGRAM{
         DROP	//  credits members min_stake n min_total_stake l i l1 best_stake m
       }>
       s3 s6 PUSH2	//  credits members min_stake n min_total_stake l i l1 best_stake m i n
-      GEQ	//  credits members min_stake n min_total_stake l i l1 best_stake m _148
+      GEQ	//  credits members min_stake n min_total_stake l i l1 best_stake m _149
     }>	//  credits members min_stake n min_total_stake l i l1 best_stake m
     s2 POP
     s2 POP
     s4 POP
     s4 POP	//  credits members best_stake m min_total_stake l
     s2 PUSH	//  credits members best_stake m min_total_stake l m
-    0 EQINT	//  credits members best_stake m min_total_stake l _150
-    s4 s2 PUXC	//  credits members best_stake m _150 l best_stake min_total_stake
-    LESS	//  credits members best_stake m _150 l _151
-    s1 s2 XCHG	//  credits members best_stake m l _150 _151
-    OR	//  credits members best_stake m l _152
+    0 EQINT	//  credits members best_stake m min_total_stake l _151
+    s4 s2 PUXC	//  credits members best_stake m _151 l best_stake min_total_stake
+    LESS	//  credits members best_stake m _151 l _152
+    s1 s2 XCHG	//  credits members best_stake m l _151 _152
+    OR	//  credits members best_stake m l _153
     IFJMP:<{	//  credits members best_stake m l
       4 BLKDROP	//  credits
-      NEWDICT	//  credits _153
-      NEWDICT	//  credits _153 _154
-      0 PUSHINT	//  credits _153 _154 _155=0
-      DUP	//  credits _153 _154 _155=0 _156=0
+      NEWDICT	//  credits _154
+      0 PUSHINT	//  credits _154 _155=0
+      NEWDICT	//  credits _154 _155=0 _156
+      s1 s1 PUSH2	//  credits _154 _155=0 _156 _157=0 _158=0
     }>	//  credits members best_stake m l
     DUP	//  credits members best_stake m l l1
     s0 DUMP	//  credits members best_stake m l l1
     s2 PUSH	//  credits members best_stake m l l1 m
-    DEC	//  credits members best_stake m l l1 _161
+    DEC	//  credits members best_stake m l l1 _163
     REPEAT:<{	//  credits members best_stake m l l1
       CDR	//  credits members best_stake m l l1
     }>
-    CAR	//  credits members best_stake m l _164
+    CAR	//  credits members best_stake m l _166
     0 INDEX	//  credits members best_stake m l m_stake
     0 PUSHINT	//  credits members best_stake m l m_stake i=0
-    DUP	//  credits members best_stake m l m_stake i=0 tot_stake=0
-    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 vset
-    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 vset frozen
+    s0 s0 PUSH2	//  credits members best_stake m l m_stake i=0 tot_stake=0 tot_weight=0
+    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 tot_weight=0 vset
+    NEWDICT	//  credits members best_stake m l m_stake i=0 tot_stake=0 tot_weight=0 vset frozen
     UNTIL:<{
-      s0 s5 XCHG	//  credits members best_stake m frozen m_stake i tot_stake vset l
-      UNCONS	//  credits members best_stake m frozen m_stake i tot_stake vset _179 l
-      SWAP	//  credits members best_stake m frozen m_stake i tot_stake vset l _179
-      4 UNTUPLE	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr
-      s1 s12 PUSH2
-      8 PUSHPOW2	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr pubkey members _184=256
+      s0 s6 XCHG	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l
+      UNCONS	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset _183 l
+      SWAP	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l _183
+      4 UNTUPLE	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr
+      s1 s13 PUSH2
+      8 PUSHPOW2	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr pubkey members _188=256
       DICTUGET
-      NULLSWAPIFNOT	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val f
+      NULLSWAPIFNOT	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr val f
       61 THROWIFNOT
-      LDGRAMS	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr _295 _294
-      NIP	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val
-      64 LDU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr _297 _296
-      NIP	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr val
-      256 PLDU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr
-      s8 s11 PUSH2	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr i m
-      LESS	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr _198
-      IF:<{	//  credits members best_stake m frozen m_stake i tot_stake vset l stake max_f pubkey adnl_addr src_addr
-        s3 s9 XCPU	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr max_f m_stake
-        MUL	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr _200
-        16 RSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr _202
-        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr stake _202
-        MIN	//  credits members best_stake m frozen m_stake i tot_stake vset l stake src_addr pubkey adnl_addr true_stake
-        s4 s4 XCPU	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake true_stake
-        SUB	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake
-        s4 PUSH	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake true_stake
-        60 LSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake _207
-        s13 PUSH	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake _207 best_stake
-        DIV	//  credits members best_stake m frozen m_stake i tot_stake vset l true_stake src_addr pubkey adnl_addr stake weight
-        s8 s5 XCPU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake true_stake
-        ADD	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake
-        2390828938 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
-        s3 PUSH	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 adnl_addr
-        IF:<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
-          115 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212=115
-        }>ELSE<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938
-          83 PUSHINT	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212=83
+      LDGRAMS	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr _300 _299
+      NIP	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr val
+      64 LDU	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr _302 _301
+      NIP	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr val
+      256 PLDU	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr src_addr
+      s9 s12 PUSH2	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr src_addr i m
+      LESS	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr src_addr _202
+      IF:<{	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake max_f pubkey adnl_addr src_addr
+        s3 s10 XCPU	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr pubkey adnl_addr max_f m_stake
+        MUL	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr pubkey adnl_addr _204
+        16 RSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr pubkey adnl_addr _206
+        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr pubkey adnl_addr stake _206
+        MIN	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l stake src_addr pubkey adnl_addr true_stake
+        s4 s4 XCPU	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake true_stake
+        SUB	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake
+        s4 PUSH	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake true_stake
+        60 LSHIFT#	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake _211
+        s14 PUSH	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake _211 best_stake
+        DIV	//  credits members best_stake m frozen m_stake i tot_stake tot_weight vset l true_stake src_addr pubkey adnl_addr stake weight
+        s9 s5 XCPU	//  credits members best_stake m frozen m_stake i weight tot_weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake true_stake
+        ADD	//  credits members best_stake m frozen m_stake i weight tot_weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake
+        s8 s9 XCPU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight weight
+        ADD	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight
+        2390828938 PUSHINT	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938
+        s3 PUSH	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938 adnl_addr
+        IF:<{	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938
+          115 PUSHINT	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938 _217=115
+        }>ELSE<{	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938
+          83 PUSHINT	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938 _217=83
         }>
-        NEWC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _212 _215
-        8 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _211=2390828938 _217
-        32 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _219
-        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake pubkey _219
-        256 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake _221
-        s9 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake weight _221
-        64 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo
-        s3 PUSH	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo adnl_addr
-        IF:<{	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey adnl_addr stake tot_stake vinfo
-          s1 s3 XCHG	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake adnl_addr vinfo
-          256 STU	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake vinfo
+        NEWC	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938 _217 _220
+        8 STU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _216=2390828938 _222
+        32 STU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _224
+        s4 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight pubkey _224
+        256 STU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight _226
+        s10 s(-1) PUXC	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight weight _226
+        64 STU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight vinfo
+        s3 PUSH	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight vinfo adnl_addr
+        IF:<{	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey adnl_addr stake tot_weight vinfo
+          s1 s3 XCHG	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey tot_weight stake adnl_addr vinfo
+          256 STU	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey tot_weight stake vinfo
         }>ELSE<{
           s0 s3 XCHG2
-          DROP	//  credits members best_stake m frozen m_stake i weight vset l true_stake src_addr pubkey tot_stake stake vinfo
+          DROP	//  credits members best_stake m frozen m_stake i weight tot_stake vset l true_stake src_addr pubkey tot_weight stake vinfo
         }>
         SWAP
         16 PUSHINT
-        s10 s8 s8 PUXC2	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vinfo i vset _228=16
-        DICTUSETB	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset
-        FALSE	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231
+        s11 s8 s8 PUXC2	//  credits members best_stake m frozen m_stake i weight tot_stake stake l true_stake src_addr pubkey tot_weight vinfo i vset _233=16
+        DICTUSETB	//  credits members best_stake m frozen m_stake i weight tot_stake stake l true_stake src_addr pubkey tot_weight vset
+        FALSE	//  credits members best_stake m frozen m_stake i weight tot_stake stake l true_stake src_addr pubkey tot_weight vset _236
         s4 PUSH
-        NEWC	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231 src_addr _232
-        256 STU	//  credits members best_stake m frozen m_stake i weight stake l true_stake src_addr pubkey tot_stake vset _231 _234
-        s1 s9 XCHG	//  credits members best_stake m frozen m_stake i _231 stake l true_stake src_addr pubkey tot_stake vset weight _234
-        64 STU	//  credits members best_stake m frozen m_stake i _231 stake l true_stake src_addr pubkey tot_stake vset _236
-        s0 s5 XCHG2	//  credits members best_stake m frozen m_stake i _231 stake l vset src_addr pubkey tot_stake _236 true_stake
-        STGRAMS	//  credits members best_stake m frozen m_stake i _231 stake l vset src_addr pubkey tot_stake _237
-        s1 s7 XCHG	//  credits members best_stake m frozen m_stake i tot_stake stake l vset src_addr pubkey _231 _237
-        1 STI	//  credits members best_stake m frozen m_stake i tot_stake stake l vset src_addr pubkey _239
-        s0 s1 s9 XCHG3
-        8 PUSHPOW2	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset _239 pubkey frozen _240=256
-        DICTUSETB	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
+        NEWC	//  credits members best_stake m frozen m_stake i weight tot_stake stake l true_stake src_addr pubkey tot_weight vset _236 src_addr _237
+        256 STU	//  credits members best_stake m frozen m_stake i weight tot_stake stake l true_stake src_addr pubkey tot_weight vset _236 _239
+        s1 s10 XCHG	//  credits members best_stake m frozen m_stake i _236 tot_stake stake l true_stake src_addr pubkey tot_weight vset weight _239
+        64 STU	//  credits members best_stake m frozen m_stake i _236 tot_stake stake l true_stake src_addr pubkey tot_weight vset _241
+        s0 s5 XCHG2	//  credits members best_stake m frozen m_stake i _236 tot_stake stake l vset src_addr pubkey tot_weight _241 true_stake
+        STGRAMS	//  credits members best_stake m frozen m_stake i _236 tot_stake stake l vset src_addr pubkey tot_weight _242
+        s1 s8 XCHG	//  credits members best_stake m frozen m_stake i tot_weight tot_stake stake l vset src_addr pubkey _236 _242
+        1 STI	//  credits members best_stake m frozen m_stake i tot_weight tot_stake stake l vset src_addr pubkey _244
+        s0 s1 s10 XCHG3
+        8 PUSHPOW2	//  credits members best_stake m src_addr m_stake i tot_weight tot_stake stake l vset _244 pubkey frozen _245=256
+        DICTUSETB	//  credits members best_stake m src_addr m_stake i tot_weight tot_stake stake l vset frozen
       }>ELSE<{
-        s0 s10 XCHG
+        s0 s11 XCHG
+        s7 s8 XCHG
         s4 s6 XCHG
         s0 s3 XCHG
-        3 BLKDROP	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
+        3 BLKDROP	//  credits members best_stake m src_addr m_stake i tot_weight tot_stake stake l vset frozen
       }>
-      s3 PUSH	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen stake
-      IF:<{	//  credits members best_stake m src_addr m_stake i tot_stake stake l vset frozen
-        s11 s7 s3 XCHG3	//  l members best_stake m vset m_stake i tot_stake frozen credits src_addr stake
-        ~credit_to CALLDICT	//  l members best_stake m vset m_stake i tot_stake frozen credits
+      s3 PUSH	//  credits members best_stake m src_addr m_stake i tot_weight tot_stake stake l vset frozen stake
+      IF:<{	//  credits members best_stake m src_addr m_stake i tot_weight tot_stake stake l vset frozen
+        s12 s8 s3 XCHG3	//  l members best_stake m vset m_stake i tot_weight tot_stake frozen credits src_addr stake
+        ~credit_to CALLDICT	//  l members best_stake m vset m_stake i tot_weight tot_stake frozen credits
       }>ELSE<{
-        s11 s7 s3 XCHG3
-        2DROP	//  l members best_stake m vset m_stake i tot_stake frozen credits
+        s12 s8 s3 XCHG3
+        2DROP	//  l members best_stake m vset m_stake i tot_weight tot_stake frozen credits
       }>
-      s0 s3 XCHG	//  l members best_stake m vset m_stake credits tot_stake frozen i
-      INC	//  l members best_stake m vset m_stake credits tot_stake frozen i
-      s9 PUSH	//  l members best_stake m vset m_stake credits tot_stake frozen i l
-      ISNULL	//  l members best_stake m vset m_stake credits tot_stake frozen i _246
-      s4 s10 XCHG
-      s4 s6 XCHG
-      s4 s4 s0 XCHG3	//  credits members best_stake m l m_stake i tot_stake vset frozen _246
-    }>	//  credits members best_stake m l m_stake i tot_stake vset frozen
-    s3 POP
-    s3 POP
-    s3 POP
-    s5 POP	//  credits frozen best_stake m tot_stake vset
-    s1 s3 PUXC	//  credits frozen vset m tot_stake tot_stake best_stake
-    EQUAL	//  credits frozen vset m tot_stake _248
+      s0 s4 XCHG	//  l members best_stake m vset m_stake credits tot_weight tot_stake frozen i
+      INC	//  l members best_stake m vset m_stake credits tot_weight tot_stake frozen i
+      s10 PUSH	//  l members best_stake m vset m_stake credits tot_weight tot_stake frozen i l
+      ISNULL	//  l members best_stake m vset m_stake credits tot_weight tot_stake frozen i _251
+      s5 s11 XCHG
+      s5 s7 XCHG
+      s1 s5 XCHG
+      s3 s4 XCHG
+      s1 s2 XCHG	//  credits members best_stake m l m_stake i tot_stake tot_weight vset frozen _251
+    }>	//  credits members best_stake m l m_stake i tot_stake tot_weight vset frozen
+    s4 POP
+    s4 POP
+    s4 POP
+    s6 POP	//  credits tot_stake best_stake m tot_weight vset frozen
+    s5 s4 PUXC	//  credits tot_stake frozen m tot_weight vset tot_stake best_stake
+    EQUAL	//  credits tot_stake frozen m tot_weight vset _253
     49 THROWIFNOT
-    s2 s3 XCHG
-    SWAP	//  credits vset frozen tot_stake m
+    s3 s3 s4 XCHG3
+    SWAP	//  credits vset tot_weight frozen tot_stake m
   }>
   conduct_elections PROC:<{
     //  ds elect credits
     SWAP	//  ds credits elect
-    unpack_elect CALLDICT	//  ds credits _130 _131 _132 _133 _134 _135 _136
+    unpack_elect CALLDICT	//  ds credits _132 _133 _134 _135 _136 _137 _138
     s4 POP	//  ds credits elect_at elect_close finished total_stake members failed
     NOW	//  ds credits elect_at elect_close finished total_stake members failed _11
     s5 PUSH	//  ds credits elect_at elect_close finished total_stake members failed _11 elect_close
@@ -1166,109 +1171,111 @@ PROGRAM{
     s8 PUSH
     s3 s2 XCPU
     s7 s7 XCHG2	//  ds members elect_at elect_close min_stake total_stake credits members min_stake max_stake min_total_stake max_stake_factor
-    try_elect CALLDICT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt
-    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt cnt
-    0 EQINT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed
-    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed failed
-    NOT	//  ds members elect_at elect_close min_stake total_stake credits vdict frozen total_stakes cnt failed finished
-    s10 PUSH
+    try_elect CALLDICT	//  ds members elect_at elect_close min_stake total_stake credits vdict total_weight frozen total_stakes cnt
+    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict total_weight frozen total_stakes cnt cnt
+    0 EQINT	//  ds members elect_at elect_close min_stake total_stake credits vdict total_weight frozen total_stakes cnt failed
+    DUP	//  ds members elect_at elect_close min_stake total_stake credits vdict total_weight frozen total_stakes cnt failed failed
+    NOT	//  ds members elect_at elect_close min_stake total_stake credits vdict total_weight frozen total_stakes cnt failed finished
+    s11 PUSH
     s0 s6 XCHG
-    s5 s10 XCHG
-    s4 s9 XCHG
-    s3 s8 XCHG
-    s12 s12 s12 XCHG3	//  ds vdict elect_at frozen total_stakes cnt credits elect_at elect_close min_stake total_stake members failed finished
-    pack_elect CALLDICT	//  ds vdict elect_at frozen total_stakes cnt credits elect
-    s2 PUSH	//  ds vdict elect_at frozen total_stakes cnt credits elect cnt
-    IFNOTJMP:<{	//  ds vdict elect_at frozen total_stakes cnt credits elect
+    s5 s11 XCHG
+    s4 s10 XCHG
+    s3 s9 XCHG
+    s13 s13 s13 XCHG3	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect_at elect_close min_stake total_stake members failed finished
+    pack_elect CALLDICT	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect
+    s3 PUSH	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect cnt
+    IFNOTJMP:<{	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect
+      NIP
       s2 POP
       s2 POP
       s2 POP
       s2 POP
       s2 POP	//  ds elect credits
-      NEWC	//  ds elect credits _48
-      s1 s2 XCHG	//  ds credits elect _48
-      STDICT	//  ds credits _49
-      STDICT	//  ds _50
-      SWAP	//  _50 ds
-      STSLICER	//  _51
-      ENDC	//  _52
+      NEWC	//  ds elect credits _49
+      s1 s2 XCHG	//  ds credits elect _49
+      STDICT	//  ds credits _50
+      STDICT	//  ds _51
+      SWAP	//  _51 ds
+      STSLICER	//  _52
+      ENDC	//  _53
       c4 POP
-      postpone_elections CALLDICT	//  _54
-    }>	//  ds vdict elect_at frozen total_stakes cnt credits elect
-    get_validator_conf CALLDICT	//  ds vdict elect_at frozen total_stakes cnt credits elect _150 _151 _152 _153
-    s2 POP	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held elect_end_before
-    NOW	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held elect_end_before _61
-    SWAP	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _61 elect_end_before
-    ADD	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _62
-    -60 ADDCONST	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _64
-    s8 PUSH	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held _64 elect_at
-    MAX	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start
-    16 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _67=16
-    CONFIGOPTPARAM	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _68
-    CTOS	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _69
-    16 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _69 _70=16
-    SDSKIPFIRST	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _71
-    16 PLDU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start main_validators
-    s6 s(-1) PUXC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start cnt main_validators
-    MIN	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75
-    s1 s3 PUSH2	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 start elect_for
-    ADD	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76
-    17 PUSHINT	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _77=17
-    NEWC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _77=17 _78
-    8 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _80
-    s3 s(-1) PUXC	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 start _80
-    32 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _76 _82
-    32 STU	//  ds vdict elect_at frozen total_stakes cnt credits elect elect_for stake_held start _75 _84
-    s1 s7 XCHG	//  ds vdict elect_at frozen total_stakes _75 credits elect elect_for stake_held start cnt _84
-    16 STU	//  ds vdict elect_at frozen total_stakes _75 credits elect elect_for stake_held start _86
-    s1 s6 XCHG	//  ds vdict elect_at frozen total_stakes start credits elect elect_for stake_held _75 _86
-    16 STU	//  ds vdict elect_at frozen total_stakes start credits elect elect_for stake_held _88
-    s0 s9 XCHG	//  ds _88 elect_at frozen total_stakes start credits elect elect_for stake_held vdict
-    CTOS	//  ds _88 elect_at frozen total_stakes start credits elect elect_for stake_held _89
-    s1 s9 XCHG	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for _88 _89
-    STSLICER	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for _90
-    ENDC	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset
-    0 PUSHINT	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _93=0
-    CONFIGOPTPARAM	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _94
-    CTOS	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset _95
-    256 PLDU	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset config_addr
-    s1 s8 PUSH2	//  ds stake_held elect_at frozen total_stakes start credits elect elect_for vset config_addr vset elect_at
+      postpone_elections CALLDICT	//  _55
+    }>	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect
+    get_validator_conf CALLDICT	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect _153 _154 _155 _156
+    s2 POP	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held elect_end_before
+    NOW	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held elect_end_before _62
+    SWAP	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held _62 elect_end_before
+    ADD	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held _63
+    -60 ADDCONST	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held _65
+    s9 PUSH	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held _65 elect_at
+    MAX	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start
+    16 PUSHINT	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _68=16
+    CONFIGOPTPARAM	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _69
+    CTOS	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _70
+    16 PUSHINT	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _70 _71=16
+    SDSKIPFIRST	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _72
+    16 PLDU	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start main_validators
+    s7 s(-1) PUXC	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start cnt main_validators
+    MIN	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76
+    s1 s3 PUSH2	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 start elect_for
+    ADD	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77
+    18 PUSHINT	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77 _78=18
+    NEWC	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77 _78=18 _79
+    8 STU	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77 _81
+    s3 s(-1) PUXC	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77 start _81
+    32 STU	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _77 _83
+    32 STU	//  ds total_weight elect_at frozen total_stakes cnt credits vdict elect elect_for stake_held start _76 _85
+    s1 s8 XCHG	//  ds total_weight elect_at frozen total_stakes _76 credits vdict elect elect_for stake_held start cnt _85
+    16 STU	//  ds total_weight elect_at frozen total_stakes _76 credits vdict elect elect_for stake_held start _87
+    s1 s7 XCHG	//  ds total_weight elect_at frozen total_stakes start credits vdict elect elect_for stake_held _76 _87
+    16 STU	//  ds total_weight elect_at frozen total_stakes start credits vdict elect elect_for stake_held _89
+    s1 s10 XCHG	//  ds stake_held elect_at frozen total_stakes start credits vdict elect elect_for total_weight _89
+    64 STU	//  ds stake_held elect_at frozen total_stakes start credits vdict elect elect_for _91
+    s1 s3 XCHG	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vdict _91
+    STDICT	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect _92
+    ENDC	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset
+    0 PUSHINT	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset _95=0
+    CONFIGOPTPARAM	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset _96
+    CTOS	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset _97
+    256 PLDU	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset config_addr
+    s1 s8 PUSH2	//  ds stake_held elect_at frozen total_stakes start credits elect_for elect vset config_addr vset elect_at
     send_validator_set_to_config CALLDICT
-    s0 s9 XCHG	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for ds
-    LDDICT	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds
-    FALSE	//  vset stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds _103
-    s0 s11 XCHG	//  _103 stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds vset
-    HASHCU	//  _103 stake_held elect_at frozen total_stakes start credits elect elect_for past_elect ds _104
-    s6 s3 XCHG2	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect start elect_for
-    ADD	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _105
-    s9 PUSH	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _105 stake_held
-    ADD	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _106
-    NEWC	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _106 _107
-    32 STU	//  _103 stake_held elect_at frozen total_stakes ds credits elect _104 past_elect _109
-    s1 s9 XCHG	//  _103 past_elect elect_at frozen total_stakes ds credits elect _104 stake_held _109
-    32 STU	//  _103 past_elect elect_at frozen total_stakes ds credits elect _104 _111
-    256 STU	//  _103 past_elect elect_at frozen total_stakes ds credits elect _113
-    s1 s5 XCHG	//  _103 past_elect elect_at elect total_stakes ds credits frozen _113
-    STDICT	//  _103 past_elect elect_at elect total_stakes ds credits _114
-    s0 s3 XCHG2	//  _103 past_elect elect_at elect credits ds _114 total_stakes
-    STGRAMS	//  _103 past_elect elect_at elect credits ds _115
-    0 PUSHINT	//  _103 past_elect elect_at elect credits ds _115 _116=0
-    STGRAMS	//  _103 past_elect elect_at elect credits ds _117
-    s1 s6 XCHG	//  ds past_elect elect_at elect credits _103 _117
-    1 STI	//  ds past_elect elect_at elect credits _119
+    s0 s9 XCHG	//  vset stake_held elect_at frozen total_stakes start credits elect_for elect ds
+    LDDICT	//  vset stake_held elect_at frozen total_stakes start credits elect_for elect past_elect ds
+    FALSE	//  vset stake_held elect_at frozen total_stakes start credits elect_for elect past_elect ds _105
+    s0 s11 XCHG	//  _105 stake_held elect_at frozen total_stakes start credits elect_for elect past_elect ds vset
+    HASHCU	//  _105 stake_held elect_at frozen total_stakes start credits elect_for elect past_elect ds _106
+    s6 s4 XCHG2	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect start elect_for
+    ADD	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect _107
+    s9 PUSH	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect _107 stake_held
+    ADD	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect _108
+    NEWC	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect _108 _109
+    32 STU	//  _105 stake_held elect_at frozen total_stakes ds credits _106 elect past_elect _111
+    s1 s9 XCHG	//  _105 past_elect elect_at frozen total_stakes ds credits _106 elect stake_held _111
+    32 STU	//  _105 past_elect elect_at frozen total_stakes ds credits _106 elect _113
+    s1 s2 XCHG	//  _105 past_elect elect_at frozen total_stakes ds credits elect _106 _113
+    256 STU	//  _105 past_elect elect_at frozen total_stakes ds credits elect _115
+    s1 s5 XCHG	//  _105 past_elect elect_at elect total_stakes ds credits frozen _115
+    STDICT	//  _105 past_elect elect_at elect total_stakes ds credits _116
+    s0 s3 XCHG2	//  _105 past_elect elect_at elect credits ds _116 total_stakes
+    STGRAMS	//  _105 past_elect elect_at elect credits ds _117
+    0 PUSHINT	//  _105 past_elect elect_at elect credits ds _117 _118=0
+    STGRAMS	//  _105 past_elect elect_at elect credits ds _119
+    s1 s6 XCHG	//  ds past_elect elect_at elect credits _105 _119
+    1 STI	//  ds past_elect elect_at elect credits _121
     s0 s3 s4 XCHG3
-    32 PUSHINT	//  ds elect credits _119 elect_at past_elect _120=32
+    32 PUSHINT	//  ds elect credits _121 elect_at past_elect _122=32
     DICTUSETB	//  ds elect credits past_elect
-    NEWC	//  ds elect credits past_elect _122
-    s1 s3 XCHG	//  ds past_elect credits elect _122
-    STDICT	//  ds past_elect credits _123
-    STDICT	//  ds past_elect _124
-    STDICT	//  ds _125
-    SWAP	//  _125 ds
-    STSLICER	//  _126
-    ENDC	//  _127
+    NEWC	//  ds elect credits past_elect _124
+    s1 s3 XCHG	//  ds past_elect credits elect _124
+    STDICT	//  ds past_elect credits _125
+    STDICT	//  ds past_elect _126
+    STDICT	//  ds _127
+    SWAP	//  _127 ds
+    STSLICER	//  _128
+    ENDC	//  _129
     c4 POP
-    TRUE	//  _129
+    TRUE	//  _131
   }>
   update_active_vset_id PROC:<{
     // 

@@ -478,7 +478,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                             |> mapToSignal { mediaAndFileReference -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
                                 if let (media, fileReference) = mediaAndFileReference {
                                     if let dimensions = media.dimensions {
-                                        size = dimensions
+                                        size = dimensions.cgSize
                                     }
                                     self.disposable.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start())
                                     return chatMessageSticker(account: context.account, file: media, small: false, fetched: true, onlyFullSize: true)
@@ -541,12 +541,12 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 if let imageReference = candidateMediaReference?.concrete(TelegramMediaImage.self) {
                                     updatedMediaReference = imageReference.abstract
                                     if let representation = largestRepresentationForPhoto(imageReference.media) {
-                                        imageDimensions = representation.dimensions
+                                        imageDimensions = representation.dimensions.cgSize
                                     }
                                 } else if let fileReference = candidateMediaReference?.concrete(TelegramMediaFile.self) {
                                     updatedMediaReference = fileReference.abstract
                                     if let representation = largestImageRepresentation(fileReference.media.previewRepresentations), !fileReference.media.isSticker {
-                                        imageDimensions = representation.dimensions
+                                        imageDimensions = representation.dimensions.cgSize
                                     }
                                 }
                                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {

@@ -185,13 +185,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 if let image = media as? TelegramMediaImage {
                     updatedMediaReference = .message(message: MessageReference(message), media: image)
                     if let representation = largestRepresentationForPhoto(image) {
-                        imageDimensions = representation.dimensions
+                        imageDimensions = representation.dimensions.cgSize
                     }
                     break
                 } else if let file = media as? TelegramMediaFile {
                     updatedMediaReference = .message(message: MessageReference(message), media: file)
                     if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
-                        imageDimensions = representation.dimensions
+                        imageDimensions = representation.dimensions.cgSize
                     }
                     break
                 } else if let _ = media as? TelegramMediaPoll {
@@ -222,8 +222,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isAnimatedSticker {
-                            let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0)))
+                            let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
+                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
                             updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
                         } else if fileReference.media.isVideo {
                             updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)

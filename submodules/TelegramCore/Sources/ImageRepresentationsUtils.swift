@@ -1,18 +1,6 @@
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-    import MtProtoKitMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#if BUCK
-    import MtProtoKit
-#else
-    import MtProtoKitDynamic
-#endif
-#endif
-
+import Postbox
+import TelegramApi
+import MtProtoKit
 import SyncCore
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
@@ -53,7 +41,7 @@ public func largestImageRepresentation(_ representations: [TelegramMediaImageRep
     }
 }
 
-public func imageRepresentationLargerThan(_ representations: [TelegramMediaImageRepresentation], size: CGSize) -> TelegramMediaImageRepresentation? {
+public func imageRepresentationLargerThan(_ representations: [TelegramMediaImageRepresentation], size: PixelDimensions) -> TelegramMediaImageRepresentation? {
     if representations.count == 0 {
         return nil
     } else {

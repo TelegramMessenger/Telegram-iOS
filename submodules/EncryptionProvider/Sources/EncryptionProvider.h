@@ -55,6 +55,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSData * _Nullable)rsaEncryptPKCS1OAEPWithPublicKey:(NSString *)publicKey data:(NSData *)data;
 - (id<MTRsaPublicKey>)parseRSAPublicKey:(NSString *)publicKey;
 
+-(NSData * _Nonnull)macosRSAEncrypt:(NSString *) publicKey data: (NSData *)data;
+
 @end
 
 NS_ASSUME_NONNULL_END

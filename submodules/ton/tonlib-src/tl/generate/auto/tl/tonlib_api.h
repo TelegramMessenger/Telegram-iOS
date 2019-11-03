@@ -92,6 +92,8 @@ class internal_transactionId;
 
 class liteServer_info;
 
+class options_configInfo;
+
 class query_fees;
 
 class query_info;
@@ -106,17 +108,35 @@ class raw_transaction;
 
 class raw_transactions;
 
+class smc_info;
+
+class smc_MethodId;
+
+class smc_runResult;
+
 class testGiver_accountState;
 
 class testWallet_accountState;
 
 class testWallet_initialAccountState;
 
+class tvm_cell;
+
+class tvm_numberDecimal;
+
+class tvm_slice;
+
+class tvm_StackEntry;
+
 class uninited_accountState;
 
 class wallet_accountState;
 
 class wallet_initialAccountState;
+
+class wallet_v3_accountState;
+
+class wallet_v3_initialAccountState;
 
 class Object;
 
@@ -283,16 +303,16 @@ class InputKey: public Object {
  public:
 };
 
-class inputKey final : public InputKey {
+class inputKeyRegular final : public InputKey {
  public:
   object_ptr<key> key_;
   td::SecureString local_password_;
 
-  inputKey();
+  inputKeyRegular();
 
-  inputKey(object_ptr<key> &&key_, td::SecureString &&local_password_);
+  inputKeyRegular(object_ptr<key> &&key_, td::SecureString &&local_password_);
 
-  static const std::int32_t ID = 869287093;
+  static const std::int32_t ID = -555399522;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -632,6 +652,22 @@ class generic_accountStateWallet final : public generic_AccountState {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class generic_accountStateWalletV3 final : public generic_AccountState {
+ public:
+  object_ptr<wallet_v3_accountState> account_state_;
+
+  generic_accountStateWalletV3();
+
+  explicit generic_accountStateWalletV3(object_ptr<wallet_v3_accountState> &&account_state_);
+
+  static const std::int32_t ID = -281349583;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class generic_accountStateTestGiver final : public generic_AccountState {
  public:
   object_ptr<testGiver_accountState> account_state_;
@@ -692,6 +728,22 @@ class liteServer_info final : public Object {
   liteServer_info(std::int64_t now_, std::int32_t version_, std::int64_t capabilities_);
 
   static const std::int32_t ID = -1250165133;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class options_configInfo final : public Object {
+ public:
+  std::int64_t default_wallet_id_;
+
+  options_configInfo();
+
+  explicit options_configInfo(std::int64_t default_wallet_id_);
+
+  static const std::int32_t ID = 165216422;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -835,6 +887,76 @@ class raw_transactions final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class smc_info final : public Object {
+ public:
+  std::int64_t id_;
+
+  smc_info();
+
+  explicit smc_info(std::int64_t id_);
+
+  static const std::int32_t ID = 1134270012;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_MethodId: public Object {
+ public:
+};
+
+class smc_methodIdNumber final : public smc_MethodId {
+ public:
+  std::int32_t number_;
+
+  smc_methodIdNumber();
+
+  explicit smc_methodIdNumber(std::int32_t number_);
+
+  static const std::int32_t ID = -1541162500;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_methodIdName final : public smc_MethodId {
+ public:
+  std::string name_;
+
+  smc_methodIdName();
+
+  explicit smc_methodIdName(std::string const &name_);
+
+  static const std::int32_t ID = -249036908;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_runResult final : public Object {
+ public:
+  std::int64_t gas_used_;
+  std::vector<object_ptr<tvm_StackEntry>> stack_;
+  std::int32_t exit_code_;
+
+  smc_runResult();
+
+  smc_runResult(std::int64_t gas_used_, std::vector<object_ptr<tvm_StackEntry>> &&stack_, std::int32_t exit_code_);
+
+  static const std::int32_t ID = 1413805043;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class testGiver_accountState final : public Object {
  public:
   std::int64_t balance_;
@@ -889,6 +1011,119 @@ class testWallet_initialAccountState final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class tvm_cell final : public Object {
+ public:
+  std::string bytes_;
+
+  tvm_cell();
+
+  explicit tvm_cell(std::string const &bytes_);
+
+  static const std::int32_t ID = -859530316;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_numberDecimal final : public Object {
+ public:
+  std::string number_;
+
+  tvm_numberDecimal();
+
+  explicit tvm_numberDecimal(std::string const &number_);
+
+  static const std::int32_t ID = 1172477619;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_slice final : public Object {
+ public:
+  std::string bytes_;
+
+  tvm_slice();
+
+  explicit tvm_slice(std::string const &bytes_);
+
+  static const std::int32_t ID = -1069968387;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_StackEntry: public Object {
+ public:
+};
+
+class tvm_stackEntrySlice final : public tvm_StackEntry {
+ public:
+  object_ptr<tvm_slice> slice_;
+
+  tvm_stackEntrySlice();
+
+  explicit tvm_stackEntrySlice(object_ptr<tvm_slice> &&slice_);
+
+  static const std::int32_t ID = 1395485477;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_stackEntryCell final : public tvm_StackEntry {
+ public:
+  object_ptr<tvm_cell> cell_;
+
+  tvm_stackEntryCell();
+
+  explicit tvm_stackEntryCell(object_ptr<tvm_cell> &&cell_);
+
+  static const std::int32_t ID = 1303473952;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_stackEntryNumber final : public tvm_StackEntry {
+ public:
+  object_ptr<tvm_numberDecimal> number_;
+
+  tvm_stackEntryNumber();
+
+  explicit tvm_stackEntryNumber(object_ptr<tvm_numberDecimal> &&number_);
+
+  static const std::int32_t ID = 1358642622;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tvm_stackEntryUnsupported final : public tvm_StackEntry {
+ public:
+
+  tvm_stackEntryUnsupported();
+
+  static const std::int32_t ID = 378880498;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class uninited_accountState final : public Object {
  public:
   std::int64_t balance_;
@@ -936,6 +1171,43 @@ class wallet_initialAccountState final : public Object {
   explicit wallet_initialAccountState(std::string const &public_key_);
 
   static const std::int32_t ID = -1079249978;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_v3_accountState final : public Object {
+ public:
+  std::int64_t balance_;
+  std::int64_t wallet_id_;
+  std::int32_t seqno_;
+  object_ptr<internal_transactionId> last_transaction_id_;
+  std::int64_t sync_utime_;
+
+  wallet_v3_accountState();
+
+  wallet_v3_accountState(std::int64_t balance_, std::int64_t wallet_id_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_);
+
+  static const std::int32_t ID = 1977698154;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_v3_initialAccountState final : public Object {
+ public:
+  std::string public_key_;
+  std::int64_t wallet_id_;
+
+  wallet_v3_initialAccountState();
+
+  wallet_v3_initialAccountState(std::string const &public_key_, std::int64_t wallet_id_);
+
+  static const std::int32_t ID = 283460879;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1459,6 +1731,24 @@ class options_setConfig final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class options_validateConfig final : public Function {
+ public:
+  object_ptr<config> config_;
+
+  options_validateConfig();
+
+  explicit options_validateConfig(object_ptr<config> &&config_);
+
+  static const std::int32_t ID = -346965447;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<options_configInfo>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class packAccountAddress final : public Function {
  public:
   object_ptr<unpackedAccountAddress> account_address_;
@@ -1737,6 +2027,98 @@ class setLogVerbosityLevel final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class smc_getCode final : public Function {
+ public:
+  std::int64_t id_;
+
+  smc_getCode();
+
+  explicit smc_getCode(std::int64_t id_);
+
+  static const std::int32_t ID = -2115626088;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tvm_cell>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_getData final : public Function {
+ public:
+  std::int64_t id_;
+
+  smc_getData();
+
+  explicit smc_getData(std::int64_t id_);
+
+  static const std::int32_t ID = -427601079;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tvm_cell>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_getState final : public Function {
+ public:
+  std::int64_t id_;
+
+  smc_getState();
+
+  explicit smc_getState(std::int64_t id_);
+
+  static const std::int32_t ID = -214390293;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tvm_cell>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_load final : public Function {
+ public:
+  object_ptr<accountAddress> account_address_;
+
+  smc_load();
+
+  explicit smc_load(object_ptr<accountAddress> &&account_address_);
+
+  static const std::int32_t ID = -903491521;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<smc_info>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class smc_runGetMethod final : public Function {
+ public:
+  std::int64_t id_;
+  object_ptr<smc_MethodId> method_;
+  std::vector<object_ptr<tvm_StackEntry>> stack_;
+
+  smc_runGetMethod();
+
+  smc_runGetMethod(std::int64_t id_, object_ptr<smc_MethodId> &&method_, std::vector<object_ptr<tvm_StackEntry>> &&stack_);
+
+  static const std::int32_t ID = -255261270;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<smc_runResult>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class sync final : public Function {
  public:
 
@@ -1970,6 +2352,24 @@ class wallet_sendGrams final : public Function {
   }
 
   using ReturnType = object_ptr<sendGramsResult>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_v3_getAccountAddress final : public Function {
+ public:
+  object_ptr<wallet_v3_initialAccountState> initital_account_state_;
+
+  wallet_v3_getAccountAddress();
+
+  explicit wallet_v3_getAccountAddress(object_ptr<wallet_v3_initialAccountState> &&initital_account_state_);
+
+  static const std::int32_t ID = 1011655671;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<accountAddress>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

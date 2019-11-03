@@ -281,6 +281,8 @@ class Promise {
       promise.do_wrap(std::move(res), std::move(func));
     };
   }
+  template <class... ArgsT>
+  auto send_closure(ArgsT &&... args);
 
  private:
   std::unique_ptr<PromiseInterface<T>> promise_;

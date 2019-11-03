@@ -11,6 +11,7 @@ import AccountContext
 import LocalAuth
 import AppBundle
 import PasscodeInputFieldNode
+import MonotonicTime
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
@@ -194,7 +195,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private func shouldWaitBeforeNextAttempt() -> Bool {
         if let attempts = self.invalidAttempts {
             if attempts.count >= 6 {
-                if Int32(CFAbsoluteTimeGetCurrent()) - attempts.timestamp < waitInterval {
+                var bootTimestamp: Int32 = 0
+                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+                
+                if attempts.bootTimestamp != bootTimestamp {
+                    return true
+                }
+                
+                if uptime - attempts.uptime < waitInterval {
                     return true
                 } else {
                     return false
@@ -215,10 +223,13 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
                 
                 self.timer?.invalidate()
-                let timer = SwiftSignalKit.Timer(timeout: Double(attempts.timestamp + waitInterval - Int32(CFAbsoluteTimeGetCurrent())), repeat: false, completion: { [weak self] in
+                let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.timer = nil
-                        strongSelf.updateInvalidAttempts(strongSelf.invalidAttempts, animated: true)
+                        if !strongSelf.shouldWaitBeforeNextAttempt() {
+                            strongSelf.updateInvalidAttempts(strongSelf.invalidAttempts, animated: true)
+                            strongSelf.timer?.invalidate()
+                            strongSelf.timer = nil
+                        }
                     }
                 }, queue: Queue.mainQueue())
                 self.timer = timer

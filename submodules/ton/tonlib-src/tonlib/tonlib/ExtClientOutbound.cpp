@@ -42,6 +42,7 @@ class ExtClientOutboundImp : public ExtClientOutbound {
     auto it = queries_.find(id);
     if (it == queries_.end()) {
       promise.set_error(TonlibError::Internal("Unknown query id"));
+      return;
     }
     it->second.set_result(std::move(r_data));
     queries_.erase(it);

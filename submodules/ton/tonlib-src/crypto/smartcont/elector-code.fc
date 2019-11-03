@@ -408,7 +408,7 @@ _ compute_total_stake(l, n, m_stake) {
   return tot_stake;
 }
 
-(cell, cell, cell, int, int) try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor) {
+(cell, cell, int, cell, int, int) try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor) {
   var cs = 16.config_param().begin_parse();
   var (max_validators, _, min_validators) = (cs~load_uint(16), cs~load_uint(16), cs~load_uint(16));
   cs.end_parse();
@@ -435,7 +435,7 @@ _ compute_total_stake(l, n, m_stake) {
   } until (~ f);
   n = min(n, max_validators);
   if (n < min_validators) {
-    return (credits, new_dict(), new_dict(), 0, 0);
+    return (credits, new_dict(), 0, new_dict(), 0, 0);
   }
   var l = nil;
   do {
@@ -464,7 +464,7 @@ _ compute_total_stake(l, n, m_stake) {
     }
   } until (i >= n);
   if ((m == 0) | (best_stake < min_total_stake)) {
-    return (credits, new_dict(), new_dict(), 0, 0);
+    return (credits, new_dict(), 0, new_dict(), 0, 0);
   }
   ;; we have to select first m validators from list l
   l1 = touch(l);
@@ -476,6 +476,7 @@ _ compute_total_stake(l, n, m_stake) {
   ;; create both the new validator set and the refund set
   int i = 0;
   var tot_stake = 0;
+  var tot_weight = 0;
   var vset = new_dict();
   var frozen = new_dict();
   do {
@@ -492,6 +493,7 @@ _ compute_total_stake(l, n, m_stake) {
       ;; validator_addr#73 public_key:SigPubKey weight:uint64 adnl_addr:bits256 = ValidatorDescr;
       var weight = (true_stake << 60) / best_stake;
       tot_stake += true_stake;
+      tot_weight += weight;
       var vinfo = begin_cell()
         .store_uint(adnl_addr ? 0x73 : 0x53, 8)  ;; validator_addr#73 or validator#53
         .store_uint(0x8e81278a, 32)    ;; ed25519_pubkey#8e81278a
@@ -514,7 +516,7 @@ _ compute_total_stake(l, n, m_stake) {
     i += 1;
   } until (l.null?());
   throw_unless(49, tot_stake == best_stake);
-  return (credits, vset, frozen, tot_stake, m); 
+  return (credits, vset, tot_weight, frozen, tot_stake, m); 
 }
 
 int conduct_elections(ds, elect, credits) impure {
@@ -545,7 +547,7 @@ int conduct_elections(ds, elect, credits) impure {
     ;; elections finished
     return false;
   }
-  (credits, var vdict, var frozen, var total_stakes, var cnt) = try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor);
+  (credits, var vdict, var total_weight, var frozen, var total_stakes, var cnt) = try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor);
   ;; pack elections; if cnt==0, set failed=true, finished=false.
   failed = (cnt == 0);
   finished = ~ failed;
@@ -561,12 +563,13 @@ int conduct_elections(ds, elect, credits) impure {
   var start = max(now() + elect_end_before - 60, elect_at);
   var main_validators = config_param(16).begin_parse().skip_bits(16).preload_uint(16);
   var vset = begin_cell()
-    .store_uint(0x11, 8)      ;; validators#11
+    .store_uint(0x12, 8)      ;; validators_ext#12
     .store_uint(start, 32)    ;; utime_since:uint32
     .store_uint(start + elect_for, 32)  ;; utime_until:uint32
     .store_uint(cnt, 16)      ;; total:(## 16) 
-    .store_uint(min(cnt, main_validators), 16)  ;; main:(## 16) 
-    .store_slice(vdict.begin_parse())  ;; list:(Hashmap 16 ValidatorDescr)
+    .store_uint(min(cnt, main_validators), 16)  ;; main:(## 16)
+    .store_uint(total_weight, 64)      ;; total_weight:uint64
+    .store_dict(vdict)        ;; list:(HashmapE 16 ValidatorDescr)
   .end_cell();
   var config_addr = config_param(0).begin_parse().preload_uint(256);
   send_validator_set_to_config(config_addr, vset, elect_at);

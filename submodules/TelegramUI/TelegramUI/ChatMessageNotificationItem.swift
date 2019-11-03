@@ -161,13 +161,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if let image = media as? TelegramMediaImage {
                     updatedMedia = image
                     if let representation = largestRepresentationForPhoto(image) {
-                        imageDimensions = representation.dimensions
+                        imageDimensions = representation.dimensions.cgSize
                     }
                     break
                 } else if let file = media as? TelegramMediaFile {
                     updatedMedia = file
                     if let representation = largestImageRepresentation(file.previewRepresentations) {
-                        imageDimensions = representation.dimensions
+                        imageDimensions = representation.dimensions.cgSize
                     }
                     isRound = file.isInstantVideo
                     break

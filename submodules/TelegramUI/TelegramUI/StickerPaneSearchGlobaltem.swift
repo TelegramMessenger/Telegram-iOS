@@ -284,7 +284,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
                 node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: false)
             }
             if let dimensions = file.dimensions {
-                let imageSize = dimensions.aspectFitted(itemSize)
+                let imageSize = dimensions.cgSize.aspectFitted(itemSize)
                 node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0 + topOffset), size: imageSize)
                 offset += itemSize.width + itemSpacing
             }

@@ -216,6 +216,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
     public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)?
+    public var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
     public var enableInteractiveDismiss = false {
@@ -270,6 +271,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             return .single(false)
+        }
+        
+        self.listNode.reorderCompleted = { [weak self] opaqueTransactionState in
+            if let strongSelf = self, let reorderCompleted = strongSelf.reorderCompleted, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
+                reorderCompleted(mergedEntries)
+            }
         }
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in

@@ -1,19 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import MtProtoKitMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-    import SwiftSignalKit
-#endif
+import Postbox
+import MtProtoKit
+import SwiftSignalKit
+import TelegramApi
 
 private func roundUp(_ value: Int, to multiple: Int) -> Int {
     if multiple == 0 {
@@ -119,6 +108,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -162,6 +155,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
@@ -210,6 +207,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -253,6 +254,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             request.dependsOnPasswordEntry = false
             
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
+            
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
@@ -290,6 +295,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                return true
+            }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {

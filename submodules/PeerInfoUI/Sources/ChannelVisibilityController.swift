@@ -637,7 +637,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 if let current = state.selectedType {
                     selectedType = current
                 } else {
-                    selectedType = .privateChannel
+                    selectedType = .publicChannel
                 }
                 
                 let currentAddressName: String

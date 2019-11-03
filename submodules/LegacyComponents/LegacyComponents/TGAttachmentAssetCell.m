@@ -6,6 +6,7 @@
 @interface TGAttachmentAssetCell ()
 {
     SMetaDisposable *_itemSelectedDisposable;
+    bool _ignoreSetSelected;
 }
 @end
 
@@ -126,14 +127,16 @@
 
 - (void)checkButtonPressed
 {
-    [_checkButton setSelected:!_checkButton.selected animated:true];
+    _ignoreSetSelected = true;
     
-    [self.selectionContext setItem:(id<TGMediaSelectableItem>)self.asset selected:_checkButton.selected animated:false sender:_checkButton];
+    [self.selectionContext setItem:(id<TGMediaSelectableItem>)self.asset selected:!_checkButton.selected animated:true sender:_checkButton];
     
     bool value = [self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)self.asset];
     if (value != _checkButton.selected) {
-        [_checkButton setSelected:value animated:false];
+        [_checkButton setSelected:value animated:true];
     }
+    
+    _ignoreSetSelected = false;
 }
 
 - (void)setChecked:(bool)checked animated:(bool)animated

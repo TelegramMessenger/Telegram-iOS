@@ -225,7 +225,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             var imageSize: CGSize = CGSize(width: 34.0, height: 34.0)
             if let file = file, let dimensions = file.dimensions {
                 let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
-                imageSize = dimensions.aspectFitted(imageBoundingSize)
+                imageSize = dimensions.cgSize.aspectFitted(imageBoundingSize)
                 imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
             }
             

@@ -18,10 +18,10 @@ func loadLegacyUser(database: SqliteInterface, id: Int32) -> (TelegramUser, Tele
         let photoBig = cursor.getString(at: 6)
         var photo: [TelegramMediaImageRepresentation] = []
         if let resource = resourceFromLegacyImageUrl(photoSmall) {
-            photo.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: resource))
+            photo.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: resource))
         }
         if let resource = resourceFromLegacyImageUrl(photoBig) {
-            photo.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 600.0, height: 600.0), resource: resource))
+            photo.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 600, height: 600), resource: resource))
         }
         
         let user = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: cursor.getInt32(at: 0)), accessHash: accessHash == 0 ? nil : .personal(accessHash), firstName: firstName.isEmpty ? nil : firstName, lastName: lastName.isEmpty ? nil : lastName, username: username.isEmpty ? nil : username, phone: phone.isEmpty ? nil : phone, photo: photo, botInfo: nil, restrictionInfo: nil, flags: [])

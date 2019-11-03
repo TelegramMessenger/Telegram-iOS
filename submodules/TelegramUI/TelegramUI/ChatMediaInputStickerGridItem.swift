@@ -229,8 +229,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         }
                         self.addSubnode(animationNode)
                     }
-                    let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     self.updateVisibility()
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
                 } else {
@@ -245,7 +245,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
                 }
                 
-                self.currentState = (item.account, item.stickerItem, dimensions)
+                self.currentState = (item.account, item.stickerItem, dimensions.cgSize)
                 self.setNeedsLayout()
             }
         }
@@ -299,8 +299,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             self.animationNode?.visibility = isPlaying
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
-                let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-                let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                 self.animationNode?.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             }
         }

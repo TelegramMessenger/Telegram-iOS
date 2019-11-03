@@ -102,7 +102,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
         self.contentTileNode.frame = self.bounds
         
         if let imageNode = self.imageNode, let image = self.cover, let largest = largestImageRepresentation(image.representations) {
-            let size = largest.dimensions.aspectFilled(imageSize)
+            let size = largest.dimensions.cgSize.aspectFilled(imageSize)
             let boundingSize = imageSize
             
             let makeLayout = imageNode.asyncLayout()
