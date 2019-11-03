@@ -19,7 +19,7 @@ BUILDBOX_DIR="buildbox"
 mkdir -p "$BUILDBOX_DIR/transient-data"
 
 source `which setup-telegram-build.sh`
-setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
+setup_telegram_build "$CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
 
 COMMIT_ID=$(git rev-parse HEAD)
 COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
