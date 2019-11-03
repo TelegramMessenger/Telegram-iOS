@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="11.1"
+XCODE_VERSION="11.2"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -173,24 +173,11 @@ scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BUCK_HTTP_CACHE=\"$BUCK_HTTP_CACHE\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
-if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	ARCHIVE_PATH="$HOME/telegram-builds-archive"
-	DATE_PATH=$(date +%Y-%m-%d_%H-%M-%S)
-	ARCHIVE_BUILD_PATH="$ARCHIVE_PATH/$DATE_PATH"
-	mkdir -p "$ARCHIVE_PATH"
-	mkdir -p "$ARCHIVE_BUILD_PATH"
-	APPSTORE_IPA="Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_DSYM_ZIP="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
-	APPSTORE_TARGET_IPA="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_TARGET_DSYM_ZIP="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+OUTPUT_PATH="build/artifacts"
+rm -rf "$OUTPUT_PATH"
+mkdir -p "$OUTPUT_PATH"
 
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.ipa" "$ARCHIVE_BUILD_PATH/"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.zip" "$ARCHIVE_BUILD_PATH/"
-elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	VERIFY_IPA="Telegram-Verify-Build.ipa"
-	rm -f "$VERIFY_IPA"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
-fi
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/build/artifacts/*" "$OUTPUT_PATH/"
 
 if [ -z "$RUNNING_VM" ]; then
 	if [ "$BUILD_MACHINE" == "linux" ]; then
@@ -200,4 +187,8 @@ if [ -z "$RUNNING_VM" ]; then
 		prlctl stop "$VM_NAME" --kill
 		prlctl delete "$VM_NAME"
 	fi
+fi
+
+if [ ! -f "$OUTPUT_PATH/Telegram.ipa" ]; then
+	exit 1
 fi
