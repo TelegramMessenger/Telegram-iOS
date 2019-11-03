@@ -38,19 +38,6 @@ beta_testflight:
       - build/artifacts
     expire_in: 1 week
 
-deploy_internal:
-  tags:
-    - ios_internal
-  stage: deploy_unused
-  only:
-    - master
-  except:
-    - tags
-  script:
-    - bash buildbox/deploy-telegram.sh hockeyapp
-  environment:
-    name: internal
-
 deploy_beta_testflight:
   tags:
     - ios_beta
