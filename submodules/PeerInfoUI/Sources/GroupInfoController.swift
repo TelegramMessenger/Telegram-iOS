@@ -842,7 +842,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 var activePermissionCount: Int?
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
-                    for right in allGroupPermissionList {
+                    for (right, _) in allGroupPermissionList {
                         if !defaultBannedRights.flags.contains(right) {
                             count += 1
                         }
@@ -902,7 +902,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 var activePermissionCount: Int?
                 if let defaultBannedRights = channel.defaultBannedRights {
                     var count = 0
-                    for right in allGroupPermissionList {
+                    for (right, _) in allGroupPermissionList {
                         if !defaultBannedRights.flags.contains(right) {
                             count += 1
                         }

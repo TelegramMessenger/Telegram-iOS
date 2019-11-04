@@ -3868,6 +3868,11 @@ Unused sets are archived when you add more.";
 "GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
 "GroupPermission.AddMembersNotAvailable" = "You don't have persmission to add members.";
 
+"Channel.EditAdmin.PermissionEnabledByDefault" = "This option is permitted for all members in Group Permissions.";
+
+"GroupPermission.EditingDisabled" = "You cannot edit restrictions of this user.";
+"GroupPermission.PermissionDisabledByDefault" = "This option is disabled for all members in Group Permissions.";
+
 "Channel.Management.RemovedBy" = "Removed by %@";
 
 "GroupRemoved.Title" = "Removed Users";
@@ -4496,6 +4501,8 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.Permissions.SlowmodeInfo" = "Members will be restricted to send one message per this interval.";
 "Channel.AdminLog.DisabledSlowmode" = "%@ disabled slowmode";
 "Channel.AdminLog.SetSlowmode" = "%1$@ set slowmode to %2$@";
+
+"GroupInfo.Permissions.EditingDisabled" = "You cannot edit this permission.";
 
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";

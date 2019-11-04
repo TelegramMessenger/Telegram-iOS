@@ -22,9 +22,10 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
+    let activatedWhileDisabled: () -> Void
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.title = title
         self.value = value
@@ -35,6 +36,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.updated = updated
+        self.activatedWhileDisabled = activatedWhileDisabled
         self.tag = tag
     }
     
@@ -259,7 +261,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     if let currentDisabledOverlayNode = currentDisabledOverlayNode {
                         if currentDisabledOverlayNode != strongSelf.disabledOverlayNode {
                             strongSelf.disabledOverlayNode = currentDisabledOverlayNode
-                            strongSelf.addSubnode(currentDisabledOverlayNode)
+                            strongSelf.insertSubnode(currentDisabledOverlayNode, belowSubnode: strongSelf.switchGestureNode)
                             currentDisabledOverlayNode.alpha = 0.0
                             transition.updateAlpha(node: currentDisabledOverlayNode, alpha: 1.0)
                             currentDisabledOverlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight))
@@ -362,7 +364,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         switchView.isUserInteractionEnabled = item.enableInteractiveChanges
                     }
-                    strongSelf.switchGestureNode.isHidden = item.enableInteractiveChanges
+                    strongSelf.switchGestureNode.isHidden = item.enableInteractiveChanges && item.enabled
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }
@@ -442,8 +444,12 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if let item = self.item, let switchView = self.switchNode.view as? UISwitch, case .ended = recognizer.state {
-            let value = switchView.isOn
-            item.updated(!value)
+            if item.enabled {
+                let value = switchView.isOn
+                item.updated(!value)
+            } else {
+                item.activatedWhileDisabled()
+            }
         }
     }
 }
