@@ -25,7 +25,7 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             guard let strongSelf = self, !strongSelf.bounds.width.isZero else {
                 return false
             }
-            return strongSelf.shouldBegin?(point) ?? false
+            return strongSelf.shouldBegin?(point) ?? true
         }
         
         contextGesture.activationProgress = { [weak self] progress, update in
