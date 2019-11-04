@@ -298,7 +298,7 @@ def watch_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
-        "MinimumOSVersion": "5.0",
+        #"MinimumOSVersion": "5.0",
     }
     return substitutions
 
@@ -313,6 +313,6 @@ def watch_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
-        "MinimumOSVersion": "5.0",
+        #"MinimumOSVersion": "5.0",
     }
     return substitutions
