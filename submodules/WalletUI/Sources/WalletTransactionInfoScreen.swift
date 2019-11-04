@@ -147,16 +147,22 @@ final class WalletTransactionInfoScreen: ViewController {
     private let context: WalletContext
     private let walletInfo: WalletInfo?
     private let walletTransaction: WalletInfoTransaction
+    private let walletState: Signal<(CombinedWalletState, Bool), NoError>
     private var presentationData: WalletPresentationData
+
+    private var walletStateDisposable: Disposable?
+    private var combinedState: CombinedWalletState?
+    private var reloadingState = false
     
     private var previousScreenBrightness: CGFloat?
     private var displayLinkAnimator: DisplayLinkAnimator?
     private let idleTimerExtensionDisposable: Disposable
     
-    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) {
+    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, walletState: Signal<(CombinedWalletState, Bool), NoError>, enableDebugActions: Bool) {
         self.context = context
         self.walletInfo = walletInfo
         self.walletTransaction = walletTransaction
+        self.walletState = walletState
         
         self.presentationData = context.presentationData
         
@@ -174,10 +180,21 @@ final class WalletTransactionInfoScreen: ViewController {
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Done, style: .done, target: self, action: #selector(self.donePressed))
+        
+        self.walletStateDisposable = (walletState
+        |> deliverOnMainQueue).start(next: { [weak self] combinedState, reloadingState in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.combinedState = combinedState
+            strongSelf.reloadingState = reloadingState
+        })
     }
     
     deinit {
         self.idleTimerExtensionDisposable.dispose()
+        self.walletStateDisposable?.dispose()
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -190,11 +207,24 @@ final class WalletTransactionInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            var randomId: Int64 = 0
-            arc4random_buf(&randomId, 8)
-            if let walletInfo = strongSelf.walletInfo {
-                strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo, address: address))
-                strongSelf.dismiss()
+            
+            if strongSelf.reloadingState {
+                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: nil, text: strongSelf.presentationData.strings.Wallet_Send_SyncInProgress, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
+                    })
+                ]), in: .window(.root))
+            } else if let combinedState = strongSelf.combinedState, !combinedState.pendingTransactions.isEmpty {
+                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: nil, text: strongSelf.presentationData.strings.Wallet_Send_TransactionInProgress, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
+                    })
+                ]), in: .window(.root))
+            } else {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                if let walletInfo = strongSelf.walletInfo {
+                    strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo, address: address))
+                    strongSelf.dismiss()
+                }
             }
         }
         (self.displayNode as! WalletTransactionInfoScreenNode).displayFeesTooltip = { [weak self] node, rect in
@@ -465,7 +495,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
             }
         }
     }
-    
+
     override func didLoad() {
         super.didLoad()
         

@@ -130,7 +130,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
+            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, walletState: (strongSelf.displayNode as! WalletInfoScreenNode).statePromise.get(), enableDebugActions: strongSelf.enableDebugActions))
         }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -578,6 +578,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     fileprivate var combinedState: CombinedWalletState?
     private var currentEntries: [WalletInfoListEntry]?
     
+    fileprivate let statePromise = Promise<(CombinedWalletState, Bool)>()
+    
     private var isReady: Bool = false
     
     let contentReady = Promise<Bool>()
@@ -817,6 +819,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.transactionListDisposable.set(nil)
         self.loadingMoreTransactions = true
         self.reloadingState = true
+        self.updateStatePromise()
         
         self.headerNode.isRefreshing = true
         self.headerNode.refreshNode.refreshProgress = 0.0
@@ -852,7 +855,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             
-                strongSelf.reloadingState = false
+            strongSelf.reloadingState = false
+            strongSelf.updateStatePromise()
             
             if let combinedState = strongSelf.combinedState {
                 strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
@@ -961,6 +965,14 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         if !self.didSetContentReady {
             self.didSetContentReady = true
             self.contentReady.set(.single(true))
+        }
+    
+        self.updateStatePromise()
+    }
+    
+    private func updateStatePromise() {
+        if let combinedState = self.combinedState {
+            self.statePromise.set(.single((combinedState, self.reloadingState)))
         }
     }
     
