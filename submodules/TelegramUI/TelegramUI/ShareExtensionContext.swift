@@ -122,8 +122,10 @@ public class ShareRootControllerImpl {
             mainWindow.hostView.eventView.isHidden = false
             self.mainWindow = mainWindow
             
+            let bounds = view.bounds
+            
             view.addSubview(mainWindow.hostView.containerView)
-            mainWindow.hostView.containerView.frame = view.bounds
+            mainWindow.hostView.containerView.frame = bounds
             
             let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
             performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
@@ -340,7 +342,14 @@ public class ShareRootControllerImpl {
                     context.account.resetStateManagement()
                 }
                 
-                let _ = passcodeEntryController(context: context, animateIn: true, completion: { value in
+                let modalPresentation: Bool
+                if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                    modalPresentation = true
+                } else {
+                    modalPresentation = false
+                }
+                
+                let _ = passcodeEntryController(context: context, animateIn: true, modalPresentation: modalPresentation, completion: { value in
                     if value {
                         displayShare()
                     } else {

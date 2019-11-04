@@ -29,6 +29,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     private let statusBar: StatusBar
     
+    private let modalPresentation: Bool
+    
     private let backgroundNode: ASImageNode
     private let iconNode: PasscodeLockIconNode
     private let titleNode: PasscodeEntryLabelNode
@@ -50,7 +52,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(accountManager: AccountManager, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar) {
+    init(accountManager: AccountManager, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.theme = theme
         self.strings = strings
@@ -59,6 +61,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.biometricsType = biometricsType
         self.arguments = arguments
         self.statusBar = statusBar
+        self.modalPresentation = modalPresentation
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.contentMode = .scaleToFill
@@ -373,7 +376,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.iconNode.alpha = 0.0
         }
                 
-        let passcodeLayout = PasscodeLayout(layout: layout)
+        let passcodeLayout = PasscodeLayout(layout: layout, modalPresentation: self.modalPresentation)
         let inputFieldOffset: CGFloat
         if isLandscape {
             let bottomInset = layout.inputHeight ?? 0.0
