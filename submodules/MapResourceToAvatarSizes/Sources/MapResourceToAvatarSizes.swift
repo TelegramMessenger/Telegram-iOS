@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
-import SyncCore
 import Display
 
 public func mapResourceToAvatarSizes(postbox: Postbox, resource: MediaResource, representations: [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError> {
@@ -16,7 +15,7 @@ public func mapResourceToAvatarSizes(postbox: Postbox, resource: MediaResource, 
         }
         var result: [Int: Data] = [:]
         for i in 0 ..< representations.count {
-            if let scaledImage = generateScaledImage(image: image, size: representations[i].dimensions, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.8) {
+            if let scaledImage = generateScaledImage(image: image, size: representations[i].dimensions.cgSize, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.8) {
                 result[i] = scaledData
             }
         }

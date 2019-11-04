@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public func decryptedResourceData(data: MediaResourceData, resource: MediaResource, params: Any) -> Data? {
     guard data.complete else {

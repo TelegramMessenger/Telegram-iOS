@@ -6,7 +6,7 @@
  */
 
 #import <Security/Security.h>
-
+#if TARGET_OS_IOS
 @implementation MTRsa
 
 NSString *MTStringByEncodingInBase64(NSData *data) {
@@ -439,3 +439,4 @@ static NSData *base64_decode(NSString *str) {
 /* END: Encryption & Decryption with RSA public key */
 
 @end
+#endif

@@ -405,7 +405,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 if let resourcePath = resourcePath, let image = UIImage(contentsOfFile: resourcePath) {
                                     dimensions = image.size
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(dimensions), resource: resource))
                             }
                         }
                         
@@ -414,7 +414,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                             if let image = UIImage(contentsOfFile: fullSizePath) {
                                 let resource: TelegramMediaResource = LocalFileMediaResource(fileId: arc4random64())
                                 copyLocalFiles.append((resource, fullSizePath))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: image.size, resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource))
                             }
                         }
                         
@@ -431,14 +431,14 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 } else if imageUrl.hasPrefix("file://"), let path = URL(string: imageUrl)?.path {
                                     copyLocalFiles.append((resource, path))
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: sizeValue.cgSizeValue, resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource))
                             }
                         }
                         
                         var resource: TelegramMediaResource = LocalFileMediaResource(fileId: arc4random64())
                         
                         var attributes: [TelegramMediaFileAttribute] = []
-                        attributes.append(.Video(duration: Int(item.duration), size: item.dimensions, flags: item.roundMessage ? .instantRoundVideo : []))
+                        attributes.append(.Video(duration: Int(item.duration), size: PixelDimensions(item.dimensions), flags: item.roundMessage ? .instantRoundVideo : []))
                        
                         var size: Int32 = 0
                         if let videoUrl = item.videoInfo?.url(withQuality: 1, actualQuality: nil, actualSize: &size) {
@@ -488,7 +488,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                     resource = updatedResource
                                     copyLocalFiles.append((resource, pathFromLegacyImageUrl(basePath: basePath, url: imageUrl)))
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: sizeValue.cgSizeValue, resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource))
                             }
                         }
                         
@@ -512,7 +512,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 } else if let _ = attribute as? TGDocumentAttributeAnimated {
                                     attributes.append(.Animated)
                                 } else if let attribute = attribute as? TGDocumentAttributeVideo {
-                                    attributes.append(.Video(duration: Int(attribute.duration), size: attribute.size, flags: attribute.isRoundMessage ? .instantRoundVideo : []))
+                                    attributes.append(.Video(duration: Int(attribute.duration), size: PixelDimensions(attribute.size), flags: attribute.isRoundMessage ? .instantRoundVideo : []))
                                 } else if let attribute = attribute as? TGDocumentAttributeSticker {
                                     var packReference: StickerPackReference?
                                     if let reference = attribute.packReference as? TGStickerPackIdReference {
@@ -522,7 +522,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                     }
                                     attributes.append(.Sticker(displayText: attribute.alt ?? "", packReference: packReference, maskData: nil))
                                 } else if let attribute = attribute as? TGDocumentAttributeImageSize {
-                                    attributes.append(.ImageSize(size: attribute.size))
+                                    attributes.append(.ImageSize(size: PixelDimensions(attribute.size)))
                                 }
                             }
                         }

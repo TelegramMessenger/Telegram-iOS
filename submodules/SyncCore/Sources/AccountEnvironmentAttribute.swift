@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public enum AccountEnvironment: Int32 {
     case production = 0

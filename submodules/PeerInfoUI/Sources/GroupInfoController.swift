@@ -1300,6 +1300,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var errorImpl: (() -> Void)?
     var clearHighlightImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1414,7 +1415,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         if let data = image.jpegData(compressionQuality: 0.6) {
                             let resource = LocalFileMediaResource(fileId: arc4random64())
                             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                            let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation, true))
                             }
@@ -2264,6 +2265,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
             }, pushController: { c in
                 pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
             })
         }
         
@@ -2305,6 +2308,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.view.endEditing(true)
         controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         let _ = (context.account.postbox.transaction { transaction -> Peer? in

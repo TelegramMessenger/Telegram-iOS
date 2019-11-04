@@ -21,6 +21,7 @@ static_library(
         "//submodules/ImageBlur:ImageBlur",
         "//submodules/AppBundle:AppBundle",
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
+        "//submodules/MonotonicTime:MonotonicTime",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

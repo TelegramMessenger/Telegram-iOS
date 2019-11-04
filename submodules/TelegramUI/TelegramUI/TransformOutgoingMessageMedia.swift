@@ -74,8 +74,8 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                                     break
                                             }
                                         }
-                                        attributes.append(.ImageSize(size: imageDimensions))
-                                        let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: scaledImageSize, resource: thumbnailResource)]).withUpdatedAttributes(attributes)
+                                        attributes.append(.ImageSize(size: PixelDimensions(imageDimensions)))
+                                        let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource)]).withUpdatedAttributes(attributes)
                                         subscriber.putNext(.standalone(media: updatedFile))
                                         subscriber.putCompletion()
                                     } else {
@@ -104,7 +104,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                             
                                 let scaledImageSize = CGSize(width: scaledImage.size.width * scaledImage.scale, height: scaledImage.size.height * scaledImage.scale)
                             
-                                let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: scaledImageSize, resource: thumbnailResource)])
+                                let updatedFile = file.withUpdatedSize(data.size).withUpdatedPreviewRepresentations([TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledImageSize), resource: thumbnailResource)])
                                 subscriber.putNext(.standalone(media: updatedFile))
                                 subscriber.putCompletion()
                             } else {
@@ -153,14 +153,14 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                 return result
                 |> mapToSignal { data -> Signal<AnyMediaReference?, NoError> in
                     if data.complete {
-                        if let smallest = smallestImageRepresentation(image.representations), smallest.dimensions.width > 100.0 || smallest.dimensions.height > 100.0 {
-                            let smallestSize = smallest.dimensions.fitted(CGSize(width: 320.0, height: 320.0))
+                        if let smallest = smallestImageRepresentation(image.representations), smallest.dimensions.width > 100 || smallest.dimensions.height > 100 {
+                            let smallestSize = smallest.dimensions.cgSize.fitted(CGSize(width: 320.0, height: 320.0))
                             if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7) {
                                 var representations = image.representations
                                 
                                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
-                                representations.append(TelegramMediaImageRepresentation(dimensions: smallestSize, resource: thumbnailResource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(smallestSize), resource: thumbnailResource))
                                 let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference)
                                 return .single(.standalone(media: updatedImage))
                             }

@@ -235,9 +235,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             isBlurrable = false
                             //self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                         case let .file(file):
-                            let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                            contentSize = dimensions
-                            displaySize = dimensions.dividedByScreenScale().integralFloor
+                            let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
+                            contentSize = dimensions.cgSize
+                            displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
@@ -310,8 +310,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                         case let .image(representations, _):
                             if let largestSize = largestImageRepresentation(representations) {
-                                contentSize = largestSize.dimensions
-                                displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
+                                contentSize = largestSize.dimensions.cgSize
+                                displaySize = largestSize.dimensions.cgSize.dividedByScreenScale().integralFloor
                                 
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
@@ -382,19 +382,19 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         }
                         if let thumbnail = thumbnail {
                             thumbnailResource = thumbnail.resource
-                            thumbnailDimensions = thumbnail.dimensions
+                            thumbnailDimensions = thumbnail.dimensions?.cgSize
                         }
                         if let dimensions = content?.dimensions {
-                            imageDimensions = dimensions
+                            imageDimensions = dimensions.cgSize
                         }
                     case let .internalReference(_, _, _, _, _, image, _, _):
                         if let image = image {
-                            if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
-                                imageDimensions = imageRepresentation.dimensions
+                            if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
+                                imageDimensions = imageRepresentation.dimensions.cgSize
                                 imageResource = imageRepresentation.resource
                             }
                             if let thumbnailRepresentation = smallestImageRepresentation(image.representations) {
-                                thumbnailDimensions = thumbnailRepresentation.dimensions
+                                thumbnailDimensions = thumbnailRepresentation.dimensions.cgSize
                                 thumbnailResource = thumbnailRepresentation.resource
                             }
                         }
@@ -406,9 +406,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         
                         var representations: [TelegramMediaImageRepresentation] = []
                         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                            representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource))
                         }
-                        representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource))
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                         
                         signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
@@ -607,7 +607,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     private func preparePatternEditing() {
         if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper {
-            if let size = file.file.dimensions?.fitted(CGSize(width: 1280.0, height: 1280.0)) {
+            if let size = file.file.dimensions?.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)) {
                 let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
             }
         }

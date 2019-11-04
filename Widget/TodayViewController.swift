@@ -77,6 +77,21 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         }
     }
     
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        if #available(iOSApplicationExtension 13.0, *) {
+            switch self.traitCollection.userInterfaceStyle {
+            case .dark:
+                self.primaryColor = .white
+            default:
+                self.primaryColor = .black
+            }
+        }
+        self.appLockedLabel?.textColor = self.primaryColor
+        for view in self.peerViews {
+            view.primaryColor = self.primaryColor
+        }
+    }
+    
     func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -> Void)) {
         completionHandler(.newData)
     }

@@ -1,20 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import MtProtoKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    import SwiftSignalKit
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-    import UIKit
-#endif
+import Postbox
+import TelegramApi
+import SwiftSignalKit
+import MtProtoKit
 
 import SyncCore
 
@@ -742,7 +730,7 @@ private func decryptedEntities101(_ entities: [MessageTextEntity]?) -> [SecretAp
     return result
 }
 
-private func boxedDecryptedMessage(transaction: Transaction, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: (CGSize, Data)], layer: SecretChatLayer) -> BoxedDecryptedMessage {
+private func boxedDecryptedMessage(transaction: Transaction, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: (PixelDimensions, Data)], layer: SecretChatLayer) -> BoxedDecryptedMessage {
     let media: Media? = message.media.first
     var messageAutoremoveTimeout: Int32 = 0
     var replyGlobalId: Int64? = nil
@@ -780,8 +768,8 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbH: Int32
             let thumb: Buffer
             if let (thumbnailSize, data) = thumbnailData[image.imageId] {
-                thumbW = Int32(thumbnailSize.width)
-                thumbH = Int32(thumbnailSize.height)
+                thumbW = thumbnailSize.width
+                thumbH = thumbnailSize.height
                 thumb = Buffer(data: data)
             } else {
                 thumbW = 90
@@ -839,8 +827,8 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbH: Int32
             let thumb: Buffer
             if let (thumbnailSize, data) = thumbnailData[file.fileId] {
-                thumbW = Int32(thumbnailSize.width)
-                thumbH = Int32(thumbnailSize.height)
+                thumbW = thumbnailSize.width
+                thumbH = thumbnailSize.height
                 thumb = Buffer(data: data)
             } else {
                 thumbW = 0
@@ -1326,10 +1314,10 @@ private func replaceOutgoingOperationWithEmptyMessage(transaction: Transaction, 
     }
 }
 
-private func resourceThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, resource: MediaResource, mediaId: MediaId) -> Signal<(MediaId, CGSize, Data)?, NoError> {
+private func resourceThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, resource: MediaResource, mediaId: MediaId) -> Signal<(MediaId, PixelDimensions, Data)?, NoError> {
     return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
     |> take(1)
-    |> map { data -> (MediaId, CGSize, Data)? in
+    |> map { data -> (MediaId, PixelDimensions, Data)? in
         if data.complete, let (mappedSize, mappedData) = auxiliaryMethods.prepareSecretThumbnailData(data) {
             return (mediaId, mappedSize, mappedData)
         } else {
@@ -1338,8 +1326,8 @@ private func resourceThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, me
     }
 }
 
-private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, message: Message) -> Signal<[MediaId: (CGSize, Data)], NoError> {
-    var signals: [Signal<(MediaId, CGSize, Data)?, NoError>] = []
+private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, message: Message) -> Signal<[MediaId: (PixelDimensions, Data)], NoError> {
+    var signals: [Signal<(MediaId, PixelDimensions, Data)?, NoError>] = []
     for media in message.media {
         if let image = media as? TelegramMediaImage {
             if let smallestRepresentation = smallestImageRepresentation(image.representations) {
@@ -1353,7 +1341,7 @@ private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods,
     }
     return combineLatest(signals)
     |> map { values in
-        var result: [MediaId: (CGSize, Data)] = [:]
+        var result: [MediaId: (PixelDimensions, Data)] = [:]
         for value in values {
             if let value = value {
                 result[value.0] = (value.1, value.2)
@@ -1364,7 +1352,7 @@ private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods,
 }
 
 private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Signal<[MediaId: (CGSize, Data)], NoError> in
+    return postbox.transaction { transaction -> Signal<[MediaId: (PixelDimensions, Data)], NoError> in
         if let message = transaction.getMessage(messageId) {
             return messageWithThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: postbox.mediaBox, message: message)
         } else {

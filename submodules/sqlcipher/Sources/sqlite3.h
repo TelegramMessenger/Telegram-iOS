@@ -34,11 +34,7 @@
 #define SQLITE3_H
 #include <stdarg.h>     /* Needed for the definition of va_list */
 
-#if TARGET_OS_OSX
-#include <sqlciphermac/sqlcipher_config.h>
-#else
 #include <sqlcipher/sqlcipher_config.h>
-#endif
 
 
 /*

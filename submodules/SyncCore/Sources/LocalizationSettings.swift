@@ -1,9 +1,6 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
+
 
 public final class LocalizationComponent: Equatable, PostboxCoding {
     public let languageCode: String

@@ -1,16 +1,10 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import UIKit
-    import TelegramApi
-#endif
+import Postbox
+import TelegramApi
 
 import SyncCore
 
-func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> CGSize? {
+func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
             case let .Video(_, size, _):
@@ -39,11 +33,11 @@ func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> In
 }
 
 public extension TelegramMediaFile {
-    var dimensions: CGSize? {
+    var dimensions: PixelDimensions? {
         if let value = dimensionsForFileAttributes(self.attributes) {
             return value
         } else if self.isAnimatedSticker {
-            return CGSize(width: 512.0, height: 512.0)
+            return PixelDimensions(width: 512, height: 512)
         } else {
             return nil
         }
@@ -89,7 +83,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
             case .documentAttributeHasStickers:
                 result.append(.HasLinkedStickers)
             case let .documentAttributeImageSize(w, h):
-                result.append(.ImageSize(size: CGSize(width: CGFloat(w), height: CGFloat(h))))
+                result.append(.ImageSize(size: PixelDimensions(width: w, height: h)))
             case .documentAttributeAnimated:
                 result.append(.Animated)
             case let .documentAttributeVideo(flags, duration, w, h):
@@ -100,7 +94,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 1)) != 0 {
                     videoFlags.insert(.supportsStreaming)
                 }
-                result.append(.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: videoFlags))
+                result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 var waveformBuffer: MemoryBuffer?
@@ -133,13 +127,13 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
             case let .photoSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
                 }
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()

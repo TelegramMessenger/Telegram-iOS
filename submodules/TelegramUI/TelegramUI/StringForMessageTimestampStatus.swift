@@ -20,7 +20,7 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
         timestamp = message.timestamp
     }
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
-    if timestamp == 0x7FFFFFFE {
+    if timestamp == scheduleWhenOnlineTimestamp {
         dateText = "         "
     }
     

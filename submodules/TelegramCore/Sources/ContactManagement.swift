@@ -1,13 +1,7 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import TelegramApi
-    import Postbox
-    import SwiftSignalKit
-#endif
+import TelegramApi
+import Postbox
+import SwiftSignalKit
 
 import SyncCore
 

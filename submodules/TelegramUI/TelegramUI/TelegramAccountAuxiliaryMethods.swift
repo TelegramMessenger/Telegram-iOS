@@ -45,5 +45,7 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
     }
     return .single(nil)
 }, prepareSecretThumbnailData: { data in
-    return prepareSecretThumbnailData(data)
+    return prepareSecretThumbnailData(data).flatMap { size, data in
+        return (PixelDimensions(size), data)
+    }
 })

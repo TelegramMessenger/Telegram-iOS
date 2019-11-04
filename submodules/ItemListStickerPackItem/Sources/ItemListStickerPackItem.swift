@@ -388,7 +388,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
-                        let stillImageSize = representation.dimensions.aspectFitted(imageBoundingSize)
+                        let stillImageSize = representation.dimensions.cgSize.aspectFitted(imageBoundingSize)
                         imageSize = stillImageSize
                         
                         if fileUpdated {

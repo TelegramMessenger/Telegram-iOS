@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import TelegramApiMac
-#else
 import TelegramApi
-#endif
 
 enum UpdateGroup {
     case withPts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])

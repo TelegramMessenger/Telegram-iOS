@@ -71,6 +71,8 @@ NS_ASSUME_NONNULL_BEGIN
 //! @abstract The range of text currently selected. If length is zero, the range is the cursor location.
 @property NSRange selectedRange;
 
+@property (readonly) CGRect selectionRect;
+
 #pragma mark - Placeholder
 /**
   @abstract Indicates if the receiver is displaying the placeholder text.

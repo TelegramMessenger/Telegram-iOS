@@ -227,20 +227,20 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             }
             if let thumbnail = thumbnail {
                 thumbnailResource = thumbnail.resource
-                thumbnailDimensions = thumbnail.dimensions
+                thumbnailDimensions = thumbnail.dimensions?.cgSize
             }
             if let dimensions = content?.dimensions {
-                imageDimensions = dimensions
+                imageDimensions = dimensions.cgSize
             }
         case let .internalReference(_, _, _, _, _, image, _, _):
             immediateThumbnailData = image?.immediateThumbnailData
             if let image = image {
-                if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
-                    imageDimensions = imageRepresentation.dimensions
+                if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
+                    imageDimensions = imageRepresentation.dimensions.cgSize
                     imageResource = imageRepresentation.resource
                 }
-                if let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0)) {
-                    thumbnailDimensions = thumbnailRepresentation.dimensions
+                if let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 200, height: 100)) {
+                    thumbnailDimensions = thumbnailRepresentation.dimensions.cgSize
                     thumbnailResource = thumbnailRepresentation.resource
                 }
             }
@@ -261,9 +261,9 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
         
         var representations: [TelegramMediaImageRepresentation] = []
         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-            representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource))
         }
-        representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
+        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource))
         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil)
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
         |> mapToSignal { value -> Signal<UIImage, NoError> in

@@ -27,7 +27,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         self.id = AnyHashable(embedUrl)
         self.webPage = webPage
         self.webpageContent = webpageContent
-        self.dimensions = webpageContent.embedSize ?? CGSize(width: 128.0, height: 128.0)
+        self.dimensions = webpageContent.embedSize?.cgSize ?? CGSize(width: 128.0, height: 128.0)
         self.duration = Int32(webpageContent.duration ?? (0 as Int))
         self.forcedTimestamp = forcedTimestamp
     }
@@ -70,7 +70,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         self.webpageContent = webpageContent
         
         if let embedSize = webpageContent.embedSize {
-            self.intrinsicDimensions = embedSize
+            self.intrinsicDimensions = embedSize.cgSize
         } else {
             self.intrinsicDimensions = CGSize(width: 480.0, height: 320.0)
         }
@@ -114,9 +114,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
 
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        if let image = webpageContent.image, let representation = image.representationForDisplayAtSize(self.intrinsicDimensions)  {
+        if let image = webpageContent.image, let representation = image.representationForDisplayAtSize(PixelDimensions(self.intrinsicDimensions)) {
             let makeImageLayout = self.imageNode.asyncLayout()
-            let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: representation.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+            let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: representation.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
             applyImageLayout()
         }
     }

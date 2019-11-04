@@ -466,6 +466,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var dismissInputImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -803,6 +804,8 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
             }, pushController: { c in
                 pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
             })
         }
         
@@ -827,6 +830,9 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {

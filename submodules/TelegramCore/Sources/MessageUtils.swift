@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 import SyncCore
 
@@ -195,7 +191,7 @@ public extension Message {
     func effectivelyFailed(timestamp: Int32) -> Bool {
         if self.flags.contains(.Failed) {
             return true
-        } else if self.id.namespace == Namespaces.Message.ScheduledCloud && self.timestamp != 0x7FFFFFFE {
+        } else if self.id.namespace == Namespaces.Message.ScheduledCloud && self.timestamp != scheduleWhenOnlineTimestamp {
             return timestamp > self.timestamp + 60
         } else {
             return false

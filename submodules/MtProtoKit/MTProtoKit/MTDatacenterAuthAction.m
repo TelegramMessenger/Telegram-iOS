@@ -10,13 +10,8 @@
 #import "MTSerialization.h"
 #import "MTDatacenterAddressSet.h"
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTSignal.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTSignal.h>
-#else
-#   import <MtProtoKit/MTSignal.h>
-#endif
+#import <MtProtoKit/MTSignal.h>
+
 
 #import "MTDatacenterAuthMessageService.h"
 #import "MTRequestMessageService.h"

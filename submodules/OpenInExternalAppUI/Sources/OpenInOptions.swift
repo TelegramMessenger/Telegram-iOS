@@ -110,14 +110,11 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }
                 return .none
             }))
-        
-            options.append(OpenInOption(identifier: "yandex", application: .other(title: "Yandex", identifier: 483693909, scheme: "yandexbrowser-open-url", store: nil), action: {
-                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) {
-                    return .openUrl(url: "yandexbrowser-open-url://\(escapedUrl)")
-                }
-                return .none
-            }))
             
+            options.append(OpenInOption(identifier: "duckDuckGo", application: .other(title: "DuckDuckGo", identifier: 663592361, scheme: "ddgQuickLink", store: nil), action: {
+                return .openUrl(url: "ddgQuickLink://\(url)")
+            }))
+                    
             options.append(OpenInOption(identifier: "edge", application: .other(title: "Microsoft Edge", identifier: 1288723196, scheme: "microsoft-edge-http", store: nil), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                     components.scheme = components.scheme == "https" ? "microsoft-edge-https" : "microsoft-edge-http"
@@ -127,9 +124,12 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }
                 return .none
             }))
-        
-            options.append(OpenInOption(identifier: "duckDuckGo", application: .other(title: "DuckDuckGo", identifier: 663592361, scheme: "ddgQuickLink", store: nil), action: {
-                return .openUrl(url: "ddgQuickLink://\(url)")
+            
+            options.append(OpenInOption(identifier: "yandex", application: .other(title: "Yandex Browser", identifier: 483693909, scheme: "yandexbrowser-open-url", store: nil), action: {
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) {
+                    return .openUrl(url: "yandexbrowser-open-url://\(escapedUrl)")
+                }
+                return .none
             }))
 
             options.append(OpenInOption(identifier: "brave", application: .other(title: "Brave", identifier: 1052879175, scheme: "brave", store: nil), action: {
@@ -139,28 +139,27 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .none
             }))
             
-            options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
-                return .openUrl(url: "alook://\(url)")
-            }))
-            
-            options.append(OpenInOption(identifier: "dolphin", application: .other(title: "Dolphin", identifier: 452204407, scheme: "dolphin", store: nil), action: {
+            options.append(OpenInOption(identifier: "dolphin", application: .other(title: "Dolphin", identifier: 1440710469, scheme: "dolphin", store: "us"), action: {
                 return .openUrl(url: "dolphin://\(url)")
             }))
                 
             options.append(OpenInOption(identifier: "onion", application: .other(title: "Onion Browser", identifier: 519296448, scheme: "onionhttp", store: nil), action: {
-                    if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
-                        components.scheme = components.scheme == "https" ? "onionhttps" : "onionhttp"
-                        if let url = components.string {
-                            return .openUrl(url: url)
-                        }
+                if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+                    components.scheme = components.scheme == "https" ? "onionhttps" : "onionhttp"
+                    if let url = components.string {
+                        return .openUrl(url: url)
                     }
-                    return .none
-                }))
+                }
+                return .none
+            }))
 
             options.append(OpenInOption(identifier: "ucbrowser", application: .other(title: "UC Browser", identifier: 1048518592, scheme: "ucbrowser", store: nil), action: {
                 return .openUrl(url: "ucbrowser://\(url)")
             }))
         
+            options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
+                return .openUrl(url: "alook://\(url)")
+            }))
         case let .location(location, withDirections):
             let lat = location.latitude
             let lon = location.longitude

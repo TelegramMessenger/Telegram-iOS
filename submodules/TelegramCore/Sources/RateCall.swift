@@ -1,19 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import MtProtoKitMac
-    import SwiftSignalKitMac
-    import TelegramApiMac
-#else
-    import Postbox
-    import TelegramApi
-    #if BUCK
-        import MtProtoKit
-    #else
-        import MtProtoKitDynamic
-    #endif
-    import SwiftSignalKit
-#endif
+import Postbox
+import MtProtoKit
+import SwiftSignalKit
+import TelegramApi
 
 public func rateCall(account: Account, callId: CallId, starsCount: Int32, comment: String = "", userInitiated: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0

@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="11.1"
+XCODE_VERSION="11.2"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -150,15 +150,24 @@ if [ "$BUILD_MACHINE" == "linux" ]; then
 	done
 elif [ "$BUILD_MACHINE" == "macOS" ]; then
 	if [ -z "$RUNNING_VM" ]; then
-		SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
-		if [ -z "$SNAPSHOT_ID" ]; then
-			echo "$VM_BASE_NAME is required to have one snapshot"
-			exit 1
-		fi
-		prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
-		prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
+		prlctl clone "$VM_BASE_NAME" --linked --name "$VM_NAME"
+		prlctl start "$VM_NAME"
+
+		echo "Getting VM IP"
+
+		while [ 1 ]; do
+			TEST_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'" || echo "")
+			if [ ! -z "$TEST_IP" ]; then
+				RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+				if [ "$RESPONSE" == "1" ]; then
+					VM_IP="$TEST_IP"
+					break
+				fi
+			fi
+			sleep 1
+		done
 	fi
-	VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
+	echo "VM_IP=$VM_IP"
 fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
@@ -173,24 +182,11 @@ scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BUCK_HTTP_CACHE=\"$BUCK_HTTP_CACHE\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
-if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
-	ARCHIVE_PATH="$HOME/telegram-builds-archive"
-	DATE_PATH=$(date +%Y-%m-%d_%H-%M-%S)
-	ARCHIVE_BUILD_PATH="$ARCHIVE_PATH/$DATE_PATH"
-	mkdir -p "$ARCHIVE_PATH"
-	mkdir -p "$ARCHIVE_BUILD_PATH"
-	APPSTORE_IPA="Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_DSYM_ZIP="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
-	APPSTORE_TARGET_IPA="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.ipa"
-	APPSTORE_TARGET_DSYM_ZIP="$ARCHIVE_BUILD_PATH/Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+OUTPUT_PATH="build/artifacts"
+rm -rf "$OUTPUT_PATH"
+mkdir -p "$OUTPUT_PATH"
 
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.ipa" "$ARCHIVE_BUILD_PATH/"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/*.zip" "$ARCHIVE_BUILD_PATH/"
-elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
-	VERIFY_IPA="Telegram-Verify-Build.ipa"
-	rm -f "$VERIFY_IPA"
-	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
-fi
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":"telegram-ios/build/artifacts/*" "$OUTPUT_PATH/"
 
 if [ -z "$RUNNING_VM" ]; then
 	if [ "$BUILD_MACHINE" == "linux" ]; then
@@ -200,4 +196,8 @@ if [ -z "$RUNNING_VM" ]; then
 		prlctl stop "$VM_NAME" --kill
 		prlctl delete "$VM_NAME"
 	fi
+fi
+
+if [ ! -f "$OUTPUT_PATH/Telegram.ipa" ]; then
+	exit 1
 fi

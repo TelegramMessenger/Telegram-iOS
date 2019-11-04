@@ -33,8 +33,6 @@ final class ChatTextInputMenu {
                             UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
                             UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
                         ]
-                        UIMenuController.shared.isMenuVisible = true
-                        UIMenuController.shared.update()
                 }
                 
             }
@@ -74,9 +72,15 @@ final class ChatTextInputMenu {
         self.state = .inactive
     }
     
-    func format() {
+    func format(view: UIView, rect: CGRect) {
         if self.state == .general {
             self.state = .format
+            if #available(iOS 13.0, *) {
+                UIMenuController.shared.showMenu(from: view, rect: rect)
+            } else {
+                UIMenuController.shared.isMenuVisible = true
+                UIMenuController.shared.update()
+            }
         }
     }
     

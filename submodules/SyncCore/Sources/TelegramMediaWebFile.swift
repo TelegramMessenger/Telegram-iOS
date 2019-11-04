@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 public class TelegramMediaWebFile: Media {
     public let resource: TelegramMediaResource

@@ -8,7 +8,6 @@ static_library(
     deps = [
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
-        "//submodules/SyncCore:SyncCore#shared",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

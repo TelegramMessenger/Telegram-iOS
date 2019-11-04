@@ -498,6 +498,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var dismissInputImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
 
@@ -584,24 +585,24 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                     }
                     if let participant = participant {
                         switch participant.participant {
-                            case .creator:
-                                return
-                            case let .member(_, _, _, banInfo, _):
-                                if let banInfo = banInfo {
-                                    var canUnban = false
-                                    if banInfo.restrictedBy != context.account.peerId {
+                        case .creator:
+                            return
+                        case let .member(_, _, _, banInfo, _):
+                            if let banInfo = banInfo {
+                                var canUnban = false
+                                if banInfo.restrictedBy != context.account.peerId {
+                                    canUnban = true
+                                }
+                                if let channel = peerView.peers[peerId] as? TelegramChannel {
+                                    if channel.hasPermission(.banMembers) {
                                         canUnban = true
                                     }
-                                    if let channel = peerView.peers[peerId] as? TelegramChannel {
-                                        if channel.hasPermission(.banMembers) {
-                                            canUnban = true
-                                        }
-                                    }
-                                    if !canUnban {
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                                        return
-                                    }
                                 }
+                                if !canUnban {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    return
+                                }
+                            }
                         }
                     }
                     pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
@@ -746,6 +747,8 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 }
             }, pushController: { c in
                 pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
             })
         }
         
@@ -771,6 +774,9 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
             controller.present(c, in: .window(.root), with: p)
             controller.view.endEditing(true)
         }
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {

@@ -465,7 +465,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     case let .imageRepresentation(_, representation):
                         let iconSize = CGSize(width: 42.0, height: 42.0)
                         let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
-                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
                     case .albumArt:
                         let iconSize = CGSize(width: 46.0, height: 46.0)

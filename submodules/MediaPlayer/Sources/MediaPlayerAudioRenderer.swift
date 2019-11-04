@@ -335,6 +335,8 @@ private final class AudioPlayerRendererContext {
         assert(audioPlayerRendererQueue.isCurrent())
         
         if self.audioGraph == nil {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
             var maybeAudioGraph: AUGraph?
             guard NewAUGraph(&maybeAudioGraph) == noErr, let audioGraph = maybeAudioGraph else {
                 return
@@ -428,6 +430,8 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
+            print("MediaPlayerAudioRenderer initialize audio unit: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+            
             self.audioGraph = audioGraph
             self.timePitchAudioUnit = timePitchAudioUnit
             self.outputAudioUnit = outputAudioUnit
@@ -497,10 +501,14 @@ private final class AudioPlayerRendererContext {
         assert(audioPlayerRendererQueue.isCurrent())
         
         if let audioGraph = self.audioGraph {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
             guard AUGraphStart(audioGraph) == noErr else {
                 self.closeAudioUnit()
                 return
             }
+            
+            print("MediaPlayerAudioRenderer start audio unit: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
     }
     

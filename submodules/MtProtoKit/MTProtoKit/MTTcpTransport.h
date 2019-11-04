@@ -1,12 +1,6 @@
 
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTTransport.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTTransport.h>
-#else
-#   import <MtProtoKit/MTTransport.h>
-#endif
+#import <MtProtoKit/MTTransport.h>
 
 @interface MTTcpTransport : MTTransport
 

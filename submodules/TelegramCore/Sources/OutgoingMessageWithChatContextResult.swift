@@ -1,19 +1,8 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-    import SwiftSignalKitMac
-#else
-    import Postbox
-    import SwiftSignalKit
-    import UIKit
-#endif
-
+import Postbox
+import SwiftSignalKit
 import SyncCore
 
-private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
-    let scale = min(to.width / max(1.0, size.width), to.height / max(1.0, size.height))
-    return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
-}
 
 public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false, scheduleTime: Int32? = nil) -> EnqueueMessage? {
     var attributes: [MessageAttribute] = []
@@ -65,7 +54,7 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = thumbnail.resource
-                            let imageDimensions = thumbnail.dimensions ?? CGSize(width: 128.0, height: 128.0)
+                            let imageDimensions = thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128)
                             let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource)], immediateThumbnailData: nil, reference: nil, partialReference: nil)
                             return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: tmpImage), replyToMessageId: nil, localGroupingKey: nil)
                         } else {
@@ -77,7 +66,7 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                             var randomId: Int64 = 0
                             arc4random_buf(&randomId, 8)
                             let thumbnailResource = thumbnail.resource
-                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? CGSize(width: 128.0, height: 128.0), resource: thumbnailResource))
+                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128), resource: thumbnailResource))
                         }
                         var fileName = "file"
                         if let content = content {

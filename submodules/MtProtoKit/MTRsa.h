@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-
+#if TARGET_OS_IOS
 @interface MTRsa : NSObject
 
 // return base64 encoded string
@@ -19,3 +19,4 @@
 + (NSData *)decryptData:(NSData *)data privateKey:(NSString *)privKey;
 
 @end
+#endif

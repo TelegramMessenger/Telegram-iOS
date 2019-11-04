@@ -6,7 +6,7 @@ public protocol KeyShortcutResponder {
 
 public class KeyShortcutsController: UIResponder {
     private var effectiveShortcuts: [KeyShortcut]?
-    private var viewControllerEnumerator: ((ContainableController) -> Bool) -> Void
+    private var viewControllerEnumerator: (@escaping (ContainableController) -> Bool) -> Void
     
     public static var isAvailable: Bool {
         if #available(iOSApplicationExtension 8.0, iOS 8.0, *), UIDevice.current.userInterfaceIdiom == .pad {
@@ -16,7 +16,7 @@ public class KeyShortcutsController: UIResponder {
         }
     }
     
-    public init(enumerator: @escaping ((ContainableController) -> Bool) -> Void) {
+    public init(enumerator: @escaping (@escaping (ContainableController) -> Bool) -> Void) {
         self.viewControllerEnumerator = enumerator
         super.init()
     }

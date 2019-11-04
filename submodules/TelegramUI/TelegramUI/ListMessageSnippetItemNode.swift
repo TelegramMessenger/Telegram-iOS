@@ -204,7 +204,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         title = NSAttributedString(string: content.title ?? content.websiteName ?? hostName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                         
                         if let image = content.image {
-                            if let representation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 80.0, height: 80.0)) {
+                            if let representation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 80, height: 80)) {
                                 iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: image), representation)
                             }
                         } else if let file = content.file {
@@ -311,7 +311,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                 let iconSize = CGSize(width: 42.0, height: 42.0)
                 let imageCorners = ImageCorners(topLeft: .Corner(2.0), topRight: .Corner(2.0), bottomLeft: .Corner(2.0), bottomRight: .Corner(2.0))
-                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                 iconImageApply = iconImageLayout(arguments)
             }
             

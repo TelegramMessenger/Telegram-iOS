@@ -103,7 +103,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
         if case .scheduledMessages(true) = self.mode {
-            //self.contentContainerNode.addSubnode(self.onlineButton)
+            self.contentContainerNode.addSubnode(self.onlineButton)
         }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -245,7 +245,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     }
     
     @objc func onlineButtonPressed() {
-        self.completion?(0x7FFFFFFE)
+        self.completion?(scheduleWhenOnlineTimestamp)
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -316,7 +316,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         var buttonOffset: CGFloat = 0.0
         if case .scheduledMessages(true) = self.mode {
-            //buttonOffset += 60.0
+            buttonOffset += 60.0
         }
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom

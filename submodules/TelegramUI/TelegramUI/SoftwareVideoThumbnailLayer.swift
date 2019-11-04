@@ -32,7 +32,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         
         if let dimensions = fileReference.media.dimensions {
             self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference)).start(next: { [weak self] transform in
-                var boundingSize = dimensions.aspectFilled(CGSize(width: 93.0, height: 93.0))
+                var boundingSize = dimensions.cgSize.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize
                 boundingSize.width = min(200.0, boundingSize.width)
                 

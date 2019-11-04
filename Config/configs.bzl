@@ -146,7 +146,7 @@ def intents_extension_configs():
 def watch_extension_binary_configs():
     config = {
         "SDKROOT": "watchos",
-        "WATCHOS_DEPLOYMENT_TARGET": "4.0",
+        "WATCHOS_DEPLOYMENT_TARGET": "5.0",
         "TARGETED_DEVICE_FAMILY": "4",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(suffix=".watchkitapp.watchkitextension"),
         "DEVELOPMENT_TEAM": get_development_team(),
@@ -168,7 +168,7 @@ def watch_extension_binary_configs():
 def watch_binary_configs():
     config = {
         "SDKROOT": "watchos",
-        "WATCHOS_DEPLOYMENT_TARGET": "4.0",
+        "WATCHOS_DEPLOYMENT_TARGET": "5.0",
         "TARGETED_DEVICE_FAMILY": "4",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(suffix=".watchkitapp"),
         "DEVELOPMENT_TEAM": get_development_team(),

@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public class ChannelMessageStateVersionAttribute: MessageAttribute {
     public let pts: Int32

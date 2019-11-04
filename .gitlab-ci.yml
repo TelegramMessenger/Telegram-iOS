@@ -1,5 +1,6 @@
 stages:
   - build
+  - deploy
 
 variables:
   LANG: "en_US.UTF-8"
@@ -16,6 +17,7 @@ internal:
     - tags
   script:
     - bash buildbox/build-telegram.sh hockeyapp
+    - bash buildbox/deploy-telegram.sh hockeyapp
   environment:
     name: internal
 
@@ -29,5 +31,22 @@ beta_testflight:
     - tags
   script:
     - bash buildbox/build-telegram.sh appstore
+  environment:
+    name: testflight_llc
+  artifacts:
+    paths:
+      - build/artifacts
+    expire_in: 1 week
+
+deploy_beta_testflight:
+  tags:
+    - ios_beta
+  stage: deploy
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/deploy-telegram.sh appstore
   environment:
     name: testflight_llc

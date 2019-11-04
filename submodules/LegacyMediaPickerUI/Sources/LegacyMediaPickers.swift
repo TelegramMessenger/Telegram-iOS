@@ -238,7 +238,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<Enqu
             if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
             }
             
             var randomId: Int64 = 0
@@ -254,7 +254,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<Enqu
             let finalDimensions = TGMediaVideoConverter.dimensions(for: dimensions, adjustments: nil, preset: TGMediaVideoConversionPresetAnimation)
             
             var fileAttributes: [TelegramMediaFileAttribute] = []
-            fileAttributes.append(.Video(duration: Int(0), size: finalDimensions, flags: [.supportsStreaming]))
+            fileAttributes.append(.Video(duration: Int(0), size: PixelDimensions(finalDimensions), flags: [.supportsStreaming]))
             fileAttributes.append(.FileName(fileName: fileName))
             fileAttributes.append(.Animated)
             
@@ -285,7 +285,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
                                 }
                             }
                             switch data {
@@ -316,7 +316,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             #endif
 
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                            representations.append(TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource))
+                                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
 
                                             let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                                             var attributes: [MessageAttribute] = []
@@ -334,7 +334,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                     let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
                                     
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                                     var attributes: [MessageAttribute] = []
@@ -385,7 +385,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
                                 }
                             }
                             
@@ -431,7 +431,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 fileAttributes.append(.Animated)
                             }
                             if !asFile {
-                                fileAttributes.append(.Video(duration: Int(finalDuration), size: finalDimensions, flags: [.supportsStreaming]))
+                                fileAttributes.append(.Video(duration: Int(finalDuration), size: PixelDimensions(finalDimensions), flags: [.supportsStreaming]))
                                 if let adjustments = adjustments {
                                     if adjustments.sendAsGif {
                                         fileAttributes.append(.Animated)

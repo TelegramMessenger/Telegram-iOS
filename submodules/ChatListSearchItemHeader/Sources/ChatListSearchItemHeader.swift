@@ -109,6 +109,6 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
     
     override public func animateRemoved(duration: Double) {
         self.alpha = 0.0
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: true)
     }
 }

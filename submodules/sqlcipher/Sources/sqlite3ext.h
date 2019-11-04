@@ -18,11 +18,7 @@
 #ifndef SQLITE3EXT_H
 #define SQLITE3EXT_H
 
-#if TARGET_OS_OSX
-#include <sqlciphermac/sqlite3.h>
-#else
 #include <sqlcipher/sqlite3.h>
-#endif
 
 /*
 ** The following structure holds pointers to all of the SQLite API

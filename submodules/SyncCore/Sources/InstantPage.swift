@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 private enum InstantPageBlockType: Int32 {
     case unsupported = 0
@@ -70,7 +69,7 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
     case video(id: MediaId, caption: InstantPageCaption, autoplay: Bool, loop: Bool)
     case audio(id: MediaId, caption: InstantPageCaption)
     case cover(InstantPageBlock)
-    case webEmbed(url: String?, html: String?, dimensions: CGSize?, caption: InstantPageCaption, stretchToWidth: Bool, allowScrolling: Bool, coverId: MediaId?)
+    case webEmbed(url: String?, html: String?, dimensions: PixelDimensions?, caption: InstantPageCaption, stretchToWidth: Bool, allowScrolling: Bool, coverId: MediaId?)
     case postEmbed(url: String, webpageId: MediaId?, avatarId: MediaId?, author: String, date: Int32, blocks: [InstantPageBlock], caption: InstantPageCaption)
     case collage(items: [InstantPageBlock], caption: InstantPageCaption)
     case slideshow(items: [InstantPageBlock], caption: InstantPageCaption)
@@ -79,7 +78,7 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
     case table(title: RichText, rows: [InstantPageTableRow], bordered: Bool, striped: Bool)
     case details(title: RichText, blocks: [InstantPageBlock], expanded: Bool)
     case relatedArticles(title: RichText, articles: [InstantPageRelatedArticle])
-    case map(latitude: Double, longitude: Double, zoom: Int32, dimensions: CGSize, caption: InstantPageCaption)
+    case map(latitude: Double, longitude: Double, zoom: Int32, dimensions: PixelDimensions, caption: InstantPageCaption)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -126,9 +125,9 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
                 if let coverIdNamespace = decoder.decodeOptionalInt32ForKey("ci.n"), let coverIdId = decoder.decodeOptionalInt64ForKey("ci.i") {
                     coverId = MediaId(namespace: coverIdNamespace, id: coverIdId)
                 }
-                var dimensions: CGSize?
+                var dimensions: PixelDimensions?
                 if let width = decoder.decodeOptionalInt32ForKey("sw"), let height = decoder.decodeOptionalInt32ForKey("sh") {
-                    dimensions = CGSize(width: CGFloat(width), height: CGFloat(height))
+                    dimensions = PixelDimensions(width: width, height: height)
                 }
                 self = .webEmbed(url: decoder.decodeOptionalStringForKey("u"), html: decoder.decodeOptionalStringForKey("h"), dimensions: dimensions, caption: decodeCaption(decoder), stretchToWidth: decoder.decodeInt32ForKey("st", orElse: 0) != 0, allowScrolling: decoder.decodeInt32ForKey("as", orElse: 0) != 0, coverId: coverId)
             case InstantPageBlockType.postEmbed.rawValue:
@@ -156,7 +155,7 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
             case InstantPageBlockType.relatedArticles.rawValue:
                 self = .relatedArticles(title: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, articles: decoder.decodeObjectArrayWithDecoderForKey("a"))
             case InstantPageBlockType.map.rawValue:
-                self = .map(latitude: decoder.decodeDoubleForKey("lat", orElse: 0.0), longitude: decoder.decodeDoubleForKey("lon", orElse: 0.0), zoom: decoder.decodeInt32ForKey("z", orElse: 0), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))), caption: decodeCaption(decoder))
+                self = .map(latitude: decoder.decodeDoubleForKey("lat", orElse: 0.0), longitude: decoder.decodeDoubleForKey("lon", orElse: 0.0), zoom: decoder.decodeInt32ForKey("z", orElse: 0), dimensions: PixelDimensions(width: decoder.decodeInt32ForKey("sw", orElse: 0), height: decoder.decodeInt32ForKey("sh", orElse: 0)), caption: decodeCaption(decoder))
             default:
                 self = .unsupported
         }

@@ -224,6 +224,8 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
             }
         }
         
+        shouldHide = false
+        
         return (result, shouldHide)
     }
     
@@ -321,13 +323,13 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                     let translation = recognizer.translation(in: self.view)
                     var nodeFrame = draggingNode.frame
                     nodeFrame.origin = self.draggingStartPosition.offsetBy(dx: translation.x, dy: translation.y)
-                    if nodeFrame.midX < 0.0 {
-                        draggingNode.updateMinimizedEdge(.left, adjusting: true)
-                    } else if nodeFrame.midX > validLayout.size.width {
-                        draggingNode.updateMinimizedEdge(.right, adjusting: true)
-                    } else {
+//                    if nodeFrame.midX < 0.0 {
+//                        draggingNode.updateMinimizedEdge(.left, adjusting: true)
+//                    } else if nodeFrame.midX > validLayout.size.width {
+//                        draggingNode.updateMinimizedEdge(.right, adjusting: true)
+//                    } else {
                         draggingNode.updateMinimizedEdge(nil, adjusting: true)
-                    }
+//                    }
                     draggingNode.frame = nodeFrame
                 }
             case .ended, .cancelled:
@@ -337,13 +339,13 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                     
                     let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: CGPoint(x: previousFrame.midX, y: previousFrame.midY), velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
                     
-                    if shouldDismiss && draggingNode.isMinimizeable {
-                        draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)
-                        self.videoNodes[index].isMinimized = true
-                    } else {
+//                    if shouldDismiss && draggingNode.isMinimizeable {
+//                        draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)
+//                        self.videoNodes[index].isMinimized = true
+//                    } else {
                         draggingNode.updateMinimizedEdge(nil, adjusting: true)
                         self.videoNodes[index].isMinimized = false
-                    }
+//                    }
                     
                     if let group = draggingNode.group {
                         self.locationByGroup[group] = updatedLocation

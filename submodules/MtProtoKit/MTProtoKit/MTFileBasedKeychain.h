@@ -1,12 +1,7 @@
 #import <Foundation/Foundation.h>
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTKeychain.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTKeychain.h>
-#else
-#   import <MtProtoKit/MTKeychain.h>
-#endif
+#import <MtProtoKit/MTKeychain.h>
+
 
 NS_ASSUME_NONNULL_BEGIN
 

@@ -26,7 +26,7 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let representation = largestImageRepresentation(self.content.map({ $0.representation })) {
-            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions)
+            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions.cgSize)
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
@@ -168,7 +168,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             self.footerContentNode.setEntry(entry)
             
             if let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })) {
-                let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
+                let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 let representations: [ImageRepresentationWithReference]
                 switch entry {
@@ -178,7 +178,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize.dimensions, self.imageNode)
+                self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
                 if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }

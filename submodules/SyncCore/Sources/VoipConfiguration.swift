@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-import PostboxMac
-#else
 import Postbox
-#endif
 
 public enum VoiceCallP2PMode: Int32 {
     case never = 0

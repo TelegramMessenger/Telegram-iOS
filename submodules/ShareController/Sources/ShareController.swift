@@ -122,7 +122,7 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                             if file.isSticker, !file.isAnimatedSticker, let dimensions = file.dimensions {
                                 return chatMessageSticker(postbox: postbox, file: file, small: false, fetched: true, onlyFullSize: true)
                                 |> map { f -> ExternalShareItemStatus in
-                                    let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions, boundingSize: dimensions, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: 1.0))
+                                    let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.cgSize, boundingSize: dimensions.cgSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: 1.0))
                                     if let image = context?.generateImage() {
                                         return .done(.image(image))
                                     } else {

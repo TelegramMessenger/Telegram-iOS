@@ -2,13 +2,7 @@
 
 #import <Foundation/Foundation.h>
 
-#ifdef BUCK
-#   import <MtProtoKit/MtProtoKit.h>
-#elif TARGET_OS_IOS
-#   import <MTProtoKitDynamic/MTLogging.h>
-#else
-#   import <MTProtoKitMac/MTLogging.h>
-#endif
+#import <MtProtoKit/MtProtoKit.h>
 
 static void (*bridgingTrace)(NSString *, NSString *);
 void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {

@@ -1,9 +1,5 @@
 import Foundation
-#if os(macOS)
-    import PostboxMac
-#else
-    import Postbox
-#endif
+import Postbox
 
 public struct TelegramMediaInvoiceFlags: OptionSet {
     public var rawValue: Int32

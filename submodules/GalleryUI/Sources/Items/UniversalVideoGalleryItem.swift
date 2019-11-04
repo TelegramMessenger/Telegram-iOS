@@ -167,6 +167,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
+    private var statusNodeShouldBeHidden = true
     
     private var isCentral = false
     private var _isVisible: Bool?
@@ -463,7 +464,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus)
+            self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
@@ -490,6 +491,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 isPaused = !whilePlaying
                                 var isStreaming = false
                                 if let fetchStatus = strongSelf.fetchStatus {
+                                    switch fetchStatus {
+                                        case .Local:
+                                            break
+                                        default:
+                                            isStreaming = true
+                                    }
+                                } else {
                                     switch fetchStatus {
                                         case .Local:
                                             break
@@ -542,7 +550,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
-                        strongSelf.statusButtonNode.isHidden = strongSelf.hideStatusNodeUntilCentrality || (!initialBuffering && (strongSelf.didPause || !isPaused) && !fetching)
+                        strongSelf.statusNodeShouldBeHidden = (!initialBuffering && (strongSelf.didPause || !isPaused) && !fetching)
+                        strongSelf.statusButtonNode.isHidden = strongSelf.hideStatusNodeUntilCentrality || strongSelf.statusNodeShouldBeHidden
                     }
                     
                     if isAnimated || disablePlayerControls {
@@ -648,6 +657,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     self.hideStatusNodeUntilCentrality = false
+                    self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
                     if videoNode.ownsContentNode {
                         if isAnimated {
                             videoNode.seek(0.0)
@@ -731,6 +741,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoNode.play()
             } else {
                 self.hideStatusNodeUntilCentrality = false
+                self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
                 videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: .stop)
             }
         }

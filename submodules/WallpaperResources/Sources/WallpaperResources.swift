@@ -301,9 +301,9 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
         let size: CGSize?
         switch mode {
             case .thumbnail:
-                size = largestRepresentation.dimensions.fitted(CGSize(width: 640.0, height: 640.0))
+                size = largestRepresentation.dimensions.cgSize.fitted(CGSize(width: 640.0, height: 640.0))
             case .fastScreen:
-                size = largestRepresentation.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0))
+                size = largestRepresentation.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0))
             default:
                 size = nil
         }
@@ -815,7 +815,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                         return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                             guard complete, let fullSizeData = fullSizeData else {
@@ -973,7 +973,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             |> mapToSignal { wallpaper in
                                 if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                                     return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                     |> mapToSignal { _, fullSizeData, complete -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {

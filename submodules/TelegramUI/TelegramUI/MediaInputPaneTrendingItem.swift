@@ -118,8 +118,8 @@ final class TrendingTopItemNode: ASDisplayNode {
             animationNode.started = { [weak self] in
                 self?.imageNode.alpha = 0.0
             }
-            let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
-            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+            let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
             animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
         } else {
@@ -154,7 +154,7 @@ final class TrendingTopItemNode: ASDisplayNode {
         super.layout()
         
         if let dimensions = self.file?.dimensions, let itemSize = self.itemSize {
-            let imageSize = dimensions.aspectFitted(itemSize)
+            let imageSize = dimensions.cgSize.aspectFitted(itemSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
         }
         
@@ -372,7 +372,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                             node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
                         }
                         if let dimensions = file.dimensions {
-                            let imageSize = dimensions.aspectFitted(itemSize)
+                            let imageSize = dimensions.cgSize.aspectFitted(itemSize)
                             node.frame = CGRect(origin: CGPoint(x: offset, y: 48.0), size: imageSize)
                             offset += itemSize.width + itemSpacing
                         }

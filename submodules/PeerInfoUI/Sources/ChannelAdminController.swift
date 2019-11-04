@@ -947,8 +947,25 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateState { current in
                                 return current.withUpdatedUpdating(true)
                             }
-                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: effectiveRank) |> deliverOnMainQueue).start(error: { _ in
-                                
+                            updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: effectiveRank) |> deliverOnMainQueue).start(error: { error in
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                var text = presentationData.strings.Login_UnknownError
+                                switch error {
+                                case .generic:
+                                    break
+                                case let .addMemberError(addMemberError):
+                                    switch addMemberError {
+                                    case .tooMuchJoined:
+                                        text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                    case .restricted:
+                                        if let peer = adminView.peers[adminView.peerId] {
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0
+                                        }
+                                    default:
+                                        break
+                                    }
+                                }
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }, completed: {
                                 updated(TelegramChatAdminRights(flags: updateFlags))
                                 dismissImpl?()
@@ -1058,8 +1075,13 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                         } else if updateFlags != defaultFlags || updateRank != nil {
                             let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                             |> map(Optional.init)
-                            |> `catch` { _ -> Signal<PeerId?, UpdateChannelAdminRightsError> in
-                                return .fail(.generic)
+                            |> `catch` { error -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                                switch error {
+                                case .tooManyChannels:
+                                    return .fail(.addMemberError(.tooMuchJoined))
+                                default:
+                                    return .fail(.generic)
+                                }
                             }
                             |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelAdminRightsError> in
                                 guard let upgradedPeerId = upgradedPeerId else {
@@ -1083,8 +1105,14 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     })
                                 }
                             }, error: { error in
-                                if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                if case let .addMemberError(error) = error {
+                                    var text = presentationData.strings.Login_UnknownError
+                                    if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
+                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                    } else if case .tooMuchJoined = error {
+                                        text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
                                 dismissImpl?()

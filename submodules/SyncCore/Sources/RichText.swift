@@ -1,5 +1,4 @@
 import Postbox
-import UIKit
 
 private enum RichTextTypes: Int32 {
     case empty = 0
@@ -35,7 +34,7 @@ public indirect enum RichText: PostboxCoding, Equatable {
     case superscript(RichText)
     case marked(RichText)
     case phone(text: RichText, phone: String)
-    case image(id: MediaId, dimensions: CGSize)
+    case image(id: MediaId, dimensions: PixelDimensions)
     case anchor(text: RichText, name: String)
     
     public init(decoder: PostboxDecoder) {
@@ -75,7 +74,7 @@ public indirect enum RichText: PostboxCoding, Equatable {
             case RichTextTypes.phone.rawValue:
                 self = .phone(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, phone: decoder.decodeStringForKey("p", orElse: ""))
             case RichTextTypes.image.rawValue:
-                self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))))
+                self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), dimensions: PixelDimensions(width: decoder.decodeInt32ForKey("sw", orElse: 0), height: decoder.decodeInt32ForKey("sh", orElse: 0)))
             case RichTextTypes.anchor.rawValue:
                 self = .anchor(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, name: decoder.decodeStringForKey("n", orElse: ""))
             default:
