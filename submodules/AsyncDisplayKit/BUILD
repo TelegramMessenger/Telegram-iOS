@@ -6,13 +6,14 @@ ASYNCDISPLAYKIT_EXPORTED_HEADERS = glob([
   "Source/Base/*.h",
   "Source/Debug/AsyncDisplayKit+Debug.h",
   "Source/TextKit/ASTextNodeTypes.h",
-  "Source/TextKit/ASTextKitComponents.h"
-], exclude = ["Source/AsyncDisplayKit.h"])
+  "Source/TextKit/ASTextKitComponents.h",
+], exclude = ["_Source/AsyncDisplayKit.h"]
+)
 
 ASYNCDISPLAYKIT_PRIVATE_HEADERS = glob([
     "Source/**/*.h"
   ],
-  exclude = ASYNCDISPLAYKIT_EXPORTED_HEADERS + ["Source/AsyncDisplayKit.h"],
+  exclude = ASYNCDISPLAYKIT_EXPORTED_HEADERS + ["_Source/AsyncDisplayKit.h"],
 )
 
 exported_headers_rule_name = "AsyncDisplayKit_ExportedHeaders"
@@ -48,7 +49,7 @@ objc_library(
         "Source/**/*.m",
         "Source/**/*.mm",
         "Source/Base/*.m",
-    ]) + private_headers,
+    ]) + ASYNCDISPLAYKIT_EXPORTED_HEADERS + ASYNCDISPLAYKIT_PRIVATE_HEADERS + private_headers,
     hdrs = exported_headers,
     defines = [
         "MINIMAL_ASDK",

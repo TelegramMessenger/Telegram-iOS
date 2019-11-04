@@ -6,6 +6,8 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#if YOGA
+
 #import "AsyncDisplayKit/ASAvailability.h"
 #import "ASButtonNode+Yoga.h"
 #import <AsyncDisplayKit/ASButtonNode+Private.h>
@@ -13,7 +15,6 @@
 #import <AsyncDisplayKit/ASStackLayoutSpecUtilities.h>
 #import <AsyncDisplayKit/ASThread.h>
 
-#if YOGA
 static void ASButtonNodeResolveHorizontalAlignmentForStyle(ASLayoutElementStyle *style, ASStackLayoutDirection _direction, ASHorizontalAlignment _horizontalAlignment, ASStackLayoutJustifyContent _justifyContent, ASStackLayoutAlignItems _alignItems) {
   if (_direction == ASStackLayoutDirectionHorizontal) {
     style.justifyContent = justifyContent(_horizontalAlignment, _justifyContent);
@@ -96,6 +97,8 @@ static void ASButtonNodeResolveVerticalAlignmentForStyle(ASLayoutElementStyle *s
 @end
 
 #else
+
+#import <AsyncDisplayKit/ASButtonNode+Private.h>
 
 @implementation ASButtonNode (Yoga)
 
