@@ -8082,7 +8082,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             |> deliverOnMainQueue).start(next: { [weak self] peer, avatarImage in
-                if let strongSelf = self, let peer = peer as? TelegramUser {
+                if let strongSelf = self, let peer = peer as? TelegramUser, peer.botInfo == nil && !peer.flags.contains(.isSupport) {
                     let recipientHandle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
                     var nameComponents = PersonNameComponents()
                     nameComponents.givenName = peer.firstName
