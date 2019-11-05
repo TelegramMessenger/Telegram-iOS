@@ -16,8 +16,10 @@ struct PasscodeKeyboardLayout {
     
     fileprivate init(layout: ContainerViewLayout, modalPresentation: Bool) {
         var modalOffset: CGFloat = 0.0
+        var modalBiometricsOffset: CGFloat = 0.0
         if modalPresentation {
             modalOffset -= 20.0
+            modalBiometricsOffset -= 8.0
         }
         
         switch layout.deviceMetrics {
@@ -112,7 +114,7 @@ struct PasscodeKeyboardLayout {
         }
         
         self.topOffset += modalOffset * 2.0
-        self.biometricsOffset += modalOffset
+        self.biometricsOffset += modalBiometricsOffset
     }
 }
 
