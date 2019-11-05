@@ -279,7 +279,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
                         
                         lineNode.backgroundColor = category.color
                         
-                        var categoryWidth = max(floor(lineWidth * category.fraction), 6.0)
+                        var categoryWidth = max(floor(lineWidth * category.fraction), 2.0)
                         if i == strongSelf.lineNodes.count - 1 {
                             categoryWidth = lineWidth - (lineOrigin.x - lineInset)
                         }

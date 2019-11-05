@@ -45,7 +45,7 @@ typedef enum {
 
 @property (nonatomic, strong) NSString *recipientName;
 
-@property (nonatomic, copy) void(^finishedWithResults)(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem);
+@property (nonatomic, copy) void(^finishedWithResults)(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime);
 @property (nonatomic, copy) void(^finishedWithPhoto)(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);
 @property (nonatomic, copy) void(^finishedWithVideo)(TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, NSTimeInterval duration, CGSize dimensions, TGVideoEditAdjustments *adjustments, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);
 
@@ -54,6 +54,8 @@ typedef enum {
 @property (nonatomic, copy) CGRect(^beginTransitionOut)(void);
 @property (nonatomic, copy) void(^finishedTransitionOut)(void);
 @property (nonatomic, copy) void(^customPresentOverlayController)(TGOverlayController *(^)(id<LegacyComponentsContext>));
+
+@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia intent:(TGCameraControllerIntent)intent;

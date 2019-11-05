@@ -45,6 +45,7 @@
 #import <LegacyComponents/TGTimerTarget.h>
 
 #import <LegacyComponents/TGMenuSheetController.h>
+#import <LegacyComponents/TGMediaPickerSendActionSheetController.h>
 
 #import "TGMediaPickerGallerySelectedItemsModel.h"
 #import "TGCameraCapturedPhoto.h"
@@ -1251,6 +1252,128 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         model.controller = galleryController;
         model.suggestionContext = self.suggestionContext;
         
+        __weak TGModernGalleryController *weakGalleryController = galleryController;
+        __weak TGMediaPickerGalleryModel *weakModel = model;
+        
+        model.interfaceView.doneLongPressed = ^(TGMediaPickerGalleryItem *item) {
+            __strong TGCameraController *strongSelf = weakSelf;
+            __strong TGMediaPickerGalleryModel *strongModel = weakModel;
+            if (strongSelf == nil || !(strongSelf.hasSilentPosting || strongSelf.hasSchedule) || strongSelf->_shortcut)
+                return;
+            
+            if (iosMajorVersion() >= 10) {
+                UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+                [generator impactOccurred];
+            }
+            
+            bool effectiveHasSchedule = strongSelf.hasSchedule;
+            for (id item in strongModel.selectionContext.selectedItems)
+            {
+                if ([item isKindOfClass:[TGMediaAsset class]])
+                {
+                    if ([[strongSelf->_editingContext timerForItem:item] integerValue] > 0)
+                    {
+                        effectiveHasSchedule = false;
+                        break;
+                    }
+                }
+            }
+            
+            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context sendButtonFrame:strongModel.interfaceView.doneButtonFrame canSendSilently:strongSelf->_hasSilentPosting canSchedule:effectiveHasSchedule];
+            controller.send = ^{
+                __strong TGCameraController *strongSelf = weakSelf;
+                __strong TGMediaPickerGalleryModel *strongModel = weakModel;
+    
+                if (strongSelf == nil || strongModel == nil)
+                    return;
+                
+                __strong TGModernGalleryController *strongController = weakGalleryController;
+                if (strongController == nil)
+                    return;
+                
+                if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+                {
+                    TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+                    [itemView stop];
+                    [itemView setPlayButtonHidden:true animated:true];
+                }
+                
+                if (strongSelf->_selectionContext.allowGrouping)
+                    [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                
+                if (strongSelf.finishedWithResults != nil)
+                    strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, 0);
+                
+                [strongSelf _dismissTransitionForResultController:strongController];
+            };
+            controller.sendSilently = ^{
+                __strong TGCameraController *strongSelf = weakSelf;
+                __strong TGMediaPickerGalleryModel *strongModel = weakModel;
+                
+                if (strongSelf == nil || strongModel == nil)
+                    return;
+                
+                __strong TGModernGalleryController *strongController = weakGalleryController;
+                if (strongController == nil)
+                    return;
+                
+                if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+                {
+                    TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+                    [itemView stop];
+                    [itemView setPlayButtonHidden:true animated:true];
+                }
+                
+                if (strongSelf->_selectionContext.allowGrouping)
+                    [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                
+                if (strongSelf.finishedWithResults != nil)
+                    strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, true, 0);
+                
+                [strongSelf _dismissTransitionForResultController:strongController];
+            };
+            controller.schedule = ^{
+                __strong TGCameraController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentScheduleController(^(int32_t time) {
+                    __strong TGCameraController *strongSelf = weakSelf;
+                    __strong TGMediaPickerGalleryModel *strongModel = weakModel;
+                    
+                    if (strongSelf == nil || strongModel == nil)
+                        return;
+                    
+                    __strong TGModernGalleryController *strongController = weakGalleryController;
+                    if (strongController == nil)
+                        return;
+                    
+                    if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+                    {
+                        TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+                        [itemView stop];
+                        [itemView setPlayButtonHidden:true animated:true];
+                    }
+                    
+                    if (strongSelf->_selectionContext.allowGrouping)
+                        [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
+                    
+                    if (strongSelf.finishedWithResults != nil)
+                        strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, time);
+                    
+                    [strongSelf _dismissTransitionForResultController:strongController];
+                });
+            };
+            
+            id<LegacyComponentsOverlayWindowManager> windowManager = nil;
+            id<LegacyComponentsContext> windowContext = nil;
+            windowManager = [strongSelf->_context makeOverlayWindowManager];
+            windowContext = [windowManager context];
+            
+            TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:strongSelf contentController:(TGOverlayController *)controller];
+            controllerWindow.hidden = false;
+        };
+        
         model.willFinishEditingItem = ^(id<TGMediaEditableItem> editableItem, id<TGMediaEditAdjustments> adjustments, id representation, bool hasChanges)
         {
             __strong TGCameraController *strongSelf = weakSelf;
@@ -1278,9 +1401,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
         model.interfaceView.hasSwipeGesture = false;
         galleryController.model = model;
-        
-        __weak TGModernGalleryController *weakGalleryController = galleryController;
-        __weak TGMediaPickerGalleryModel *weakModel = model;
 
         if (_items.count > 1)
             [model.interfaceView updateSelectionInterface:selectionContext.count counterVisible:(selectionContext.count > 0) animated:false];
@@ -1318,7 +1438,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
 
             if (strongSelf.finishedWithResults != nil)
-                strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset);
+                strongSelf.finishedWithResults(strongController, strongSelf->_selectionContext, strongSelf->_editingContext, item.asset, false, 0);
             
             if (strongSelf->_shortcut)
                 return;
