@@ -5,220 +5,163 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import AVFoundation
 import CoreImage
 import TelegramPresentationData
+import Compression
+import TextFormat
+import AccountContext
+import MediaResources
+import StickerResources
+import ContextUI
+import AnimationUI
+import Emoji
 
-private class AlphaFrameFilter: CIFilter {
-    static var kernel: CIColorKernel? = {
-        return CIColorKernel(source: """
-kernel vec4 alphaFrame(__sample s, __sample m) {
-  return vec4( s.rgb, 1.0 - m.r );
-}
-""")
-    }()
-    
-    var inputImage: CIImage?
-    var maskImage: CIImage?
-    
-    override var outputImage: CIImage? {
-        let kernel = AlphaFrameFilter.kernel!
-        guard let inputImage = inputImage, let maskImage = maskImage else {
-            return nil
-        }
-        let args = [inputImage as AnyObject, maskImage as AnyObject]
-        return kernel.apply(extent: inputImage.extent, arguments: args)
-    }
-}
+private let nameFont = Font.medium(14.0)
+private let inlineBotPrefixFont = Font.regular(14.0)
+private let inlineBotNameFont = nameFont
 
-private func createVideoComposition(for playerItem: AVPlayerItem, ready: @escaping () -> Void) -> AVVideoComposition? {
-    let videoSize = CGSize(width: playerItem.presentationSize.width, height: playerItem.presentationSize.height / 2.0)
-    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-        let composition = AVMutableVideoComposition(asset: playerItem.asset, applyingCIFiltersWithHandler: { request in
-            let sourceRect = CGRect(origin: .zero, size: videoSize)
-            let alphaRect = sourceRect.offsetBy(dx: 0, dy: sourceRect.height)
-            let filter = AlphaFrameFilter()
-            filter.inputImage = request.sourceImage.cropped(to: alphaRect)
-                .transformed(by: CGAffineTransform(translationX: 0, y: -sourceRect.height))
-            filter.maskImage = request.sourceImage.cropped(to: sourceRect)
-            request.finish(with: filter.outputImage!, context: nil)
-            ready()
-        })
-        composition.renderSize = videoSize
-        return composition
-    } else {
-        return nil
-    }
-}
-
-private final class StickerAnimationNode: ASDisplayNode {
-    private var account: Account?
-    private var fileReference: FileMediaReference?
-    private let disposable = MetaDisposable()
-    private let fetchDisposable = MetaDisposable()
-    
-    var playerLayer: AVPlayerLayer {
-        return self.layer as! AVPlayerLayer
-    }
-    
-    var started: () -> Void = {}
-    
-    var ready = false
-    var visibility = false {
+private class ChatMessageHeartbeatHaptic {
+    private var hapticFeedback = HapticFeedback()
+    private var timer: SwiftSignalKit.Timer?
+    private var time: Double = 0.0
+    var enabled = false {
         didSet {
-            if self.visibility {
-                if self.ready {
-                    self.player?.play()
-                }
-            } else{
-                self.player?.pause()
+            if !self.enabled {
+                self.reset()
             }
         }
     }
     
-    var player: AVPlayer? {
-        get {
-            if self.isNodeLoaded {
-                return self.playerLayer.player
-            } else {
-                return nil
-            }
-        }
-        set {
-            self.playerLayer.player = newValue
+    var active: Bool {
+        return self.timer != nil
+    }
+    
+    private func reset() {
+        if let timer = self.timer {
+            self.time = 0.0
+            timer.invalidate()
+            self.timer = nil
         }
     }
     
-    private var playerItem: AVPlayerItem? = nil {
-        willSet {
-            self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
-        }
-        didSet {
-            self.playerItem?.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: .new, context: nil)
-            self.setupLooping()
+    private func beat(time: Double) {
+        let epsilon = 0.1
+        if fabs(0.0 - time) < epsilon || fabs(1.0 - time) < epsilon || fabs(2.0 - time) < epsilon {
+            self.hapticFeedback.impact(.medium)
+        } else if fabs(0.2 - time) < epsilon || fabs(1.2 - time) < epsilon || fabs(2.2 - time) < epsilon {
+            self.hapticFeedback.impact(.light)
         }
     }
     
-    override init() {
-        super.init()
+    func start(time: Double) {
+        self.hapticFeedback.prepareImpact()
         
-        self.setLayerBlock({
-            let layer = AVPlayerLayer()
-            layer.isHidden = true
-            layer.videoGravity = .resize
-            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                layer.pixelBufferAttributes = [(kCVPixelBufferPixelFormatTypeKey as String): kCVPixelFormatType_32BGRA]
-            }
-            return layer
-        })
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self.didPlayToEndTimeObsever as Any)
-        self.playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status))
-        self.player = nil
-        self.playerItem = nil
-        self.disposable.dispose()
-        self.fetchDisposable.dispose()
-    }
-    
-    func setup(account: Account, fileReference: FileMediaReference) {
-        self.disposable.set(chatMessageAnimationData(postbox: account.postbox, fileReference: fileReference, synchronousLoad: false).start(next: { [weak self] data in
-            if let strongSelf = self, data.complete {
-                let playerItem = AVPlayerItem(url: URL(fileURLWithPath: data.path))
-                Queue.mainQueue().async {
-                    strongSelf.player = AVPlayer(playerItem: playerItem)
-                    strongSelf.player?.isMuted = true
-                    strongSelf.playerItem = playerItem
-                }
-            }
-        }))
-        self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
-    }
-    
-    func reset() {
-        self.disposable.set(nil)
-        self.fetchDisposable.set(nil)
-    }
-    
-    private func setupLooping() {
-        guard let playerItem = self.playerItem, let player = self.player else {
+        if time > 2.0 {
             return
         }
+
+        var startTime: Double = 0.0
+        var delay: Double = 0.0
         
-        self.didPlayToEndTimeObsever = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: nil, using: { _ in
-            player.seek(to: kCMTimeZero) { _ in
-                player.play()
-            }
-        })
-    }
-    
-    private var didPlayToEndTimeObsever: NSObjectProtocol? = nil {
-        willSet(newObserver) {
-            if let observer = self.didPlayToEndTimeObsever, self.didPlayToEndTimeObsever !== newObserver {
-                NotificationCenter.default.removeObserver(observer)
+        if time > 0.0 {
+            if time <= 1.0 {
+                startTime = 1.0
+            } else if time <= 2.0 {
+                startTime = 2.0
             }
         }
-    }
-    
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if let playerItem = object as? AVPlayerItem, playerItem === self.playerItem {
-            if case .readyToPlay = playerItem.status, playerItem.videoComposition == nil {
-                playerItem.seekingWaitsForVideoCompositionRendering = true
-                let composition = createVideoComposition(for: playerItem, ready: { [weak self] in
-                    Queue.mainQueue().async {
-                        self?.playerLayer.isHidden = false
-                        self?.started()
-                    }
-                })
-                playerItem.videoComposition = composition
-                self.ready = true
-                if self.visibility {
-                    self.player?.play()
-                }
+        
+        delay = max(0.0, startTime - time)
+        
+        let block = { [weak self] in
+            guard let strongSelf = self, strongSelf.enabled else {
+                return
             }
+            
+            strongSelf.time = startTime
+            strongSelf.beat(time: startTime)
+            strongSelf.timer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
+                guard let strongSelf = self, strongSelf.enabled else {
+                    return
+                }
+                strongSelf.time += 0.2
+                strongSelf.beat(time: strongSelf.time)
+                
+                if strongSelf.time > 2.2 {
+                    strongSelf.reset()
+                    strongSelf.time = 0.0
+                    strongSelf.timer?.invalidate()
+                    strongSelf.timer = nil
+                }
+                
+                }, queue: Queue.mainQueue())
+            strongSelf.timer?.start()
+        }
+        
+        if delay > 0.0 {
+            Queue.mainQueue().after(delay, block)
         } else {
-            return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
+            block()
         }
     }
 }
 
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     let imageNode: TransformImageNode
-    private let animationNode: StickerAnimationNode
+    private let animationNode: AnimatedStickerNode
+    private var didSetUpAnimationNode = false
+    private var isPlaying = false
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
     
     private var selectionNode: ChatMessageSelectionNode?
+    private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
+    var emojiFile: TelegramMediaFile?
     private let disposable = MetaDisposable()
     
+    private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
     
+    private var actionButtonsNode: ChatMessageActionButtonsNode?
+    
     private var highlightedState: Bool = false
+    
+    private var heartbeatHaptic: ChatMessageHeartbeatHaptic?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.imageNode = TransformImageNode()
-        self.animationNode = StickerAnimationNode()
+        self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
         
         self.animationNode.started = { [weak self] in
-            self?.imageNode.alpha = 0.0
+            if let strongSelf = self {
+                strongSelf.imageNode.alpha = 0.0
+                
+                if let item = strongSelf.item {
+                    if let _ = strongSelf.emojiFile {
+                        item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                    }
+                }
+            }
         }
         
         self.imageNode.displaysAsynchronously = false
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.animationNode)
+        self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
     }
     
     deinit {
@@ -238,8 +181,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
+                
+                if strongSelf.telegramFile == nil {
+                    if strongSelf.animationNode.frame.contains(point) {
+                        return .waitForDoubleTap
+                    }
+                }
             }
             return .waitForSingleTap
+        }
+        recognizer.longTap = { [weak self] point, recognizer in
+            guard let strongSelf = self else {
+                return
+            }
+            //strongSelf.reactionRecognizer?.cancel()
+            if strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
+                recognizer.cancel()
+            }
         }
         self.view.addGestureRecognizer(recognizer)
         
@@ -256,18 +214,22 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
-    private var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            if self.visibility != oldValue {
-                switch self.visibility {
-                    case .visible:
-                        self.animationNode.visibility = true
-                        self.visibilityPromise.set(true)
-                    case .none:
-                        self.animationNode.visibility = false
-                        self.visibilityPromise.set(false)
-                }
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.updateVisibility()
+                self.heartbeatHaptic?.enabled = self.visibilityStatus
             }
         }
     }
@@ -279,21 +241,98 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
-                    self.imageNode.setSignal(chatMessageSticker(account: item.context.account, file: telegramFile, small: false, thumbnail: true))
-                    self.animationNode.setup(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile))
+                    let dimensions = telegramFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false))
+                    self.updateVisibility()
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                 }
                 break
             }
         }
+
+        let (emoji, fitz) = item.message.text.basicEmoji
+        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
+            if self.emojiFile?.id != emojiFile.id {
+                self.emojiFile = emojiFile
+                let dimensions = emojiFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                var fitzModifier: EmojiFitzModifier?
+                if let fitz = fitz {
+                    fitzModifier = EmojiFitzModifier(emoji: fitz)
+                }
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
+                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
+                self.updateVisibility()
+            }
+        }
+    }
+    
+    func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        let isPlaying = self.visibilityStatus
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            
+            var alreadySeen = false
+            if isPlaying, let _ = self.emojiFile {
+                if item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = true
+                }
+            }
+            
+            self.animationNode.visibility = isPlaying && !alreadySeen
+            if self.didSetUpAnimationNode && alreadySeen {
+                self.animationNode.seekToStart()
+            }
+            
+            if self.isPlaying && !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
+                
+                var file: TelegramMediaFile?
+                var playbackMode: AnimatedStickerPlaybackMode = .loop
+                var isEmoji = false
+                var fitzModifier: EmojiFitzModifier?
+
+                if let telegramFile = self.telegramFile {
+                    file = telegramFile
+                    if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+                        playbackMode = .once
+                    }
+                } else if let emojiFile = self.emojiFile {
+                    isEmoji = true
+                    file = emojiFile
+                    playbackMode = .once
+                    let (_, fitz) = item.message.text.basicEmoji
+                    if let fitz = fitz {
+                        fitzModifier = EmojiFitzModifier(emoji: fitz)
+                    }
+                }
+                
+                if let file = file {
+                    let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
+                    self.animationNode.setup(account: item.context.account, resource: .resource(file.resource), fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                }
+            }
+        }
+    }
+    
+    override func updateStickerSettings() {
+        self.updateVisibility()
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
-        let displaySize = CGSize(width: 162.0, height: 162.0)
+        let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
+        let emojiFile = self.emojiFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
+        let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
+        let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
@@ -301,11 +340,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            var imageSize: CGSize = CGSize(width: 162.0, height: 162.0)
+            var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
+            var isEmoji = false
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
                     imageSize = dimensions.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
+                    imageSize = thumbnailSize.aspectFitted(displaySize)
+                }
+            } else if let emojiFile = emojiFile {
+                isEmoji = true
+                
+                let displaySize = CGSize(width: floor(displaySize.width * item.presentationData.animatedEmojiScale), height: floor(displaySize.height * item.presentationData.animatedEmojiScale))
+                if let dimensions = emojiFile.dimensions {
+                    imageSize = CGSize(width: displaySize.width * dimensions.width / 512.0, height: displaySize.height * dimensions.height / 512.0)
+                } else if let thumbnailSize = emojiFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.aspectFitted(displaySize)
                 }
             }
@@ -314,23 +363,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var hasAvatar = false
             
             switch item.chatLocation {
-                case let .peer(peerId):
-                    if peerId != item.context.account.peerId {
-                        if peerId.isGroupOrChannel && item.message.author != nil {
-                            var isBroadcastChannel = false
-                            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                                isBroadcastChannel = true
-                            }
-                            
-                            if !isBroadcastChannel {
-                                hasAvatar = true
-                            }
+            case let .peer(peerId):
+                if peerId != item.context.account.peerId {
+                    if peerId.isGroupOrChannel && item.message.author != nil {
+                        var isBroadcastChannel = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
                         }
-                    } else if incoming {
-                        hasAvatar = true
+                        
+                        if !isBroadcastChannel {
+                            hasAvatar = true
+                        }
                     }
+                } else if incoming {
+                    hasAvatar = true
+                }
                 /*case .group:
-                    hasAvatar = true*/
+                 hasAvatar = true*/
             }
             
             if hasAvatar {
@@ -339,8 +388,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.id.peerId == item.context.account.peerId {
+            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                needShareButton = false
+            } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
@@ -383,12 +436,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
+            var deliveryFailedInset: CGFloat = 0.0
+            if isFailed {
+                deliveryFailedInset += 24.0
+            }
+            
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
             let imageInset: CGFloat = 10.0
-            let innerImageSize = imageSize
+            var innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            if isEmoji {
+                innerImageSize = imageSize
+            }
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
             
@@ -398,7 +459,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
-                if item.message.flags.contains(.Failed) {
+                if isFailed {
                     statusType = .FreeOutgoing(.Failed)
                 } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
@@ -407,41 +468,87 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let edited = false
-            let sentViaBot = false
             var viewCount: Int? = nil
             for attribute in item.message.attributes {
-                if let _ = attribute as? EditedMessageAttribute {
-                    // edited = true
-                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                }// else if let _ = attribute as? InlineBotMessageAttribute {
-                //    sentViaBot = true
-                //  }
+                }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal)
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal, reactionCount: dateReactionCount)
             
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, false, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+            
+            var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: ASImageNode?
             var replyBackgroundImage: UIImage?
+            var replyMarkup: ReplyMarkupMessageAttribute?
+            
+            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            
             for attribute in item.message.attributes {
-                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
-                    
-                    if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                        updatedReplyBackgroundNode = currentReplyBackgroundNode
+                if let attribute = attribute as? InlineBotMessageAttribute {
+                    var inlineBotNameString: String?
+                    if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
+                        inlineBotNameString = bot.username
                     } else {
-                        updatedReplyBackgroundNode = ASImageNode()
+                        inlineBotNameString = attribute.title
                     }
                     
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                    replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
-                    break
+                    if let inlineBotNameString = inlineBotNameString {
+                        let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                        
+                        let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
+                        let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                        let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                        
+                        viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    }
                 }
+                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                    replyMarkup = attribute
+                }
+            }
+            
+            if item.message.id.peerId != item.context.account.peerId {
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? SourceReferenceMessageAttribute {
+                        if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
+                            let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                            
+                            let nameString = NSAttributedString(string: sourcePeer.displayTitle, font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                            
+                            viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: nameString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                        }
+                    }
+                }
+            }
+            
+            if replyInfoApply != nil || viaBotApply != nil {
+                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
+                    updatedReplyBackgroundNode = currentReplyBackgroundNode
+                } else {
+                    updatedReplyBackgroundNode = ASImageNode()
+                }
+                
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
             }
             
             var updatedShareButtonBackground: UIImage?
@@ -473,14 +580,46 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
+            var maxContentWidth = imageSize.width
+            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+            if let replyMarkup = replyMarkup {
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
+                maxContentWidth = max(maxContentWidth, minWidth)
+                actionButtonsFinalize = buttonsLayout
+            }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: contentHeight), insets: layoutInsets), { [weak self] animation, _ in
+            var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+            if let actionButtonsFinalize = actionButtonsFinalize {
+                actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+            }
+            
+            var layoutSize = CGSize(width: params.width, height: contentHeight)
+            if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                layoutSize.height += actionButtonsSizeAndApply.0.height
+            }
+            
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
-                    let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
-                    strongSelf.imageNode.frame = updatedImageFrame
-                    strongSelf.animationNode.frame = updatedImageFrame.insetBy(dx: imageInset, dy: imageInset)
+                    var transition: ContainedViewLayoutTransition = .immediate
+                    if case let .System(duration) = animation {
+                        transition = .animated(duration: duration, curve: .spring)
+                    }
+                    
+                    let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
+                    var updatedContentFrame = updatedImageFrame
+                    if isEmoji {
+                        updatedContentFrame = updatedContentFrame.insetBy(dx: -imageInset, dy: -imageInset)
+                    }
+                    
+                    strongSelf.imageNode.frame = updatedContentFrame
+                    strongSelf.animationNode.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+                    strongSelf.animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
+                    
+                    strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -532,6 +671,71 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
                     }
+                    
+                    if isFailed {
+                        let deliveryFailedNode: ChatMessageDeliveryFailedNode
+                        var isAppearing = false
+                        if let current = strongSelf.deliveryFailedNode {
+                            deliveryFailedNode = current
+                        } else {
+                            isAppearing = true
+                            deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
+                                if let item = self?.item {
+                                    item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
+                                }
+                            })
+                            strongSelf.deliveryFailedNode = deliveryFailedNode
+                            strongSelf.addSubnode(deliveryFailedNode)
+                        }
+                        let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
+                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: imageFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: imageFrame.maxY - deliveryFailedSize.height - imageInset), size: deliveryFailedSize)
+                        if isAppearing {
+                            deliveryFailedNode.frame = deliveryFailedFrame
+                            transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
+                        } else {
+                            transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedFrame)
+                        }
+                    } else if let deliveryFailedNode = strongSelf.deliveryFailedNode {
+                        strongSelf.deliveryFailedNode = nil
+                        transition.updateAlpha(node: deliveryFailedNode, alpha: 0.0)
+                        transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
+                            deliveryFailedNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                        var animated = false
+                        if let _ = strongSelf.actionButtonsNode {
+                            if case .System = animation {
+                                animated = true
+                            }
+                        }
+                        let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
+                        let previousFrame = actionButtonsNode.frame
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
+                        actionButtonsNode.frame = actionButtonsFrame
+                        if actionButtonsNode !== strongSelf.actionButtonsNode {
+                            strongSelf.actionButtonsNode = actionButtonsNode
+                            actionButtonsNode.buttonPressed = { button in
+                                if let strongSelf = self {
+                                    strongSelf.performMessageButtonAction(button: button)
+                                }
+                            }
+                            actionButtonsNode.buttonLongTapped = { button in
+                                if let strongSelf = self {
+                                    strongSelf.presentMessageButtonContextMenu(button: button)
+                                }
+                            }
+                            strongSelf.addSubnode(actionButtonsNode)
+                        } else {
+                            if case let .System(duration) = animation {
+                                actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
+                    } else if let actionButtonsNode = strongSelf.actionButtonsNode {
+                        actionButtonsNode.removeFromSupernode()
+                        strongSelf.actionButtonsNode = nil
+                    }
                 }
             })
         }
@@ -541,71 +745,133 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                switch gesture {
-                case .tap:
-                    if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                        if let item = self.item, let author = item.content.firstMessage.author {
-                            var openPeerId = item.effectiveAuthorId ?? author.id
-                            var navigate: ChatControllerInteractionNavigateToPeer
-                            
-                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                navigate = .chat(textInputState: nil, messageId: nil)
-                            } else {
-                                navigate = .info
-                            }
-                            
-                            for attribute in item.content.firstMessage.attributes {
-                                if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                    openPeerId = attribute.messageId.peerId
-                                    navigate = .chat(textInputState: nil, messageId: attribute.messageId)
-                                }
-                            }
-                            
-                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                            } else {
-                                if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                    if case .member = channel.participationStatus {
-                                    } else {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                        return
-                                    }
-                                }
-                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
-                            }
-                        }
-                        return
-                    }
-                    
-                    if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                        if let item = self.item {
-                            for attribute in item.message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                    return
-                                }
-                            }
-                        }
-                    }
-                    
-                    if let item = self.item, self.imageNode.frame.contains(location) {
-                        //self.animationNode.play()
-                        //let _ = item.controllerInteraction.openMessage(item.message, .default)
-                        return
-                    }
-                    
-                    self.item?.controllerInteraction.clickThroughMessage()
-                case .longTap, .doubleTap:
-                    if let item = self.item, self.imageNode.frame.contains(location) {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
-                    }
-                case .hold:
-                    break
-                }
+                let _ = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil)
             }
         default:
             break
         }
+    }
+    
+    private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> Bool {
+        switch gesture {
+        case .tap:
+            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                if let item = self.item, let author = item.content.firstMessage.author {
+                    var openPeerId = item.effectiveAuthorId ?? author.id
+                    var navigate: ChatControllerInteractionNavigateToPeer
+                    
+                    if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                        navigate = .chat(textInputState: nil, subject: nil)
+                    } else {
+                        navigate = .info
+                    }
+                    
+                    for attribute in item.content.firstMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            openPeerId = attribute.messageId.peerId
+                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
+                        }
+                    }
+                    
+                    if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                        item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                    } else {
+                        if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                            if case .member = channel.participationStatus {
+                            } else {
+                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
+                                return true
+                            }
+                        }
+                        item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                    }
+                }
+                return true
+            }
+            
+            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                if let item = self.item {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? InlineBotMessageAttribute {
+                            var botAddressName: String?
+                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                botAddressName = addressName
+                            } else {
+                                botAddressName = attribute.title
+                            }
+                            
+                            if let botAddressName = botAddressName {
+                                item.controllerInteraction.updateInputState { textInputState in
+                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                }
+                                item.controllerInteraction.updateInputMode { _ in
+                                    return .text
+                                }
+                            }
+                            return true
+                        }
+                    }
+                }
+            }
+            
+            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                if let item = self.item {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute {
+                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                            return true
+                        }
+                    }
+                }
+            }
+            
+            if let item = self.item, self.imageNode.frame.contains(location) {
+                if self.telegramFile != nil {
+                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                } else if let _ = self.emojiFile {
+                    var startTime: Signal<Double, NoError>
+                    if self.animationNode.playIfNeeded() {
+                        startTime = .single(0.0)
+                    } else {
+                        startTime = self.animationNode.status
+                            |> map { $0.timestamp }
+                            |> take(1)
+                            |> deliverOnMainQueue
+                    }
+                    
+                    if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
+                        let _ = startTime.start(next: { [weak self] time in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let heartbeatHaptic: ChatMessageHeartbeatHaptic
+                            if let current = strongSelf.heartbeatHaptic {
+                                heartbeatHaptic = current
+                            } else {
+                                heartbeatHaptic = ChatMessageHeartbeatHaptic()
+                                heartbeatHaptic.enabled = true
+                                strongSelf.heartbeatHaptic = heartbeatHaptic
+                            }
+                            if !heartbeatHaptic.active {
+                                heartbeatHaptic.start(time: time)
+                            }
+                        })
+                    }
+                }
+                return true
+            }
+            
+            self.item?.controllerInteraction.clickThroughMessage()
+        case .longTap, .doubleTap:
+            if let item = self.item, self.imageNode.frame.contains(location) {
+                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                return false
+            }
+        case .hold:
+            break
+        }
+        return true
     }
     
     @objc func shareButtonPressed() {
@@ -640,7 +906,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -726,12 +992,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
                 if animated {
-                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
                     
                     if !incoming {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                     }
                 }
             }
@@ -741,13 +1007,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DIdentity
                 if animated {
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, completion: { [weak selectionNode]_ in
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { [weak selectionNode]_ in
                         selectionNode?.removeFromSupernode()
                     })
-                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     if CGFloat(0.0).isLessThanOrEqualTo(selectionNode.frame.origin.x) {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                     }
                 } else {
                     selectionNode.removeFromSupernode()
@@ -771,7 +1037,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 self.highlightedState = highlighted
                 
                 if highlighted {
-                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.bubble.mediaHighlightOverlayColor, animated: false)
+                    self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
                 }
@@ -795,5 +1061,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

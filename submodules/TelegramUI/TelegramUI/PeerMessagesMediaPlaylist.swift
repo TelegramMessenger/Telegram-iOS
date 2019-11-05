@@ -4,10 +4,21 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
+import MusicAlbumArtResources
 
 private enum PeerMessagesMediaPlaylistLoadAnchor {
     case messageId(MessageId)
     case index(MessageIndex)
+    
+    var id: MessageId {
+        switch self {
+            case let .messageId(id):
+                return id
+            case let .index(index):
+                return index.id
+        }
+    }
 }
 
 private enum PeerMessagesMediaPlaylistNavigation {
@@ -25,20 +36,6 @@ struct MessageMediaPlaylistItemStableId: Hashable {
     
     static func ==(lhs: MessageMediaPlaylistItemStableId, rhs: MessageMediaPlaylistItemStableId) -> Bool {
         return lhs.stableId == rhs.stableId
-    }
-}
-
-struct PeerMessagesMediaPlaylistItemId: SharedMediaPlaylistItemId {
-    let messageId: MessageId
-    
-    func isEqual(to: SharedMediaPlaylistItemId) -> Bool {
-        if let to = to as? PeerMessagesMediaPlaylistItemId {
-            if self.messageId != to.messageId {
-                return false
-            }
-            return true
-        }
-        return false
     }
 }
 
@@ -143,7 +140,7 @@ private enum NavigatedMessageFromViewPosition {
 }
 
 private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: MessageIndex) -> [Message] {
-    guard let index = view.entries.index(where: { $0.index.id == centralIndex.id }) else {
+    guard let index = view.entries.firstIndex(where: { $0.index.id == centralIndex.id }) else {
         return []
     }
     var result: [Message] = []
@@ -286,7 +283,7 @@ private struct PlaybackStack {
     
     mutating func resetToId(_ id: MessageId) {
         if self.set.contains(id) {
-            if let index = self.ids.index(of: id) {
+            if let index = self.ids.firstIndex(of: id) {
                 for i in (index + 1) ..< self.ids.count {
                     self.set.remove(self.ids[i])
                 }
@@ -304,7 +301,7 @@ private struct PlaybackStack {
     
     mutating func push(_ id: MessageId) {
         if self.set.contains(id) {
-            if let index = self.ids.index(of: id) {
+            if let index = self.ids.firstIndex(of: id) {
                 self.ids.remove(at: index)
             }
         }
@@ -489,6 +486,14 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     private func loadItem(anchor: PeerMessagesMediaPlaylistLoadAnchor, navigation: PeerMessagesMediaPlaylistNavigation) {
         self.loadingItem = true
         self.updateState()
+        
+        let namespaces: MessageIdNamespaces
+        if Namespaces.Message.allScheduled.contains(anchor.id.namespace) {
+            namespaces = .just(Namespaces.Message.allScheduled)
+        } else {
+            namespaces = .not(Namespaces.Message.allScheduled)
+        }
+        
         switch anchor {
             case let .messageId(messageId):
                 if case let .messages(peerId, tagMask, _) = self.messagesLocation {
@@ -498,7 +503,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         guard let message = message else {
                             return .single(nil)
                         }
-                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                        
+                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                         |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                             if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                 return .single((message, aroundMessages))
@@ -572,7 +578,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
-                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -602,7 +608,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {

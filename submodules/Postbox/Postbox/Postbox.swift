@@ -57,33 +57,43 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.containing(id: id) ?? [:]
     }
     
+    public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
+        assert(!self.disposed)
+        return self.postbox?.chatListTable.doesGroupContainHoles(groupId: groupId) ?? false
+    }
+    
+    public func recalculateChatListGroupStats(groupId: PeerGroupId) {
+        assert(!self.disposed)
+        self.postbox?.recalculateChatListGroupStats(groupId: groupId)
+    }
+    
     public func replaceChatListHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?) {
         assert(!self.disposed)
         self.postbox?.replaceChatListHole(groupId: groupId, index: index, hole: hole)
     }
     
-    public func deleteMessages(_ messageIds: [MessageId]) {
+    public func deleteMessages(_ messageIds: [MessageId], forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
-        self.postbox?.deleteMessages(messageIds)
+        self.postbox?.deleteMessages(messageIds, forEachMedia: forEachMedia)
     }
     
-    public func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) {
+    public func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
-        self.postbox?.deleteMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId)
+        self.postbox?.deleteMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, forEachMedia: forEachMedia)
     }
     
-    public func withAllMessages(peerId: PeerId, _ f: (Message) -> Bool) {
-        self.postbox?.withAllMessages(peerId: peerId, f)
+    public func withAllMessages(peerId: PeerId, namespace: MessageId.Namespace? = nil, _ f: (Message) -> Bool) {
+        self.postbox?.withAllMessages(peerId: peerId, namespace: namespace, f)
     }
     
-    public func clearHistory(_ peerId: PeerId) {
+    public func clearHistory(_ peerId: PeerId, namespaces: MessageIdNamespaces, forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
-        self.postbox?.clearHistory(peerId)
+        self.postbox?.clearHistory(peerId, namespaces: namespaces, forEachMedia: forEachMedia)
     }
     
-    public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
+    public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
-        self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace)
+        self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: forEachMedia)
     }
     
     public func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
@@ -95,11 +105,11 @@ public final class Transaction {
         }
     }
     
-    public func deleteMessagesWithGlobalIds(_ ids: [Int32]) {
+    public func deleteMessagesWithGlobalIds(_ ids: [Int32], forEachMedia: (Media) -> Void) {
         assert(!self.disposed)
         if let postbox = self.postbox {
             let messageIds = postbox.messageIdsForGlobalIds(ids)
-            postbox.deleteMessages(messageIds)
+            postbox.deleteMessages(messageIds, forEachMedia: forEachMedia)
         }
     }
     
@@ -270,6 +280,11 @@ public final class Transaction {
     public func getTopPeerMessageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
         assert(!self.disposed)
         return self.postbox?.getTopPeerMessageIndex(peerId: peerId, namespace: namespace)
+    }
+    
+    public func getTopPeerMessageIndex(peerId: PeerId) -> MessageIndex? {
+        assert(!self.disposed)
+        return self.postbox?.getTopPeerMessageIndex(peerId: peerId)
     }
     
     public func getPeerChatListIndex(_ peerId: PeerId) -> (PeerGroupId, ChatListIndex)? {
@@ -932,8 +947,10 @@ func debugRestoreState(basePath:String, name: String) {
     }
 }
 
+private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
+
 public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<PostboxResult, NoError> {
-    let queue = Queue(name: "org.telegram.postbox.Postbox")
+    let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
             let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
@@ -1472,82 +1489,26 @@ public final class Postbox {
         self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
     }
     
-    /*fileprivate func fillMultipleGroupFeedHoles(groupId: PeerGroupId, mainHoleMaxIndex: MessageIndex, fillType: HoleFill, messages: [StoreMessage]) {
-        let initialGroupFeedOperationsCount = self.currentGroupFeedOperations[groupId]?.count ?? 0
-        self.groupFeedIndexTable.fillMultipleHoles(insertMessage: { message in
-            self.insertMessageInternal(message: message)
-        }, groupId: groupId, mainHoleMaxIndex: mainHoleMaxIndex, fillType: fillType, messages: self.messageHistoryTable.internalStoreMessages(messages), addOperation: { groupId, operation in
-            if self.currentGroupFeedOperations[groupId] == nil {
-                self.currentGroupFeedOperations[groupId] = []
-            }
-            self.currentGroupFeedOperations[groupId]!.append(operation)
-        })
-        
-        var filledMessageIndices: [MessageIndex: HoleFillDirection] = [:]
-        if let operations = self.currentGroupFeedOperations[groupId] {
-            for i in initialGroupFeedOperationsCount ..< operations.count {
-                switch operations[i] {
-                    case let .insertHole(hole, _):
-                        filledMessageIndices[hole.maxIndex] = fillType.direction
-                    case let .insertMessage(message):
-                        filledMessageIndices[MessageIndex(message)] = fillType.direction
-                default:
-                    break
-                }
-            }
-        }
-        
-        if !filledMessageIndices.isEmpty {
-            if self.currentGroupFeedIdsWithFilledHoles[groupId] == nil {
-                self.currentGroupFeedIdsWithFilledHoles[groupId] = [:]
-            }
-            for (messageIndex, direction) in filledMessageIndices {
-                self.currentGroupFeedIdsWithFilledHoles[groupId]![messageIndex] = direction
-            }
-        }
-        
-        if self.currentRemovedHolesByPeerGroupId[groupId] == nil {
-            self.currentRemovedHolesByPeerGroupId[groupId] = [:]
-        }
-        self.currentRemovedHolesByPeerGroupId[groupId]![mainHoleMaxIndex] = fillType.direction
+    fileprivate func recalculateChatListGroupStats(groupId: PeerGroupId) {
+        let summary = self.chatListIndexTable.reindexPeerGroupUnreadCounts(postbox: self, groupId: groupId)
+        self.groupMessageStatsTable.set(groupId: groupId, summary: summary)
+        self.currentUpdatedGroupTotalUnreadSummaries[groupId] = summary
     }
-    
-    fileprivate func addFeedHoleFromLatestEntries(groupId: PeerGroupId) {
-        self.groupFeedIndexTable.addHoleFromLatestEntries(groupId: groupId, messageHistoryTable: self.messageHistoryTable, operations: &self.currentGroupFeedOperations)
-    }
-    
-    fileprivate func addMessagesToGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
-        for id in ids {
-            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
-                if let message = self.messageHistoryTable.getMessage(index) {
-                    self.groupFeedIndexTable.add(groupId: groupId, message: message, operations: &self.currentGroupFeedOperations)
-                }
-            }
-        }
-    }
-    
-    fileprivate func removeMessagesFromGroupFeedIndex(groupId: PeerGroupId, ids: [MessageId]) {
-        for id in ids {
-            if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry {
-                self.groupFeedIndexTable.remove(groupId: groupId, messageIndex: index, operations: &self.currentGroupFeedOperations)
-            }
-        }
-    }*/
     
     fileprivate func replaceChatListHole(groupId: PeerGroupId, index: MessageIndex, hole: ChatListHole?) {
         self.chatListTable.replaceHole(groupId: groupId, index: index, hole: hole, operations: &self.currentChatListOperations)
     }
     
-    fileprivate func deleteMessages(_ messageIds: [MessageId]) {
-        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+    fileprivate func deleteMessages(_ messageIds: [MessageId], forEachMedia: (Media) -> Void) {
+        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
     }
     
-    fileprivate func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) {
-        self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+    fileprivate func deleteMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, forEachMedia: (Media) -> Void) {
+        self.messageHistoryTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
     }
     
-    fileprivate func withAllMessages(peerId: PeerId, _ f: (Message) -> Bool) {
-        for index in self.messageHistoryTable.allMessageIndices(peerId: peerId) {
+    fileprivate func withAllMessages(peerId: PeerId, namespace: MessageId.Namespace?, _ f: (Message) -> Bool) {
+        for index in self.messageHistoryTable.allMessageIndices(peerId: peerId, namespace: namespace) {
             if let message = self.messageHistoryTable.getMessage(index) {
                 if !f(self.renderIntermediateMessage(message)) {
                     break
@@ -1558,15 +1519,15 @@ public final class Postbox {
         }
     }
     
-    fileprivate func clearHistory(_ peerId: PeerId) {
-        self.messageHistoryTable.clearHistory(peerId: peerId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
-        for namespace in self.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: .everywhere) {
+    fileprivate func clearHistory(_ peerId: PeerId, namespaces: MessageIdNamespaces, forEachMedia: (Media) -> Void) {
+        self.messageHistoryTable.clearHistory(peerId: peerId, namespaces: namespaces, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+        for namespace in self.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: .everywhere) where namespaces.contains(namespace) {
             self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max - 1, operations: &self.currentPeerHoleOperations)
         }
     }
     
-    fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
-        self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+    fileprivate func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
+        self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
     }
     
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
@@ -1595,13 +1556,25 @@ public final class Postbox {
             case let .associated(_, messageId):
                 if let messageId = messageId, let readState = self.readStateTable.getCombinedState(messageId.peerId), readState.count != 0 {
                     if let topMessage = self.messageHistoryTable.topMessage(messageId.peerId) {
-                        let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(topMessage.index, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+                        let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(postbox: self, messageIndex: topMessage.index, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
                     }
                 }
             default:
                 break
         }
-        return self.messageHistoryTable.applyInteractiveMaxReadIndex(messageIndex, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+        let initialCombinedStates = self.readStateTable.getCombinedState(messageIndex.id.peerId)
+        var resultIds = self.messageHistoryTable.applyInteractiveMaxReadIndex(postbox: self, messageIndex: messageIndex, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+        if let states = initialCombinedStates?.states {
+            for (namespace, state) in states {
+                if namespace != messageIndex.id.namespace && state.count != 0 {
+                    if let item = self.messageHistoryTable.fetch(peerId: messageIndex.id.peerId, namespace: namespace, tag: nil, from: MessageIndex(id: MessageId(peerId: messageIndex.id.peerId, namespace: namespace, id: 1), timestamp: messageIndex.timestamp), includeFrom: true, to: MessageIndex.lowerBound(peerId: messageIndex.id.peerId, namespace: namespace), limit: 1).first {
+                        resultIds.append(contentsOf:  self.messageHistoryTable.applyInteractiveMaxReadIndex(postbox: self, messageIndex: item.index, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations))
+                    }
+                }
+            }
+        }
+        
+        return resultIds
     }
     
     func applyMarkUnread(peerId: PeerId, namespace: MessageId.Namespace, value: Bool, interactive: Bool) {
@@ -1812,6 +1785,16 @@ public final class Postbox {
             return nil
         }
     }
+
+    fileprivate func getTopPeerMessageIndex(peerId: PeerId) -> MessageIndex? {
+        var indices: [MessageIndex] = []
+        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) where self.seedConfiguration.chatMessagesNamespaces.contains(namespace) {
+            if let index = self.messageHistoryTable.topIndexEntry(peerId: peerId, namespace: namespace) {
+                indices.append(index)
+            }
+        }
+        return indices.max()
+    }
     
     fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
@@ -2008,7 +1991,7 @@ public final class Postbox {
     
     fileprivate func removeItemCollection(collectionId: ItemCollectionId) {
         var infos = self.itemCollectionInfoTable.getInfos(namespace: collectionId.namespace)
-        if let index = infos.index(where: { $0.1 == collectionId }) {
+        if let index = infos.firstIndex(where: { $0.1 == collectionId }) {
             infos.remove(at: index)
             self.replaceItemCollectionInfos(namespace: collectionId.namespace, itemCollectionInfos: infos.map { ($0.1, $0.2) })
         }
@@ -2236,7 +2219,7 @@ public final class Postbox {
         return peerIds
     }
     
-    public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocation, count: Int, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocation, count: Int, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.transactionSignal(userInteractive: true, { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
             
@@ -2280,26 +2263,26 @@ public final class Postbox {
                         }
                     }
             }
-            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
         })
     }
     
-    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.transactionSignal { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
-            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: .message(messageId), fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: .message(messageId), fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
         }
     }
     
-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, anchor: HistoryViewInputAnchor, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, anchor: HistoryViewInputAnchor, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.transactionSignal { subscriber, transaction in
             let peerIds = self.peerIdsForLocation(chatLocation, tagMask: tagMask)
             
-            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
+            return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
         }
     }
     
-    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewPeerIds, count: Int, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
+    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewPeerIds, count: Int, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
         var mainPeerId: PeerId?
         switch peerIds {
@@ -2388,7 +2371,7 @@ public final class Postbox {
             readStates = transientReadStates
         }
         
-        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, peerIds: peerIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tagMask, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
+        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, peerIds: peerIds, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tagMask, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
             if let tagMask = tagMask {
                 return Int32(self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, namespace: lowerBound.id.namespace, tag: tagMask, lowerBound: lowerBound, upperBound: upperBound))
             } else {

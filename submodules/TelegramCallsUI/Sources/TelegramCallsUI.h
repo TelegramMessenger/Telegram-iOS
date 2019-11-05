@@ -14,6 +14,6 @@ FOUNDATION_EXPORT double TelegramCallsUIVersionNumber;
 //! Project version string for TelegramCallsUI.
 FOUNDATION_EXPORT const unsigned char TelegramCallsUIVersionString[];
 
-// In this header, you should import all the public headers of your framework using statements like #import <TelegramCallsUI/PublicHeader.h>
+#import <TelegramCallsUI/CallsEmoji.h>
 
 

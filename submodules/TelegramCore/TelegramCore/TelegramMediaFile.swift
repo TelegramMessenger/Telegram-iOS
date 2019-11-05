@@ -20,6 +20,7 @@ private let typeHasLinkedStickers: Int32 = 6
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
+    case animatedEmoji
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -27,6 +28,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 self = .id(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
             case 1:
                 self = .name(decoder.decodeStringForKey("n", orElse: ""))
+            case 2:
+                self = .animatedEmoji
             default:
                 self = .name("")
                 assertionFailure()
@@ -42,6 +45,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
             case let .name(name):
                 encoder.encodeInt32(1, forKey: "r")
                 encoder.encodeString(name, forKey: "n")
+            case .animatedEmoji:
+                encoder.encodeInt32(2, forKey: "r")
         }
     }
     
@@ -55,6 +60,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 }
             case let .name(name):
                 if case .name(name) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .animatedEmoji:
+                if case .animatedEmoji = rhs {
                     return true
                 } else {
                     return false
@@ -336,6 +347,17 @@ public final class TelegramMediaFile: Media, Equatable {
         return false
     }
     
+    public var isStaticSticker: Bool {
+        for attribute in self.attributes {
+            if case .Sticker = attribute {
+                if let s = self.size, s < 200 * 1024 {
+                    return !isAnimatedSticker
+                }
+            }
+        }
+        return false
+    }
+    
     public var isVideo: Bool {
         for attribute in self.attributes {
             if case .Video = attribute {
@@ -363,6 +385,13 @@ public final class TelegramMediaFile: Media, Equatable {
         return false
     }
     
+    public var isAnimatedSticker: Bool {
+        if let _ = self.fileName, self.mimeType == "application/x-tgsticker" {
+            return true
+        }
+        return false
+    }
+    
     public var isMusic: Bool {
         for attribute in self.attributes {
             if case .Audio(false, _, _, _, _) = attribute {
@@ -382,7 +411,13 @@ public final class TelegramMediaFile: Media, Equatable {
     }
     
     public var dimensions: CGSize? {
-        return dimensionsForFileAttributes(self.attributes)
+        if let value = dimensionsForFileAttributes(self.attributes) {
+            return value
+        } else if self.isAnimatedSticker {
+            return CGSize(width: 512.0, height: 512.0)
+        } else {
+            return nil
+        }
     }
     
     public var duration: Int32? {
@@ -497,6 +532,8 @@ extension StickerPackReference {
                 self = .id(id: id, accessHash: accessHash)
             case let .inputStickerSetShortName(shortName):
                 self = .name(shortName)
+            case .inputStickerSetAnimatedEmoji:
+                self = .animatedEmoji
         }
     }
 }

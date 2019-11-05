@@ -285,6 +285,11 @@ public final class MediaPlayerNode: ASDisplayNode {
                     strongSelf.updateLayout()
                     
                     strongSelf.layer.addSublayer(videoLayer)
+                    
+                    /*let testLayer = RuntimeUtils.makeLayerHostCopy(videoLayer.sublayers![0].sublayers![0])*/
+                    //testLayer.frame = CGRect(origin: CGPoint(x: -500.0, y: -300.0), size: CGSize(width: 60.0, height: 60.0))
+                    //strongSelf.layer.addSublayer(testLayer)
+                    
                     strongSelf.updateState()
                 }
             }

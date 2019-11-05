@@ -18,7 +18,9 @@ import Foundation
 public enum CreateChannelError {
     case generic
     case restricted
+    case tooMuchJoined
     case tooMuchLocationBasedGroups
+    case serverProvided(String)
 }
 
 private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
@@ -40,7 +42,11 @@ private func createChannel(account: Account, title: String, description: String?
         
         return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
-            if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
+            if error.errorCode == 406 {
+                return .serverProvided(error.errorDescription)
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return .tooMuchJoined
+            } else if error.errorDescription == "CHANNELS_ADMIN_LOCATED_TOO_MUCH" {
                 return .tooMuchLocationBasedGroups
             } else if error.errorDescription == "USER_RESTRICTED" {
                 return .restricted
@@ -52,15 +58,15 @@ private func createChannel(account: Account, title: String, description: String?
             account.stateManager.addUpdates(updates)
             if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
                 return account.postbox.multiplePeersView([peerId])
-                    |> filter { view in
-                        return view.peers[peerId] != nil
-                    }
-                    |> take(1)
-                    |> map { _ in
-                        return peerId
-                    }
-                    |> introduceError(CreateChannelError.self)
-                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+                |> filter { view in
+                    return view.peers[peerId] != nil
+                }
+                |> take(1)
+                |> map { _ in
+                    return peerId
+                }
+                |> introduceError(CreateChannelError.self)
+                |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
             } else {
                 return .fail(.generic)
             }

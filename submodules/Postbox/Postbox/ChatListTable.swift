@@ -109,19 +109,6 @@ private func addOperation(_ operation: ChatListOperation, groupId: PeerGroupId, 
     operations[groupId]!.append(operation)
 }
 
-/*
- dialog.unread_mark ? 1 : 0,
- dialog.peer.channel_id || dialog.peer.chat_id || dialog.peer.user_id,
- dialog.top_message.id,
- top_message.edit_date || top_message.date,
- dialog.read_inbox_max_id,
- dialog.read_outbox_max_id,
- dialog.unread_count,
- dialog.unread_mentions_count,
- draft.draft.date || 0
-
- */
-
 public enum ChatListNamespaceEntry {
     case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: PeerChatInterfaceState?)
     case hole(MessageIndex)
@@ -779,5 +766,28 @@ final class ChatListTable: Table {
         return result.sorted(by: { lhs, rhs in
             return lhs.index > rhs.index
         })
+    }
+    
+    func doesGroupContainHoles(groupId: PeerGroupId) -> Bool {
+        var result = false
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
+            if extractKey(key).type == ChatListEntryType.hole.rawValue {
+                result = true
+                return false
+            } else {
+                return true
+            }
+        }, limit: 0)
+        return result
+    }
+    
+    func forEachPeer(groupId: PeerGroupId, _ f: (PeerId) -> Void) {
+        self.valueBox.range(self.table, start: self.lowerBound(groupId: groupId), end: self.upperBound(groupId: groupId), keys: { key in
+            let extracted = extractKey(key)
+            if extracted.type == ChatListEntryType.message.rawValue {
+                f(extracted.index.id.peerId)
+            }
+            return true
+        }, limit: 0)
     }
 }

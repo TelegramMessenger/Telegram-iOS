@@ -5,6 +5,8 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import MediaResources
+import AccountContext
 
 private extension TelegramWallpaper {
     var mainResource: MediaResource? {
@@ -41,22 +43,7 @@ private func areMediaResourcesEqual(_ lhs: MediaResource?, _ rhs: MediaResource?
     }
 }
 
-enum WallpaperUploadManagerStatus {
-    case none
-    case uploading(TelegramWallpaper, Float)
-    case uploaded(TelegramWallpaper, TelegramWallpaper)
-    
-    var wallpaper: TelegramWallpaper? {
-        switch self {
-            case let .uploading(wallpaper, _), let .uploaded(wallpaper, _):
-                return wallpaper
-            default:
-                return nil
-        }
-    }
-}
-
-final class WallpaperUploadManager {
+final class WallpaperUploadManagerImpl: WallpaperUploadManager {
     private let sharedContext: SharedAccountContext
     private let account: Account
     private var context: WallpaperUploadContext?
@@ -139,7 +126,7 @@ final class WallpaperUploadManager {
                                         
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[current.theme.index] = updatedWallpaper
-                                        return PresentationThemeSettings(chatWallpaper: updatedWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(chatWallpaper: updatedWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })).start()
                                 }
                             }

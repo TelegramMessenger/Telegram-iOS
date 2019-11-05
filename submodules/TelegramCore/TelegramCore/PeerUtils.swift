@@ -1,101 +1,113 @@
 import Foundation
 #if os(macOS)
-    import PostboxMac
+import PostboxMac
 #else
-    import Postbox
+import Postbox
 #endif
 
 public extension Peer {
-    public var debugDisplayTitle: String {
+    var debugDisplayTitle: String {
         switch self {
-            case let user as TelegramUser:
-                return user.name
-            case let group as TelegramGroup:
-                return group.title
-            case let channel as TelegramChannel:
-                return channel.title
-            default:
-                return ""
+        case let user as TelegramUser:
+            return user.name
+        case let group as TelegramGroup:
+            return group.title
+        case let channel as TelegramChannel:
+            return channel.title
+        default:
+            return ""
         }
     }
     
-    public var displayTitle: String {
+    var displayTitle: String {
         return self.debugDisplayTitle
     }
     
-    public var compactDisplayTitle: String {
+    var compactDisplayTitle: String {
         switch self {
-            case let user as TelegramUser:
-                if let firstName = user.firstName {
-                    return firstName
-                } else if let lastName = user.lastName {
-                    return lastName
-                } else {
-                    return ""
-                }
-            case let group as TelegramGroup:
-                return group.title
-            case let channel as TelegramChannel:
-                return channel.title
-            default:
+        case let user as TelegramUser:
+            if let firstName = user.firstName {
+                return firstName
+            } else if let lastName = user.lastName {
+                return lastName
+            } else {
                 return ""
+            }
+        case let group as TelegramGroup:
+            return group.title
+        case let channel as TelegramChannel:
+            return channel.title
+        default:
+            return ""
         }
     }
     
-    public var restrictionText: String? {
+    func restrictionText(platform: String) -> String? {
+        var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
-            case let user as TelegramUser:
-                return user.restrictionInfo?.reason
-            case let channel as TelegramChannel:
-                return channel.restrictionInfo?.reason
-            default:
-                return nil
+        case let user as TelegramUser:
+            restrictionInfo = user.restrictionInfo
+        case let channel as TelegramChannel:
+            restrictionInfo = channel.restrictionInfo
+        default:
+            break
         }
-    }
-    
-    public var addressName: String? {
-        switch self {
-            case let user as TelegramUser:
-                return user.username
-            case _ as TelegramGroup:
-                return nil
-            case let channel as TelegramChannel:
-                return channel.username
-            default:
-                return nil
-        }
-    }
-    
-    public var displayLetters: [String] {
-        switch self {
-            case let user as TelegramUser:
-                if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty && !lastName.isEmpty {
-                    return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased(), lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
-                } else if let firstName = user.firstName, !firstName.isEmpty {
-                    return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()]
-                } else if let lastName = user.lastName, !lastName.isEmpty {
-                    return [lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+        
+        if let restrictionInfo = restrictionInfo {
+            for rule in restrictionInfo.rules {
+                if rule.platform == "all" || rule.platform == platform {
+                    return rule.text
                 }
-                
+            }
+            return nil
+        } else {
+            return nil
+        }
+    }
+    
+    var addressName: String? {
+        switch self {
+        case let user as TelegramUser:
+            return user.username
+        case _ as TelegramGroup:
+            return nil
+        case let channel as TelegramChannel:
+            return channel.username
+        default:
+            return nil
+        }
+    }
+    
+    var displayLetters: [String] {
+        switch self {
+        case let user as TelegramUser:
+            if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty && !lastName.isEmpty {
+                return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased(), lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+            } else if let firstName = user.firstName, !firstName.isEmpty {
+                return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()]
+            } else if let lastName = user.lastName, !lastName.isEmpty {
+                return [lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+            }
+            
+            return []
+        case let group as TelegramGroup:
+            if group.title.startIndex != group.title.endIndex {
+                return [group.title.substring(to: group.title.index(after: group.title.startIndex)).uppercased()]
+            } else {
                 return []
-            case let group as TelegramGroup:
-                if group.title.startIndex != group.title.endIndex {
-                    return [group.title.substring(to: group.title.index(after: group.title.startIndex)).uppercased()]
-                } else {
-                    return []
-                }
-            case let channel as TelegramChannel:
-                if channel.title.startIndex != channel.title.endIndex {
-                    return [channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()]
-                } else {
-                    return []
-                }
-            default:
+            }
+        case let channel as TelegramChannel:
+            if channel.title.startIndex != channel.title.endIndex {
+                return [channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()]
+            } else {
                 return []
+            }
+        default:
+            return []
         }
     }
     
-    public var profileImageRepresentations: [TelegramMediaImageRepresentation] {
+    var profileImageRepresentations: [TelegramMediaImageRepresentation] {
         if let user = self as? TelegramUser {
             return user.photo
         } else if let group = self as? TelegramGroup {
@@ -106,53 +118,53 @@ public extension Peer {
         return []
     }
     
-    public var smallProfileImage: TelegramMediaImageRepresentation? {
+    var smallProfileImage: TelegramMediaImageRepresentation? {
         return smallestImageRepresentation(self.profileImageRepresentations)
     }
     
-    public var largeProfileImage: TelegramMediaImageRepresentation? {
+    var largeProfileImage: TelegramMediaImageRepresentation? {
         return largestImageRepresentation(self.profileImageRepresentations)
     }
     
-    public var isDeleted: Bool {
+    var isDeleted: Bool {
         switch self {
-            case let user as TelegramUser:
-                return user.firstName == nil && user.lastName == nil
-            default:
-                return false
+        case let user as TelegramUser:
+            return user.firstName == nil && user.lastName == nil
+        default:
+            return false
         }
     }
     
-    public var isScam: Bool {
+    var isScam: Bool {
         switch self {
-            case let user as TelegramUser:
-                return user.flags.contains(.isScam)
-            case let channel as TelegramChannel:
-                return channel.flags.contains(.isScam)
-            default:
-                return false
+        case let user as TelegramUser:
+            return user.flags.contains(.isScam)
+        case let channel as TelegramChannel:
+            return channel.flags.contains(.isScam)
+        default:
+            return false
         }
     }
     
-    public var isVerified: Bool {
+    var isVerified: Bool {
         switch self {
-            case let user as TelegramUser:
-                return user.flags.contains(.isVerified)
-            case let channel as TelegramChannel:
-                return channel.flags.contains(.isVerified)
-            default:
-                return false
+        case let user as TelegramUser:
+            return user.flags.contains(.isVerified)
+        case let channel as TelegramChannel:
+            return channel.flags.contains(.isVerified)
+        default:
+            return false
         }
     }
 }
 
 public extension PeerId {
-    public var isGroupOrChannel: Bool {
+    var isGroupOrChannel: Bool {
         switch self.namespace {
-            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-                return true
-            default:
-                return false
+        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -210,7 +222,7 @@ public func peerViewMainPeer(_ view: PeerView) -> Peer? {
 }
 
 public extension RenderedPeer {
-    public convenience init(message: Message) {
+    convenience init(message: Message) {
         var peers = SimpleDictionary<PeerId, Peer>()
         let peerId = message.id.peerId
         if let peer = message.peers[peerId] {
@@ -224,7 +236,7 @@ public extension RenderedPeer {
         self.init(peerId: message.id.peerId, peers: peers)
     }
     
-    public var chatMainPeer: Peer? {
+    var chatMainPeer: Peer? {
         if let peer = self.peers[self.peerId] {
             if let peer = peer as? TelegramSecretChat {
                 return self.peers[peer.regularPeerId]
@@ -237,3 +249,9 @@ public extension RenderedPeer {
     }
 }
 
+public func isServicePeer(_ peer: Peer) -> Bool {
+    if let peer = peer as? TelegramUser {
+        return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000))
+    }
+    return false
+}

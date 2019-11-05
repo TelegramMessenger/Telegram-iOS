@@ -13,7 +13,11 @@ import WebPImage
 import WebP
 #endif
 import Lottie
-import TelegramUIPrivateModule
+import MediaResources
+import PhotoResources
+import ImageBlur
+import AnimationUI
+import WallpaperResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -77,7 +81,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return .complete()
             }
             return fetchCachedPatternWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
-        }
+        } 
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -118,6 +122,14 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return .complete()
             }
             return fetchAnimatedStickerRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
+    } else if let representation = representation as? CachedAnimatedStickerFirstFrameRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchAnimatedStickerFirstFrameRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
     }
     return .never()
@@ -213,7 +225,7 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                         
                         let _ = try? finalData.write(to: url, options: [.atomic])
                         
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -255,7 +267,7 @@ private func fetchCachedScaledImageRepresentation(resource: MediaResource, resou
                     
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -317,7 +329,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                     
                     CGImageDestinationAddImage(colorDestination, fullSizeImage, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -360,7 +372,7 @@ private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, re
                             
                             CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                             if CGImageDestinationFinalize(colorDestination) {
-                                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                                subscriber.putNext(.temporaryPath(path))
                                 subscriber.putCompletion()
                             }
                         }
@@ -390,7 +402,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
                     
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -429,7 +441,7 @@ private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResour
                     
                     CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(alphaDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -477,7 +489,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                     
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -544,7 +556,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
                     
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -583,7 +595,7 @@ private func fetchCachedPatternWallpaperMaskRepresentation(account: Account, res
                     
                     CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(alphaDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -631,7 +643,7 @@ private func fetchCachedPatternWallpaperRepresentation(account: Account, resourc
                     
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                         subscriber.putCompletion()
                     }
                 }
@@ -676,7 +688,7 @@ private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: M
                         
                         CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                         if CGImageDestinationFinalize(colorDestination) {
-                            subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                            subscriber.putNext(.temporaryPath(path))
                         }
                     }
                 }
@@ -702,7 +714,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         
         let nsString = (resource.emoji as NSString)
         let font = Font.regular(52.0)
-        let stringAttributes = [NSAttributedStringKey.font: font]
+        let stringAttributes = [NSAttributedString.Key.font: font]
         var textSize = nsString.size(withAttributes: stringAttributes)
         textSize = CGSize(width: ceil(textSize.width) + 1.0, height: ceil(textSize.height) + 1.0)
         
@@ -755,7 +767,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
             let options = NSMutableDictionary()
             CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
             if CGImageDestinationFinalize(colorDestination) {
-                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                subscriber.putNext(.temporaryPath(path))
             }
         }
         subscriber.putCompletion()
@@ -875,7 +887,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
                     let options = NSMutableDictionary()
                     CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) {
-                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putNext(.temporaryPath(path))
                     }
                 }
                 subscriber.putCompletion()
@@ -885,15 +897,35 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
     }
 }
 
-private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            return convertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: 400.0, height: 400.0)).start(next: { path in
-                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
+                subscriber.putNext(.tempFile(file))
                 subscriber.putCompletion()
             })
         } else {
             return EmptyDisposable
         }
-    }) |> runOn(Queue.concurrentDefaultQueue())
+    })
+    |> runOn(Queue.concurrentDefaultQueue())
 }
+
+private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if #available(iOS 9.0, *) {
+                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { path in
+                    subscriber.putNext(.temporaryPath(path))
+                    subscriber.putCompletion()
+                })
+            } else {
+                return EmptyDisposable
+            }
+        } else {
+            return EmptyDisposable
+        }
+    })
+    |> runOn(Queue.concurrentDefaultQueue())
+}
+

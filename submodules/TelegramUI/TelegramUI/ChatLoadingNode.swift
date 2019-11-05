@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import ActivityIndicator
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: ASImageNode

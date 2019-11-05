@@ -9,8 +9,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-import TelegramCorePrivateModule
-
 enum PendingMessageUploadedContent {
     case text(String)
     case media(Api.InputMedia, String)
@@ -96,6 +94,13 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
     } else if let file = media as? TelegramMediaFile {
         if let resource = file.resource as? CloudDocumentMediaResource {
             if peerId.namespace == Namespaces.Peer.SecretChat {
+                for attribute in file.attributes {
+                    if case let .Sticker(sticker) = attribute {
+                        if let _ = sticker.packReference {
+                            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: PendingMessageUploadedContent.text(text), reuploadInfo: nil)))
+                        }
+                    }
+                }
                 return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: true, isGrouped: isGrouped, peerId: peerId, messageId: messageId, text: text, attributes: attributes, file: file)
             } else {
                 if forceReupload {
@@ -297,7 +302,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
                                     }
                                     var updatedAttributes = currentMessage.attributes
-                                    if let index = updatedAttributes.index(where: { $0 is OutgoingMessageInfoAttribute }){
+                                    if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){
                                         let attribute = updatedAttributes[index] as! OutgoingMessageInfoAttribute
                                         updatedAttributes[index] = attribute.withUpdatedFlags(attribute.flags.union([.transformedMedia]))
                                     } else {
@@ -410,6 +415,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                             stickerSet = .inputStickerSetID(id: id, accessHash: accessHash)
                         case let .name(name):
                             stickerSet = .inputStickerSetShortName(shortName: name)
+                        default:
+                            stickerSet = .inputStickerSetEmpty
                     }
                 }
                 var inputMaskCoords: Api.MaskCoords?
@@ -469,17 +476,17 @@ private enum UploadedMediaFileAndThumbnail {
 
 private func uploadedThumbnail(network: Network, postbox: Postbox, resourceReference: MediaResourceReference) -> Signal<Api.InputFile?, PendingMessageUploadError> {
     return multipartUpload(network: network, postbox: postbox, source: .resource(resourceReference), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
-        |> mapError { _ -> PendingMessageUploadError in return .generic }
-        |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
-            switch result {
-                case .progress:
-                    return .complete()
-                case let .inputFile(inputFile):
-                    return .single(inputFile)
-                case .inputSecretFile:
-                    return .single(nil)
-            }
+    |> mapError { _ -> PendingMessageUploadError in return .generic }
+    |> mapToSignal { result -> Signal<Api.InputFile?, PendingMessageUploadError> in
+        switch result {
+            case .progress:
+                return .complete()
+            case let .inputFile(inputFile):
+                return .single(inputFile)
+            case .inputSecretFile:
+                return .single(nil)
         }
+    }
 }
 
 public func statsCategoryForFileWithAttributes(_ attributes: [TelegramMediaFileAttribute]) -> MediaResourceStatsCategory {
@@ -557,7 +564,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
                                 }
                                 var updatedAttributes = currentMessage.attributes
-                                if let index = updatedAttributes.index(where: { $0 is OutgoingMessageInfoAttribute }){
+                                if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){
                                     let attribute = updatedAttributes[index] as! OutgoingMessageInfoAttribute
                                     updatedAttributes[index] = attribute.withUpdatedFlags(attribute.flags.union([.transformedMedia]))
                                 } else {

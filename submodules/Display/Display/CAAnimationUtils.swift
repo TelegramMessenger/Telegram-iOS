@@ -36,7 +36,7 @@ private let completionKey = "CAAnimationUtils_completion"
 public let kCAMediaTimingFunctionSpring = "CAAnimationUtilsSpringCurve"
 
 public extension CAAnimation {
-    public var completion: ((Bool) -> Void)? {
+    var completion: ((Bool) -> Void)? {
         get {
             if let delegate = self.delegate as? CALayerAnimationDelegate {
                 return delegate.completion
@@ -54,13 +54,13 @@ public extension CAAnimation {
 }
 
 public extension CALayer {
-    public func makeAnimation(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, delay: Double = 0.0, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) -> CAAnimation {
+    func makeAnimation(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, delay: Double = 0.0, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) -> CAAnimation {
         if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
             animation.fromValue = from
             animation.toValue = to
             animation.isRemovedOnCompletion = removeOnCompletion
-            animation.fillMode = kCAFillModeForwards
+            animation.fillMode = .forwards
             if let completion = completion {
                 animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
             }
@@ -76,7 +76,7 @@ public extension CALayer {
             
             if !delay.isZero {
                 animation.beginTime = CACurrentMediaTime() + delay
-                animation.fillMode = kCAFillModeBoth
+                animation.fillMode = .both
             }
             
             return animation
@@ -94,10 +94,10 @@ public extension CALayer {
             if let mediaTimingFunction = mediaTimingFunction {
                 animation.timingFunction = mediaTimingFunction
             } else {
-                animation.timingFunction = CAMediaTimingFunction(name: timingFunction)
+                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName(rawValue: timingFunction))
             }
             animation.isRemovedOnCompletion = removeOnCompletion
-            animation.fillMode = kCAFillModeForwards
+            animation.fillMode = .forwards
             animation.speed = speed
             animation.isAdditive = additive
             if let completion = completion {
@@ -106,19 +106,19 @@ public extension CALayer {
             
             if !delay.isZero {
                 animation.beginTime = CACurrentMediaTime() + delay
-                animation.fillMode = kCAFillModeBoth
+                animation.fillMode = .both
             }
             
             return animation
         }
     }
     
-    public func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, delay: Double = 0.0, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, delay: Double = 0.0, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let animation = self.makeAnimation(from: from, to: to, keyPath: keyPath, timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
         self.add(animation, forKey: additive ? nil : keyPath)
     }
     
-    public func animateGroup(_ animations: [CAAnimation], key: String) {
+    func animateGroup(_ animations: [CAAnimation], key: String) {
         let animationGroup = CAAnimationGroup()
         var timeOffset = 0.0
         for animation in animations {
@@ -130,7 +130,7 @@ public extension CALayer {
         self.add(animationGroup, forKey: key)
     }
     
-    public func animateKeyframes(values: [AnyObject], duration: Double, keyPath: String, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateKeyframes(values: [AnyObject], duration: Double, keyPath: String, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
@@ -152,6 +152,7 @@ public extension CALayer {
         animation.keyTimes = keyTimes
         animation.speed = speed
         animation.duration = duration
+        animation.isAdditive = additive
         if let completion = completion {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
@@ -159,7 +160,7 @@ public extension CALayer {
         self.add(animation, forKey: keyPath)
     }
 
-    public func animateSpring(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateSpring(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double = 0.0, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let animation: CABasicAnimation
         if #available(iOS 9.0, *) {
             animation = makeSpringBounceAnimation(keyPath, initialVelocity, damping)
@@ -169,7 +170,7 @@ public extension CALayer {
         animation.fromValue = from
         animation.toValue = to
         animation.isRemovedOnCompletion = removeOnCompletion
-        animation.fillMode = kCAFillModeForwards
+        animation.fillMode = .forwards
         if let completion = completion {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
@@ -180,13 +181,18 @@ public extension CALayer {
             speed = Float(1.0) / k
         }
         
+        if !delay.isZero {
+            animation.beginTime = CACurrentMediaTime() + delay
+            animation.fillMode = .both
+        }
+        
         animation.speed = speed * Float(animation.duration / duration)
         animation.isAdditive = additive
         
         self.add(animation, forKey: keyPath)
     }
     
-    public func animateAdditive(from: NSValue, to: NSValue, keyPath: String, key: String, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateAdditive(from: NSValue, to: NSValue, keyPath: String, key: String, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
@@ -200,10 +206,10 @@ public extension CALayer {
         if let mediaTimingFunction = mediaTimingFunction {
             animation.timingFunction = mediaTimingFunction
         } else {
-            animation.timingFunction = CAMediaTimingFunction(name: timingFunction)
+            animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName(rawValue: timingFunction))
         }
         animation.isRemovedOnCompletion = removeOnCompletion
-        animation.fillMode = kCAFillModeForwards
+        animation.fillMode = .forwards
         animation.speed = speed
         animation.isAdditive = true
         if let completion = completion {
@@ -213,19 +219,19 @@ public extension CALayer {
         self.add(animation, forKey: key)
     }
     
-    public func animateAlpha(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
+    func animateAlpha(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "opacity", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    public func animateScale(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateScale(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    public func animateRotation(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateRotation(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.rotation.z", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    func animatePosition(from: CGPoint, to: CGPoint, duration: Double, delay: Double = 0.0, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animatePosition(from: CGPoint, to: CGPoint, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to && !force {
             if let completion = completion {
                 completion(true)
@@ -245,27 +251,27 @@ public extension CALayer {
         self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
-    public func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.x", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
     }
     
-    public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: true, completion: completion)
     }
     
-    public func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
-        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.x", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
+    func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.x", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
     }
     
-    public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
-        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
+    func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
     }
     
-    public func animatePositionKeyframes(values: [CGPoint], duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animatePositionKeyframes(values: [CGPoint], duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animateKeyframes(values: values.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position")
     }
     
-    public func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to && !force {
             if let completion = completion {
                 completion(true)
@@ -315,7 +321,7 @@ public extension CALayer {
         })
     }
     
-    public func cancelAnimationsRecursive(key: String) {
+    func cancelAnimationsRecursive(key: String) {
         self.removeAnimation(forKey: key)
         if let sublayers = self.sublayers {
             for layer in sublayers {

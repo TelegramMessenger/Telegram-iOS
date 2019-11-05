@@ -188,6 +188,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     public var playbackStatusUpdated: ((MediaPlayerPlaybackStatus?) -> Void)?
     public var playerStatusUpdated: ((MediaPlayerStatus?) -> Void)?
     public var seek: ((Double) -> Void)?
+    public var update: ((Double?, CGFloat) -> Void)?
     
     private let _scrubbingTimestamp = Promise<Double?>(nil)
     public var scrubbingTimestamp: Signal<Double?, NoError> {
@@ -378,6 +379,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                                 strongSelf.scrubbingTimestampValue = statusValue.timestamp
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(strongSelf.scrubbingTimestampValue, CGFloat(statusValue.timestamp / statusValue.duration))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -385,8 +387,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
                         if let strongSelf = self {
                             if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                let timestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                strongSelf.scrubbingTimestampValue = timestampValue
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(timestampValue, CGFloat(timestampValue / statusValue.duration))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -408,6 +412,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 }
                                 strongSelf.seek?(scrubbingTimestampValue)
                             }
+                            strongSelf.update?(nil, 0.0)
                             strongSelf.updateProgressAnimations()
                         }
                     }
@@ -691,30 +696,19 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        var hitBounds = self.bounds
-        let hitTestSlop = self.hitTestSlop
-        hitBounds.origin.x += hitTestSlop.left
-        hitBounds.origin.y += hitTestSlop.top
-        hitBounds.size.width += -hitTestSlop.left - hitTestSlop.right
-        hitBounds.size.height += -hitTestSlop.top - hitTestSlop.bottom
-        
-        if hitBounds.contains(point) {
-            switch self.contentNodes {
-                case let .standard(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
-                case let .custom(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
+        switch self.contentNodes {
+        case let .standard(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
+                return handleNodeContainer.view
+            } else {
+                return nil
             }
-        } else {
-            return nil
+        case let .custom(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
+                return handleNodeContainer.view
+            } else {
+                return nil
+            }
         }
     }
 }

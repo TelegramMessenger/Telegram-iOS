@@ -6,6 +6,9 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import StickerResources
+import AccountContext
+import AnimationUI
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String
@@ -65,12 +68,12 @@ final class StickerPaneSearchStickerItem: GridItem {
     let account: Account
     let code: String?
     let stickerItem: FoundStickerItem
-    let selected: () -> Void
+    let selected: (ASDisplayNode, CGRect) -> Void
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     let section: GridSection?
     
-    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
@@ -103,14 +106,23 @@ private let textFont = Font.regular(20.0)
 final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var currentState: (Account, FoundStickerItem, CGSize)?
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
     
+    override var isVisibleInGrid: Bool {
+        didSet {
+            self.updateVisibility()
+        }
+    }
+    
+    private var isPlaying = false
+    
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    var selected: (() -> Void)?
+    var selected: ((ASDisplayNode, CGRect) -> Void)?
     
     var stickerItem: FoundStickerItem? {
         return self.currentState?.1
@@ -143,8 +155,27 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
             
             if let dimensions = stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                if stickerItem.file.isAnimatedSticker {
+                    if self.animationNode == nil {
+                        let animationNode = AnimatedStickerNode()
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        self.animationNode = animationNode
+                        self.addSubnode(animationNode)
+                    }
+                    let dimensions = stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    self.animationNode?.setup(account: account, resource: .resource(stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.visibility = self.isVisibleInGrid
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                }
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()
@@ -165,17 +196,30 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
             self.imageNode.frame = imageFrame
             
+            if let animationNode = self.animationNode {
+                animationNode.frame = imageFrame
+                animationNode.updateLayout(size: imageSize)
+            }
+            
             let textSize = self.textNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
             self.textNode.frame = CGRect(origin: CGPoint(x: bounds.size.width - textSize.width, y: bounds.size.height - textSize.height), size: textSize)
         }
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        self.selected?()
+        self.selected?(self, self.bounds)
     }
     
     func transitionNode() -> ASDisplayNode? {
         return self.imageNode
+    }
+    
+    func updateVisibility() {
+        let isPlaying = self.isVisibleInGrid
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode?.visibility = isPlaying
+        }
     }
     
     func updatePreviewing(animated: Bool) {

@@ -145,8 +145,9 @@
                      {
                          selectableItem = ((id<TGModernGallerySelectableItem>)controller.currentItem).selectableMediaItem;
                          
-                         if (selectableItem != nil)
+                         if (selectableItem != nil) {
                              [strongSelf->_selectionContext setItem:selectableItem selected:true animated:false sender:nil];
+                         }
                      }
                  }
              } dismissed:^

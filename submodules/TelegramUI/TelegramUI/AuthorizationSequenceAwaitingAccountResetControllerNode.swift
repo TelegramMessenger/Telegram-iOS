@@ -4,10 +4,9 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import AuthorizationUI
 
 private func timerValueString(days: Int32, hours: Int32, minutes: Int32, color: UIColor, strings: PresentationStrings) -> NSAttributedString {
-    var string = NSMutableAttributedString()
-    
     var daysString = ""
     if days > 0 {
         daysString = strings.MessageTimer_Days(days) + " "
@@ -15,7 +14,7 @@ private func timerValueString(days: Int32, hours: Int32, minutes: Int32, color: 
     
     var hoursString = ""
     if hours > 0 || days > 0 {
-        daysString = strings.MessageTimer_Hours(hours) + " "
+        hoursString = strings.MessageTimer_Hours(hours) + " "
     }
     
     let minutesString = strings.MessageTimer_Minutes(minutes)

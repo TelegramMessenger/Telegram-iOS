@@ -10,16 +10,7 @@ import TelegramUIPreferences
 import TelegramPresentationData
 import DeviceAccess
 import UniversalMediaPlayer
-
-public enum PresentationCallState: Equatable {
-    case waiting
-    case ringing
-    case requesting(Bool)
-    case connecting(Data?)
-    case active(Double, Int32?, Data)
-    case terminating
-    case terminated(CallId?, CallSessionTerminationReason?, Bool)
-}
+import AccountContext
 
 private final class PresentationCallToneRenderer {
     let queue: Queue
@@ -159,7 +150,7 @@ private final class PresentationCallToneRenderer {
     }
 }
 
-public final class PresentationCall {
+public final class PresentationCallImpl: PresentationCall {
     public let account: Account
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
@@ -208,7 +199,7 @@ public final class PresentationCall {
     
     private let canBeRemovedPromise = Promise<Bool>(false)
     private var didSetCanBeRemoved = false
-    var canBeRemoved: Signal<Bool, NoError> {
+    public var canBeRemoved: Signal<Bool, NoError> {
         return self.canBeRemovedPromise.get()
     }
     
@@ -417,6 +408,11 @@ public final class PresentationCall {
                             if let error = error {
                                 if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                                    Queue.mainQueue().async {
+                                        if let strongSelf = self {
+                                            strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .busy)
+                                        }
+                                    }
                                 } else {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
                                     Queue.mainQueue().async {

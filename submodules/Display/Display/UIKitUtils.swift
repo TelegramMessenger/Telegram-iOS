@@ -56,9 +56,13 @@ public extension UIColor {
         if hexString.hasPrefix("#") {
             scanner.scanLocation = 1
         }
-        var num: UInt32 = 0
-        if scanner.scanHexInt32(&num) {
-            self.init(rgb: num)
+        var value: UInt32 = 0
+        if scanner.scanHexInt32(&value) {
+            if hexString.count > 7 {
+                self.init(argb: value)
+            } else {
+                self.init(rgb: value)
+            }
         } else {
             return nil
         }
@@ -79,9 +83,13 @@ public extension UIColor {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
-        self.getRed(&red, green: &green, blue: &blue, alpha: nil)
-        
-        return (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
+        if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
+            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+        } else if self.getWhite(&red, alpha: nil) {
+            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+        } else {
+            return 0
+        }
     }
     
     var argb: UInt32 {
@@ -89,9 +97,13 @@ public extension UIColor {
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
         var alpha: CGFloat = 0.0
-        self.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
-        return (UInt32(alpha * 255.0) << 24) | (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
+        if self.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            return (UInt32(alpha * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+        } else if self.getWhite(&red, alpha: &alpha) {
+            return (UInt32(max(0.0, alpha) * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+        } else {
+            return 0
+        }
     }
     
     var hsv: (CGFloat, CGFloat, CGFloat) {
@@ -105,6 +117,19 @@ public extension UIColor {
         }
     }
     
+    var lightness: CGFloat {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
+            return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        } else if self.getWhite(&red, alpha: nil) {
+            return red
+        } else {
+            return 0.0
+        }
+    }
+    
     func withMultipliedBrightnessBy(_ factor: CGFloat) -> UIColor {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0
@@ -113,6 +138,16 @@ public extension UIColor {
         self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
         
         return UIColor(hue: hue, saturation: saturation, brightness: max(0.0, min(1.0, brightness * factor)), alpha: alpha)
+    }
+    
+    func withMultiplied(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) -> UIColor {
+        var hueValue: CGFloat = 0.0
+        var saturationValue: CGFloat = 0.0
+        var brightnessValue: CGFloat = 0.0
+        var alphaValue: CGFloat = 0.0
+        self.getHue(&hueValue, saturation: &saturationValue, brightness: &brightnessValue, alpha: &alphaValue)
+        
+        return UIColor(hue: max(0.0, min(1.0, hueValue * hue)), saturation: max(0.0, min(1.0, saturationValue * saturation)), brightness: max(0.0, min(1.0, brightnessValue * brightness)), alpha: alphaValue)
     }
     
     func mixedWith(_ other: UIColor, alpha: CGFloat) -> UIColor {
@@ -138,10 +173,22 @@ public extension UIColor {
         }
         return self
     }
+    
+    func interpolateTo(_ color: UIColor, fraction: CGFloat) -> UIColor? {
+        let f = min(max(0, fraction), 1)
+        
+        guard let c1 = self.cgColor.components, let c2 = color.cgColor.components else { return nil }
+        let r: CGFloat = CGFloat(c1[0] + (c2[0] - c1[0]) * f)
+        let g: CGFloat = CGFloat(c1[1] + (c2[1] - c1[1]) * f)
+        let b: CGFloat = CGFloat(c1[2] + (c2[2] - c1[2]) * f)
+        let a: CGFloat = CGFloat(c1[3] + (c2[3] - c1[3]) * f)
+        
+        return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
 }
 
 public extension CGSize {
-    public func fitted(_ size: CGSize) -> CGSize {
+    func fitted(_ size: CGSize) -> CGSize {
         var fittedSize = self
         if fittedSize.width > size.width {
             fittedSize = CGSize(width: size.width, height: floor((fittedSize.height * size.width / max(fittedSize.width, 1.0))))
@@ -152,11 +199,11 @@ public extension CGSize {
         return fittedSize
     }
     
-    public func cropped(_ size: CGSize) -> CGSize {
+    func cropped(_ size: CGSize) -> CGSize {
         return CGSize(width: min(size.width, self.width), height: min(size.height, self.height))
     }
     
-    public func fittedToArea(_ area: CGFloat) -> CGSize {
+    func fittedToArea(_ area: CGFloat) -> CGSize {
         if self.height < 1.0 || self.width < 1.0 {
             return CGSize()
         }
@@ -166,22 +213,22 @@ public extension CGSize {
         return CGSize(width: floor(width), height: floor(height))
     }
     
-    public func aspectFilled(_ size: CGSize) -> CGSize {
+    func aspectFilled(_ size: CGSize) -> CGSize {
         let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFitted(_ size: CGSize) -> CGSize {
+    func aspectFitted(_ size: CGSize) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFittedOrSmaller(_ size: CGSize) -> CGSize {
+    func aspectFittedOrSmaller(_ size: CGSize) -> CGSize {
         let scale = min(1.0, min(size.width / max(1.0, self.width), size.height / max(1.0, self.height)))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFittedWithOverflow(_ size: CGSize, leeway: CGFloat) -> CGSize {
+    func aspectFittedWithOverflow(_ size: CGSize, leeway: CGFloat) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         var result = CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
         if result.width < size.width && result.width > size.width - leeway {
@@ -195,22 +242,22 @@ public extension CGSize {
         return result
     }
     
-    public func fittedToWidthOrSmaller(_ width: CGFloat) -> CGSize {
+    func fittedToWidthOrSmaller(_ width: CGFloat) -> CGSize {
         let scale = min(1.0, width / max(1.0, self.width))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func multipliedByScreenScale() -> CGSize {
+    func multipliedByScreenScale() -> CGSize {
         let scale = UIScreenScale
         return CGSize(width: self.width * scale, height: self.height * scale)
     }
     
-    public func dividedByScreenScale() -> CGSize {
+    func dividedByScreenScale() -> CGSize {
         let scale = UIScreenScale
         return CGSize(width: self.width / scale, height: self.height / scale)
     }
     
-    public var integralFloor: CGSize {
+    var integralFloor: CGSize {
         return CGSize(width: floor(self.width), height: floor(self.height))
     }
 }
@@ -225,7 +272,7 @@ public extension UIImage {
         self.draw(at: CGPoint())
         let result = UIGraphicsGetImageFromCurrentImageContext()!
         UIGraphicsEndImageContext()
-        if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsets()) {
+        if self.capInsets != UIEdgeInsets() {
             return result.resizableImage(withCapInsets: self.capInsets, resizingMode: self.resizingMode)
         }
         return result
@@ -290,6 +337,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
         for sublayer in sublayers {
             let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
             if let subtree = subtree {
+                subtree.transform = sublayer.transform
                 subtree.frame = sublayer.frame
                 subtree.bounds = sublayer.bounds
                 layer.addSublayer(subtree)
@@ -302,7 +350,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
 }
 
 public extension UIView {
-    public func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
+    func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
@@ -313,6 +361,7 @@ public extension UIView {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         
@@ -321,7 +370,7 @@ public extension UIView {
 }
 
 public extension CALayer {
-    public func snapshotContentTree(unhide: Bool = false) -> CALayer? {
+    func snapshotContentTree(unhide: Bool = false) -> CALayer? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
@@ -332,6 +381,7 @@ public extension CALayer {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         
@@ -340,29 +390,29 @@ public extension CALayer {
 }
 
 public extension CGRect {
-    public var topLeft: CGPoint {
+    var topLeft: CGPoint {
         return self.origin
     }
     
-    public var topRight: CGPoint {
+    var topRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.minY)
     }
     
-    public var bottomLeft: CGPoint {
+    var bottomLeft: CGPoint {
         return CGPoint(x: self.minX, y: self.maxY)
     }
     
-    public var bottomRight: CGPoint {
+    var bottomRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.maxY)
     }
     
-    public var center: CGPoint {
+    var center: CGPoint {
         return CGPoint(x: self.midX, y: self.midY)
     }
 }
 
 public extension CGPoint {
-    public func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
+    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
         return CGPoint(x: self.x + dx, y: self.y + dy)
     }
 }

@@ -350,7 +350,11 @@
             return;
         
         id item = [strongSelf _itemAtIndexPath:indexPath];
-        [strongSelf->_selectionContext toggleItemSelection:item animated:true sender:nil];
+        bool success = false;
+        [strongSelf->_selectionContext toggleItemSelection:item animated:true sender:nil success:&success];
+        if (!success) {
+            [strongSelf->_selectionGestureRecognizer cancel];
+        }
     };
 }
 

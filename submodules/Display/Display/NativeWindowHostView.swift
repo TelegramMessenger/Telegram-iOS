@@ -112,7 +112,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
         self.extendedLayoutIncludesOpaqueBars = true
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIAccessibilityVoiceOverStatusDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.updatePreviewingRegistration()
                 }
@@ -130,11 +130,11 @@ private final class WindowRootViewController: UIViewController, UIViewController
         }
     }
     
-    override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
         return self.gestureEdges
     }
     
-    override func prefersHomeIndicatorAutoHidden() -> Bool {
+    override var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
     
@@ -225,6 +225,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
     var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var invalidateSupportedOrientationsImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
@@ -323,6 +324,10 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.invalidatePreferNavigationUIHiddenImpl?()
     }
     
+    func invalidateSupportedOrientations() {
+        self.invalidateSupportedOrientationsImpl?()
+    }
+    
     func cancelInteractiveKeyboardGestures() {
         self.cancelInteractiveKeyboardGesturesImpl?()
     }
@@ -332,7 +337,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     }
 }
 
-public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
+public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UIWindow) {
     let window = NativeWindow(frame: UIScreen.main.bounds)
     
     let rootViewController = WindowRootViewController()
@@ -341,7 +346,16 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
     
-    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, isRotating: {
+    let aboveStatusbarWindow = AboveStatusBarWindow(frame: UIScreen.main.bounds)
+    aboveStatusbarWindow.supportedOrientations = { [weak rootViewController] in
+        if let rootViewController = rootViewController {
+            return rootViewController.supportedInterfaceOrientations
+        } else {
+            return .portrait
+        }
+    }
+    
+    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, aboveStatusBarView: rootViewController.view, isRotating: {
         return window.isRotating()
     }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
@@ -394,6 +408,10 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         return hostView?.invalidatePreferNavigationUIHidden?()
     }
     
+    window.invalidateSupportedOrientationsImpl = { [weak hostView] in
+        return hostView?.invalidateSupportedOrientations?()
+    }
+    
     window.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
         hostView?.cancelInteractiveKeyboardGestures?()
     }
@@ -413,5 +431,5 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         }
     }
     
-    return (window, hostView)
+    return (window, hostView, aboveStatusbarWindow)
 }

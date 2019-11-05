@@ -86,7 +86,7 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
             _durationLabel.accessibilityIgnoresInvertColors = true;
         }
         
-        self.accessibilityLabel = @"Video";
+        self.accessibilityLabel = TGLocalized(@"Message.Video");
     }
     return self;
 }

@@ -229,6 +229,8 @@ final class ItemCollectionItemTable: Table {
                 references = self.reverseIndexTable.exactReferences(namespace: ReverseIndexNamespace(namespace), token: token)
             case let .matching(tokens):
                 references = Array(self.reverseIndexTable.matchingReferences(namespace: ReverseIndexNamespace(namespace), tokens: tokens))
+            case let .any(tokens):
+                references = Array(self.reverseIndexTable.matchingReferences(namespace: ReverseIndexNamespace(namespace), tokens: tokens, union: true))
         }
         var resultsByCollectionId: [ItemCollectionId: [(ItemCollectionItemIndex, ItemCollectionItem)]] = [:]
         for reference in references {

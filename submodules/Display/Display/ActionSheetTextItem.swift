@@ -34,6 +34,8 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     
     private let label: ASTextNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -42,17 +44,24 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         self.label.maximumNumberOfLines = 0
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
+        self.label.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
+        self.accessibilityArea.accessibilityTraits = .staticText
         
         super.init(theme: theme)
         
         self.label.isUserInteractionEnabled = false
         self.addSubnode(self.label)
+        
+        self.addSubnode(self.accessibilityArea)
     }
     
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        self.accessibilityArea.accessibilityLabel = item.title
         
         self.setNeedsLayout()
     }
@@ -69,5 +78,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         
         let labelSize = self.label.measure(CGSize(width: max(1.0, size.width - 20.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
     }
 }

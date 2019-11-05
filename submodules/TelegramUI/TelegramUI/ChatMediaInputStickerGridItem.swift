@@ -6,6 +6,9 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import StickerResources
+import AccountContext
+import AnimationUI
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none
@@ -145,7 +148,6 @@ final class ChatMediaInputStickerGridItem: GridItem {
         let node = ChatMediaInputStickerGridItemNode()
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
         return node
     }
@@ -157,7 +159,6 @@ final class ChatMediaInputStickerGridItem: GridItem {
         }
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
     }
 }
@@ -166,10 +167,22 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
+    private var didSetUpAnimationNode = false
+    private var item: ChatMediaInputStickerGridItem?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
     var currentIsPreviewing = false
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            self.updateVisibility()
+        }
+    }
+    
+    private var isPanelVisible = false
+    private var isPlaying = false
     
     var interfaceInteraction: ChatControllerInteraction?
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
@@ -197,19 +210,38 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: StickerPackItem) {
-        //self.updateSelectionState(animated: false)
-        //self.updateHiddenMedia()
-    }
-    
     override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = item as? ChatMediaInputStickerGridItem else {
             return
         }
+        self.item = item
         if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem {
             if let dimensions = item.stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
+                if item.stickerItem.file.isAnimatedSticker {
+                    if self.animationNode == nil {
+                        let animationNode = AnimatedStickerNode()
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        self.animationNode = animationNode
+                        animationNode.started = { [weak self] in
+                            self?.imageNode.isHidden = true
+                        }
+                        self.addSubnode(animationNode)
+                    }
+                    let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    self.updateVisibility()
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                        self.imageNode.isHidden = false
+                        self.didSetUpAnimationNode = false
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
+                }
                 
                 self.currentState = (item.account, item.stickerItem, dimensions)
                 self.setNeedsLayout()
@@ -226,6 +258,10 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 let imageSize = mediaDimensions.aspectFitted(boundingSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                if let animationNode = self.animationNode {
+                    animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                    animationNode.updateLayout(size: imageSize)
+                }
             }
         }
     }
@@ -235,13 +271,37 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file), false)
+            interfaceInteraction.sendSticker(.standalone(media: item.file), false, self, self.bounds)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }
     }
     
     func transitionNode() -> ASDisplayNode? {
         return self.imageNode
+    }
+    
+    func updateIsPanelVisible(_ isPanelVisible: Bool) {
+        if self.isPanelVisible != isPanelVisible {
+            self.isPanelVisible = isPanelVisible
+            self.updateVisibility()
+        }
+    }
+    
+    func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        let isPlaying = self.isPanelVisible && self.isVisibleInGrid && (item.interfaceInteraction?.stickerSettings.loopAnimatedStickers ?? true)
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode?.visibility = isPlaying
+            if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
+                self.didSetUpAnimationNode = true
+                let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                self.animationNode?.setup(account: item.account, resource: .resource(item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+            }
+        }
     }
     
     func updatePreviewing(animated: Bool) {

@@ -3,8 +3,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import Display
+import MergeLists
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool) -> ChatHistoryViewTransition {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool) -> ChatHistoryViewTransition {
     let mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
     let allUpdated = fromView?.associatedData != toView.associatedData
     if reverse {
@@ -57,31 +58,6 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             stationaryItemRange = (0, Int.max)
         case .HoleReload:
             stationaryItemRange = (0, Int.max)
-            /*if let (_, removeDirection) = removeHoleDirections.first {
-                switch removeDirection {
-                    case .LowerToUpper:
-                        var holeIndex: MessageIndex?
-                        for (index, _) in filledHoleDirections {
-                            if holeIndex == nil || index < holeIndex! {
-                                holeIndex = index
-                            }
-                        }
-                        
-                        if let holeIndex = holeIndex {
-                            for i in 0 ..< toView.filteredEntries.count {
-                                if toView.filteredEntries[i].index >= holeIndex {
-                                    let index = toView.filteredEntries.count - 1 - (i - 1)
-                                    stationaryItemRange = (index, Int.max)
-                                    break
-                                }
-                            }
-                        }
-                    case .UpperToLower:
-                        break
-                    case .AroundId, .AroundIndex:
-                        break
-                }
-            }*/
     }
     
     for (index, entry, previousIndex) in mergeResult.indicesAndItems {
@@ -189,6 +165,10 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     }
                 }
         }
+    }
+    
+    if updatedMessageSelection {
+        options.insert(.Synchronous)
     }
     
     return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)

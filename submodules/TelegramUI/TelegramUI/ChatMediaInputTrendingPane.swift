@@ -6,6 +6,10 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import OverlayStatusController
+import AccountContext
+import StickerPackPreviewUI
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
@@ -180,9 +184,11 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
                 let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                controller.sendSticker = { fileReference in
+                controller.sendSticker = { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.sendSticker(fileReference, false)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                    } else {
+                        return false
                     }
                 }
                 strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

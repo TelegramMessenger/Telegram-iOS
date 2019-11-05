@@ -6,6 +6,10 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import LocalizedPeerData
+import PhotoResources
+import TelegramStringFormatting
 
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
@@ -52,19 +56,19 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
             
-            let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor : presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor
+            let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
                     if isMedia {
-                        textColor = incoming ? presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor
+                        textColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     } else {
-                        textColor = incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor
+                        textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
                     }
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -159,6 +163,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                 
                 node.previousMediaReference = updatedMediaReference
+                
+                node.titleNode?.displaysAsynchronously = !presentationData.isPreview
+                node.textNode?.displaysAsynchronously = !presentationData.isPreview
                 
                 let titleNode = titleApply()
                 let textNode = textApply()

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import AvatarNode
 
 private let normalFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 private let smallFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
@@ -15,7 +16,7 @@ final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
         })
     }
     
-    weak var chatController: ChatController?
+    weak var chatController: ChatControllerImpl?
     weak var targetNode: ChatAvatarNavigationNode?
     
     override func layoutSubviews() {
@@ -27,7 +28,7 @@ final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode
-    weak var chatController: ChatController? {
+    weak var chatController: ChatControllerImpl? {
         didSet {
             if self.isNodeLoaded {
                 (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController

@@ -6,6 +6,13 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import AccountContext
+import TelegramStringFormatting
+import AccountContext
+import RadialStatusNode
+import PhotoResources
+import MusicAlbumArtResources
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -861,7 +868,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                 case .playbackStatus:
                     if let context = self.context {
-                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause))
+                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: nil)
                     }
             }
         }
@@ -882,7 +889,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds, nil)
         }
     }
     

@@ -100,6 +100,10 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
+    open func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.addSubnode(accessoryItemNode)
+    }
+    
     final var headerAccessoryItemNode: ListViewAccessoryItemNode? {
         didSet {
             if let headerAccessoryItemNode = self.headerAccessoryItemNode {
@@ -523,6 +527,9 @@ open class ListViewItemNode: ASDisplayNode {
     open func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
     }
     
+    open func selected() {
+    }
+    
     open func isReorderable(at point: CGPoint) -> Bool {
         return false
     }
@@ -545,5 +552,16 @@ open class ListViewItemNode: ASDisplayNode {
     
     override open func accessibilityElementDidBecomeFocused() {
         (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0)
+    }
+    
+    public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
+        self.frame = frame
+        self.updateAbsoluteRect(frame, within: containerSize)
+    }
+    
+    open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    }
+    
+    open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
     }
 }

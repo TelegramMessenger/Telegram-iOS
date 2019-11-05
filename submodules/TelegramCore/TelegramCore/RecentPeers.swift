@@ -124,7 +124,7 @@ public func removeRecentPeer(account: Account, peerId: PeerId) -> Signal<Void, N
             return .complete()
         }
         
-        if let index = entry.ids.index(of: peerId) {
+        if let index = entry.ids.firstIndex(of: peerId) {
             var updatedIds = entry.ids
             updatedIds.remove(at: index)
             transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: entry.enabled, ids: updatedIds), collectionSpec: collectionSpec)

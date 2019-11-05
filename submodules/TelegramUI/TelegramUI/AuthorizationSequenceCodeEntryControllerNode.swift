@@ -5,50 +5,8 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
-
-func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
-    switch type {
-        case .sms:
-            return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
-        case .otherSession:
-            let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
-            return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
-        case .call, .flashCall:
-            return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
-    }
-}
-
-func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
-    if let nextType = nextType, let timeout = timeout {
-        let minutes = timeout / 60
-        let seconds = timeout % 60
-        switch nextType {
-            case .sms:
-                if timeout <= 0 {
-                    return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
-                } else {
-                    let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
-                    return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).0, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
-                }
-            case .call, .flashCall:
-                if timeout <= 0 {
-                    return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
-                } else {
-                    return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).0, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
-                }
-        }
-    } else {
-        switch currentType {
-            case .otherSession:
-                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
-            default:
-                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
-        }
-    }
-}
-
-
+import TextFormat
+import AuthorizationUI
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -150,7 +108,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(24.0)
         self.codeField.textField.textAlignment = .center
-        self.codeField.textField.keyboardType = .numberPad
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.codeField.textField.keyboardType = .asciiCapableNumberPad
+        } else {
+            self.codeField.textField.keyboardType = .numberPad
+        }
         #if swift(>=4.2)
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             self.codeField.textField.textContentType = .oneTimeCode
@@ -158,7 +120,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         #endif
         self.codeField.textField.returnKeyType = .done
         self.codeField.textField.textColor = self.theme.list.itemPrimaryTextColor
-        self.codeField.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor
         

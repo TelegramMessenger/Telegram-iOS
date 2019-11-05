@@ -51,6 +51,7 @@ public extension MediaResource {
 
 public protocol CachedMediaResourceRepresentation {
     var uniqueId: String { get }
+    var keepDuration: CachedMediaRepresentationKeepDuration { get }
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool
 }
 

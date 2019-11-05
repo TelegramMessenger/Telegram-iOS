@@ -1,6 +1,25 @@
 import Foundation
 import UIKit
 import UIKit.UIGestureRecognizerSubclass
+import AsyncDisplayKit
+
+private func cancelScrollViewGestures(view: UIView?) {
+    if let view = view {
+        if let gestureRecognizers = view.gestureRecognizers {
+            for recognizer in gestureRecognizers {
+                if let recognizer = recognizer as? UIPanGestureRecognizer {
+                    switch recognizer.state {
+                    case .began, .possible:
+                        recognizer.state = .ended
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        cancelScrollViewGestures(view: view.superview)
+    }
+}
 
 private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     weak var target: TapLongTapOrDoubleTapGestureRecognizer?
@@ -24,14 +43,14 @@ private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     }
 }
 
-enum TapLongTapOrDoubleTapGesture {
+public enum TapLongTapOrDoubleTapGesture {
     case tap
     case doubleTap
     case longTap
     case hold
 }
 
-enum TapLongTapOrDoubleTapGestureRecognizerAction {
+public enum TapLongTapOrDoubleTapGestureRecognizerAction {
     case waitForDoubleTap
     case waitForSingleTap
     case waitForHold(timeout: Double, acceptTap: Bool)
@@ -44,12 +63,16 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     private var tapCount: Int = 0
     
     private var timer: Foundation.Timer?
-    private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
+    public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
-    var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
-    var highlight: ((CGPoint?) -> Void)?
+    public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
+    public var longTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
+    private var recognizedLongTap: Bool = false
+    public var externalUpdated: ((UIView?, CGPoint) -> Void)?
+    public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
+    public var highlight: ((CGPoint?) -> Void)?
     
-    var hapticFeedback: HapticFeedback?
+    public var hapticFeedback: HapticFeedback?
     
     private var highlightPoint: CGPoint?
     
@@ -73,13 +96,21 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.tapCount = 0
         self.touchCount = 0
         self.hapticFeedback = nil
+        self.recognizedLongTap = false
         
         if self.highlightPoint != nil {
             self.highlightPoint = nil
             self.highlight?(nil)
         }
         
+        self.externalUpdated = nil
+        self.externalEnded = nil
+        
         super.reset()
+    }
+    
+    public func cancel() {
+        self.state = .cancelled
     }
     
     fileprivate func longTapEvent() {
@@ -87,6 +118,13 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.timer = nil
         if let (location, _) = self.touchLocationAndTimestamp {
             self.lastRecognizedGestureAndLocation = (.longTap, location)
+            if let longTap = self.longTap {
+                self.recognizedLongTap = true
+                self.state = .began
+                longTap(location, self)
+                cancelScrollViewGestures(view: self.view?.superview)
+                return
+            }
         } else {
             self.lastRecognizedGestureAndLocation = nil
         }
@@ -156,13 +194,13 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                         self.timer?.invalidate()
                         let timer = Timer(timeInterval: 0.3, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.longTapEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case let .waitForHold(timeout, _):
                         self.hapticFeedback = HapticFeedback()
                         self.hapticFeedback?.prepareTap()
                         let timer = Timer(timeInterval: timeout, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.holdEvent), userInfo: nil, repeats: false)
                         self.timer = timer
-                        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                        RunLoop.main.add(timer, forMode: .common)
                     case .fail:
                         self.state = .failed
                 }
@@ -181,6 +219,12 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             let location = touch.location(in: self.view)
             self.lastRecognizedGestureAndLocation = (.hold, location)
             self.state = .changed
+            return
+        }
+        
+        if self.recognizedLongTap, let externalUpdated = self.externalUpdated {
+            let location = touch.location(in: self.view)
+            externalUpdated(self.view, location)
             return
         }
         
@@ -211,6 +255,12 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             return
         }
         
+        if let (gesture, location) = self.lastRecognizedGestureAndLocation, case .longTap = gesture, self.recognizedLongTap {
+            self.externalEnded?((self.view, location))
+            self.state = .cancelled
+            return
+        }
+        
         if self.tapCount == 1 {
             var tapAction: TapLongTapOrDoubleTapGestureRecognizerAction = .waitForDoubleTap
             if let tapActionAtPoint = self.tapActionAtPoint, let (touchLocation, _) = self.touchLocationAndTimestamp {
@@ -227,7 +277,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                     self.state = .began
                     let timer = Timer(timeInterval: 0.2, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.tapEvent), userInfo: nil, repeats: false)
                     self.timer = timer
-                    RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
+                    RunLoop.main.add(timer, forMode: .common)
                 case let .waitForHold(_, acceptTap):
                     if let (touchLocation, _) = self.touchLocationAndTimestamp, acceptTap {
                         if self.state != .began {
@@ -251,6 +301,8 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             self.highlightPoint = nil
             self.highlight?(nil)
         }
+        
+        self.externalEnded?(nil)
         
         self.state = .cancelled
     }

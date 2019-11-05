@@ -714,8 +714,13 @@ public final class ManagedAudioSession {
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                 }
         }
+        
         if resetToBuiltin {
-            switch type {
+            var updatedType = type
+            if case .record(false) = updatedType, self.isHeadsetPluggedInValue {
+                updatedType = .record(speaker: true)
+            }
+            switch updatedType {
                 case .record(false):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                 case .voiceCall, .playWithPossiblePortOverride, .record(true):
@@ -723,7 +728,7 @@ public final class ManagedAudioSession {
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         for route in routes {
                             if route.portType == .builtInMic {
-                                if case .record = type, self.isHeadsetPluggedInValue {
+                                if case .record = updatedType, self.isHeadsetPluggedInValue {
                                 } else {
                                     let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
                                 }

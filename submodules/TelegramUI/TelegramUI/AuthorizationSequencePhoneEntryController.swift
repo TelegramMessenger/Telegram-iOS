@@ -6,6 +6,10 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
+import CountrySelectionUI
+import SettingsUI
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
@@ -57,7 +61,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         self.attemptNavigation = { _ in
             return false
         }
@@ -95,6 +99,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             guard let strongSelf = self else {
                 return
             }
+            strongSelf.view.endEditing(true)
             self?.present(debugController(sharedContext: strongSelf.sharedContext, context: nil, modal: true), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil)
         if let (code, name, number) = self.currentData {
@@ -155,7 +160,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 var actions: [TextAlertAction] = []
                 if let (current, _, _) = self.otherAccountPhoneNumbers.0, logInNumber != formatPhoneNumber(current) {
                     actions.append(TextAlertAction(type: .genericAction, title: self.strings.Login_PhoneNumberAlreadyAuthorizedSwitch, action: { [weak self] in
-                        self?.sharedContext.switchToAccount(id: id)
+                        self?.sharedContext.switchToAccount(id: id, fromSettingsController: nil, withChatListController: nil)
                         self?.back()
                     }))
                 }

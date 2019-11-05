@@ -6,15 +6,19 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import AVFoundation
+import RadialStatusNode
+import StickerResources
+import PhotoResources
+import AnimationUI
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
     let result: ChatContextResult
-    let resultSelected: (ChatContextResult) -> Void
+    let resultSelected: (ChatContextResult, ASDisplayNode, CGRect) -> Bool
     
     let selectable: Bool = true
     
-    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult) -> Void) {
+    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
         self.account = account
         self.result = result
         self.resultSelected = resultSelected
@@ -66,10 +70,6 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
             }
         }
     }
-    
-    func selected(listView: ListView) {
-        self.resultSelected(self.result)
-    }
 }
 
 private let titleFont = Font.medium(16.0)
@@ -80,9 +80,11 @@ private let iconTextBackgroundImage = generateStretchableFilledCircleImage(radiu
 final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     private var videoLayer: (SoftwareVideoThumbnailLayer, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
     private var currentVideoFile: TelegramMediaFile?
+    private var currentAnimatedStickerFile: TelegramMediaFile?
     private var resourceStatus: MediaResourceStatus?
     private(set) var item: HorizontalListContextResultsChatInputPanelItem?
     private var statusDisposable = MetaDisposable()
@@ -119,19 +121,19 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     
                     let displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
                     self.displayLink = displayLink
-                    displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+                    displayLink.add(to: RunLoop.main, forMode: .common)
                     if #available(iOS 10.0, *) {
                         displayLink.preferredFramesPerSecond = 25
                     } else {
                         displayLink.frameInterval = 2
                     }
                     displayLink.isPaused = false
-                    CMTimebaseSetRate(self.timebase, 1.0)
+                    CMTimebaseSetRate(self.timebase, rate: 1.0)
                 } else if let displayLink = self.displayLink {
                     self.displayLink = nil
                     displayLink.isPaused = true
                     displayLink.invalidate()
-                    CMTimebaseSetRate(self.timebase, 0.0)
+                    CMTimebaseSetRate(self.timebase, rate: 0.0)
                 }
             }
         }
@@ -152,8 +154,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
-        CMTimebaseSetRate(timebase!, 0.0)
+        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -188,6 +190,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         let imageLayout = self.imageNode.asyncLayout()
         let currentImageResource = self.currentImageResource
         let currentVideoFile = self.currentVideoFile
+        let currentAnimatedStickerFile = self.currentAnimatedStickerFile
         
         return { [weak self] item, params, mergedTop, mergedBottom in
             let height = params.width
@@ -199,6 +202,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
 
             var imageResource: TelegramMediaResource?
             var stickerFile: TelegramMediaFile?
+            var animatedStickerFile: TelegramMediaFile?
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
@@ -231,7 +235,10 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
                             imageDimensions = largestRepresentation.dimensions
                         }
-                        if file.isSticker {
+                        if file.isAnimatedSticker {
+                            animatedStickerFile = file
+                            imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        } else if file.isSticker {
                             stickerFile = file
                             imageResource = file.resource
                         } else {
@@ -286,6 +293,15 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 updatedVideoFile = true
             }
             
+            var updatedAnimatedStickerFile = false
+            if let currentAnimatedStickerFile = currentAnimatedStickerFile, let animatedStickerFile = animatedStickerFile {
+                if !currentAnimatedStickerFile.isEqual(to: animatedStickerFile) {
+                    updatedAnimatedStickerFile = true
+                }
+            } else if (currentAnimatedStickerFile != nil) != (animatedStickerFile != nil) {
+                updatedAnimatedStickerFile = true
+            }
+            
             if updatedImageResource {
                 if let imageResource = imageResource {
                     if let stickerFile = stickerFile {
@@ -300,7 +316,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 }
             }
             
-            
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: height, height: croppedImageDimensions.width + sideInset), insets: UIEdgeInsets())
             
             return (nodeLayout, { _ in
@@ -308,6 +323,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     strongSelf.item = item
                     strongSelf.currentImageResource = imageResource
                     strongSelf.currentVideoFile = videoFile
+                    strongSelf.currentAnimatedStickerFile = currentAnimatedStickerFile
                     
                     if let imageApply = imageApply {
                         if let updateImageSignal = updateImageSignal {
@@ -348,6 +364,32 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                     }
                     
+                    if updatedAnimatedStickerFile {
+                        if let animationNode = strongSelf.animationNode {
+                            strongSelf.animationNode = nil
+                            animationNode.removeFromSupernode()
+                        }
+                        
+                        if let animatedStickerFile = animatedStickerFile {
+                            let animationNode: AnimatedStickerNode
+                            if let currentAnimationNode = strongSelf.animationNode {
+                                animationNode = currentAnimationNode
+                            } else {
+                                animationNode = AnimatedStickerNode()
+                                animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                                animationNode.visibility = true
+                                strongSelf.addSubnode(animationNode)
+                                strongSelf.animationNode = animationNode
+                            }
+                            animationNode.started = { [weak self] in
+                                self?.imageNode.alpha = 0.0
+                            }
+                            let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                            animationNode.setup(account: item.account, resource: .resource(animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                        }
+                    }
+                    
                     let progressSize = CGSize(width: 24.0, height: 24.0)
                     let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - progressSize.width) / 2.0), y: floorToScreenPixels((nodeLayout.contentSize.height - progressSize.height) / 2.0)), size: progressSize)
 
@@ -363,19 +405,17 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status
                                     
-
                                     let state: RadialStatusNodeState
                                     let statusForegroundColor: UIColor = .white
                                     
                                     switch status {
-                                    case let .Fetching(_, progress):
-                                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
-                                    case .Remote:
-                                        state = .download(statusForegroundColor)
-                                    case .Local:
-                                        state = .none
+                                        case let .Fetching(_, progress):
+                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                                        case .Remote:
+                                            state = .download(statusForegroundColor)
+                                        case .Local:
+                                            state = .none
                                     }
-                                    
                                     
                                     strongSelf.statusNode.transitionToState(state, completion: { })
                                 }
@@ -391,8 +431,21 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         layer.layer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         layer.layer.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                     }
+                    
+                    if let animationNode = strongSelf.animationNode {
+                        animationNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        animationNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
+                        animationNode.updateLayout(size: croppedImageDimensions)
+                    }
                 }
             })
         }
+    }
+    
+    override func selected() {
+        guard let item = self.item else {
+            return
+        }
+        let _ = item.resultSelected(item.result, self, self.bounds)
     }
 }

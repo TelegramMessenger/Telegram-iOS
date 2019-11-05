@@ -6,6 +6,9 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import StickerResources
+import AnimationUI
+import ItemListStickerPackItem
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -69,14 +72,30 @@ private let verticalOffset: CGFloat = 3.0
 
 final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let imageNode: TransformImageNode
+    private var animatedStickerNode: AnimatedStickerNode?
     private let highlightNode: ASImageNode
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var currentCollectionId: ItemCollectionId?
-    private var currentThumbnailItem: TelegramMediaImageRepresentation?
+    private var currentThumbnailItem: StickerPackThumbnailItem?
     private var theme: PresentationTheme?
     
     private let stickerFetchedDisposable = MetaDisposable()
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.visibilityStatus = self.visibility != .none
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+                self.animatedStickerNode?.visibility = self.visibilityStatus && loopAnimatedStickers
+            }
+        }
+    }
     
     init() {
         self.highlightNode = ASImageNode()
@@ -110,28 +129,64 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
         }
         
-        var thumbnailItem: TelegramMediaImageRepresentation?
+        var thumbnailItem: StickerPackThumbnailItem?
         var resourceReference: MediaResourceReference?
         if let thumbnail = info.thumbnail {
-            thumbnailItem = thumbnail
-            resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
-        } else if let item = item, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-            thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
-            resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+            if info.flags.contains(.isAnimated) {
+                thumbnailItem = .animated(thumbnail.resource)
+                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
+            } else {
+                thumbnailItem = .still(thumbnail)
+                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
+            }
+        } else if let item = item {
+            if item.file.isAnimatedSticker {
+                thumbnailItem = .animated(item.file.resource)
+                resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
+            } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource))
+                resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+            }
         }
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
             if let thumbnailItem = thumbnailItem {
-                let imageSize = thumbnailItem.dimensions.aspectFitted(boundingImageSize)
-                let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
-                imageApply()
-                self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, representation: thumbnailItem))
-               
-                if let resourceReference = resourceReference {
-                self.stickerFetchedDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: resourceReference).start())
+                switch thumbnailItem {
+                    case let .still(representation):
+                        let imageSize = representation.dimensions.aspectFitted(boundingImageSize)
+                        let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+                        imageApply()
+                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource))
+                        self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    case let .animated(resource):
+                        let imageSize = boundingImageSize
+                        let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+                        imageApply()
+                        self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true))
+                        self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        
+                        let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+                        self.imageNode.isHidden = loopAnimatedStickers
+                        
+                        let animatedStickerNode: AnimatedStickerNode
+                        if let current = self.animatedStickerNode {
+                            animatedStickerNode = current
+                        } else {
+                            animatedStickerNode = AnimatedStickerNode()
+                            self.animatedStickerNode = animatedStickerNode
+                            animatedStickerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                            self.addSubnode(animatedStickerNode)
+                            animatedStickerNode.setup(account: account, resource: .resource(resource), width: 80, height: 80, mode: .cached)
+                        }
+                        animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
+                        if let animatedStickerNode = self.animatedStickerNode {
+                            animatedStickerNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        }
                 }
-                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                if let resourceReference = resourceReference {
+                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
+                }
             }
             
             self.updateIsHighlighted()

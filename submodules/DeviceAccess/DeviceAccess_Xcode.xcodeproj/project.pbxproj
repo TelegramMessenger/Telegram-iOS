@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D068EE9222F4ABB60064E921 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D068EE9122F4ABB60064E921 /* AccountContext.framework */; };
 		D0AE31FE22B281300058D3BC /* DeviceAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE31FC22B281300058D3BC /* DeviceAccess.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE320522B2818D0058D3BC /* DeviceAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE320422B2818D0058D3BC /* DeviceAccess.swift */; };
 		D0AE320A22B281CA0058D3BC /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE320922B281CA0058D3BC /* Display.framework */; };
@@ -17,6 +18,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D068EE9122F4ABB60064E921 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31F922B281300058D3BC /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31FC22B281300058D3BC /* DeviceAccess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeviceAccess.h; sourceTree = "<group>"; };
 		D0AE31FD22B281300058D3BC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -33,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D068EE9222F4ABB60064E921 /* AccountContext.framework in Frameworks */,
 				D0AE321222B2821B0058D3BC /* TelegramPresentationData.framework in Frameworks */,
 				D0AE321022B281E50058D3BC /* LegacyComponents.framework in Frameworks */,
 				D0AE320E22B281D30058D3BC /* SwiftSignalKit.framework in Frameworks */,
@@ -74,6 +77,7 @@
 		D0AE320822B281CA0058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D068EE9122F4ABB60064E921 /* AccountContext.framework */,
 				D0AE321122B2821B0058D3BC /* TelegramPresentationData.framework */,
 				D0AE320F22B281E50058D3BC /* LegacyComponents.framework */,
 				D0AE320D22B281D30058D3BC /* SwiftSignalKit.framework */,
@@ -258,7 +262,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugHockeyapp;
@@ -344,7 +348,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseHockeyappInternal;
@@ -495,7 +499,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugAppStoreLLC;
@@ -523,7 +527,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseAppStoreLLC;

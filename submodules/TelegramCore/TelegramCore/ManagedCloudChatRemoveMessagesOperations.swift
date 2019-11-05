@@ -136,7 +136,41 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
 }
 
 private func removeMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveMessagesOperation) -> Signal<Void, NoError> {
-    if peer.id.namespace == Namespaces.Peer.CloudChannel {
+    var isScheduled = false
+    for id in operation.messageIds {
+        if id.namespace == Namespaces.Message.ScheduledCloud {
+            isScheduled = true
+            break
+        }
+    }
+    
+    if isScheduled {
+        if let inputPeer = apiInputPeer(peer) {
+            var signal: Signal<Void, NoError> = .complete()
+            for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+                let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
+                let partSignal = network.request(Api.functions.messages.deleteScheduledMessages(peer: inputPeer, id: ids.map { $0.id }))
+                    |> map { result -> Api.Updates? in
+                        return result
+                    }
+                    |> `catch` { _ in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { updates -> Signal<Void, NoError> in
+                        if let updates = updates {
+                            stateManager.addUpdates(updates)
+                        }
+                        return .complete()
+                }
+                
+                signal = signal
+                    |> then(partSignal)
+            }
+            return signal
+        } else {
+            return .complete()
+        }
+    } else if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
             var signal: Signal<Void, NoError> = .complete()
             for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
@@ -177,20 +211,20 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
         for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
             let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
             let partSignal = network.request(Api.functions.messages.deleteMessages(flags: flags, id: ids.map { $0.id }))
-            |> map { result -> Api.messages.AffectedMessages? in
-                return result
-            }
-            |> `catch` { _ in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<Void, NoError> in
-                if let result = result {
-                    switch result {
-                    case let .affectedMessages(pts, ptsCount):
-                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                    }
+                |> map { result -> Api.messages.AffectedMessages? in
+                    return result
                 }
-                return .complete()
+                |> `catch` { _ in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let result = result {
+                        switch result {
+                        case let .affectedMessages(pts, ptsCount):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                        }
+                    }
+                    return .complete()
             }
             
             signal = signal
@@ -216,9 +250,9 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             let reportSignal: Signal<Api.Bool, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
                 reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .single(.boolFalse)
-                    }
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
             } else {
                 reportSignal = .single(.boolTrue)
             }
@@ -275,7 +309,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
         |> then(deleteUser)
         |> then(reportSignal)
         |> then(postbox.transaction { transaction -> Void in
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .all)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
@@ -294,7 +328,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
-                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .not(Namespaces.Message.allScheduled))
             })
         } else {
             return .complete()
@@ -304,7 +338,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
     }
 }
 
-private func requestClearHistory(postbox: Postbox, network: Network, stateManager: AccountStateManager, inputPeer: Api.InputPeer, maxId: Int32, justClear: Bool, type: InteractiveMessagesDeletionType) -> Signal<Void, NoError> {
+private func requestClearHistory(postbox: Postbox, network: Network, stateManager: AccountStateManager, inputPeer: Api.InputPeer, maxId: Int32, justClear: Bool, type: CloudChatClearHistoryType) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     if justClear {
         flags |= 1 << 0

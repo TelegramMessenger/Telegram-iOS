@@ -188,7 +188,7 @@ final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {
         }
     }
     
-    func matchingReferences(namespace: ReverseIndexNamespace, tokens: [ValueBoxKey]) -> Set<T> {
+    func matchingReferences(namespace: ReverseIndexNamespace, tokens: [ValueBoxKey], union: Bool = false) -> Set<T> {
         var references: Set<T>?
         for token in tokens {
             if let references = references, references.isEmpty {
@@ -208,7 +208,11 @@ final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {
                 return true
             }, limit: 0)
             if let previousReferences = references {
-                references = previousReferences.intersection(currentReferences)
+                if union {
+                    references = previousReferences.union(currentReferences)
+                } else {
+                    references = previousReferences.intersection(currentReferences)
+                }
             } else {
                 references = currentReferences
             }

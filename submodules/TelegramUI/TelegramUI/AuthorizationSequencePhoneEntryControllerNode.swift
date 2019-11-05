@@ -4,6 +4,9 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import PhoneInputNode
+import CountrySelectionUI
+import AuthorizationUI
 
 private func emojiFlagForISOCountryCode(_ countryCode: NSString) -> String {
     if countryCode.length != 2 {
@@ -100,10 +103,12 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.addSubnode(self.countryButton)
         self.addSubnode(self.phoneInputNode)
         
-        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
-        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.phoneInputNode.countryCodeField.textField.textColor = theme.list.itemPrimaryTextColor
         self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
+        self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
+        self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
         
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
@@ -176,8 +181,6 @@ private final class ContactSyncNode: ASDisplayNode {
         self.switchNode.frameColor = theme.list.itemSwitchColors.frameColor
         self.switchNode.contentColor = theme.list.itemSwitchColors.contentColor
         self.switchNode.handleColor = theme.list.itemSwitchColors.handleColor
-        self.switchNode.positiveContentColor = theme.list.itemSwitchColors.positiveColor
-        self.switchNode.negativeContentColor = theme.list.itemSwitchColors.negativeColor
         self.switchNode.isOn = true
         
         super.init()

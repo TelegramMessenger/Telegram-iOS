@@ -12,6 +12,24 @@
 		090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */; };
 		090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */; };
 		092F368521542D6C001A9F49 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 092F368321542D6C001A9F49 /* Localizable.strings */; };
+		094DDF0822E7A0D3004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0222E7A0D3004B0256 /* Localizable.strings */; };
+		094DDF0922E7A0D3004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0422E7A0D3004B0256 /* InfoPlist.strings */; };
+		094DDF0A22E7A0D3004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF3222E7A61B004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF2C22E7A61B004B0256 /* Localizable.strings */; };
+		094DDF3322E7A61B004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF2E22E7A61B004B0256 /* InfoPlist.strings */; };
+		094DDF3422E7A61B004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF3C22E7A98E004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3622E7A98E004B0256 /* Localizable.strings */; };
+		094DDF3D22E7A98E004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3822E7A98E004B0256 /* InfoPlist.strings */; };
+		094DDF3E22E7A98E004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF4622E7A9A8004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4022E7A9A8004B0256 /* Localizable.strings */; };
+		094DDF4722E7A9A8004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4222E7A9A8004B0256 /* InfoPlist.strings */; };
+		094DDF4822E7A9A8004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF5722E8C310004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4A22E8C30F004B0256 /* Localizable.strings */; };
+		094DDF5822E8C310004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4C22E8C30F004B0256 /* InfoPlist.strings */; };
+		094DDF5922E8C310004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */; };
+		094DDF5A22E8C310004B0256 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5122E8C30F004B0256 /* Localizable.strings */; };
+		094DDF5B22E8C310004B0256 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5322E8C30F004B0256 /* InfoPlist.strings */; };
+		094DDF5C22E8C310004B0256 /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = 094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */; };
 		0956AF2F217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */; };
 		0972C6E021791D950069E98A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0972C6DF21791D950069E98A /* UserNotifications.framework */; };
 		0972C6E421792D130069E98A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0972C6E221792D120069E98A /* InfoPlist.strings */; };
@@ -173,6 +191,18 @@
 		09C5732D2172953900BDF00F /* TGBridgeLocationVenue+TGTableItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572FF2172953600BDF00F /* TGBridgeLocationVenue+TGTableItem.m */; };
 		09CFB212217299E80083F7A3 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09CFB211217299E80083F7A3 /* CoreLocation.framework */; };
 		09D30420217418EC00C00567 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
+		09E9600722C23FF200B13673 /* BlackNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */; };
+		09E9600822C23FF200B13673 /* BlackNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600222C23FF000B13673 /* BlackNotificationIcon.png */; };
+		09E9600922C23FF200B13673 /* BlueNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600322C23FF000B13673 /* BlueNotificationIcon.png */; };
+		09E9600A22C23FF200B13673 /* BlueNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */; };
+		09E9600B22C23FF200B13673 /* BlackNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */; };
+		09E9600C22C23FF200B13673 /* BlueNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */; };
+		09E9601322C2441000B13673 /* BlackClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */; };
+		09E9601422C2441000B13673 /* BlackClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */; };
+		09E9601522C2441000B13673 /* BlueClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */; };
+		09E9601622C2441000B13673 /* BlueClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */; };
+		09E9601722C2441000B13673 /* BlackClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */; };
+		09E9601822C2441000B13673 /* BlueClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */; };
 		09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */; };
 		09EBE2A622B004EA00F670AB /* BlueIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29A22B004E800F670AB /* BlueIconIpad@2x.png */; };
 		09EBE2A722B004EA00F670AB /* BlueIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE29B22B004E900F670AB /* BlueIconIpad.png */; };
@@ -185,6 +215,8 @@
 		09EBE2AE22B004EA00F670AB /* BlueFilledIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */; };
 		09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */; };
 		09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */; };
+		09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE222C6339700E7185B /* IntentMessages.swift */; };
+		09EC5CDA22CBBF9600292E42 /* telegram_plane1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 09EC5CD922CBBF9600292E42 /* telegram_plane1@2x.png */; };
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
@@ -194,13 +226,10 @@
 		D008185622B579A1008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185522B579A1008A895F /* BuildConfig.framework */; };
 		D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185722B579AD008A895F /* BuildConfig.framework */; };
 		D00818A522B58CCB008A895F /* WatchCommonWatch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818A422B58CCB008A895F /* WatchCommonWatch.framework */; };
-		D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CE22B595DB008A895F /* LightweightAccountData.framework */; };
 		D00859A91B28189D00EAF753 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00859A81B28189D00EAF753 /* Images.xcassets */; };
 		D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = D00859AA1B28189D00EAF753 /* LaunchScreen.xib */; };
 		D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */; };
 		D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D00ED75B1FE95287001F38BD /* InfoPlist.strings */; };
-		D015E011225CCEB300CB9E8A /* ReadBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E010225CCEB300CB9E8A /* ReadBuffer.swift */; };
-		D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E01E225CDF5000CB9E8A /* Api0.swift */; };
 		D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D015E050225D303F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; };
 		D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -270,7 +299,6 @@
 		D06706611D51185400DED3E3 /* TelegramCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D06706621D5118F500DED3E3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; };
 		D073E52021FF7CE900742DDD /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D073E51F21FF7CE900742DDD /* Crypto.m */; };
-		D073E52222003E1E00742DDD /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073E52122003E1E00742DDD /* Data.swift */; };
 		D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410511FABDD54008FFE92 /* MtProtoKitDynamic.framework */; };
 		D08611B21F5711080047111E /* HockeySDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D08984FE2118B3F100918162 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08984FD2118B3F100918162 /* MtProtoKitDynamic.framework */; };
@@ -303,7 +331,6 @@
 		D08DB0BC213F4D1D00F2ADBF /* start_arrow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2311E49DEDE00988324 /* start_arrow@2x.png */; };
 		D08DB0BD213F4D1D00F2ADBF /* start_arrow_ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2321E49DEDE00988324 /* start_arrow_ipad.png */; };
 		D08DB0BE213F4D1D00F2ADBF /* start_arrow_ipad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2331E49DEDE00988324 /* start_arrow_ipad@2x.png */; };
-		D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2341E49DEDE00988324 /* telegram_plane1@2x.png */; };
 		D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */; };
 		D096C2BE1CC3C021006D814E /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2BD1CC3C021006D814E /* Display.framework */; };
 		D096C2BF1CC3C021006D814E /* Display.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2BD1CC3C021006D814E /* Display.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -323,6 +350,12 @@
 		D0B4AF8F1EC122A700D51FF6 /* TelegramUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; };
 		D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0B844601DACF561005F29E1 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
+		D0BAAA1823100B7A00AFC473 /* Api.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1623100B7A00AFC473 /* Api.m */; };
+		D0BAAA1B23100C2700AFC473 /* NotificationService.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1A23100C2700AFC473 /* NotificationService.m */; };
+		D0BAAA1E2310117200AFC473 /* StoredAccountInfos.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */; };
+		D0BAAA21231026BC00AFC473 /* Attachments.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA20231026BC00AFC473 /* Attachments.m */; };
+		D0BAAA242310302300AFC473 /* FetchImage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA232310302300AFC473 /* FetchImage.m */; };
+		D0BAAA272310326200AFC473 /* Serialization.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA262310326200AFC473 /* Serialization.m */; };
 		D0C2DFF81CC4D1BA0044FF83 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */; };
 		D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; };
 		D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -358,7 +391,6 @@
 		D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
 		D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D268781D79A70A00C422DA /* IntentHandler.swift */; };
 		D0D2688E1D79A70B00C422DA /* SiriIntents.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0D268761D79A70A00C422DA /* SiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E2CE632227F0680084E3DD /* ManagedFile.swift */; };
 		D0E8B8AD2044496C00605593 /* voip_connecting.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A82044496B00605593 /* voip_connecting.mp3 */; };
 		D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A92044496C00605593 /* voip_end.caf */; };
 		D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AA2044496C00605593 /* voip_fail.caf */; };
@@ -368,10 +400,6 @@
 		D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */; };
 		D0ECCB7F1FE9C38500609802 /* Telegram_iOS_UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */; };
 		D0ECCB8A1FE9C4AC00609802 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */; };
-		D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633921FF3EDF001D4648 /* AccountData.swift */; };
-		D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0400EE41D5B912E007931CE /* NotificationService.swift */; };
-		D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633E21FF46E4001D4648 /* ImageData.swift */; };
-		D0ED634121FF4786001D4648 /* Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED634021FF4786001D4648 /* Serialization.swift */; };
 		D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F575122083B96B00F1C1E1 /* CloudKit.framework */; };
 		D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */; };
 /* End PBXBuildFile section */
@@ -501,6 +529,24 @@
 		090E777222A6945800CD99F5 /* BlackClassicIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIcon@3x.png"; sourceTree = "<group>"; };
 		090E777322A6945800CD99F5 /* BlueClassicIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIcon@2x.png"; sourceTree = "<group>"; };
 		092F368421542D6C001A9F49 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Share/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		094DDF0322E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF0522E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF0722E7A0D3004B0256 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = fr; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF2D22E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF2F22E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF3122E7A61B004B0256 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = tr; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF3722E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF3922E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF3B22E7A98E004B0256 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ca; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF4122E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF4322E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF4522E7A9A8004B0256 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = uk; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF4B22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ms; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF4D22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ms; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF4F22E8C30F004B0256 /* ms */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ms; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
+		094DDF5222E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = Localizable.strings; sourceTree = "<group>"; };
+		094DDF5422E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = InfoPlist.strings; sourceTree = "<group>"; };
+		094DDF5622E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = id; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
 		0956AF2D217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGNeoUnsupportedMessageViewModel.h; sourceTree = "<group>"; };
 		0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGNeoUnsupportedMessageViewModel.m; sourceTree = "<group>"; };
@@ -803,6 +849,18 @@
 		09C573152172953800BDF00F /* TGBridgeLocationVenue+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeLocationVenue+TGTableItem.h"; path = "Bridge/TGBridgeLocationVenue+TGTableItem.h"; sourceTree = "<group>"; };
 		09CFB211217299E80083F7A3 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/CoreLocation.framework; sourceTree = DEVELOPER_DIR; };
 		09D304212174335F00C00567 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600222C23FF000B13673 /* BlackNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackNotificationIcon.png; sourceTree = "<group>"; };
+		09E9600322C23FF000B13673 /* BlueNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueNotificationIcon.png; sourceTree = "<group>"; };
+		09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicNotificationIcon@3x.png"; sourceTree = "<group>"; };
+		09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueClassicNotificationIcon.png; sourceTree = "<group>"; };
+		09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicNotificationIcon@2x.png"; sourceTree = "<group>"; };
+		09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackClassicNotificationIcon.png; sourceTree = "<group>"; };
+		09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicNotificationIcon@3x.png"; sourceTree = "<group>"; };
 		09EBE29922B004E800F670AB /* BlueFilledIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueFilledIconIpad.png; sourceTree = "<group>"; };
 		09EBE29A22B004E800F670AB /* BlueIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE29B22B004E900F670AB /* BlueIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueIconIpad.png; sourceTree = "<group>"; };
@@ -815,6 +873,8 @@
 		09EBE2A222B004E900F670AB /* BlueFilledIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A322B004E900F670AB /* BlackIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackIconIpad@2x.png"; sourceTree = "<group>"; };
 		09EBE2A422B004E900F670AB /* BlueFilledIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueFilledIconLargeIpad@2x.png"; sourceTree = "<group>"; };
+		09EC0DE222C6339700E7185B /* IntentMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentMessages.swift; sourceTree = "<group>"; };
+		09EC5CD922CBBF9600292E42 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane1@2x.png"; sourceTree = "<group>"; };
 		09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-HockeyApp.entitlements"; sourceTree = "<group>"; };
 		D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-Fork.entitlements"; sourceTree = "<group>"; };
@@ -841,8 +901,6 @@
 		D00859B71B28189D00EAF753 /* Telegram_iOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telegram_iOSTests.swift; sourceTree = "<group>"; };
 		D00ED7591FE94630001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = en; path = en.lproj/AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		D00ED75C1FE95287001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		D015E010225CCEB300CB9E8A /* ReadBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBuffer.swift; sourceTree = "<group>"; };
-		D015E01E225CDF5000CB9E8A /* Api0.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api0.swift; sourceTree = "<group>"; };
 		D015E04C225D2D8F00CB9E8A /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01A47521F4DBEB100383CC1 /* libHockeySDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libHockeySDK.a; path = "../../build/HockeySDK-iOS/Support/build/Debug-iphoneos/libHockeySDK.a"; sourceTree = "<group>"; };
 		D01A47541F4DBED700383CC1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = HockeySDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -877,7 +935,6 @@
 		D03B0E951D637A0500955575 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03BCCC91C6EBD670097A291 /* ListViewTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewTests.swift; sourceTree = "<group>"; };
 		D0400ED81D5B8F97007931CE /* TelegramUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0400EE41D5B912E007931CE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		D0400EE61D5B912E007931CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D04DCC0B1F71C80000B021D7 /* 0.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = 0.m4a; sourceTree = "<group>"; };
 		D04DCC0C1F71C80000B021D7 /* 1.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = 1.m4a; sourceTree = "<group>"; };
@@ -934,7 +991,6 @@
 		D050F2311E49DEDE00988324 /* start_arrow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "start_arrow@2x.png"; sourceTree = "<group>"; };
 		D050F2321E49DEDE00988324 /* start_arrow_ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = start_arrow_ipad.png; sourceTree = "<group>"; };
 		D050F2331E49DEDE00988324 /* start_arrow_ipad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "start_arrow_ipad@2x.png"; sourceTree = "<group>"; };
-		D050F2341E49DEDE00988324 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_plane1@2x.png"; sourceTree = "<group>"; };
 		D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "telegram_sphere@2x.png"; sourceTree = "<group>"; };
 		D051DB0C215E5E2300F30F92 /* NotificationContent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationContent.entitlements; sourceTree = "<group>"; };
 		D052974422B0073E004ABAF6 /* WhiteFilledIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "WhiteFilledIcon@3x.png"; sourceTree = "<group>"; };
@@ -955,7 +1011,6 @@
 		D06706601D51185400DED3E3 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
-		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
 		D08410471FABDC7A008FFE92 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08410491FABDCF2008FFE92 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -998,6 +1053,18 @@
 		D0B844591DACF507005F29E1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HockeySDK.framework; path = "third-party/HockeySDK.framework"; sourceTree = "<group>"; };
 		D0B8445A1DACF507005F29E1 /* HockeySDKResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = HockeySDKResources.bundle; path = "third-party/HockeySDKResources.bundle"; sourceTree = "<group>"; };
 		D0B8445F1DACF561005F29E1 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		D0BAAA1623100B7A00AFC473 /* Api.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Api.m; sourceTree = "<group>"; };
+		D0BAAA1723100B7A00AFC473 /* Api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Api.h; sourceTree = "<group>"; };
+		D0BAAA1923100C2700AFC473 /* NotificationService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NotificationService.h; sourceTree = "<group>"; };
+		D0BAAA1A23100C2700AFC473 /* NotificationService.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NotificationService.m; sourceTree = "<group>"; };
+		D0BAAA1C2310117200AFC473 /* StoredAccountInfos.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StoredAccountInfos.h; sourceTree = "<group>"; };
+		D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StoredAccountInfos.m; sourceTree = "<group>"; };
+		D0BAAA1F231026BC00AFC473 /* Attachments.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Attachments.h; sourceTree = "<group>"; };
+		D0BAAA20231026BC00AFC473 /* Attachments.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Attachments.m; sourceTree = "<group>"; };
+		D0BAAA222310302300AFC473 /* FetchImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FetchImage.h; sourceTree = "<group>"; };
+		D0BAAA232310302300AFC473 /* FetchImage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FetchImage.m; sourceTree = "<group>"; };
+		D0BAAA252310326200AFC473 /* Serialization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Serialization.h; sourceTree = "<group>"; };
+		D0BAAA262310326200AFC473 /* Serialization.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Serialization.m; sourceTree = "<group>"; };
 		D0C2DFF51CC4D1B20044FF83 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		D0C2DFF91CC4D1C90044FF83 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
@@ -1043,7 +1110,6 @@
 		D0D268881D79A70A00C422DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D268971D79AF1B00C422DA /* SiriIntents-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-AppStore.entitlements"; sourceTree = "<group>"; };
 		D0D268981D79AF3900C422DA /* SiriIntentsUI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SiriIntentsUI.entitlements; sourceTree = "<group>"; };
-		D0E2CE632227F0680084E3DD /* ManagedFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D0E3A7071B285B5000A402D9 /* Telegram-iOS-Hockeyapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-Hockeyapp.entitlements"; sourceTree = "<group>"; };
 		D0E41A381D65A69C00FBFC00 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
 		D0E41A3B1D65A69C00FBFC00 /* TodayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewController.swift; sourceTree = "<group>"; };
@@ -1062,10 +1128,7 @@
 		D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telegram_iOS_UITests.swift; sourceTree = "<group>"; };
 		D0ECCB801FE9C38500609802 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SnapshotHelper.swift; sourceTree = "<group>"; };
-		D0ED633921FF3EDF001D4648 /* AccountData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountData.swift; sourceTree = "<group>"; };
 		D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NotificationService-Bridging-Header.h"; sourceTree = "<group>"; };
-		D0ED633E21FF46E4001D4648 /* ImageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageData.swift; sourceTree = "<group>"; };
-		D0ED634021FF4786001D4648 /* Serialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Serialization.swift; sourceTree = "<group>"; };
 		D0F575122083B96B00F1C1E1 /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "SFCompactRounded-Semibold.otf"; path = "Telegram-iOS/Resources/SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1086,7 +1149,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */,
 				D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */,
 				D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */,
 				D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */,
@@ -1187,6 +1249,66 @@
 			path = en.lproj;
 			sourceTree = "<group>";
 		};
+		094DDF0122E7A0D3004B0256 /* fr.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF0222E7A0D3004B0256 /* Localizable.strings */,
+				094DDF0422E7A0D3004B0256 /* InfoPlist.strings */,
+				094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = fr.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF2B22E7A61B004B0256 /* tr.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF2C22E7A61B004B0256 /* Localizable.strings */,
+				094DDF2E22E7A61B004B0256 /* InfoPlist.strings */,
+				094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = tr.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF3522E7A98E004B0256 /* ca.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF3622E7A98E004B0256 /* Localizable.strings */,
+				094DDF3822E7A98E004B0256 /* InfoPlist.strings */,
+				094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = ca.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF3F22E7A9A8004B0256 /* uk.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF4022E7A9A8004B0256 /* Localizable.strings */,
+				094DDF4222E7A9A8004B0256 /* InfoPlist.strings */,
+				094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = uk.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF4922E8C30F004B0256 /* ms.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF4A22E8C30F004B0256 /* Localizable.strings */,
+				094DDF4C22E8C30F004B0256 /* InfoPlist.strings */,
+				094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = ms.lproj;
+			sourceTree = "<group>";
+		};
+		094DDF5022E8C30F004B0256 /* id.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				094DDF5122E8C30F004B0256 /* Localizable.strings */,
+				094DDF5322E8C30F004B0256 /* InfoPlist.strings */,
+				094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */,
+			);
+			path = id.lproj;
+			sourceTree = "<group>";
+		};
 		0972C6E121792CED0069E98A /* ru.lproj */ = {
 			isa = PBXGroup;
 			children = (
@@ -1198,6 +1320,18 @@
 		09A218E122A14E5600DE6898 /* App Icons */ = {
 			isa = PBXGroup;
 			children = (
+				09E9601122C2440F00B13673 /* BlackClassicNotificationIcon.png */,
+				09E9600D22C2440E00B13673 /* BlackClassicNotificationIcon@2x.png */,
+				09E9600E22C2440E00B13673 /* BlackClassicNotificationIcon@3x.png */,
+				09E9600F22C2440F00B13673 /* BlueClassicNotificationIcon.png */,
+				09E9601022C2440F00B13673 /* BlueClassicNotificationIcon@2x.png */,
+				09E9601222C2441000B13673 /* BlueClassicNotificationIcon@3x.png */,
+				09E9600222C23FF000B13673 /* BlackNotificationIcon.png */,
+				09E9600522C23FF100B13673 /* BlackNotificationIcon@2x.png */,
+				09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */,
+				09E9600322C23FF000B13673 /* BlueNotificationIcon.png */,
+				09E9600422C23FF100B13673 /* BlueNotificationIcon@2x.png */,
+				09E9600622C23FF100B13673 /* BlueNotificationIcon@3x.png */,
 				09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */,
 				09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */,
 				09A4192B22B7A4D400637EB4 /* BlackClassicIconLargeIpad@2x.png */,
@@ -1830,13 +1964,19 @@
 				D0612E481D58B478000C8F02 /* Application.swift */,
 				D09DCBB41D0C854D00F51FFE /* en.lproj */,
 				D0CE6F47213EDA4400BCD44B /* ar.lproj */,
+				094DDF3522E7A98E004B0256 /* ca.lproj */,
 				D0CE6F4E213EDA4400BCD44B /* de.lproj */,
 				D0CE6F40213EDA4400BCD44B /* es.lproj */,
+				094DDF0122E7A0D3004B0256 /* fr.lproj */,
+				094DDF5022E8C30F004B0256 /* id.lproj */,
 				D0CE6F24213EDA4300BCD44B /* it.lproj */,
 				D0CE6F2B213EDA4300BCD44B /* ko.lproj */,
+				094DDF4922E8C30F004B0256 /* ms.lproj */,
 				D0CE6F32213EDA4300BCD44B /* nl.lproj */,
 				D0CE6F1D213EDA4200BCD44B /* pt.lproj */,
 				D0CE6F39213EDA4300BCD44B /* ru.lproj */,
+				094DDF2B22E7A61B004B0256 /* tr.lproj */,
+				094DDF3F22E7A9A8004B0256 /* uk.lproj */,
 				D00859A01B28189D00EAF753 /* Info.plist */,
 				D09A59B71B5876B600FC3724 /* Telegram-Bridging-Header.h */,
 				D02E31221BD803E800CD3F01 /* main.m */,
@@ -2017,22 +2157,26 @@
 		D0400EE31D5B912E007931CE /* NotificationService */ = {
 			isa = PBXGroup;
 			children = (
-				D015E01E225CDF5000CB9E8A /* Api0.swift */,
+				D0BAAA1723100B7A00AFC473 /* Api.h */,
+				D0BAAA1623100B7A00AFC473 /* Api.m */,
+				D0BAAA1923100C2700AFC473 /* NotificationService.h */,
+				D0BAAA1A23100C2700AFC473 /* NotificationService.m */,
+				D0BAAA1C2310117200AFC473 /* StoredAccountInfos.h */,
+				D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */,
+				D0BAAA1F231026BC00AFC473 /* Attachments.h */,
+				D0BAAA20231026BC00AFC473 /* Attachments.m */,
+				D0BAAA222310302300AFC473 /* FetchImage.h */,
+				D0BAAA232310302300AFC473 /* FetchImage.m */,
+				D0BAAA252310326200AFC473 /* Serialization.h */,
+				D0BAAA262310326200AFC473 /* Serialization.m */,
 				D000CAC221FB6E170011B15D /* NotificationService-AppStore.entitlements */,
 				D000CAC321FB6E170011B15D /* NotificationService-AppStoreLLC.entitlements */,
 				D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */,
 				D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */,
-				D0400EE41D5B912E007931CE /* NotificationService.swift */,
-				D0ED633921FF3EDF001D4648 /* AccountData.swift */,
-				D0ED633E21FF46E4001D4648 /* ImageData.swift */,
 				D0400EE61D5B912E007931CE /* Info.plist */,
 				D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */,
-				D0ED634021FF4786001D4648 /* Serialization.swift */,
 				D073E51E21FF7CE900742DDD /* Crypto.h */,
 				D073E51F21FF7CE900742DDD /* Crypto.m */,
-				D073E52122003E1E00742DDD /* Data.swift */,
-				D0E2CE632227F0680084E3DD /* ManagedFile.swift */,
-				D015E010225CCEB300CB9E8A /* ReadBuffer.swift */,
 			);
 			path = NotificationService;
 			sourceTree = "<group>";
@@ -2135,6 +2279,7 @@
 		D050F21B1E49DEDE00988324 /* intro */ = {
 			isa = PBXGroup;
 			children = (
+				09EC5CD922CBBF9600292E42 /* telegram_plane1@2x.png */,
 				D050F21C1E49DEDE00988324 /* fast_arrow@2x.png */,
 				D050F21D1E49DEDE00988324 /* fast_arrow_shadow@2x.png */,
 				D050F21E1E49DEDE00988324 /* fast_body@2x.png */,
@@ -2159,7 +2304,6 @@
 				D050F2311E49DEDE00988324 /* start_arrow@2x.png */,
 				D050F2321E49DEDE00988324 /* start_arrow_ipad.png */,
 				D050F2331E49DEDE00988324 /* start_arrow_ipad@2x.png */,
-				D050F2341E49DEDE00988324 /* telegram_plane1@2x.png */,
 				D050F2351E49DEDE00988324 /* telegram_sphere@2x.png */,
 			);
 			name = intro;
@@ -2187,9 +2331,9 @@
 		D09DCBB41D0C854D00F51FFE /* en.lproj */ = {
 			isa = PBXGroup;
 			children = (
-				D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */,
 				D09DCBB51D0C856B00F51FFE /* Localizable.strings */,
 				D00ED75B1FE95287001F38BD /* InfoPlist.strings */,
+				D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */,
 			);
 			name = en.lproj;
 			sourceTree = "<group>";
@@ -2283,6 +2427,7 @@
 				D021D4DB219CB1020064BEBA /* SiriIntents-Fork.entitlements */,
 				D0D268781D79A70A00C422DA /* IntentHandler.swift */,
 				D08985062119B7FE00918162 /* IntentContacts.swift */,
+				09EC0DE222C6339700E7185B /* IntentMessages.swift */,
 				D0D2687A1D79A70A00C422DA /* Info.plist */,
 				D08985052118B62400918162 /* SiriIntents-Bridging-Header.h */,
 			);
@@ -2303,15 +2448,15 @@
 		D0E41A3A1D65A69C00FBFC00 /* Widget */ = {
 			isa = PBXGroup;
 			children = (
-				0972C6E121792CED0069E98A /* ru.lproj */,
+				D04FA1AE2145E37F0006EF45 /* en.lproj */,
 				D04FA1B62145E3800006EF45 /* ar.lproj */,
 				D04FA1B32145E37F0006EF45 /* de.lproj */,
-				D04FA1AE2145E37F0006EF45 /* en.lproj */,
 				D04FA1C52145E3810006EF45 /* es.lproj */,
 				D04FA1BF2145E3800006EF45 /* it.lproj */,
 				D04FA1BC2145E3800006EF45 /* ko.lproj */,
 				D04FA1B92145E3800006EF45 /* nl.lproj */,
 				D04FA1C22145E3810006EF45 /* pt.lproj */,
+				0972C6E121792CED0069E98A /* ru.lproj */,
 				D0ADF955212B3B6400310BBC /* Widget-AppStoreLLC.entitlements */,
 				D0B2F75A204F51E400D3BFB9 /* Widget-AppStore.entitlements */,
 				D0B2F75B204F51E500D3BFB9 /* Widget-HockeyApp.entitlements */,
@@ -2619,6 +2764,12 @@
 				es,
 				ar,
 				de,
+				fr,
+				tr,
+				ca,
+				uk,
+				ms,
+				id,
 			);
 			mainGroup = D00859931B28189D00EAF753;
 			productRefGroup = D008599D1B28189D00EAF753 /* Products */;
@@ -2681,12 +2832,17 @@
 				D04DCC211F71C80000B021D7 /* 0.m4a in Resources */,
 				D04DCC261F71C80000B021D7 /* 103.m4a in Resources */,
 				09A218F222A1570A00DE6898 /* BlueFilledIcon@2x.png in Resources */,
+				09E9600922C23FF200B13673 /* BlueNotificationIcon.png in Resources */,
 				090E777722A6945900CD99F5 /* BlueClassicIcon@2x.png in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
 				D08DB0AB213F4D1D00F2ADBF /* ic_bubble@2x.png in Resources */,
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,
+				09E9600722C23FF200B13673 /* BlackNotificationIcon@3x.png in Resources */,
 				09EBE2A522B004EA00F670AB /* BlueFilledIconIpad.png in Resources */,
+				094DDF5C22E8C310004B0256 /* AppIntentVocabulary.plist in Resources */,
+				094DDF3C22E7A98E004B0256 /* Localizable.strings in Resources */,
+				094DDF3422E7A61B004B0256 /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F60213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F63213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */,
@@ -2698,19 +2854,29 @@
 				D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */,
 				D0CE6F68213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				09A218EE22A1570A00DE6898 /* BlueFilledIcon@3x.png in Resources */,
+				09E9600C22C23FF200B13673 /* BlueNotificationIcon@3x.png in Resources */,
+				09E9601422C2441000B13673 /* BlackClassicNotificationIcon@3x.png in Resources */,
 				D0CE6F6A213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09A4193522B7A4D500637EB4 /* BlackClassicIconIpad@2x.png in Resources */,
+				09E9601622C2441000B13673 /* BlueClassicNotificationIcon@2x.png in Resources */,
+				09E9601322C2441000B13673 /* BlackClassicNotificationIcon@2x.png in Resources */,
 				D0E8C2DE2285EA55009F26E8 /* BlackIcon@2x.png in Resources */,
 				D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */,
+				094DDF5722E8C310004B0256 /* Localizable.strings in Resources */,
 				D0CE6F66213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D08DB0B8213F4D1D00F2ADBF /* powerful_mask@2x.png in Resources */,
 				D08DB0B4213F4D1D00F2ADBF /* knot_down@2x.png in Resources */,
+				094DDF4822E7A9A8004B0256 /* AppIntentVocabulary.plist in Resources */,
+				09EC5CDA22CBBF9600292E42 /* telegram_plane1@2x.png in Resources */,
 				D08DB0BC213F4D1D00F2ADBF /* start_arrow@2x.png in Resources */,
 				D08DB0B6213F4D1D00F2ADBF /* powerful_infinity@2x.png in Resources */,
+				094DDF5B22E8C310004B0256 /* InfoPlist.strings in Resources */,
 				09EBE2AA22B004EA00F670AB /* BlueIconLargeIpad@2x.png in Resources */,
 				D0CE6F5B213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09EBE2AF22B004EA00F670AB /* BlackIconIpad@2x.png in Resources */,
+				094DDF5922E8C310004B0256 /* AppIntentVocabulary.plist in Resources */,
 				09A4193422B7A4D500637EB4 /* BlackClassicIconIpad.png in Resources */,
+				094DDF4622E7A9A8004B0256 /* Localizable.strings in Resources */,
 				09A4193222B7A4D500637EB4 /* BlueClassicIconIpad.png in Resources */,
 				D0CE6F62213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0A8213F4D1D00F2ADBF /* fast_arrow_shadow@2x.png in Resources */,
@@ -2718,14 +2884,20 @@
 				D04DCC2C1F71C80000B021D7 /* 109.m4a in Resources */,
 				D08DB0BD213F4D1D00F2ADBF /* start_arrow_ipad.png in Resources */,
 				09EBE2AB22B004EA00F670AB /* BlackIconLargeIpad@2x.png in Resources */,
+				09E9601722C2441000B13673 /* BlackClassicNotificationIcon.png in Resources */,
 				D0CE6F64213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
+				094DDF3E22E7A98E004B0256 /* AppIntentVocabulary.plist in Resources */,
+				094DDF3D22E7A98E004B0256 /* InfoPlist.strings in Resources */,
 				D04DCC231F71C80000B021D7 /* 100.m4a in Resources */,
+				09E9600A22C23FF200B13673 /* BlueNotificationIcon@2x.png in Resources */,
+				094DDF3222E7A61B004B0256 /* Localizable.strings in Resources */,
 				09A218EF22A1570A00DE6898 /* BlueIcon@2x.png in Resources */,
 				D04DCC281F71C80000B021D7 /* 105.m4a in Resources */,
 				D08DB0BB213F4D1D00F2ADBF /* private_screw@2x.png in Resources */,
 				D0CE6F5F213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D04DCC2D1F71C80000B021D7 /* 110.m4a in Resources */,
+				094DDF5A22E8C310004B0256 /* Localizable.strings in Resources */,
 				D04DCC2B1F71C80000B021D7 /* 108.m4a in Resources */,
 				D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */,
 				D08DB0B5213F4D1D00F2ADBF /* knot_up1@2x.png in Resources */,
@@ -2742,6 +2914,7 @@
 				D0CE6F59213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D08DB0B9213F4D1D00F2ADBF /* powerful_star@2x.png in Resources */,
 				D04DCC271F71C80000B021D7 /* 104.m4a in Resources */,
+				09E9600B22C23FF200B13673 /* BlackNotificationIcon@2x.png in Resources */,
 				090E777522A6945900CD99F5 /* BlueClassicIcon@3x.png in Resources */,
 				09A218F122A1570A00DE6898 /* BlackFilledIcon@3x.png in Resources */,
 				D04DCC2A1F71C80000B021D7 /* 107.m4a in Resources */,
@@ -2754,6 +2927,8 @@
 				09EBE2B022B004EA00F670AB /* BlueFilledIconLargeIpad@2x.png in Resources */,
 				D0CE6F58213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0AF213F4D1D00F2ADBF /* ic_pencil@2x.png in Resources */,
+				094DDF5822E8C310004B0256 /* InfoPlist.strings in Resources */,
+				09E9601822C2441000B13673 /* BlueClassicNotificationIcon@3x.png in Resources */,
 				D0CE6F67213EDA4400BCD44B /* Localizable.strings in Resources */,
 				09A4193322B7A4D500637EB4 /* BlueClassicIconLargeIpad@2x.png in Resources */,
 				D04DCC291F71C80000B021D7 /* 106.m4a in Resources */,
@@ -2761,12 +2936,16 @@
 				D052974622B0073F004ABAF6 /* WhiteFilledIcon@3x.png in Resources */,
 				D08DB0B7213F4D1D00F2ADBF /* powerful_infinity_white@2x.png in Resources */,
 				D00859A91B28189D00EAF753 /* Images.xcassets in Resources */,
+				094DDF0922E7A0D3004B0256 /* InfoPlist.strings in Resources */,
 				D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */,
+				094DDF0822E7A0D3004B0256 /* Localizable.strings in Resources */,
+				094DDF4722E7A9A8004B0256 /* InfoPlist.strings in Resources */,
 				D0CE6F56213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D0CE6F65213EDA4400BCD44B /* InfoPlist.strings in Resources */,
 				D0E8B8B12044496C00605593 /* voip_busy.caf in Resources */,
 				09EBE2A622B004EA00F670AB /* BlueIconIpad@2x.png in Resources */,
 				D08DB0A7213F4D1D00F2ADBF /* fast_arrow@2x.png in Resources */,
+				094DDF0A22E7A0D3004B0256 /* AppIntentVocabulary.plist in Resources */,
 				D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */,
 				D0CE6F55213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D08DB0B2213F4D1D00F2ADBF /* ic_smile_eye@2x.png in Resources */,
@@ -2784,14 +2963,16 @@
 				09EBE2A822B004EA00F670AB /* BlackFilledIconIpad@2x.png in Resources */,
 				D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */,
 				D08DB0AD213F4D1D00F2ADBF /* ic_cam@2x.png in Resources */,
+				094DDF3322E7A61B004B0256 /* InfoPlist.strings in Resources */,
 				090E777622A6945900CD99F5 /* BlackClassicIcon@3x.png in Resources */,
-				D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */,
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
+				09E9600822C23FF200B13673 /* BlackNotificationIcon.png in Resources */,
 				09EBE2A922B004EA00F670AB /* BlackFilledIconLargeIpad@2x.png in Resources */,
 				090E777422A6945900CD99F5 /* BlackClassicIcon@2x.png in Resources */,
 				D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */,
 				D04DCC221F71C80000B021D7 /* 1.m4a in Resources */,
 				09EBE2AD22B004EA00F670AB /* BlackFilledIconIpad.png in Resources */,
+				09E9601522C2441000B13673 /* BlueClassicNotificationIcon.png in Resources */,
 				D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2998,15 +3179,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D073E52222003E1E00742DDD /* Data.swift in Sources */,
-				D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */,
-				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,
-				D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */,
-				D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */,
-				D0ED634121FF4786001D4648 /* Serialization.swift in Sources */,
+				D0BAAA242310302300AFC473 /* FetchImage.m in Sources */,
+				D0BAAA1E2310117200AFC473 /* StoredAccountInfos.m in Sources */,
+				D0BAAA1823100B7A00AFC473 /* Api.m in Sources */,
 				D073E52021FF7CE900742DDD /* Crypto.m in Sources */,
-				D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */,
-				D015E011225CCEB300CB9E8A /* ReadBuffer.swift in Sources */,
+				D0BAAA1B23100C2700AFC473 /* NotificationService.m in Sources */,
+				D0BAAA21231026BC00AFC473 /* Attachments.m in Sources */,
+				D0BAAA272310326200AFC473 /* Serialization.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3049,6 +3228,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08985072119B7FE00918162 /* IntentContacts.swift in Sources */,
+				09EC0DE322C6339700E7185B /* IntentMessages.swift in Sources */,
 				D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3114,6 +3294,150 @@
 				092F368421542D6C001A9F49 /* en */,
 			);
 			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0222E7A0D3004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0322E7A0D3004B0256 /* fr */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0422E7A0D3004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0522E7A0D3004B0256 /* fr */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF0622E7A0D3004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF0722E7A0D3004B0256 /* fr */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF2C22E7A61B004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF2D22E7A61B004B0256 /* tr */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF2E22E7A61B004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF2F22E7A61B004B0256 /* tr */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3022E7A61B004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3122E7A61B004B0256 /* tr */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF3622E7A98E004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3722E7A98E004B0256 /* ca */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3822E7A98E004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3922E7A98E004B0256 /* ca */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF3A22E7A98E004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF3B22E7A98E004B0256 /* ca */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF4022E7A9A8004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4122E7A9A8004B0256 /* uk */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4222E7A9A8004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4322E7A9A8004B0256 /* uk */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4422E7A9A8004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4522E7A9A8004B0256 /* uk */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF4A22E8C30F004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4B22E8C30F004B0256 /* ms */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4C22E8C30F004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4D22E8C30F004B0256 /* ms */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF4E22E8C30F004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF4F22E8C30F004B0256 /* ms */,
+			);
+			name = AppIntentVocabulary.plist;
+			sourceTree = "<group>";
+		};
+		094DDF5122E8C30F004B0256 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5222E8C30F004B0256 /* id */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		094DDF5322E8C30F004B0256 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5422E8C30F004B0256 /* id */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		094DDF5522E8C30F004B0256 /* AppIntentVocabulary.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				094DDF5622E8C30F004B0256 /* id */,
+			);
+			name = AppIntentVocabulary.plist;
 			sourceTree = "<group>";
 		};
 		0972C6E221792D120069E98A /* InfoPlist.strings */ = {
@@ -4918,18 +5242,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -4942,7 +5260,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugHockeyapp;
@@ -4962,18 +5280,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -4985,7 +5297,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseAppStore;
@@ -5058,18 +5370,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -5080,7 +5386,7 @@
 				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugFork;
@@ -6075,18 +6381,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -6097,7 +6397,7 @@
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.TelegramHD";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugAppStore;
@@ -6222,18 +6522,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -6245,7 +6539,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseHockeyappInternal;
@@ -6378,18 +6672,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -6400,7 +6688,7 @@
 				PROVISIONING_PROFILE = "954189c1-ae38-447b-a473-7c9b7198aa47";
 				PROVISIONING_PROFILE_SPECIFIER = "match Development ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = DebugAppStoreLLC;
@@ -6943,18 +7231,12 @@
 				CURRENT_PROJECT_VERSION = 667;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(BUILT_PRODUCTS_DIR)";
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
 				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"-lz",
@@ -6966,7 +7248,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore ph.telegra.Telegraph";
 				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = ReleaseAppStoreLLC;

@@ -7,6 +7,9 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
+import Emoji
+import PersistentStringHash
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
@@ -211,13 +214,19 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadPeerType: MediaAutoDownloadPeerType
     let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
+    let isScheduledMessages: Bool
     let contactsPeerIds: Set<PeerId>
+    let animatedEmojiStickers: [String: StickerPackItem]
+    let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: StickerPackItem] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
+        self.isScheduledMessages = isScheduledMessages
         self.contactsPeerIds = contactsPeerIds
+        self.animatedEmojiStickers = animatedEmojiStickers
+        self.forcedResourceStatus = forcedResourceStatus
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -230,7 +239,16 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.isRecentActions != rhs.isRecentActions {
             return false
         }
+        if lhs.isScheduledMessages != rhs.isScheduledMessages {
+            return false
+        }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
+            return false
+        }
+        if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
             return false
         }
         return true
@@ -312,8 +330,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, presentationData: presentationData, action: { timestamp in
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: associatedData.isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -341,7 +358,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.bubble.incoming.withoutWallpaper.fill)
+                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill)
                 }
             }
         }
@@ -353,8 +370,14 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if let fileName = telegramFile.fileName, fileName.hasSuffix(".tgs") && telegramFile.mimeType == "application/x-tgsticker", let size = telegramFile.size, size > 0 && size <= 64 * 1024, !telegramFile.previewRepresentations.isEmpty {
-                    viewClassName = ChatMessageAnimatedStickerItemNode.self
+                if telegramFile.isAnimatedSticker, !telegramFile.previewRepresentations.isEmpty, let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
+                    if self.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
+                            viewClassName = ChatMessageAnimatedStickerItemNode.self
+                        }
+                    } else {
+                        viewClassName = ChatMessageAnimatedStickerItemNode.self
+                    }
                     break loop
                 }
                 for attribute in telegramFile.attributes {
@@ -380,8 +403,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.elligibleForLargeEmoji && messageTextIsElligibleForLargeEmoji(message.text) {
-            viewClassName = ChatMessageStickerItemNode.self
+        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.media.isEmpty {
+            if self.message.text.count == 1, let _ = self.associatedData.animatedEmojiStickers[self.message.text.basicEmoji.0] {
+                viewClassName = ChatMessageAnimatedStickerItemNode.self
+            } else if messageIsElligibleForLargeEmoji(self.message) {
+                viewClassName = ChatMessageStickerItemNode.self
+            }
         }
         
         let configure = {

@@ -7,6 +7,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
+import AccountContext
+import LocalizedPeerData
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 
@@ -14,6 +18,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -39,18 +44,23 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            if self.visibility != oldValue {
-                self.interactiveVideoNode.visibility = self.visibility
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.interactiveVideoNode.visibility = isVisible
             }
         }
     }
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.interactiveVideoNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.interactiveVideoNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -134,8 +144,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.id.peerId == item.context.account.peerId {
+            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                needShareButton = false
+            }
+            else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
@@ -179,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -370,6 +385,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     
@@ -387,6 +405,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
                     videoApply(videoLayoutData, transition)
+                    
+                    strongSelf.contextSourceNode.contentRect = videoFrame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -459,7 +479,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {
@@ -565,7 +585,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 var navigate: ChatControllerInteractionNavigateToPeer
                                 
                                 if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                    navigate = .chat(textInputState: nil, messageId: nil)
+                                    navigate = .chat(textInputState: nil, subject: nil)
                                 } else {
                                     navigate = .info
                                 }
@@ -573,7 +593,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 for attribute in item.content.firstMessage.attributes {
                                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                                         openPeerId = attribute.messageId.peerId
-                                        navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                        navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                     }
                                 }
                                 
@@ -616,7 +636,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     }
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
+                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
                                 } else if let _ = forwardInfo.authorSignature {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                                 }
@@ -627,7 +647,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         self.item?.controllerInteraction.clickThroughMessage()
                     case .longTap, .doubleTap:
                         if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
-                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds)
+                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds, nil)
                         }
                     case .hold:
                         break
@@ -670,7 +690,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -758,12 +778,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
                 if animated {
-                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
                     
                     if !incoming {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                     }
                 }
             }
@@ -773,13 +793,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DIdentity
                 if animated {
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, completion: { [weak selectionNode]_ in
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { [weak selectionNode]_ in
                         selectionNode?.removeFromSupernode()
                     })
-                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     if CGFloat(0.0).isLessThanOrEqualTo(selectionNode.frame.origin.x) {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                     }
                 } else {
                     selectionNode.removeFromSupernode()
@@ -808,5 +828,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveVideoNode.playMediaWithSound()
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

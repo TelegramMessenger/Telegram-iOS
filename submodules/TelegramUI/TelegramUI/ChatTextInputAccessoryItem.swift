@@ -7,4 +7,5 @@ enum ChatTextInputAccessoryItem: Equatable {
     case commands
     case silentPost(Bool)
     case messageAutoremoveTimeout(Int32?)
+    case scheduledMessages
 }

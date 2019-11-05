@@ -6,7 +6,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import LegacyComponents
 
 import RMIntro
@@ -69,13 +68,13 @@ final class AuthorizationSequenceSplashController: ViewController {
             })
         })
         
-        self.controller = RMIntroViewController(backgroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.auth.introStartButton, accentColor: theme.list.itemAccentColor, regularDotColor: theme.auth.introDotColor, highlightedDotColor: theme.list.itemPrimaryTextColor, suggestedLocalizationSignal: localizationSignal)
+        self.controller = RMIntroViewController(backgroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.intro.startButtonColor, accentColor: theme.list.itemAccentColor, regularDotColor: theme.intro.dotColor, highlightedDotColor: theme.list.itemPrimaryTextColor, suggestedLocalizationSignal: localizationSignal)
         
         super.init(navigationBarPresentationData: nil)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.controller.startMessaging = { [weak self] in
             self?.activateLocalization("en")

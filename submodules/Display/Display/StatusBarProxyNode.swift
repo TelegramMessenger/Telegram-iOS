@@ -51,6 +51,14 @@ private func maxSubviewBounds(_ view: UIView) -> CGRect {
     return bounds
 }
 
+private let formatter: DateFormatter? = {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .short
+    formatter.locale = Locale.current
+    return formatter
+}()
+
+
 private class StatusBarItemNode: ASDisplayNode {
     var statusBarStyle: StatusBarStyle
     var targetView: UIView
@@ -103,11 +111,42 @@ private class StatusBarItemNode: ASDisplayNode {
                 }
             }
         } else {
-            context.withContext { c in
-                c.translateBy(x: containingBounds.minX, y: -containingBounds.minY)
-                UIGraphicsPushContext(c)
-                self.targetView.layer.render(in: c)
-                UIGraphicsPopContext()
+            if self.targetView.checkIsKind(of: timeViewClass) {
+                context.withContext { c in
+                    c.translateBy(x: containingBounds.minX, y: -containingBounds.minY)
+                    UIGraphicsPushContext(c)
+                    
+                    let color: UIColor
+                    switch self.statusBarStyle {
+                        case .Black, .Ignore, .Hide:
+                            color = UIColor.black
+                        case .White:
+                            color = UIColor.white
+                    }
+                    
+                    formatter?.locale = Locale.current
+                    if let string = formatter?.string(from: Date()) {
+                        let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 12.0), NSAttributedString.Key.foregroundColor: color])
+                        
+                        let line = CTLineCreateWithAttributedString(attributedString)
+
+                        c.translateBy(x: containingBounds.width / 2.0, y: containingBounds.height / 2.0)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -containingBounds.width / 2.0, y: -containingBounds.height / 2.0)
+                        
+                        c.translateBy(x: 0.0, y: 5.0 + UIScreenPixel)
+                        CTLineDraw(line, c)
+                    }
+                    
+                    UIGraphicsPopContext()
+                }
+            } else {
+                context.withContext { c in
+                    c.translateBy(x: containingBounds.minX, y: -containingBounds.minY)
+                    UIGraphicsPushContext(c)
+                    self.targetView.layer.render(in: c)
+                    UIGraphicsPopContext()
+                }
             }
         }
         //dumpViews(self.targetView)
@@ -136,8 +175,9 @@ private class StatusBarItemNode: ASDisplayNode {
                 type = .Activity
             }
         }
-        tintStatusBarItem(context, type: type, style: statusBarStyle)
-        self.contentNode.contents = context.generateImage()?.cgImage
+        tintStatusBarItem(context, type: type, style: self.statusBarStyle)
+        let image = context.generateImage()?.cgImage
+        self.contentNode.contents = image
         
         let mappedFrame = self.targetView.convert(self.targetView.bounds, to: self.rootView)
         self.frame = mappedFrame
@@ -356,6 +396,14 @@ private let stringClass: AnyClass? = {
     return NSClassFromString("_UI" + nameString)
 }()
 
+private let timeViewClass: AnyClass? = {
+    var nameString = "StatusBar"
+    if CFAbsoluteTimeGetCurrent() > 0 {
+        nameString += "TimeItemView"
+    }
+    return NSClassFromString("UI" + nameString)
+}()
+
 private func containsSubviewOfClass(view: UIView, of subviewClass: AnyClass?) -> Bool {
     guard let subviewClass = subviewClass else {
         return false
@@ -434,7 +482,7 @@ class StatusBarProxyNode: ASDisplayNode {
                     self.timer = Timer(timeInterval: 5.0, target: StatusBarProxyNodeTimerTarget { [weak self] in
                         self?.updateItems()
                     }, selector: #selector(StatusBarProxyNodeTimerTarget.tick), userInfo: nil, repeats: true)
-                    RunLoop.main.add(self.timer!, forMode: .commonModes)
+                    RunLoop.main.add(self.timer!, forMode: .common)
                 } else {
                     self.timer?.invalidate()
                     self.timer = nil

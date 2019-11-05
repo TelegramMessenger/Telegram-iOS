@@ -13,6 +13,13 @@ public struct HistoryPreloadIndex: Comparable {
     public let isMuted: Bool
     public let isPriority: Bool
     
+    public init(index: ChatListIndex?, hasUnread: Bool, isMuted: Bool, isPriority: Bool) {
+        self.index = index
+        self.hasUnread = hasUnread
+        self.isMuted = isMuted
+        self.isPriority = isPriority
+    }
+    
     public static func <(lhs: HistoryPreloadIndex, rhs: HistoryPreloadIndex) -> Bool {
         if lhs.isPriority != rhs.isPriority {
             if lhs.isPriority {
@@ -309,7 +316,7 @@ final class ChatHistoryPreloadManager {
             }
             return disposable
         }
-        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
+        self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), self.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()), additionalPeerIds)
         |> delay(1.0, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] view, additionalPeerIds in
             guard let strongSelf = self else {

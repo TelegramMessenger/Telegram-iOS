@@ -5,8 +5,12 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import AccountContext
+import ShareController
+import LegacyUI
+import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -55,9 +59,13 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
-    if (peer is TelegramUser) && peer.id != context.account.peerId {
-        controller.hasTimer = true
+    if peer.id != context.account.peerId {
+        if peer is TelegramUser {
+            controller.hasTimer = hasSchedule
+        }
+        controller.hasSilentPosting = !isSecretChat
     }
+    controller.hasSchedule = hasSchedule
     
     let screenSize = parentController.view.bounds.size
     var startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)

@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 public extension MessageFlags {
-    public var isSending: Bool {
+    var isSending: Bool {
         return (self.contains(.Unsent) || self.contains(.Sending)) && !self.contains(.Failed)
     }
 }
@@ -28,7 +28,7 @@ public extension Message {
         return nil
     }
     
-    public var muted: Bool {
+    var muted: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? NotificationInfoMessageAttribute {
                 return attribute.flags.contains(.muted)
@@ -37,7 +37,7 @@ public extension Message {
         return false
     }
     
-    public var personal: Bool {
+    var personal: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? NotificationInfoMessageAttribute {
                 return attribute.flags.contains(.personal)
@@ -77,7 +77,7 @@ public extension Message {
         return false
     }
     
-    public var sourceReference: SourceReferenceMessageAttribute? {
+    var sourceReference: SourceReferenceMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? SourceReferenceMessageAttribute {
                 return attribute
@@ -86,7 +86,7 @@ public extension Message {
         return nil
     }
     
-    public var effectiveAuthor: Peer? {
+    var effectiveAuthor: Peer? {
         if let forwardInfo = self.forwardInfo, let sourceReference = self.sourceReference, forwardInfo.author?.id == sourceReference.messageId.peerId {
             if let peer = self.peers[sourceReference.messageId.peerId] {
                 return peer
@@ -171,4 +171,32 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     }
     
     return Message(stableId: 0, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+}
+
+public extension Message {
+    func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
+        if self.id.peerId == accountPeerId {
+            if self.forwardInfo != nil {
+                return true
+            } else {
+                return false
+            }
+        } else if self.flags.contains(.Incoming) {
+            return true
+        } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func effectivelyFailed(timestamp: Int32) -> Bool {
+        if self.flags.contains(.Failed) {
+            return true
+        } else if self.id.namespace == Namespaces.Message.ScheduledCloud {
+            return timestamp > self.timestamp + 60
+        } else {
+            return false
+        }
+    }
 }

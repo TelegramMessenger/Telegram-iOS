@@ -1,83 +1,572 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
-   <FileRef
-      location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/WatchCommon/WatchCommon_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/BuildConfig/BuildConfig_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/MediaPlayer/UniversalMediaPlayer_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramPresentationData/TelegramPresentationData_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramVoip/TelegramVoip_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramUIPreferences/TelegramUIPreferences_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/RMIntro/RMIntro_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramCallsUI/TelegramCallsUI_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/Display/Display_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/Postbox/Postbox_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/MtProtoKit/MtProtoKit_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/LegacyComponents/LegacyComponents_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/lottie-ios/Lottie_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/ffmpeg/FFMpeg_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/webp/WebP_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/libtgvoip/libtgvoip_Xcode.xcodeproj">
-   </FileRef>
+   <Group
+      location = "container:"
+      name = "Third Party">
+      <FileRef
+         location = "group:submodules/lottie-ios/Lottie_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/webp/WebP_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HockeySDK-iOS/Support/HockeySDK_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ffmpeg/FFMpeg_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Stripe/Stripe_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Opus/opus_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/OpusBinding/OpusBinding_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/rlottie/RLottieBinding_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Core">
+      <FileRef
+         location = "group:submodules/sqlcipher/sqlcipher_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Postbox/Postbox_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MtProtoKit/MtProtoKit_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LiveLocationManager/LiveLocationManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/InstantPageCache/InstantPageCache_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Utils">
+      <FileRef
+         location = "group:submodules/AccountContext/AccountContext_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LegacyDataImport/LegacyDataImport_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TemporaryCachedPeerDataManager/TemporaryCachedPeerDataManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MergeLists/MergeLists_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MapResourceToAvatarSizes/MapResourceToAvatarSizes_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LocalizedPeerData/LocalizedPeerData_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UrlEscaping/UrlEscaping_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Tuples/Tuples_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramNotices/TelegramNotices_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramPermissions/TelegramPermissions_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WebsiteType/WebsiteType_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ScreenCaptureDetection/ScreenCaptureDetection_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Crc32/Crc32_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Pdf/Pdf_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MosaicLayout/MosaicLayout_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MimeTypes/MimeTypes_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Geocoding/Geocoding_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UrlHandling/UrlHandling_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HexColor/HexColor_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/QrCode/QrCode_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PersistentStringHash/PersistentStringHash_Xcode.xcodeproj">
+      </FileRef>
+      <Group
+         location = "container:"
+         name = "Device">
+         <FileRef
+            location = "group:submodules/DeviceLocationManager/DeviceLocationManager_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SaveToCameraRoll/SaveToCameraRoll_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LocalAuth/LocalAuth_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/DeviceProximity/DeviceProximity_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/RaiseToListen/RaiseToListen_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ShareItems/ShareItems_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Text Processing">
+         <FileRef
+            location = "group:submodules/TextFormat/TextFormat_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/Emoji/Emoji_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Image Processing">
+         <FileRef
+            location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/TinyThumbnail/TinyThumbnail_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ImageTransparency/ImageTransparency_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ImageCompression/ImageCompression_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/EncryptionKeyVisualization/EncryptionKeyVisualization_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Voip">
+      <FileRef
+         location = "group:submodules/TelegramVoip/TelegramVoip_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/libtgvoip/libtgvoip_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Media">
+      <FileRef
+         location = "group:submodules/TelegramAudio/TelegramAudio_Xcode.xcodeproj">
+      </FileRef>
+      <Group
+         location = "container:"
+         name = "Resources">
+         <FileRef
+            location = "group:submodules/MediaResources/MediaResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PhotoResources/PhotoResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/WallpaperResources/WallpaperResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/MusicAlbumArtResources/MusicAlbumArtResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LocalMediaResources/LocalMediaResources_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Shared">
+      <FileRef
+         location = "group:submodules/LightweightAccountData/LightweightAccountData_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WatchCommon/WatchCommon_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/BuildConfig/BuildConfig_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "UI Components">
+      <Group
+         location = "container:"
+         name = "Authorization">
+         <FileRef
+            location = "group:submodules/AuthorizationUI/AuthorizationUI_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Video Content">
+         <FileRef
+            location = "group:submodules/TelegramUniversalVideoContent/TelegramUniversalVideoContent_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Nodes">
+         <FileRef
+            location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LiveLocationTimerNode/LiveLocationTimerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LiveLocationPositionNode/LiveLocationPositionNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/CheckNode/CheckNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SwitchNode/SwitchNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ActivityIndicator/ActivityIndicator_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ProgressNavigationButtonNode/ProgressNavigationButtonNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PhoneInputNode/PhoneInputNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SearchBarNode/SearchBarNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchItemNode/ChatListSearchItemNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PeersNearbyIconNode/PeersNearbyIconNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SolidRoundedButtonNode/SolidRoundedButtonNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatTitleActivityNode/ChatTitleActivityNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/TextSelectionNode/TextSelectionNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SinglePhoneInputNode/SinglePhoneInputNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/CounterContollerTitleView/CounterContollerTitleView_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/GridMessageSelectionNode/GridMessageSelectionNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Gestures">
+         <FileRef
+            location = "group:submodules/TouchDownGesture/TouchDownGesture_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SwipeToDismissGesture/SwipeToDismissGesture_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/DirectionalPanGesture/DirectionalPanGesture_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Share">
+         <FileRef
+            location = "group:submodules/ShareController/ShareController_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Action Sheet">
+         <FileRef
+            location = "group:submodules/DateSelectionUI/DateSelectionUI_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ActionSheetPeerItem/ActionSheetPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/DeleteChatPeerActionSheetItem/DeleteChatPeerActionSheetItem_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "List">
+         <FileRef
+            location = "group:submodules/ItemListUI/ItemListUI_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ListSectionHeaderNode/ListSectionHeaderNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ContactsPeerItem/ContactsPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListPeerItem/ItemListPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListAvatarAndNameInfoItem/ItemListAvatarAndNameInfoItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListPeerActionItem/ItemListPeerActionItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListStickerPackItem/ItemListStickerPackItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListAddressItem/ItemListAddressItem_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Peers">
+         <FileRef
+            location = "group:submodules/HorizontalPeerItem/HorizontalPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchRecentPeersNode/ChatListSearchRecentPeersNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PeerOnlineMarkerNode/PeerOnlineMarkerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SelectablePeerNode/SelectablePeerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Chat">
+         <FileRef
+            location = "group:submodules/ReactionSelectionNode/ReactionSelectionNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <FileRef
+         location = "group:submodules/LegacyComponents/LegacyComponents_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LegacyUI/LegacyUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/OpenInExternalAppUI/OpenInExternalAppUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/AlertUI/AlertUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/OverlayStatusController/OverlayStatusController_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MediaPlayer/UniversalMediaPlayer_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramUpdateUI/TelegramUpdateUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramPresentationData/TelegramPresentationData_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramUIPreferences/TelegramUIPreferences_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramCallsUI/TelegramCallsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/RMIntro/RMIntro_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/AnimationUI/AnimationUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Display/Display_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ComposePollUI/ComposePollUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UndoUI/UndoUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/SearchUI/SearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/GameUI/GameUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WebUI/WebUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PassportUI/PassportUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/CountrySelectionUI/CountrySelectionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/GalleryUI/GalleryUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeerAvatarGalleryUI/PeerAvatarGalleryUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PasswordSetupUI/PasswordSetupUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/InstantPageUI/InstantPageUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LocationUI/LocationUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/BotPaymentsUI/BotPaymentsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ContactListUI/ContactListUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramPermissionsUI/TelegramPermissionsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PasscodeUI/PasscodeUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/CallListUI/CallListUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ChatListUI/ChatListUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LanguageSuggestionUI/LanguageSuggestionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HashtagSearchUI/HashtagSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/StickerPackPreviewUI/StickerPackPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/JoinLinkPreviewUI/JoinLinkPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LanguageLinkPreviewUI/LanguageLinkPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WebSearchUI/WebSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeersNearbyUI/PeersNearbyUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/NotificationMuteSettingsUI/NotificationMuteSettingsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/NotificationSoundSelectionUI/NotificationSoundSelectionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeerInfoUI/PeerInfoUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/SettingsUI/SettingsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MessageReactionListUI/MessageReactionListUI_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Watch Bridge">
+      <FileRef
+         location = "group:submodules/WatchBridgeAudio/WatchBridgeAudio_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WatchBridge/WatchBridge_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
    <FileRef
       location = "group:submodules/TelegramUI/TelegramUI_Xcode.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:submodules/HockeySDK-iOS/Support/HockeySDK_Xcode.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Telegram-iOS.xcodeproj">

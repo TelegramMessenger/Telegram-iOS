@@ -6,6 +6,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import SearchBarNode
+import SearchUI
+import ContactListUI
+import ChatListUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -204,7 +209,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             
             let contactsInsets = insets
             
-            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: contactsInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: contactsInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
         }
         
         if let searchDisplayController = self.searchDisplayController {
@@ -305,7 +310,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func animateOut(completion: (() -> Void)? = nil) {
         self.clipsToBounds = true
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -341,7 +346,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     contactListNode.suppressPermissionWarning = { [weak self] in
                         if let strongSelf = self {
-                            presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                            strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                                 strongSelf.present(c, a)
                             })
                         }

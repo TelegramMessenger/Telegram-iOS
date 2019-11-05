@@ -4,6 +4,7 @@ import AsyncDisplayKit
 
 public final class AccessibilityAreaNode: ASDisplayNode {
     public var activate: (() -> Bool)?
+    public var focused: (() -> Void)?
     
     override public init() {
         super.init()
@@ -17,5 +18,25 @@ public final class AccessibilityAreaNode: ASDisplayNode {
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return nil
+    }
+    
+    override public func accessibilityElementDidBecomeFocused() {
+        if let focused = self.focused {
+            focused()
+        } else {
+            var supernode = self.supernode
+            while true {
+                if let supernodeValue = supernode {
+                    if let listItemNode = supernodeValue as? ListViewItemNode {
+                        listItemNode.accessibilityElementDidBecomeFocused()
+                        break
+                    } else {
+                        supernode = supernodeValue.supernode
+                    }
+                } else {
+                    break
+                }
+            }
+        }
     }
 }

@@ -14,7 +14,7 @@ open class UITracingLayerView: UIView {
         self.setNeedsLayout()
     }
     
-    override open var autoresizingMask: UIViewAutoresizing {
+    override open var autoresizingMask: UIView.AutoresizingMask {
         get {
             return []
         } set(value) {

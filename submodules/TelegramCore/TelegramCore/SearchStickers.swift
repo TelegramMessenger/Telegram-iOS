@@ -97,7 +97,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
                 if let item = entry.contents as? SavedStickerItem {
                     for representation in item.stringRepresentations {
-                        if representation == query {
+                        if representation.hasPrefix(query) {
                             result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
                             break
                         }
@@ -107,6 +107,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             
             let currentItems = Set<MediaId>(result.map { $0.file.fileId })
             var recentItems: [TelegramMediaFile] = []
+            var recentAnimatedItems: [TelegramMediaFile] = []
             var recentItemsIds = Set<MediaId>()
             var matchingRecentItemsIds = Set<MediaId>()
             
@@ -114,19 +115,29 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                 if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
                     if !currentItems.contains(file.fileId) {
                         for case let .Sticker(sticker) in file.attributes {
-                            if sticker.displayText == query {
+                            if sticker.displayText.hasPrefix(query) {
                                 matchingRecentItemsIds.insert(file.fileId)
                             }
                             recentItemsIds.insert(file.fileId)
-                            recentItems.append(file)
+                            if file.isAnimatedSticker {
+                                recentAnimatedItems.append(file)
+                            } else {
+                                recentItems.append(file)
+                            }
                             break
                         }
                     }
                 }
             }
             
-            var installed: [FoundStickerItem] = []
-            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: .exact(ValueBoxKey(query))) {
+            var searchQuery: ItemCollectionSearchQuery = .exact(ValueBoxKey(query))
+            if query == "\u{2764}" {
+                searchQuery = .any([ValueBoxKey("\u{2764}"), ValueBoxKey("\u{2764}\u{FE0F}")])
+            }
+            
+            var installedItems: [FoundStickerItem] = []
+            var installedAnimatedItems: [FoundStickerItem] = []
+            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: searchQuery) {
                 if let item = item as? StickerPackItem {
                     if !currentItems.contains(item.file.fileId) {
                         var stringRepresentations: [String] = []
@@ -138,11 +149,21 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                             }
                         }
                         if !recentItemsIds.contains(item.file.fileId) {
-                            installed.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                            if item.file.isAnimatedSticker {
+                                installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                            } else {
+                                installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                            }
                         } else {
                             matchingRecentItemsIds.insert(item.file.fileId)
                         }
                     }
+                }
+            }
+            
+            for file in recentAnimatedItems {
+                if matchingRecentItemsIds.contains(file.fileId) {
+                    result.append(FoundStickerItem(file: file, stringRepresentations: [query]))
                 }
             }
             
@@ -152,7 +173,8 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                 }
             }
             
-            result.append(contentsOf: installed)
+            result.append(contentsOf: installedAnimatedItems)
+            result.append(contentsOf: installedItems)
         }
         
         let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
@@ -163,13 +185,24 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
         if !scope.contains(.remote) {
             return .single(tempResult)
         }
-        let currentItems = Set<MediaId>(localItems.map { $0.file.fileId })
+        let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
+        
         if let cached = cached {
+            var cachedItems: [FoundStickerItem] = []
+            var cachedAnimatedItems: [FoundStickerItem] = []
+            
             for file in cached.items {
-                if !currentItems.contains(file.fileId) {
-                    tempResult.append(FoundStickerItem(file: file, stringRepresentations: []))
+                if !currentItemIds.contains(file.fileId) {
+                    if file.isAnimatedSticker {
+                        cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                    } else {
+                        cachedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                    }
                 }
             }
+            
+            tempResult.append(contentsOf: cachedAnimatedItems)
+            tempResult.append(contentsOf: cachedItems)
         }
         
         let remote = account.network.request(Api.functions.messages.getStickers(emoticon: query, hash: cached?.hash ?? 0))
@@ -180,21 +213,32 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             return account.postbox.transaction { transaction -> [FoundStickerItem] in
                 switch result {
                     case let .stickers(hash, stickers):
-                        var items: [FoundStickerItem] = localItems
-                        let currentItems = Set<MediaId>(items.map { $0.file.fileId })
+                        var items: [FoundStickerItem] = []
+                        var animatedItems: [FoundStickerItem] = []
+                        
+                        var result: [FoundStickerItem] = localItems
+                        let currentItemIds = Set<MediaId>(result.map { $0.file.fileId })
                         
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
                                 files.append(file)
-                                if !currentItems.contains(id) {
-                                    items.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                if !currentItemIds.contains(id) {
+                                    if file.isAnimatedSticker {
+                                        animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    } else {
+                                        items.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    }
                                 }
                             }
                         }
+                        
+                        result.append(contentsOf: animatedItems)
+                        result.append(contentsOf: items)
+                        
                         transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash), collectionSpec: collectionSpec)
                     
-                        return items
+                        return result
                     case .stickersNotModified:
                         break
                 }
@@ -293,6 +337,9 @@ public func searchGifs(account: Account, query: String) -> Signal<ChatContextRes
     }
     |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
         return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: "")
+        |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+            return .single(nil)
+        }
     }
 }
 

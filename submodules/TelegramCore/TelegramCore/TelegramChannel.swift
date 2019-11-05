@@ -72,6 +72,7 @@ public struct TelegramChannelGroupFlags: OptionSet {
     public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
+    public static let slowModeEnabled = TelegramChannelGroupFlags(rawValue: 1 << 0)
 }
 
 public struct TelegramChannelGroupInfo: Equatable {
@@ -144,6 +145,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let isVerified = TelegramChannelFlags(rawValue: 1 << 0)
     public static let isCreator = TelegramChannelFlags(rawValue: 1 << 1)
     public static let isScam = TelegramChannelFlags(rawValue: 1 << 2)
+    public static let hasGeo = TelegramChannelFlags(rawValue: 1 << 3)
 }
 
 public final class TelegramChannel: Peer {
@@ -314,7 +316,7 @@ public enum TelegramChannelPermission {
 }
 
 public extension TelegramChannel {
-    public func hasPermission(_ permission: TelegramChannelPermission) -> Bool {
+    func hasPermission(_ permission: TelegramChannelPermission) -> Bool {
         if self.flags.contains(.isCreator) {
             return true
         }
@@ -432,5 +434,19 @@ public extension TelegramChannel {
             return (bannedRights.untilDate, true)
         }
         return nil
+    }
+    
+    public var isRestrictedBySlowmode: Bool {
+        if self.flags.contains(.isCreator) {
+            return false
+        }
+        if let adminRights = self.adminRights, !adminRights.flags.isEmpty {
+            return false
+        }
+        if case let .group(group) = self.info {
+            return group.flags.contains(.slowModeEnabled)
+        } else {
+            return false
+        }
     }
 }

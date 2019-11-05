@@ -4,12 +4,14 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import PhotoResources
+import ImageCompression
 
 public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, media: AnyMediaReference, opportunistic: Bool) -> Signal<AnyMediaReference?, NoError> {
     switch media.media {
         case let file as TelegramMediaFile:
             let signal = Signal<MediaResourceData, NoError> { subscriber in
-                let fetch = fetchedMediaResource(postbox: postbox, reference: media.resourceReference(file.resource)).start()
+                let fetch = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: media.resourceReference(file.resource)).start()
                 let data = postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                     subscriber.putNext(next)
                     if next.complete {
@@ -46,7 +48,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                     if let scaledImage = generateImage(image.size.fitted(CGSize(width: 320.0, height: 320.0)), contextGenerator: { size, context in
                                         context.setBlendMode(.copy)
                                         drawImage(context: context, image: image.cgImage!, orientation: image.imageOrientation, in: CGRect(origin: CGPoint(), size: size))
-                                    }, scale: 1.0), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                                    }, scale: 1.0), let thumbnailData = scaledImage.jpegData(compressionQuality: 0.6) {
                                         /*if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                                             #if DEBUG
                                             if true, let heicData = compressImage(scaledImage, quality: 0.7) {
@@ -95,7 +97,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                         } |> runOn(opportunistic ? Queue.mainQueue() : Queue.concurrentDefaultQueue())
                     } else if file.mimeType.hasPrefix("video/") {
                         return Signal { subscriber in
-                            if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 320.0, height: 320.0)), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                            if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 320.0, height: 320.0)), let thumbnailData = scaledImage.jpegData(compressionQuality: 0.6) {
                                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                             
@@ -125,7 +127,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
         case let image as TelegramMediaImage:
             if let representation = largestImageRepresentation(image.representations) {
                 let signal = Signal<MediaResourceData, NoError> { subscriber in
-                    let fetch = fetchedMediaResource(postbox: postbox, reference: media.resourceReference(representation.resource)).start()
+                    let fetch = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: media.resourceReference(representation.resource)).start()
                     let data = postbox.mediaBox.resourceData(representation.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { next in
                         subscriber.putNext(next)
                         if next.complete {

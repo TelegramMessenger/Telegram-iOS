@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import AccountContext
 
 class ChatInputPanelNode: ASDisplayNode {
     var context: AccountContext?

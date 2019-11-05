@@ -232,7 +232,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     }
     UIView *parentView = [_presentation view];
     
-    CGPoint centerPoint = [self.superview convertPoint:self.center toView:parentView];
+    CGPoint centerPointInSelfWindow = [self.window convertPoint:self.center fromView:self.superview];
+    CGPoint centerPointInParentViewWindow = [self.window convertPoint:centerPointInSelfWindow toWindow:parentView.window];
+    CGPoint centerPoint = [parentView.window convertPoint:centerPointInParentViewWindow toView:parentView];
+    
     centerPoint.x += _centerOffset.x;
     centerPoint.y += _centerOffset.y;
     _innerCircleView.center = centerPoint;
@@ -391,7 +394,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         [[_presentation view] addSubview:_innerIconWrapperView];
         
         _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 38.0f)];
-        _stopButton.accessibilityLabel = @"Stop and preview";
+        _stopButton.accessibilityLabel = TGLocalized(@"VoiceOver.Recording.StopAndPreview");
         _stopButton.adjustsImageWhenHighlighted = false;
         _stopButton.exclusiveTouch = true;
         [_stopButton setImage:[self stopButtonImage] forState:UIControlStateNormal];

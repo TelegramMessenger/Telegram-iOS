@@ -38,9 +38,9 @@ private final class ContextMenuContentScrollNode: ASDisplayNode {
         self.rightShadow.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         
         self.leftOverscrollNode = ASDisplayNode()
-        self.leftOverscrollNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        //self.leftOverscrollNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         self.rightOverscrollNode = ASDisplayNode()
-        self.rightOverscrollNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        //self.rightOverscrollNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
         super.init()
         
@@ -55,8 +55,8 @@ private final class ContextMenuContentScrollNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        self.view.addGestureRecognizer(panRecognizer)
+        //let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        //self.view.addGestureRecognizer(panRecognizer)
     }
     
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -221,21 +221,33 @@ final class ContextMenuNode: ASDisplayNode {
         self.scrollNode.layout()
     }
     
-    func animateIn() {
-        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.2)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4)
+    func animateIn(bounce: Bool) {
+        if bounce {
+            self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.2)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4)
+            let containerPosition = self.containerNode.layer.position
+            self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
+        }
         
-        let containerPosition = self.containerNode.layer.position
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
-        
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        self.allowsGroupOpacity = true
+        self.layer.rasterizationScale = UIScreen.main.scale
+        self.layer.shouldRasterize = true
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak self] _ in
+            self?.allowsGroupOpacity = false
+            self?.layer.shouldRasterize = false
+        })
         
         if let feedback = self.feedback {
             feedback.impact(.light)
         }
     }
     
-    func animateOut(completion: @escaping () -> Void) {
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+    func animateOut(bounce: Bool, completion: @escaping () -> Void) {
+        self.allowsGroupOpacity = true
+        self.layer.rasterizationScale = UIScreen.main.scale
+        self.layer.shouldRasterize = true
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.allowsGroupOpacity = false
+            self?.layer.shouldRasterize = false
             completion()
         })
     }

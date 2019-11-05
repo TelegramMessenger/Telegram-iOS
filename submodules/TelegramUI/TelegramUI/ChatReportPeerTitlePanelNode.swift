@@ -76,7 +76,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.separatorNode.isLayerBacked = true
         
         self.closeButton = HighlightableButtonNode()
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         super.init()
@@ -92,8 +92,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
-            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
-            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
         
         let panelHeight: CGFloat = 40.0

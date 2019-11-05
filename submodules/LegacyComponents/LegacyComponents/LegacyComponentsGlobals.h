@@ -9,7 +9,6 @@
 @protocol SDisposable;
 @class TGLocalization;
 @class UIViewController;
-@class TGWallpaperInfo;
 @class TGMemoryImageCache;
 @class TGImageMediaAttachment;
 @class TGNavigationBarPallete;
@@ -64,9 +63,6 @@ typedef enum {
 - (SSignal *)recentStickerMasksSignal;
 
 - (id<SDisposable>)requestAudioSession:(TGAudioSessionType)type interrupted:(void (^)())interrupted;
-
-- (TGWallpaperInfo *)currentWallpaperInfo;
-- (UIImage *)currentWallpaperImage;
 
 - (SThreadPool *)sharedMediaImageProcessingThreadPool;
 - (TGMemoryImageCache *)sharedMediaMemoryImageCache;

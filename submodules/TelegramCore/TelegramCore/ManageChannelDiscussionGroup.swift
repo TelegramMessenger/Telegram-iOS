@@ -43,21 +43,14 @@ public enum ChannelDiscussionGroupError {
     case hasNotPermissions
 }
 
-public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
+public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId?, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
-        return (channel: transaction.getPeer(channelId), group: groupId != nil ? transaction.getPeer(groupId!) : nil)
+        return (channel: channelId.flatMap(transaction.getPeer), group: groupId.flatMap(transaction.getPeer))
     }
     |> mapError { _ in ChannelDiscussionGroupError.generic }
-    |> mapToSignal { peers -> Signal<Bool, ChannelDiscussionGroupError> in
-        guard let channel = peers.channel else {
-            return .fail(.generic)
-        }
-        
-        let tempGroupApi = peers.group != nil ? apiInputChannel(peers.group!) : Api.InputChannel.inputChannelEmpty
-        
-        guard let apiChannel = apiInputChannel(channel), let apiGroup = tempGroupApi else {
-            return .fail(.generic)
-        }
+    |> mapToSignal { channel, group -> Signal<Bool, ChannelDiscussionGroupError> in
+        let apiChannel = channel.flatMap(apiInputChannel) ?? Api.InputChannel.inputChannelEmpty
+        let apiGroup = group.flatMap(apiInputChannel) ?? Api.InputChannel.inputChannelEmpty
         
         return network.request(Api.functions.channels.setDiscussionGroup(broadcast: apiChannel, group: apiGroup))
         |> map { result in
@@ -82,17 +75,33 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
     |> mapToSignal { result in
         if result {
             return postbox.transaction { transaction in
-                var previousGroupId: PeerId?
-                transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
-                    let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
-                    previousGroupId = current.linkedDiscussionPeerId
-                    return current.withUpdatedLinkedDiscussionPeerId(groupId)
-                })
-                if let associatedId = previousGroupId ?? groupId  {
-                    transaction.updatePeerCachedData(peerIds: Set([associatedId]), update: { (_, current) -> CachedPeerData? in
-                        let cachedData = (current as? CachedChannelData ?? CachedChannelData())
-                        return cachedData.withUpdatedLinkedDiscussionPeerId(groupId == nil ? nil : channelId)
+                if let channelId = channelId {
+                    var previousGroupId: PeerId?
+                    transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
+                        let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
+                        previousGroupId = current.linkedDiscussionPeerId
+                        return current.withUpdatedLinkedDiscussionPeerId(groupId)
                     })
+                    if let previousGroupId = previousGroupId, previousGroupId != groupId {
+                        transaction.updatePeerCachedData(peerIds: Set([previousGroupId]), update: { (_, current) -> CachedPeerData? in
+                            let cachedData = (current as? CachedChannelData ?? CachedChannelData())
+                            return cachedData.withUpdatedLinkedDiscussionPeerId(nil)
+                        })
+                    }
+                }
+                if let groupId = groupId {
+                    var previousChannelId: PeerId?
+                    transaction.updatePeerCachedData(peerIds: Set([groupId]), update: { (_, current) -> CachedPeerData? in
+                        let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
+                        previousChannelId = current.linkedDiscussionPeerId
+                        return current.withUpdatedLinkedDiscussionPeerId(channelId)
+                    })
+                    if let previousChannelId = previousChannelId, previousChannelId != channelId {
+                        transaction.updatePeerCachedData(peerIds: Set([previousChannelId]), update: { (_, current) -> CachedPeerData? in
+                            let cachedData = (current as? CachedChannelData ?? CachedChannelData())
+                            return cachedData.withUpdatedLinkedDiscussionPeerId(nil)
+                        })
+                    }
                 }
             }
             |> introduceError(ChannelDiscussionGroupError.self)

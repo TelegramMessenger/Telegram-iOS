@@ -41,6 +41,18 @@ private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
     return image
 }
 
+private let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
 private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId: PeerId, letters: [String]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
@@ -53,8 +65,7 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId:
     
     let colorsArray = gradientColors[colorIndex % gradientColors.count]
     var locations: [CGFloat] = [1.0, 0.0]
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
     
     context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     

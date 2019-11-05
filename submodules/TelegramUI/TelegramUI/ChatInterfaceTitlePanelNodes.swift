@@ -1,19 +1,20 @@
 import Foundation
 import UIKit
 import TelegramCore
+import AccountContext
 
 func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
-    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText != nil {
+    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios") != nil {
         return nil
     }
     if chatPresentationInterfaceState.search != nil {
         return nil
     }
     var selectedContext: ChatTitlePanelContext?
-    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
+    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !chatPresentationInterfaceState.isScheduledMessages {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
@@ -29,7 +30,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     var displayActionsPanel = false
-    if !chatPresentationInterfaceState.peerIsBlocked, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+    if !chatPresentationInterfaceState.peerIsBlocked && !chatPresentationInterfaceState.isScheduledMessages, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if !peerStatusSettings.isEmpty {
             if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                 displayActionsPanel = true

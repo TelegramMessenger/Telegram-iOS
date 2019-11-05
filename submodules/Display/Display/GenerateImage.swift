@@ -1,15 +1,28 @@
 import Foundation
 import UIKit
+import Accelerate
 
-let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
+public let deviceColorSpace: CGColorSpace = {
+    if #available(iOSApplicationExtension 9.3, *) {
+        if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+            return colorSpace
+        } else {
+            return CGColorSpaceCreateDeviceRGB()
+        }
+    } else {
+        return CGColorSpaceCreateDeviceRGB()
+    }
+}()
+
+private let grayscaleColorSpace = CGColorSpaceCreateDeviceGray()
+
 let deviceScale = UIScreen.main.scale
 
-public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
-    let scale = deviceScale
+public func generateImagePixel(_ size: CGSize, scale: CGFloat, pixelGenerator: (CGSize, UnsafeMutablePointer<UInt8>, Int) -> Void) -> UIImage? {
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
+    let bytes = malloc(length)!.assumingMemoryBound(to: UInt8.self)
     guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
     })
@@ -17,7 +30,7 @@ public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMu
         return nil
     }
     
-    pixelGenerator(scaledSize, bytes)
+    pixelGenerator(scaledSize, bytes, bytesPerRow)
     
     let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
     
@@ -27,6 +40,74 @@ public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMu
     }
     
     return UIImage(cgImage: image, scale: scale, orientation: .up)
+}
+
+private func withImageBytes(image: UIImage, _ f: (UnsafePointer<UInt8>, Int, Int, Int) -> Void) {
+    let selectedScale = image.scale
+    let scaledSize = CGSize(width: image.size.width * selectedScale, height: image.size.height * selectedScale)
+    let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
+    let length = bytesPerRow * Int(scaledSize.height)
+    let bytes = malloc(length)!.assumingMemoryBound(to: UInt8.self)
+    memset(bytes, 0, length)
+    
+    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+    
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue) else {
+        return
+    }
+    
+    context.scaleBy(x: selectedScale, y: selectedScale)
+    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: image.size))
+    
+    f(bytes, Int(scaledSize.width), Int(scaledSize.height), bytesPerRow)
+}
+
+public func generateGrayscaleAlphaMaskImage(image: UIImage) -> UIImage? {
+    let selectedScale = image.scale
+    let scaledSize = CGSize(width: image.size.width * selectedScale, height: image.size.height * selectedScale)
+    let bytesPerRow = (1 * Int(scaledSize.width) + 15) & (~15)
+    let length = bytesPerRow * Int(scaledSize.height)
+    let bytes = malloc(length)!.assumingMemoryBound(to: UInt8.self)
+    memset(bytes, 0, length)
+    
+    guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
+        free(bytes)
+    })
+        else {
+            return nil
+    }
+    
+    let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)
+    
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: grayscaleColorSpace, bitmapInfo: bitmapInfo.rawValue) else {
+        return nil
+    }
+    
+    context.scaleBy(x: selectedScale, y: selectedScale)
+    
+    withImageBytes(image: image, { pixels, width, height, imageBytesPerRow in
+        var src = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: pixels), height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: imageBytesPerRow)
+        
+        let permuteMap: [UInt8] = [3, 2, 1, 0]
+        vImagePermuteChannels_ARGB8888(&src, &src, permuteMap, vImage_Flags(kvImageDoNotTile))
+        vImageUnpremultiplyData_ARGB8888(&src, &src, vImage_Flags(kvImageDoNotTile))
+        
+        for y in 0 ..< Int(scaledSize.height) {
+            let srcRowBytes = pixels.advanced(by: y * imageBytesPerRow)
+            let dstRowBytes = bytes.advanced(by: y * bytesPerRow)
+            for x in 0 ..< Int(scaledSize.width) {
+                let a = srcRowBytes.advanced(by: x * 4 + 0).pointee
+                dstRowBytes.advanced(by: x).pointee = 0xff &- a
+            }
+        }
+    })
+    
+    guard let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: bytesPerRow, space: grayscaleColorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        else {
+            return nil
+    }
+    
+    return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
 }
 
 public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) -> Void, opaque: Bool = false, scale: CGFloat? = nil) -> UIImage? {
@@ -287,7 +368,7 @@ public class DrawingContext {
         }
     }
     
-    public init(size: CGSize, scale: CGFloat = 0.0, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = 0.0, premultiplied: Bool = true, clear: Bool = false) {
         let actualScale: CGFloat
         if scale.isZero {
             actualScale = deviceScale
@@ -301,7 +382,11 @@ public class DrawingContext {
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
         self.length = bytesPerRow * Int(scaledSize.height)
         
-        self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+        if premultiplied {
+            self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+        } else {
+            self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.first.rawValue)
+        }
         
         self.bytes = malloc(length)!
         if clear {

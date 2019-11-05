@@ -5,14 +5,24 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramUIPreferences
+import TelegramPresentationData
+import AccountContext
+import OverlayStatusController
+import AlertUI
+import PassportUI
+import InstantPageUI
+import StickerPackPreviewUI
+import JoinLinkPreviewUI
+import LanguageLinkPreviewUI
+import SettingsUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
         if let peerId = peerId {
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return .chat(textInputState: nil, messageId: nil)
+                return .chat(textInputState: nil, subject: nil)
             } else {
-                return .chat(textInputState: nil, messageId: nil)
+                return .chat(textInputState: nil, subject: nil)
             }
         } else {
             return .info
@@ -22,11 +32,11 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
-            openExternalUrl(context: context, urlContext: urlContext, url: url, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
+            context.sharedContext.openExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
         case let .peer(peerId, navigation):
             if let peerId = peerId {
                 openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: navigation))
@@ -38,7 +48,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
-            let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup)
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup))
             controller.peerSelected = { [weak controller] peerId in
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
@@ -56,7 +66,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     let _ = (requestStartBotInGroup(account: context.account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in
                         if let navigationController = navigationController {
-                            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                         }
                         switch result {
                             case let .channelParticipant(participant):
@@ -73,18 +83,18 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             dismissInput()
             present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
         case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
             let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-            controller.sendSticker = sendFile
+            controller.sendSticker = sendSticker
             present(controller, nil)
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
-                openPeer(peerId, .chat(textInputState: nil, messageId: nil))
+                openPeer(peerId, .chat(textInputState: nil, subject: nil))
             }), nil)
         case let .localization(identifier):
             dismissInput()
@@ -167,8 +177,10 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                         })
                     })
                     |> deliverOnMainQueue).start(completed: {
-                        navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId), messageId: nil))
+                        navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                     })
+                } else {
+                    navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                 }
             }
             
@@ -184,7 +196,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 })
             } else {
-                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                 controller.peerSelected = { [weak controller] peerId in
                     if let strongController = controller {
                         strongController.dismiss()
@@ -224,6 +236,96 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })
+            dismissInput()
+        case let .theme(slug):
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let signal = getTheme(account: context.account, slug: slug)
+            |> mapToSignal { themeInfo -> Signal<(Data, TelegramTheme), GetThemeError> in
+                return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
+                    let disposables = DisposableSet()
+                    let resource = themeInfo.file?.resource
+                    
+                    if let resource = resource {
+                        disposables.add(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: resource)).start())
+                        
+                        let maybeFetched = context.sharedContext.accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                        |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+                            if maybeData.complete {
+                                let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                                return .single(loadedData)
+                            } else {
+                                return context.account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                                |> map { next -> Data? in
+                                    if next.size > 0, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []) {
+                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                        return data
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            }
+                        }
+                   
+                        disposables.add(maybeFetched.start(next: { data in
+                            if let data = data {
+                                subscriber.putNext((data, themeInfo))
+                                subscriber.putCompletion()
+                            }
+                        }))
+                    } else {
+                        subscriber.putError(.generic)
+                    }
+                    
+                    return disposables
+                }
+            }
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            present(controller, nil)
+            
+            var cancelImpl: (() -> Void)?
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                present(controller, nil)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.35, queue: Queue.mainQueue())
+            
+            let disposable = MetaDisposable()
+            let progressDisposable = progressSignal.start()
+            cancelImpl = {
+                disposable.set(nil)
+            }
+            disposable.set((signal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
+                controller?.dismiss()
+                
+                if let theme = makePresentationTheme(data: dataAndTheme.0) {
+                    let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
+                    present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
+            }, error: { [weak controller] error in
+                let errorText: String
+                switch error {
+                    case .generic, .slugInvalid:
+                        errorText = presentationData.strings.Theme_ErrorNotFound
+                    case .unsupported:
+                        errorText = presentationData.strings.Theme_Unsupported
+                }
+                present(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                controller?.dismiss()
+            }))
             dismissInput()
     }
 }

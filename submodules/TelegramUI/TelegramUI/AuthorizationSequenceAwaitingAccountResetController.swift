@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequenceAwaitingAccountResetController: ViewController {
     private var controllerNode: AuthorizationSequenceAwaitingAccountResetControllerNode {
@@ -37,7 +38,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.attemptNavigation = { _ in
             return false

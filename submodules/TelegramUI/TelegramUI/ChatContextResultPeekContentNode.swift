@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AVFoundation
+import PhotoResources
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account
@@ -83,19 +84,19 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
                     
                     let displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
                     self.displayLink = displayLink
-                    displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+                    displayLink.add(to: RunLoop.main, forMode: .common)
                     if #available(iOS 10.0, *) {
                         displayLink.preferredFramesPerSecond = 25
                     } else {
                         displayLink.frameInterval = 2
                     }
                     displayLink.isPaused = false
-                    CMTimebaseSetRate(self.timebase, 1.0)
+                    CMTimebaseSetRate(self.timebase, rate: 1.0)
                 } else if let displayLink = self.displayLink {
                     self.displayLink = nil
                     displayLink.isPaused = true
                     displayLink.invalidate()
-                    CMTimebaseSetRate(self.timebase, 0.0)
+                    CMTimebaseSetRate(self.timebase, rate: 0.0)
                 }
             }
         }
@@ -120,8 +121,8 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
-        CMTimebaseSetRate(timebase!, 0.0)
+        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
         super.init()

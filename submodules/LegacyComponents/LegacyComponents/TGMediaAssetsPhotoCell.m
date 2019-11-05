@@ -1,5 +1,7 @@
 #import "TGMediaAssetsPhotoCell.h"
 
+#import "LegacyComponentsInternal.h"
+
 NSString *const TGMediaAssetsPhotoCellKind = @"TGMediaAssetsPhotoCellKind";
 
 @implementation TGMediaAssetsPhotoCell
@@ -7,7 +9,7 @@ NSString *const TGMediaAssetsPhotoCellKind = @"TGMediaAssetsPhotoCellKind";
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self != nil) {
-        self.accessibilityLabel = @"Photo";
+        self.accessibilityLabel = TGLocalized(@"Message.Photo");
     }
     return self;
 }

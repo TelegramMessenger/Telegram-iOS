@@ -20,12 +20,14 @@ private func wrappedRead(_ fd: Int32, _ data: UnsafeMutableRawPointer, _ count: 
 }
 
 public final class ManagedFile {
-    private let queue: Queue
+    private let queue: Queue?
     private let fd: Int32
     private let mode: ManagedFileMode
     
-    public init?(queue: Queue, path: String, mode: ManagedFileMode) {
-        assert(queue.isCurrent())
+    public init?(queue: Queue?, path: String, mode: ManagedFileMode) {
+        if let queue = queue {
+            assert(queue.isCurrent())
+        }
         self.queue = queue
         self.mode = mode
         let fileMode: Int32
@@ -50,22 +52,30 @@ public final class ManagedFile {
     }
     
     deinit {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         close(self.fd)
     }
     
     public func write(_ data: UnsafeRawPointer, count: Int) -> Int {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         return wrappedWrite(self.fd, data, count)
     }
     
     public func read(_ data: UnsafeMutableRawPointer, _ count: Int) -> Int {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         return wrappedRead(self.fd, data, count)
     }
     
     public func readData(count: Int) -> Data {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         var result = Data(count: count)
         result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
             let readCount = self.read(bytes, count)
@@ -75,17 +85,23 @@ public final class ManagedFile {
     }
     
     public func seek(position: Int64) {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         lseek(self.fd, position, SEEK_SET)
     }
     
     public func truncate(count: Int64) {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         ftruncate(self.fd, count)
     }
     
     public func getSize() -> Int? {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         var value = stat()
         if fstat(self.fd, &value) == 0 {
             return Int(value.st_size)
@@ -95,7 +111,9 @@ public final class ManagedFile {
     }
     
     public func sync() {
-        assert(self.queue.isCurrent())
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         fsync(self.fd)
     }
 }

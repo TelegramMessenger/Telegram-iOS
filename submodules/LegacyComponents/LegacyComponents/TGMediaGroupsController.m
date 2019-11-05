@@ -6,7 +6,6 @@
 #import <LegacyComponents/TGMediaAssetMomentList.h>
 
 #import "TGMediaAssetsPickerController.h"
-#import "TGMediaAssetsMomentsController.h"
 
 #import <LegacyComponents/TGMediaPickerToolbarView.h>
 

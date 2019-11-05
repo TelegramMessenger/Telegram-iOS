@@ -33,7 +33,7 @@ private final class VisibleVideoItem {
     }
 }
 
-final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
+final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
     private let account: Account
     private let trackingNode: MultiplexedVideoTrackingNode
     var didScroll: ((CGFloat, CGFloat) -> Void)?
@@ -58,7 +58,6 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     }
     private var displayItems: [VisibleVideoItem] = []
     private var visibleThumbnailLayers: [MediaId: SoftwareVideoThumbnailLayer] = [:]
-    //private var visibleProgressNodes: [MediaId: RadialStatusNode] = [:]
     private var statusDisposable: [MediaId : MetaDisposable] = [:]
 
     private var visibleLayers: [MediaId: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
@@ -69,7 +68,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     private let timebase: CMTimebase
     
-    var fileSelected: ((FileMediaReference) -> Void)?
+    var fileSelected: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
     var enableVideoNodes = false
     
     init(account: Account) {
@@ -78,16 +77,16 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         self.trackingNode.isLayerBacked = true
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
-        CMTimebaseSetRate(timebase!, 0.0)
+        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
-        super.init(frame: CGRect())
+        super.init()
         
         self.isOpaque = true
-        self.showsVerticalScrollIndicator = false
-        self.showsHorizontalScrollIndicator = false
-        self.alwaysBounceVertical = true
+        self.view.showsVerticalScrollIndicator = false
+        self.view.showsHorizontalScrollIndicator = false
+        self.view.alwaysBounceVertical = true
         
         self.addSubnode(self.trackingNode)
         
@@ -103,7 +102,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         }
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        self.displayLink.add(to: RunLoop.main, forMode: .common)
         if #available(iOS 10.0, *) {
             self.displayLink.preferredFramesPerSecond = 25
         } else {
@@ -114,9 +113,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         self.trackingNode.inHierarchyUpdated = { [weak self] value in
             if let strongSelf = self {
                 if !value {
-                    CMTimebaseSetRate(strongSelf.timebase, 0.0)
+                    CMTimebaseSetRate(strongSelf.timebase, rate: 0.0)
                 } else {
-                    CMTimebaseSetRate(strongSelf.timebase, 1.0)
+                    CMTimebaseSetRate(strongSelf.timebase, rate: 1.0)
                 }
                 strongSelf.displayLink.isPaused = !value
                 if value && !strongSelf.enableVideoNodes {
@@ -129,10 +128,10 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             }
         }
         
-        self.delegate = self
+        self.view.delegate = self
         
         let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
-        self.addGestureRecognizer(recognizer)
+        self.view.addGestureRecognizer(recognizer)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -441,7 +440,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 i += row.count
             }
             let contentSize = CGSize(width: drawableSize.width, height: contentMaxValueInScrollDirection + self.bottomInset)
-            self.contentSize = contentSize
+            self.view.contentSize = contentSize
             
             self.displayItems = displayItems
             
@@ -452,9 +451,9 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            let point = recognizer.location(in: self)
-            if let file = self.offsetFileAt(point: point) {
-                self.fileSelected?(file)
+            let point = recognizer.location(in: self.view)
+            if let (file, rect) = self.offsetFileAt(point: point) {
+                self.fileSelected?(file, self, rect)
             }
         }
     }
@@ -468,15 +467,15 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         return nil
     }
     
-    func fileAt(point: CGPoint) -> FileMediaReference? {
+    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
         let offsetPoint = point.offsetBy(dx: 0.0, dy: self.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
-    private func offsetFileAt(point: CGPoint) -> FileMediaReference? {
+    private func offsetFileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
         for item in self.displayItems {
             if item.frame.contains(point) {
-                return item.fileReference
+                return (item.fileReference, item.frame)
             }
         }
         return nil

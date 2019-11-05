@@ -5,6 +5,9 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
+import AccountContext
+import Emoji
 
 private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     let symbol: String

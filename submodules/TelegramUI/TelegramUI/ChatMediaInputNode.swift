@@ -6,6 +6,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
+import StickerPackPreviewUI
+import PeerInfoUI
+import SettingsUI
 
 private struct PeerSpecificPackData {
     let peer: Peer
@@ -329,6 +334,7 @@ final class ChatMediaInputNodeInteraction {
     let dismissPeerSpecificSettings: () -> Void
     let clearRecentlyUsedStickers: () -> Void
     
+    var stickerSettings: ChatInterfaceStickerSettings?
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPreviewPeekItem?
@@ -651,6 +657,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
             }
         }
+        self.inputNodeInteraction.stickerSettings = self.controllerInteraction.stickerSettings
         
         let previousEntries = Atomic<([ChatMediaInputPanelEntry], [ChatMediaInputGridEntry])>(value: ([], []))
         
@@ -842,12 +849,14 @@ final class ChatMediaInputNode: ChatInputNode {
                                 if let strongSelf = self {
                                     var menuItems: [PeekControllerMenuItem] = []
                                     menuItems = [
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                             if let strongSelf = self {
-                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                            } else {
+                                                return false
                                             }
                                         }),
-                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                             if let strongSelf = self {
                                                 if isStarred {
                                                     let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -855,17 +864,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                 }
                                             }
+                                            return true
                                         }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                             if let strongSelf = self {
                                                 loop: for attribute in item.file.attributes {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
                                                             let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                            controller.sendSticker = { file in
+                                                            controller.sendSticker = { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                } else {
+                                                                    return false
                                                                 }
                                                             }
                                                             
@@ -878,8 +890,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }
                                                 }
                                             }
+                                            return true
                                         }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
                                     ]
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
@@ -888,15 +901,18 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                         } else if let file = item as? FileMediaReference {
                             return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
-                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                     if let strongSelf = self {
-                                        strongSelf.controllerInteraction.sendGif(file)
+                                        return strongSelf.controllerInteraction.sendGif(file, node, rect)
+                                    } else {
+                                        return false
                                     }
                                 }),
-                                PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
+                                PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: { _, _ in
                                     if let strongSelf = self {
                                         let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file).start()
                                     }
+                                    return true
                                 })
                             ])))
                         }
@@ -904,20 +920,28 @@ final class ChatMediaInputNode: ChatInputNode {
                 } else {
                     panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
                 }
+                let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
+                if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
+                    return .single(nil)
+                }
+                
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
-                            if let file = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
+                            if let (file, _) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
-                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction.sendGif(file)
+                                            return strongSelf.controllerInteraction.sendGif(file, node, rect)
+                                        } else {
+                                            return false
                                         }
                                     }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: { _, _ in
                                         if let strongSelf = self {
                                             let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
                                         }
+                                        return true
                                     })
                                 ])))
                             }
@@ -938,12 +962,14 @@ final class ChatMediaInputNode: ChatInputNode {
                                     if let strongSelf = self {
                                         var menuItems: [PeekControllerMenuItem] = []
                                         menuItems = [
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                                 if let strongSelf = self {
-                                                    strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                } else {
+                                                    return false
                                                 }
                                             }),
-                                            PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                            PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                                 if let strongSelf = self {
                                                     if isStarred {
                                                         let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -951,17 +977,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                     }
                                                 }
+                                                return true
                                             }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                                 if let strongSelf = self {
                                                     loop: for attribute in item.file.attributes {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
                                                                     let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                                    controller.sendSticker = { file in
+                                                                    controller.sendSticker = { file, sourceNode, sourceRect in
                                                                         if let strongSelf = self {
-                                                                            strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                            return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                        } else {
+                                                                            return false
                                                                         }
                                                                     }
                                                           
@@ -974,8 +1003,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         }
                                                     }
                                                 }
+                                                return true
                                             }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
                                         ]
                                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {
@@ -1012,7 +1042,7 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     private func setCurrentPane(_ pane: ChatMediaInputPaneType, transition: ContainedViewLayoutTransition, collectionIdHint: Int32? = nil) {
-        if let index = self.paneArrangement.panes.index(of: pane), index != self.paneArrangement.currentIndex {
+        if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
@@ -1097,8 +1127,8 @@ final class ChatMediaInputNode: ChatInputNode {
         }
         
         if let currentView = self.currentView, let firstVisibleCollectionId = firstVisibleCollectionId, !ensuredNodeVisible {
-            let targetIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == collectionId })
-            let firstVisibleIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == firstVisibleCollectionId })
+            let targetIndex = currentView.collectionInfos.firstIndex(where: { id, _, _ in return id == collectionId })
+            let firstVisibleIndex = currentView.collectionInfos.firstIndex(where: { id, _, _ in return id == firstVisibleCollectionId })
             if let targetIndex = targetIndex, let firstVisibleIndex = firstVisibleIndex {
                 let toRight = targetIndex > firstVisibleIndex
                 self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .bottom(0.0) : .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
@@ -1321,7 +1351,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, transition: transition)
         
-        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, transition: transition)
+        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible && visiblePanes.contains(where: { $0.0 == .stickers }), transition: transition)
         self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, transition: transition)
         
         if self.gifPane.supernode != nil {
@@ -1330,7 +1360,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingGifPaneOut {
                         self.animatingGifPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .gifs), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .gifs), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.gifPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.gifPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
@@ -1355,7 +1385,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingStickerPaneOut {
                         self.animatingStickerPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .stickers), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .stickers), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.stickerPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.stickerPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
@@ -1380,7 +1410,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingTrendingPaneOut {
                         self.animatingTrendingPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .trending), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .trending), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.trendingPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.trendingPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in

@@ -4,6 +4,8 @@ import TelegramCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
 
 final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
     private let containerNode: ASDisplayNode

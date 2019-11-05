@@ -17,10 +17,10 @@ public func getDeepLinkInfo(network: Network, path: String) -> Signal<DeepLinkIn
     return network.request(Api.functions.help.getDeepLinkInfo(path: path)) |> retryRequest
     |> map { value -> DeepLinkInfo? in
         switch value {
-        case .deepLinkInfoEmpty:
-            return nil
-        case let .deepLinkInfo(flags, message, entities):
-            return DeepLinkInfo(message: message, entities: entities != nil ? messageTextEntitiesFromApiEntities(entities!) : [], updateApp: (flags & (1 << 0)) != 0)
+            case .deepLinkInfoEmpty:
+                return nil
+            case let .deepLinkInfo(flags, message, entities):
+                return DeepLinkInfo(message: message, entities: entities != nil ? messageTextEntitiesFromApiEntities(entities!) : [], updateApp: (flags & (1 << 0)) != 0)
         }
     }
 }

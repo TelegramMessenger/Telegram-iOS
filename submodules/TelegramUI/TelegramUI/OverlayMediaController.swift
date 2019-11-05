@@ -4,8 +4,9 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import AccountContext
 
-public final class OverlayMediaController: ViewController {
+public final class OverlayMediaControllerImpl: ViewController, OverlayMediaController {
     private var controllerNode: OverlayMediaControllerNode {
         return self.displayNode as! OverlayMediaControllerNode
     }
@@ -25,22 +26,22 @@ public final class OverlayMediaController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    var hasNodes: Bool {
+    public var hasNodes: Bool {
         return self.controllerNode.hasNodes
     }
     
-    func addNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+    public func addNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         self.controllerNode.addNode(node, customTransition: customTransition)
     }
     
-    func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
+    public func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         self.controllerNode.removeNode(node, customTransition: customTransition)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        let updatedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(top: (layout.statusBarHeight ?? 0.0) + 44.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+        let updatedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: (layout.statusBarHeight ?? 0.0) + 44.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
         self.controllerNode.containerLayoutUpdated(updatedLayout, transition: transition)
     }
 }

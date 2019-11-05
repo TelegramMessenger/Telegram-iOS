@@ -5,11 +5,15 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
+import TextFormat
+import UrlEscaping
 
-private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
-private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
-private let messageItalicFont: UIFont = UIFont.italicSystemFont(ofSize: 17.0)
-private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
+private let messageFont = Font.regular(17.0)
+private let messageBoldFont = Font.semibold(17.0)
+private let messageItalicFont = Font.italic(17.0)
+private let messageBoldItalicFont = Font.semiboldItalic(17.0)
+private let messageFixedFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
 final class ChatBotInfoItem: ListViewItem {
     fileprivate let text: String
@@ -112,7 +116,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode, .tooltip:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .tooltip:
                         return .waitForSingleTap
                 }
             }
@@ -151,14 +155,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
-            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, fixedFont: messageFixedFont)
+            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.message.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, boldItalicFont: messageBoldItalicFont, fixedFont: messageFixedFont, blockQuoteFont: messageFont)
             
             let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -231,7 +235,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.textNode.attributeRects(name: name, at: index)
                             break
                         }
@@ -244,7 +248,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.offsetContainer.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }
@@ -262,19 +266,19 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - self.offsetContainer.frame.minX - textNodeFrame.minX, y: point.y - self.offsetContainer.frame.minY - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
-                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText)
+                if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
                 return .url(url: url, concealed: concealed)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return .none
@@ -297,7 +301,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                 case let .url(url, concealed):
                                     self.item?.controllerInteraction.openUrl(url, concealed, nil)
                                 case let .peerMention(peerId, _):
-                                    self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
+                                    self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
                                 case let .textMention(name):
                                     self.item?.controllerInteraction.openPeerMention(name)
                                 case let .botCommand(command):

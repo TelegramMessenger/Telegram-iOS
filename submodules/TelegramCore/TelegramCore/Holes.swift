@@ -150,6 +150,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 var implicitelyFillHole = false
                 let minMaxRange: ClosedRange<MessageId.Id>
+                
                 switch space {
                     case .everywhere:
                         let offsetId: Int32
@@ -357,7 +358,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     var storeMessages: [StoreMessage] = []
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
+                        if let storeMessage = StoreMessage(apiMessage: message, namespace: namespace) {
                             if let channelPts = channelPts {
                                 var attributes = storeMessage.attributes
                                 attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
@@ -372,14 +373,14 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         let filledRange: ClosedRange<MessageId.Id>
-                        let ids = messages.compactMap({ $0.id?.id })
+                        let ids = messages.compactMap({ $0.id()?.id })
                         if ids.count == 0 || implicitelyFillHole {
                             filledRange = minMaxRange
                         } else {
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
                                 case let .aroundId(aroundId):
-                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.lowerBound)
+                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
                                 case let .range(start, end):
                                     if start.id <= end.id {
                                         let minBound = start.id

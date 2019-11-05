@@ -5,8 +5,11 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramBaseController
+import AccountContext
+import AlertUI
 
-final class ChatRecentActionsController: TelegramController {
+final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
@@ -31,7 +34,7 @@ final class ChatRecentActionsController: TelegramController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
             if let strongSelf = self {
@@ -39,13 +42,14 @@ final class ChatRecentActionsController: TelegramController {
             }
         })
         
-        self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
-        }, setupEditMessage: { _ in
-        }, beginMessageSelection: { _ in
+        self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        }, setupEditMessage: { _, _ in
+        }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
-        }, reportMessages: { _ in
-        }, deleteMessages: { _ in
+        }, reportMessages: { _, _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
@@ -64,7 +68,8 @@ final class ChatRecentActionsController: TelegramController {
         }, navigateToChat: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
-        }, sendContextResult: { _, _ in
+        }, sendContextResult: { _, _, _, _ in
+            return false
         }, sendBotCommand: { _, _ in
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
@@ -74,11 +79,12 @@ final class ChatRecentActionsController: TelegramController {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
         }, sendRecordedMedia: {
-        }, displayRestrictedInfo: { _ in
+        }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _ in
+        }, sendSticker: { _, _, _ in
+            return false
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {
@@ -102,6 +108,9 @@ final class ChatRecentActionsController: TelegramController {
         }, unarchiveChat: {
         }, openLinkEditing: {  
         }, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
+        }, displaySendMessageOptions: {
+        }, openScheduledMessages: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
@@ -140,7 +149,7 @@ final class ChatRecentActionsController: TelegramController {
         let rightButton = ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
         self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
     }
     

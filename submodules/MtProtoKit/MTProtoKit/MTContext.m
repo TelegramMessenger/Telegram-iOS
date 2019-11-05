@@ -653,33 +653,9 @@
     }];
 }
 
-- (void)scheduleSessionCleanupForAuthKeyId:(int64_t)authKeyId sessionInfo:(MTSessionInfo *)sessionInfo
-{
-    [[MTContext contextQueue] dispatchOnQueue:^
-    {
-        
-#warning implement and reenable
+- (void)scheduleSessionCleanupForAuthKeyId:(int64_t)authKeyId sessionInfo:(MTSessionInfo *)sessionInfo {
+    [[MTContext contextQueue] dispatchOnQueue:^{
         return;
-        
-        if (authKeyId == 0 || sessionInfo == nil)
-            return;
-        
-        NSMutableArray *sessionIds = _cleanupSessionIdsByAuthKeyId[@(authKeyId)];
-        if (sessionIds == nil)
-        {
-            sessionIds = [[NSMutableArray alloc] init];
-            _cleanupSessionIdsByAuthKeyId[@(authKeyId)] = sessionIds;
-        }
-        else if (![sessionIds respondsToSelector:@selector(setObject:forKey:)])
-        {
-            sessionIds = [[NSMutableArray alloc] initWithArray:sessionIds];
-            _cleanupSessionIdsByAuthKeyId[@(authKeyId)] = sessionIds;
-        }
-        
-        [sessionIds addObject:@(sessionInfo.sessionId)];
-        [_currentSessionInfos addObject:sessionInfo];
-        
-        [_keychain setObject:_cleanupSessionIdsByAuthKeyId forKey:@"cleanupSessionIdsByAuthKeyId" group:@"cleanup"];
     }];
 }
 
@@ -1351,9 +1327,7 @@
         
         [_datacenterAuthInfoById enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, MTDatacenterAuthInfo *authInfo, __unused BOOL *stop)
         {
-            if ([authInfo authSaltForMessageId:saltsRequiredAtLeastUntilMessageId == 0])
-            {
-#warning TODO
+            if ([authInfo authSaltForMessageId:saltsRequiredAtLeastUntilMessageId == 0]) {
             }
         }];
     }];

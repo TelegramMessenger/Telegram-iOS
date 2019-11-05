@@ -38,7 +38,7 @@ public func requestCancelAccountResetData(network: Network, hash: String) -> Sig
     }
     |> map { sentCode -> CancelAccountResetData in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout, _):
+            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
                 var parsedNextType: AuthorizationCodeNextType?
                 if let nextType = nextType {
                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
@@ -59,7 +59,7 @@ public func requestNextCancelAccountResetOption(network: Network, phoneNumber: S
     }
     |> map { sentCode -> CancelAccountResetData in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout, _):
+            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
                 var parsedNextType: AuthorizationCodeNextType?
                 if let nextType = nextType {
                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)

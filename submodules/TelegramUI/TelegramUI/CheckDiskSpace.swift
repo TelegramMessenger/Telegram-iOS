@@ -1,6 +1,9 @@
 import Foundation
 import Display
 import TelegramCore
+import AccountContext
+import AlertUI
+import SettingsUI
 
 func totalDiskSpace() -> Int64 {
     do {

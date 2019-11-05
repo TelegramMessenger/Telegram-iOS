@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import StickerResources
+import AccountContext
 
 final class StickersChatInputContextPanelItem: ListViewItem {
     let account: Account
@@ -123,7 +125,7 @@ final class StickersChatInputContextPanelItemNode: ListViewItemNode {
         for i in 0 ..< self.nodes.count {
             if self.nodes[i].frame.contains(location) {
                 let file = item.files[i]
-                item.interfaceInteraction.sendSticker(.standalone(media: file))
+                item.interfaceInteraction.sendSticker(.standalone(media: file), self.nodes[i], self.nodes[i].bounds)
                 break
             }
         }

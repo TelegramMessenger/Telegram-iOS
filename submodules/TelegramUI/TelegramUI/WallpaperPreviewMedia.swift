@@ -4,7 +4,7 @@ import Postbox
 import TelegramCore
 
 enum WallpaperPreviewMediaContent: Equatable {
-    case file(TelegramMediaFile, UIColor?)
+    case file(TelegramMediaFile, UIColor?, Bool, Bool)
     case color(UIColor)
 }
 

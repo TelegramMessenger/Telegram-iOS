@@ -6,14 +6,9 @@ import TelegramCore
 import Display
 import DeviceAccess
 import TelegramPresentationData
-
-public final class TelegramApplicationOpenUrlCompletion {
-    public let completion: (Bool) -> Void
-    
-    public init(completion: @escaping (Bool) -> Void) {
-        self.completion = completion
-    }
-}
+import AccountContext
+import LiveLocationManager
+import TemporaryCachedPeerDataManager
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -100,60 +95,11 @@ private final class DeviceSpecificContactImportContexts {
     }
 }
 
-public final class TelegramApplicationBindings {
-    public let isMainApp: Bool
-    public let containerPath: String
-    public let appSpecificScheme: String
-    public let openUrl: (String) -> Void
-    public let openUniversalUrl: (String, TelegramApplicationOpenUrlCompletion) -> Void
-    public let canOpenUrl: (String) -> Bool
-    public let getTopWindow: () -> UIWindow?
-    public let displayNotification: (String) -> Void
-    public let applicationInForeground: Signal<Bool, NoError>
-    public let applicationIsActive: Signal<Bool, NoError>
-    public let clearMessageNotifications: ([MessageId]) -> Void
-    public let pushIdleTimerExtension: () -> Disposable
-    public let openSettings: () -> Void
-    public let openAppStorePage: () -> Void
-    public let registerForNotifications: (@escaping (Bool) -> Void) -> Void
-    public let requestSiriAuthorization: (@escaping (Bool) -> Void) -> Void
-    public let siriAuthorization: () -> AccessType
-    public let getWindowHost: () -> WindowHost?
-    public let presentNativeController: (UIViewController) -> Void
-    public let dismissNativeController: () -> Void
-    public let getAvailableAlternateIcons: () -> [PresentationAppIcon]
-    public let getAlternateIconName: () -> String?
-    public let requestSetAlternateIconName: (String?, @escaping (Bool) -> Void) -> Void
-    
-    public init(isMainApp: Bool, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping (@escaping (Bool) -> Void) -> Void, requestSiriAuthorization: @escaping (@escaping (Bool) -> Void) -> Void, siriAuthorization: @escaping () -> AccessType, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void, getAvailableAlternateIcons: @escaping () -> [PresentationAppIcon], getAlternateIconName: @escaping () -> String?, requestSetAlternateIconName: @escaping (String?, @escaping (Bool) -> Void) -> Void) {
-        self.isMainApp = isMainApp
-        self.containerPath = containerPath
-        self.appSpecificScheme = appSpecificScheme
-        self.openUrl = openUrl
-        self.openUniversalUrl = openUniversalUrl
-        self.canOpenUrl = canOpenUrl
-        self.getTopWindow = getTopWindow
-        self.displayNotification = displayNotification
-        self.applicationInForeground = applicationInForeground
-        self.applicationIsActive = applicationIsActive
-        self.clearMessageNotifications = clearMessageNotifications
-        self.pushIdleTimerExtension = pushIdleTimerExtension
-        self.openSettings = openSettings
-        self.openAppStorePage = openAppStorePage
-        self.registerForNotifications = registerForNotifications
-        self.requestSiriAuthorization = requestSiriAuthorization
-        self.siriAuthorization = siriAuthorization
-        self.presentNativeController = presentNativeController
-        self.dismissNativeController = dismissNativeController
-        self.getWindowHost = getWindowHost
-        self.getAvailableAlternateIcons = getAvailableAlternateIcons
-        self.getAlternateIconName = getAlternateIconName
-        self.requestSetAlternateIconName = requestSetAlternateIconName
+public final class AccountContextImpl: AccountContext {
+    public let sharedContextImpl: SharedAccountContextImpl
+    public var sharedContext: SharedAccountContext {
+        return self.sharedContextImpl
     }
-}
-
-public final class AccountContext {
-    public let sharedContext: SharedAccountContext
     public let account: Account
     
     public let fetchManager: FetchManager
@@ -161,12 +107,13 @@ public final class AccountContext {
     
     public var keyShortcutsController: KeyShortcutsController?
     
-    let downloadedMediaStoreManager: DownloadedMediaStoreManager
+    public let downloadedMediaStoreManager: DownloadedMediaStoreManager
     
     public let liveLocationManager: LiveLocationManager?
-    let wallpaperUploadManager: WallpaperUploadManager?
+    public let wallpaperUploadManager: WallpaperUploadManager?
+    private let themeUpdateManager: ThemeUpdateManager?
     
-    let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
+    public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
     public let currentLimitsConfiguration: Atomic<LimitsConfiguration>
     private let _limitsConfiguration = Promise<LimitsConfiguration>()
@@ -182,24 +129,26 @@ public final class AccountContext {
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
     
-    public init(sharedContext: SharedAccountContext, account: Account, limitsConfiguration: LimitsConfiguration) {
-        self.sharedContext = sharedContext
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration) {
+        self.sharedContextImpl = sharedContext
         self.account = account
         
-        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: account.postbox, accountManager: sharedContext.accountManager)
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
-        if let locationManager = self.sharedContext.locationManager {
-            self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: self.sharedContext.applicationBindings.applicationInForeground)
+        if let locationManager = self.sharedContextImpl.locationManager {
+            self.liveLocationManager = LiveLocationManagerImpl(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
-        self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
+        self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         if sharedContext.applicationBindings.isMainApp {
-            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: fetchManager)
-            self.wallpaperUploadManager = WallpaperUploadManager(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
+            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
+            self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
+            self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
+            self.themeUpdateManager = nil
         }
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])

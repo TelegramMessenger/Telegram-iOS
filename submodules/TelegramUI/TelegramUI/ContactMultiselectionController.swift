@@ -6,14 +6,13 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
+import AlertUI
+import ContactListUI
+import CounterContollerTitleView
 
-enum ContactMultiselectionControllerMode {
-    case groupCreation
-    case peerSelection(searchChatList: Bool, searchGroups: Bool)
-    case channelCreation
-}
-
-class ContactMultiselectionController: ViewController {
+class ContactMultiselectionControllerImpl: ViewController, ContactMultiselectionController {
     private let context: AccountContext
     private let mode: ContactMultiselectionControllerMode
     
@@ -64,18 +63,18 @@ class ContactMultiselectionController: ViewController {
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
     
-    init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
-        self.context = context
-        self.mode = mode
-        self.options = options
-        self.filters = filters
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    init(_ params: ContactMultiselectionControllerParams) {
+        self.context = params.context
+        self.mode = params.mode
+        self.options = params.options
+        self.filters = params.filters
+        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.navigationItem.titleView = self.titleView
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -123,7 +122,7 @@ class ContactMultiselectionController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.updateTitle()

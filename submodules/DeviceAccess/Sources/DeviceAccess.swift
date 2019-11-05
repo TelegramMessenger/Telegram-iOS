@@ -12,6 +12,7 @@ import UserNotifications
 import CoreTelephony
 import TelegramPresentationData
 import LegacyComponents
+import AccountContext
 
 public enum DeviceAccessMicrophoneSubject {
     case audio
@@ -40,14 +41,6 @@ public enum DeviceAccessSubject {
     case notifications
     case siri
     case cellularData
-}
-
-public enum AccessType {
-    case notDetermined
-    case allowed
-    case denied
-    case restricted
-    case unreachable
 }
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
@@ -183,7 +176,7 @@ public final class DeviceAccess {
                                 case .notRestricted:
                                     return .allowed
                                 default:
-                                    return nil
+                                    return .allowed
                             }
                         }
                         let cellState = CTCellularData.init()
@@ -196,7 +189,7 @@ public final class DeviceAccess {
                             }
                         }
                     } else {
-                        subscriber.putNext(.notDetermined)
+                        subscriber.putNext(.allowed)
                         subscriber.putCompletion()
                     }
                     return EmptyDisposable
@@ -230,6 +223,8 @@ public final class DeviceAccess {
                             subscriber.putNext(.denied)
                         case .notDetermined:
                             subscriber.putNext(.notDetermined)
+                        @unknown default:
+                            fatalError()
                     }
                     subscriber.putCompletion()
                     return EmptyDisposable
@@ -340,6 +335,8 @@ public final class DeviceAccess {
                                     value = false
                                 case .authorized:
                                     value = true
+                                @unknown default:
+                                    fatalError()
                             }
                             let _ = cachedMediaLibraryAccessStatus.swap(value)
                             continueWithValue(value)
@@ -383,7 +380,9 @@ public final class DeviceAccess {
                             }
                         case .notDetermined:
                             completion(true)
-                    }
+                        @unknown default:
+                            fatalError()
+                }
                 case .contacts:
                     let _ = (self.contactsPromise.get()
                     |> take(1)
@@ -446,8 +445,12 @@ public final class DeviceAccess {
                             completion(result)
                         }
                     }
-                default:
-                    break
+                case .cellularData:
+                    if let presentationData = presentationData {
+                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Permissions_CellularDataTitle_v0, text: presentationData.strings.Permissions_CellularDataText_v0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            openSettings()
+                        })]), nil)
+                    }
             }
     }
 }

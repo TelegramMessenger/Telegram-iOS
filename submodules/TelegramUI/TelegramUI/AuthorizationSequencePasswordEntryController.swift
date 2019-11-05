@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequencePasswordEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePasswordEntryControllerNode {
@@ -53,7 +54,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.attemptNavigation = { _ in
             return false

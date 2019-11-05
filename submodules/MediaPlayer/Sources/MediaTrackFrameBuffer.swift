@@ -108,6 +108,8 @@ public final class MediaTrackFrameBuffer {
             }
             
             bufferedDuration = CMTimeGetSeconds(bufferedUntilTime) - timestamp
+        } else if self.endOfStream {
+            return .finished(at: CMTimeGetSeconds(self.duration))
         }
         
         let minTimestamp = timestamp - 1.0

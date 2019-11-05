@@ -5,17 +5,11 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 private struct CommandChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand
-    
-    var hashValue: Int {
-        return command.command.text.hashValue ^ command.peer.id.hashValue
-    }
-    
-    static func ==(lhs: CommandChatInputContextPanelEntryStableId, rhs: CommandChatInputContextPanelEntryStableId) -> Bool {
-        return lhs.command == rhs.command
-    }
 }
 
 private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {

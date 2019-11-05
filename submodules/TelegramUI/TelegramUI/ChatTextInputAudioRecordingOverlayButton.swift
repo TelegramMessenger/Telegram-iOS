@@ -108,7 +108,7 @@ final class ChatTextInputAudioRecordingOverlay {
             
             self.animatedIn = true
             self.animationStartTime = CACurrentMediaTime()
-            self.displayLink?.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+            self.displayLink?.add(to: RunLoop.main, forMode: .common)
             self.displayLink?.isPaused = false
         }
     }

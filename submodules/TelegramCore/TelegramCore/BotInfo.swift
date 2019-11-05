@@ -7,7 +7,7 @@ import Foundation
     import TelegramApi
 #endif
 
-public struct BotCommand: PostboxCoding, Equatable {
+public struct BotCommand: PostboxCoding, Hashable {
     public let text: String
     public let description: String
     
@@ -24,10 +24,6 @@ public struct BotCommand: PostboxCoding, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.text, forKey: "t")
         encoder.encodeString(self.description, forKey: "d")
-    }
-    
-    public static func ==(lhs: BotCommand, rhs: BotCommand) -> Bool {
-        return lhs.text == rhs.text && lhs.description == rhs.description
     }
 }
 

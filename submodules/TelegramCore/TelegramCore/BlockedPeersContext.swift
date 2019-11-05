@@ -57,7 +57,6 @@ public final class BlockedPeersContext {
     }
     
     deinit {
-        assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
     }
     
@@ -159,11 +158,21 @@ public final class BlockedPeersContext {
             }
             |> mapToSignal { _ -> Signal<Peer?, BlockedPeersContextAddError> in
                 return postbox.transaction { transaction -> Peer? in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        let previous: CachedUserData
+                        if let current = current as? CachedUserData {
+                            previous = current
+                        } else {
+                            previous = CachedUserData()
+                        }
+                        return previous.withUpdatedIsBlocked(true)
+                    })
                     return transaction.getPeer(peerId)
                 }
                 |> introduceError(BlockedPeersContextAddError.self)
             }
             |> deliverOnMainQueue
+            
             |> mapToSignal { peer -> Signal<Never, BlockedPeersContextAddError> in
                 guard let strongSelf = self, let peer = peer else {
                     return .complete()
@@ -190,7 +199,7 @@ public final class BlockedPeersContext {
     
     public func remove(peerId: PeerId) -> Signal<Never, BlockedPeersContextRemoveError> {
         assert(Queue.mainQueue().isCurrent())
-        
+        let postbox = self.account.postbox
         let network = self.account.network
         return self.account.postbox.transaction { transaction -> Api.InputUser? in
             return transaction.getPeer(peerId).flatMap(apiInputUser)
@@ -203,6 +212,21 @@ public final class BlockedPeersContext {
             return network.request(Api.functions.contacts.unblock(id: inputUser))
             |> mapError { _ -> BlockedPeersContextRemoveError in
                 return .generic
+            }
+            |> mapToSignal { value in
+                return postbox.transaction { transaction -> Peer? in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        let previous: CachedUserData
+                        if let current = current as? CachedUserData {
+                            previous = current
+                        } else {
+                            previous = CachedUserData()
+                        }
+                        return previous.withUpdatedIsBlocked(false)
+                    })
+                    return transaction.getPeer(peerId)
+                }
+                |> introduceError(BlockedPeersContextRemoveError.self)
             }
             |> deliverOnMainQueue
             |> mapToSignal { _ -> Signal<Never, BlockedPeersContextRemoveError> in

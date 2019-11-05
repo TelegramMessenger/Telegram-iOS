@@ -33,6 +33,9 @@
 #import "MTNetworkUsageCalculationInfo.h"
 #import "MTNetworkUsageManager.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #if ! __has_feature(objc_arc)
 #warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
 // For more information see: https://github.com/robbiehanson/CocoaAsyncSocket/wiki/ARC
@@ -205,7 +208,6 @@ enum GCDAsyncSocketConfig
 
 // Disconnect
 - (void)closeWithError:(NSError *)error;
-- (void)close;
 - (void)maybeClose;
 
 // Errors
@@ -1050,7 +1052,7 @@ enum GCDAsyncSocketConfig
 - (void)dealloc
 {
 	LogInfo(@"%@ - %@ (start)", THIS_METHOD, self);
-	
+
 	if (dispatch_get_current_queue() == socketQueue)
 	{
 		[self closeWithError:nil];
@@ -6785,11 +6787,14 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
 	
 	// We can't run the run loop unless it has an associated input source or a timer.
 	// So we'll just create a timer that will never fire - unless the server runs for decades.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
 	[NSTimer scheduledTimerWithTimeInterval:[[NSDate distantFuture] timeIntervalSinceNow]
 	                                 target:self
 	                               selector:@selector(doNothingAtAll:)
 	                               userInfo:nil
 	                                repeats:YES];
+#pragma clang diagnostic pop
 	
 	[[NSRunLoop currentRunLoop] run];
 	
@@ -7395,3 +7400,5 @@ static void CFWriteStreamCallback (CFWriteStreamRef stream, CFStreamEventType ty
 }
 
 @end	
+
+#pragma clang diagnostic pop

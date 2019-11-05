@@ -97,7 +97,7 @@ public let listViewAnimationCurveLinear: (CGFloat) -> CGFloat = { t in
 }
 
 #if os(iOS)
-public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIViewAnimationOptions) -> (CGFloat) -> CGFloat {
+public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIView.AnimationOptions) -> (CGFloat) -> CGFloat {
     if animationOptions.rawValue == UInt(7 << 16) {
         return listViewAnimationCurveSystem
     } else {

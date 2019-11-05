@@ -6,6 +6,8 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import AccountContext
+import TelegramStringFormatting
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
@@ -32,7 +34,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.closeButton = ASButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()
@@ -109,9 +111,13 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                     if let file = content.file, let mediaKind = mediaContentKind(file) {
                         if content.type == "telegram_background" {
                             text = strings.Message_Wallpaper
+                        } else if content.type == "telegram_theme" {
+                            text = strings.Message_Theme
                         } else {
                             text = stringForMediaKind(mediaKind, strings: self.strings).0
                         }
+                    } else if let files = content.files, content.type == "telegram_theme" {
+                        text = strings.Message_Theme
                     } else if let _ = content.image {
                         text = stringForMediaKind(.image, strings: self.strings).0
                     }

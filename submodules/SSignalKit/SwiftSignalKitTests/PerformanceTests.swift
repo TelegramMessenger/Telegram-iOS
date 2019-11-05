@@ -3,7 +3,7 @@ import XCTest
 import SwiftSignalKit
 import Foundation
 
-final class DisposableLock {
+/*final class DisposableLock {
     private var action: (() -> Void)?
     private var lock = pthread_mutex_t()
     
@@ -164,3 +164,4 @@ class PerformanceTests: XCTestCase {
         print("read2 = \(sum2) ops = \(reads.count)")
     }
 }
+*/

@@ -60,7 +60,6 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     CVPixelBufferRef _previousPixelBuffer;
     int32_t _repeatingCount;
     
-    NSMutableData *_audioBuffer;
     int16_t _micLevelPeak;
     int _micLevelPeakCount;
     

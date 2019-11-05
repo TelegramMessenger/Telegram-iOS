@@ -3,6 +3,8 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import Postbox
+import AccountContext
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -17,14 +19,18 @@ private let granularity: Int32 = 60 * 60 * 24
 final class ChatMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
     private let roundedTimestamp: Int32
+    private let scheduled: Bool
     
     let id: Int64
     let presentationData: ChatPresentationData
+    let context: AccountContext
     let action: ((Int32) -> Void)?
     
-    init(timestamp: Int32, presentationData: ChatPresentationData, action:((Int32) -> Void)? = nil) {
+    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
         self.timestamp = timestamp
+        self.scheduled = scheduled
         self.presentationData = presentationData
+        self.context = context
         self.action = action
         if timestamp == Int32.max {
             self.roundedTimestamp = timestamp / (granularity) * (granularity)
@@ -39,7 +45,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let height: CGFloat = 34.0
     
     func node() -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, presentationData: self.presentationData, action: self.action)
+        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
     }
 }
 
@@ -83,13 +89,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private let localTimestamp: Int32
     private var presentationData: ChatPresentationData
+    private let context: AccountContext
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
     private var action: ((Int32) -> Void)? = nil
     
-    init(localTimestamp: Int32, presentationData: ChatPresentationData, action:((Int32) -> Void)? = nil) {
+    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
         self.presentationData = presentationData
+        self.context = context
         
         self.localTimestamp = localTimestamp
         self.action = action
@@ -112,7 +120,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -131,7 +139,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         var timeinfoNow: tm = tm()
         localtime_r(&now, &timeinfoNow)
         
-        let text: String
+        var text: String
         if timeinfo.tm_year == timeinfoNow.tm_year {
             if timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.Weekday_Today
@@ -140,6 +148,14 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             }
         } else {
             text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+        }
+        
+        if scheduled {
+            if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
+                text = presentationData.strings.ScheduledMessages_ScheduledToday
+            } else {
+                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+            }
         }
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
@@ -156,8 +172,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updatePresentationData(_ presentationData: ChatPresentationData) {
-        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground

@@ -10,7 +10,7 @@ import DisplayPrivate
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool, imageMode: Bool) -> (UIImage, CGFloat) {
     let font = horizontal ? Font.regular(13.0) : Font.medium(10.0)
-    let titleSize = (title as NSString).boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], attributes: [NSAttributedStringKey.font: font], context: nil).size
+    let titleSize = (title as NSString).boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], attributes: [NSAttributedString.Key.font: font], context: nil).size
     
     let imageSize: CGSize
     if let image = image {
@@ -57,7 +57,7 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
                 }
                 context.restoreGState()
             } else {
-                let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 1.0), size: imageSize)
+                let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 0.0), size: imageSize)
                 context.saveGState()
                 context.translateBy(x: imageRect.midX, y: imageRect.midY)
                 context.scaleBy(x: 1.0, y: -1.0)
@@ -76,9 +76,9 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
     
     if !imageMode {
         if horizontal {
-            (title as NSString).draw(at: CGPoint(x: imageSize.width + horizontalSpacing, y: floor((size.height - titleSize.height) / 2.0) - 2.0), withAttributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: tintColor])
+            (title as NSString).draw(at: CGPoint(x: imageSize.width + horizontalSpacing, y: floor((size.height - titleSize.height) / 2.0)), withAttributes: [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: tintColor])
         } else {
-            (title as NSString).draw(at: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 2.0), withAttributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: tintColor])
+            (title as NSString).draw(at: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 1.0), withAttributes: [NSAttributedString.Key.font: font, NSAttributedString.Key.foregroundColor: tintColor])
         }
     }
     
@@ -143,7 +143,7 @@ private final class TabBarNodeContainer {
         
         self.imageNode = imageNode
         self.imageNode.isAccessibilityElement = true
-        self.imageNode.accessibilityTraits = UIAccessibilityTraitButton
+        self.imageNode.accessibilityTraits = .button
         
         self.badgeContainerNode = ASDisplayNode()
         self.badgeContainerNode.isUserInteractionEnabled = false
@@ -413,7 +413,7 @@ class TabBarNode: ASDisplayNode {
                 let nodeSize = node.textImageNode.image?.size ?? CGSize()
                 
                 let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - nodeSize.width / 2.0)
-                let nodeFrame = CGRect(origin: CGPoint(x: originX, y: 4.0), size: nodeSize)
+                let nodeFrame = CGRect(origin: CGPoint(x: originX, y: 3.0), size: nodeSize)
                 transition.updateFrame(node: node, frame: nodeFrame)
                 node.imageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.textImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
@@ -434,10 +434,10 @@ class TabBarNode: ASDisplayNode {
                     let backgroundSize = CGSize(width: hasSingleLetterValue ? 18.0 : max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
                     let backgroundFrame: CGRect
                     if horizontal {
-                        backgroundFrame = CGRect(origin: CGPoint(x: originX + 8.0, y: 2.0), size: backgroundSize)
+                        backgroundFrame = CGRect(origin: CGPoint(x: originX + 10.0, y: 2.0), size: backgroundSize)
                     } else {
                         let contentWidth = node.contentWidth ?? node.frame.width
-                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 1.0 + contentWidth - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
+                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) + contentWidth - backgroundSize.width - 5.0, y: 2.0), size: backgroundSize)
                     }
                     transition.updateFrame(node: container.badgeContainerNode, frame: backgroundFrame)
                     container.badgeBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)

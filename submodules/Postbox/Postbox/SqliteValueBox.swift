@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
+import sqlciphermac
+#else
 import sqlcipher
+#endif
 #if os(macOS)
     import SwiftSignalKitMac
 #else
@@ -230,7 +234,7 @@ public final class SqliteValueBox: ValueBox {
         postboxLog("Opening \(path), exists: \(exists)")
         if exists {
             do {
-                let data = try Data(contentsOf: URL(fileURLWithPath: path))
+                let data = try Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe)
                 postboxLog("\(path) size: \(data.count)")
             } catch let e {
                 postboxLog("Couldn't open database: \(e)")
@@ -240,7 +244,7 @@ public final class SqliteValueBox: ValueBox {
         postboxLog("Opening \(path)-wal, exists: \(walExists)")
         if walExists {
             do {
-                let data = try Data(contentsOf: URL(fileURLWithPath: path + "-wal"))
+                let data = try Data(contentsOf: URL(fileURLWithPath: path + "-wal"), options: .mappedIfSafe)
                 postboxLog("\(path)-wal size: \(data.count)")
             } catch let e {
                 postboxLog("Couldn't open database: \(e)")

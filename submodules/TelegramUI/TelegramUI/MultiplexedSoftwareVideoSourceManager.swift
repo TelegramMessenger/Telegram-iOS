@@ -66,7 +66,7 @@ final class MultiplexedSoftwareVideoSourceManager {
                                 context.source = SoftwareVideoSource(path: data.path)
                             }
                         }
-                    }), fetchStatusDisposable: fetchedMediaResource(postbox: self.account.postbox, reference: AnyMediaReference.standalone(media: file).resourceReference(file.resource)).start())
+                    }), fetchStatusDisposable: fetchedMediaResource(mediaBox: self.account.postbox.mediaBox, reference: AnyMediaReference.standalone(media: file).resourceReference(file.resource)).start())
                 }
             }
         }

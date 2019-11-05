@@ -35,7 +35,7 @@ public enum ViewControllerPresentationAnimation {
     case modalSheet
 }
 
-public struct ViewControllerSupportedOrientations {
+public struct ViewControllerSupportedOrientations: Equatable {
     public var regularSize: UIInterfaceOrientationMask
     public var compactSize: UIInterfaceOrientationMask
     
@@ -65,9 +65,15 @@ open class ViewControllerPresentationArguments {
         return self.validLayout
     }
     
-    private let presentationContext: PresentationContext
+    public let presentationContext: PresentationContext
     
-    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown) {
+        didSet {
+            if self.supportedOrientations != oldValue {
+                self.window?.invalidateSupportedOrientations()
+            }
+        }
+    }
     public final var lockedOrientation: UIInterfaceOrientationMask?
     public final var lockOrientation: Bool = false {
         didSet {
@@ -81,6 +87,15 @@ open class ViewControllerPresentationArguments {
     
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
+    public final var automaticallyControlPresentationContextLayout: Bool = true
+    public final var isModalWhenInOverlay: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.displayNode.clipsToBounds = true
+            }
+        }
+    }
+    public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
@@ -102,7 +117,7 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    override open func prefersHomeIndicatorAutoHidden() -> Bool {
+    override open var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
     
@@ -140,6 +155,9 @@ open class ViewControllerPresentationArguments {
     private var previewingContext: Any?
     
     public var displayNavigationBar = true
+    open var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return true
+    }
     
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
@@ -180,7 +198,7 @@ open class ViewControllerPresentationArguments {
     
     open var visualNavigationInsetHeight: CGFloat {
         if let navigationBar = self.navigationBar {
-            var height = navigationBar.frame.maxY
+            let height = navigationBar.frame.maxY
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
                 //height += contentNode.height
             }
@@ -206,6 +224,16 @@ open class ViewControllerPresentationArguments {
     public var scrollToTopWithTabBar: (() -> Void)?
     public var longTapWithTabBar: (() -> Void)?
     
+    open func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+        
+    }
+    
+    open var customData: Any? {
+        get {
+            return nil
+        }
+    }
+
     public var attemptNavigation: (@escaping () -> Void) -> Bool = { _ in
         return true
     }
@@ -213,7 +241,7 @@ open class ViewControllerPresentationArguments {
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {
-                let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.frame.size.width, height: 1.0))
+                let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.bounds.size.width, height: 1.0))
                 scrollToTopView.action = { [weak self] in
                     if let scrollToTop = self?.scrollToTop {
                         scrollToTop()
@@ -247,7 +275,13 @@ open class ViewControllerPresentationArguments {
             }
         }
         self.navigationBar?.requestContainerLayout = { [weak self] transition in
-            self?.requestLayout(transition: transition)
+            if let strongSelf = self, strongSelf.isNodeLoaded, let validLayout = strongSelf.validLayout {
+                if strongSelf.navigationBarRequiresEntireLayoutUpdate {
+                    strongSelf.containerLayoutUpdated(validLayout, transition: transition)
+                } else {
+                    strongSelf.updateNavigationBarLayout(validLayout, transition: transition)
+                }
+            }
         }
         self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
@@ -265,28 +299,18 @@ open class ViewControllerPresentationArguments {
         
     }
     
-    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.validLayout = layout
-        
-        if !self.isViewLoaded {
-            self.loadView()
-        }
-        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
-        if let _ = layout.statusBarHeight {
-            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
-        }
-        
+    private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let navigationBarHeight: CGFloat = max(20.0, statusBarHeight) + (self.navigationBar?.contentHeight ?? 44.0)
+        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight ?? 44.0)
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
-            navigationBarOffset = -20.0
+            navigationBarOffset = 0.0
         } else {
             navigationBarOffset = 0.0
         }
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: navigationBarHeight))
         if layout.statusBarHeight == nil {
-            navigationBarFrame.size.height = (self.navigationBar?.contentHeight ?? 44.0) + 20.0
+            //navigationBarFrame.size.height = (self.navigationBar?.contentHeight ?? 44.0) + 20.0
         }
         
         if !self.displayNavigationBar {
@@ -308,12 +332,32 @@ open class ViewControllerPresentationArguments {
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
         }
+    }
+    
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
         
-        self.presentationContext.containerLayoutUpdated(layout, transition: transition)
+        if !self.isViewLoaded {
+            self.loadView()
+        }
+        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
+        if let _ = layout.statusBarHeight {
+            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+        }
+        
+        self.updateNavigationBarLayout(layout, transition: transition)
+        
+        if self.automaticallyControlPresentationContextLayout {
+            self.presentationContext.containerLayoutUpdated(layout, transition: transition)
+        }
         
         if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
         }
+    }
+    
+    open func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        
     }
     
     open func navigationStackConfigurationUpdated(next: [ViewController]) {
@@ -344,6 +388,10 @@ open class ViewControllerPresentationArguments {
         if let backgroundColor = self.displayNode.backgroundColor, backgroundColor.alpha.isEqual(to: 1.0) {
             self.blocksBackgroundWhenInOverlay = true
             self.isOpaqueWhenInOverlay = true
+        }
+        
+        if self.isModalWhenInOverlay {
+            self.displayNode.clipsToBounds = true
         }
     }
     
@@ -478,7 +526,7 @@ open class ViewControllerPresentationArguments {
     
     public final func navigationNextSibling() -> UIViewController? {
         if let navigationController = self.navigationController as? NavigationController {
-            if let index = navigationController.viewControllers.index(where: { $0 === self }) {
+            if let index = navigationController.viewControllers.firstIndex(where: { $0 === self }) {
                 if index != navigationController.viewControllers.count - 1 {
                     return navigationController.viewControllers[index + 1]
                 }
@@ -548,7 +596,7 @@ private func traceViewVisibility(view: UIView, rect: CGRect) -> Bool {
         if view.window == nil {
             return false
         }
-        if let index = siblings.index(where: { $0 === view.layer }) {
+        if let index = siblings.firstIndex(where: { $0 === view.layer }) {
             let viewFrame = view.convert(rect, to: superview)
             for i in (index + 1) ..< siblings.count {
                 if siblings[i].frame.contains(viewFrame) {

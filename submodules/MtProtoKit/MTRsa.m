@@ -55,7 +55,10 @@ static NSData *base64_decode(NSString *str) {
         NSData *data = [[NSData alloc] initWithBase64EncodedString:str options:NSDataBase64DecodingIgnoreUnknownCharacters];
         return data;
     } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         return [[NSData alloc] initWithBase64Encoding:[str stringByReplacingOccurrencesOfString:@"[^A-Za-z0-9+/=]" withString:@"" options:NSRegularExpressionSearch range:NSMakeRange(0, [str length])]];
+#pragma clang diagnostic pop
     }
 }
 
@@ -292,7 +295,7 @@ static NSData *base64_decode(NSString *str) {
                                &outlen
                                );
         if (status != 0) {
-            NSLog(@"SecKeyEncrypt fail. Error Code: %d", status);
+            NSLog(@"SecKeyEncrypt fail. Error Code: %d", (int)status);
             ret = nil;
             break;
         }else{
@@ -348,7 +351,7 @@ static NSData *base64_decode(NSString *str) {
                                &outlen
                                );
         if (status != 0) {
-            NSLog(@"SecKeyEncrypt fail. Error Code: %d", status);
+            NSLog(@"SecKeyEncrypt fail. Error Code: %d", (int)status);
             ret = nil;
             break;
         }else{

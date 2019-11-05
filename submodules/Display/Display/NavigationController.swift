@@ -10,19 +10,36 @@ import DisplayPrivate
 public final class NavigationControllerTheme {
     public let navigationBar: NavigationBarTheme
     public let emptyAreaColor: UIColor
-    public let emptyDetailIcon: UIImage?
     
-    public init(navigationBar: NavigationBarTheme, emptyAreaColor: UIColor, emptyDetailIcon: UIImage?) {
+    public init(navigationBar: NavigationBarTheme, emptyAreaColor: UIColor) {
         self.navigationBar = navigationBar
         self.emptyAreaColor = emptyAreaColor
-        self.emptyDetailIcon = emptyDetailIcon
     }
+}
+
+public struct NavigationAnimationOptions : OptionSet {
+    public let rawValue: Int
+    
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let removeOnMasterDetails = NavigationAnimationOptions(rawValue: 1 << 0)
 }
 
 private final class NavigationControllerContainerView: UIView {
     override class var layerClass: AnyClass {
         return CATracingLayer.self
     }
+}
+
+public enum NavigationEmptyDetailsBackgoundMode {
+    case image(UIImage)
+    case wallpaper(UIImage)
 }
 
 private final class NavigationControllerView: UITracingLayerView {
@@ -34,7 +51,8 @@ private final class NavigationControllerView: UITracingLayerView {
     var navigationBackgroundView: UIView?
     var navigationSeparatorView: UIView?
     var emptyDetailView: UIImageView?
-    
+    var detailsBackground: WallpaperBackgroundNode?
+    var masterDetailsBlackout: ASDisplayNode?
     var topControllerNode: ASDisplayNode?
     
     /*override var accessibilityElements: [Any]? {
@@ -98,11 +116,24 @@ public enum NavigationControllerMode {
     case automaticMasterDetail
 }
 
+public enum MasterDetailLayoutBlackout : Equatable {
+    case master
+    case details
+}
+
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
+    public var isModalWhenInOverlay: Bool = false
+    public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    public var ready: Promise<Bool> = Promise(true)
+    private let _ready = Promise<Bool>(true)
+    open var ready: Promise<Bool> {
+        return self._ready
+    }
+    
+    private var masterDetailsBlackout: MasterDetailLayoutBlackout?
+    private var backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode?
     
     public var lockOrientation: Bool = false
     
@@ -150,10 +181,23 @@ open class NavigationController: UINavigationController, ContainableController, 
         return self._displayNode!
     }
     
-    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme) {
+    public func updateMasterDetailsBlackout(_ blackout: MasterDetailLayoutBlackout?, transition: ContainedViewLayoutTransition) {
+        self.masterDetailsBlackout = blackout
+        if isViewLoaded {
+            self.view.endEditing(true)
+        }
+        self.requestLayout(transition: transition)
+    }
+    public func updateBackgroundDetailsMode(_ mode: NavigationEmptyDetailsBackgoundMode?, transition: ContainedViewLayoutTransition) {
+        self.backgroundDetailsMode = mode
+        self.requestLayout(transition: transition)
+    }
+    
+    
+    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme, backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode? = nil) {
         self.mode = mode
         self.theme = theme
-        
+        self.backgroundDetailsMode = backgroundDetailsMode
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -195,12 +239,12 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.controllerView.separatorView.backgroundColor = theme.navigationBar.separatorColor
             self.controllerView.navigationBackgroundView?.backgroundColor = theme.navigationBar.backgroundColor
             self.controllerView.navigationSeparatorView?.backgroundColor = theme.navigationBar.separatorColor
-            if let emptyDetailView = self.controllerView.emptyDetailView {
-                emptyDetailView.image = theme.emptyDetailIcon
-                if let image = theme.emptyDetailIcon {
-                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor(emptyDetailView.center.x - image.size.width / 2.0), y: floor(emptyDetailView.center.y - image.size.height / 2.0)), size: image.size)
-                }
-            }
+//            if let emptyDetailView = self.controllerView.emptyDetailView {
+//                emptyDetailView.image = theme.emptyDetailIcon
+//                if let image = theme.emptyDetailIcon {
+//                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor(emptyDetailView.center.x - image.size.width / 2.0), y: floor(emptyDetailView.center.y - image.size.height / 2.0)), size: image.size)
+//                }
+//            }
         }
     }
     
@@ -227,13 +271,20 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let masterWidth: CGFloat = max(320.0, floor(layout.size.width / 3.0))
                 let detailWidth: CGFloat = layout.size.width - masterWidth
                 if index == 0 {
-                    return (CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: masterWidth, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                    return (CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: masterWidth, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 } else {
                     let detailFrame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: detailWidth, height: layout.size.height))
-                    return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                    return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 }
             case .single:
-                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                var heightClass: ContainerViewLayoutSizeClass
+                if (layout.size.width < 375.0 && layout.size.height > 700.0) || layout.size.height > 900.0 {
+                    heightClass = .regular
+                } else {
+                    heightClass = .compact
+                }
+                
+                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: heightClass), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
         }
     }
     
@@ -254,43 +305,98 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.controllerView.addSubview(self.controllerView.separatorView)
                 }
                 
-                let navigationBackgroundFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: CGSize(width: lastControllerFrameAndLayout.0.width, height: (layout.statusBarHeight ?? 0.0) + 44.0))
-                
-                if let navigationBackgroundView = self.controllerView.navigationBackgroundView, let navigationSeparatorView = self.controllerView.navigationSeparatorView, let emptyDetailView = self.controllerView.emptyDetailView {
-                    transition.updateFrame(view: navigationBackgroundView, frame: navigationBackgroundFrame)
-                    transition.updateFrame(view: navigationSeparatorView, frame: CGRect(origin: CGPoint(x: navigationBackgroundFrame.minX, y: navigationBackgroundFrame.maxY), size: CGSize(width: navigationBackgroundFrame.width, height: UIScreenPixel)))
-                    if let image = emptyDetailView.image {
-                        transition.updateFrame(view: emptyDetailView, frame: CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size))
+                if let backgroundDetailsMode = self.backgroundDetailsMode {
+                    switch backgroundDetailsMode {
+                        case let .image(image):
+                            if let detailsBackground = self.controllerView.detailsBackground {
+                                self.controllerView.detailsBackground = nil
+                                transition.updateAlpha(node: detailsBackground, alpha: 0.0, completion: { [weak detailsBackground] _ in
+                                    detailsBackground?.removeFromSupernode()
+                                })
+                            }
+                            let emptyDetailView: UIImageView
+                            if let emptyView = self.controllerView.emptyDetailView {
+                                emptyDetailView = emptyView
+                            } else {
+                                emptyDetailView = UIImageView()
+                                emptyDetailView.alpha = 0.0
+                                self.controllerView.emptyDetailView = emptyDetailView
+                            }
+                            emptyDetailView.image = image
+                            if emptyDetailView.superview == nil {
+                                self.controllerView.insertSubview(emptyDetailView, at: 0)
+                            }
+                            transition.updateAlpha(layer: emptyDetailView.layer, alpha: 1.0)
+                            
+                            emptyDetailView.frame = CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size)
+
+                        
+                        case let .wallpaper(image):
+                            if let emptyDetailView = self.controllerView.emptyDetailView {
+                                self.controllerView.emptyDetailView = nil
+                                transition.updateAlpha(layer: emptyDetailView.layer, alpha: 0.0, completion: { [weak emptyDetailView] _ in
+                                    emptyDetailView?.removeFromSuperview()
+                                })
+                            }
+                            let detailsBackground: WallpaperBackgroundNode
+                            if let background = self.controllerView.detailsBackground {
+                                detailsBackground = background
+                            } else {
+                                detailsBackground = WallpaperBackgroundNode()
+                                detailsBackground.alpha = 0.0
+                                self.controllerView.detailsBackground = detailsBackground
+                            }
+                            detailsBackground.image = image
+                            if detailsBackground.supernode == nil {
+                                self.controllerView.insertSubview(detailsBackground.view, at: 0)
+                            }
+                            transition.updateAlpha(node: detailsBackground, alpha: 1.0)
+                            detailsBackground.frame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
                     }
                 } else {
-                    let navigationBackgroundView = UIView()
-                    navigationBackgroundView.backgroundColor = self.theme.navigationBar.backgroundColor
-                    let navigationSeparatorView = UIView()
-                    navigationSeparatorView.backgroundColor = self.theme.navigationBar.separatorColor
-                    let emptyDetailView = UIImageView()
-                    emptyDetailView.image = self.theme.emptyDetailIcon
-                    emptyDetailView.alpha = 0.0
-                    
-                    self.controllerView.navigationBackgroundView = navigationBackgroundView
-                    self.controllerView.navigationSeparatorView = navigationSeparatorView
-                    self.controllerView.emptyDetailView = emptyDetailView
-                    
-                    self.controllerView.insertSubview(navigationBackgroundView, at: 0)
-                    self.controllerView.insertSubview(navigationSeparatorView, at: 1)
-                    self.controllerView.insertSubview(emptyDetailView, at: 2)
-                    
-                    navigationBackgroundView.frame = navigationBackgroundFrame
-                    navigationSeparatorView.frame = CGRect(origin: CGPoint(x: navigationBackgroundFrame.minX, y: navigationBackgroundFrame.maxY), size: CGSize(width: navigationBackgroundFrame.width, height: UIScreenPixel))
-                    
-                    transition.animatePositionAdditive(layer: navigationBackgroundView.layer, offset: CGPoint(x: navigationBackgroundFrame.width, y: 0.0))
-                    transition.animatePositionAdditive(layer: navigationSeparatorView.layer, offset: CGPoint(x: navigationBackgroundFrame.width, y: 0.0))
-                    
-                    if let image = emptyDetailView.image {
-                        emptyDetailView.frame = CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size)
+                    if let emptyDetailView = self.controllerView.emptyDetailView {
+                        self.controllerView.emptyDetailView = nil
+                        transition.updateAlpha(layer: emptyDetailView.layer, alpha: 0.0, completion: { [weak emptyDetailView] _ in
+                            emptyDetailView?.removeFromSuperview()
+                        })
                     }
-                    
-                    transition.updateAlpha(layer: emptyDetailView.layer, alpha: 1.0)
+                    if let detailsBackground = self.controllerView.detailsBackground {
+                        self.controllerView.detailsBackground = nil
+                        transition.updateAlpha(node: detailsBackground, alpha: 0.0, completion: { [weak detailsBackground] _ in
+                            detailsBackground?.removeFromSupernode()
+                        })
+                    }
                 }
+                
+                if let blackout = self.masterDetailsBlackout {
+                    let blackoutFrame: CGRect
+                    switch blackout {
+                    case .details:
+                        blackoutFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
+                    case .master:
+                        blackoutFrame = masterData.0
+                    }
+                    if self.controllerView.masterDetailsBlackout == nil {
+                        self.controllerView.masterDetailsBlackout = ASDisplayNode()
+                        self.controllerView.masterDetailsBlackout?.backgroundColor = UIColor.black
+                        self.controllerView.masterDetailsBlackout?.alpha = 0
+                        self.controllerView.masterDetailsBlackout?.frame = blackoutFrame
+                    }
+                    let blackoutNode = self.controllerView.masterDetailsBlackout!
+                    if blackoutNode.supernode == nil {
+                        self.controllerView.addSubnode(blackoutNode)
+                    }
+                    transition.updateFrame(node: blackoutNode, frame: blackoutFrame)
+                    transition.updateAlpha(node: blackoutNode, alpha: 0.2)
+                } else {
+                    if let blackout = self.controllerView.masterDetailsBlackout {
+                        self.controllerView.masterDetailsBlackout = nil
+                        transition.updateAlpha(node: blackout, alpha: 0.0, completion: { [weak blackout] _ in
+                            blackout?.removeFromSupernode()
+                        })
+                    }
+                }
+                
                 transition.updateFrame(view: self.controllerView.separatorView, frame: CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height)))
             case .single:
                 self.viewControllers.first?.view.clipsToBounds = false
@@ -310,6 +416,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                             emptyDetailView?.removeFromSuperview()
                         })
                     }
+                    if let blackout = self.controllerView.masterDetailsBlackout {
+                        self.controllerView.masterDetailsBlackout = nil
+                        transition.updateAlpha(node: blackout, alpha: 0.0, completion: { [weak blackout] _ in
+                            blackout?.removeFromSupernode()
+                        })
+                    }
                 }
                 self.controllerView.containerView.clipsToBounds = false
                 lastControllerFrameAndLayout = layoutDataForConfiguration(layoutConfiguration, layout: layout, index: 1)
@@ -326,6 +438,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if self.controllerView.sharedStatusBar.view.superview != nil {
                     self.controllerView.sharedStatusBar.removeFromSupernode()
                     self.controllerView.containerView.layer.setTraceableInfo(nil)
+                    
+                    if layout.deviceMetrics.type == .tablet {
+                        self.controllerView.containerView.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: 0, disableChildrenTracingTags: WindowTracingTags.statusBar | WindowTracingTags.keyboard))
+                    }
                 }
             case .masterDetail:
                 if self.controllerView.sharedStatusBar.view.superview == nil {
@@ -346,10 +462,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 } else if case .masterDetail = layoutConfiguration, i == 1 {
                     controller.navigationBar?.previousItem = .close
                 } else {
-                    controller.navigationBar?.previousItem = .item(viewControllers[i - 1].navigationItem)
+                    controller.navigationBar?.previousItem = .item(self.viewControllers[i - 1].navigationItem)
+                }
+                if i < self._viewControllers.count - 1 {
+                    controller.updateNavigationCustomData((self.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0, transition: transition)
+                } else {
+                    controller.updateNavigationCustomData(nil, progress: 1.0, transition: transition)
                 }
             }
-            viewControllers[i].navigation_setNavigationController(self)
+            self.viewControllers[i].navigation_setNavigationController(self)
             
             if i == 0, let (_, layout) = firstControllerFrameAndLayout {
                 controllersAndFrames.append((true, self._viewControllers[i], layout))
@@ -374,7 +495,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 frame = lastControllerFrameAndLayout.0
             }
             let isAppearing = record.controller.view.superview == nil
-            (record.controller as? ViewController)?.containerLayoutUpdated(layout, transition: isAppearing ? .immediate : transition)
+            if let controller = record.controller as? ViewController {
+                let updatedLayout: ContainerViewLayout
+                if previousControllers.count == self.viewControllers.count + 1, previousControllers[previousControllers.count - 2].controller === controller {
+                    updatedLayout = layout.withUpdatedInputHeight(controller.hasActiveInput ? layout.inputHeight : nil)
+                } else {
+                    updatedLayout = layout
+                }
+                controller.containerLayoutUpdated(updatedLayout, transition: isAppearing ? .immediate : transition)
+            }
             if isAppearing {
                 if isMaster {
                     appearingMasterController = record
@@ -428,7 +557,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.controllerView.containerView.addSubview(record.controller.view)
                 record.controller.setIgnoreAppearanceMethodInvocations(false)
                 
-                if let _ = previousControllers.index(where: { $0.controller === record.controller }) {
+                if let _ = previousControllers.firstIndex(where: { $0.controller === record.controller }) {
                     //previousControllers[index].transition = .appearance
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: previousController.view, topNavigationBar: (previousController as? ViewController)?.navigationBar, bottomView: record.controller.view, bottomNavigationBar: (record.controller as? ViewController)?.navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
@@ -448,7 +577,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         }
                     })
                 } else {
-                    if let index = self._viewControllers.index(where: { $0.controller === previousController }) {
+                    if let index = self._viewControllers.firstIndex(where: { $0.controller === previousController }) {
                         self._viewControllers[index].transition = .appearance
                     }
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Push, container: self.controllerView.containerView, topView: record.controller.view, topNavigationBar: (record.controller as? ViewController)?.navigationBar, bottomView: previousController.view, bottomNavigationBar: (previousController as? ViewController)?.navigationBar)
@@ -457,7 +586,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.controllerView.inTransition = true
                     navigationTransitionCoordinator.animateCompletion(0.0, completion: { [weak self] in
                         if let strongSelf = self {
-                            if let index = strongSelf._viewControllers.index(where: { $0.controller === previousController }) {
+                            if let index = strongSelf._viewControllers.firstIndex(where: { $0.controller === previousController }) {
                                 strongSelf._viewControllers[index].transition = .none
                             }
                             strongSelf.navigationTransitionCoordinator = nil
@@ -595,7 +724,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.updateControllerLayouts(previousControllers: self._viewControllers, layout: layout, transition: transition)
         
         if let presentedViewController = self.presentedViewController {
-            let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+            let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
             
             if let presentedViewController = presentedViewController as? ContainableController {
                 presentedViewController.containerLayoutUpdated(containedLayout, transition: transition)
@@ -605,8 +734,35 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-            navigationTransitionCoordinator.updateProgress()
+            navigationTransitionCoordinator.updateProgress(transition: transition)
         }
+    }
+    
+    private var modalTransition: CGFloat = 0.0
+    
+    public func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.modalTransition == value {
+            return
+        }
+        let scale = (self.view.bounds.width - 20.0 * 2.0) / self.view.bounds.width
+        let cornerRadius = value * 10.0 / scale
+        switch transition {
+        case let .animated(duration, curve):
+            let previous = self.displayNode.layer.cornerRadius
+            self.displayNode.layer.cornerRadius = cornerRadius
+            if !cornerRadius.isZero {
+                self.displayNode.clipsToBounds = true
+            }
+            self.displayNode.layer.animate(from: previous as NSNumber, to: cornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, completion: { [weak self] _ in
+                if cornerRadius.isZero {
+                    self?.displayNode.clipsToBounds = false
+                }
+            })
+        case .immediate:
+            self.displayNode.layer.cornerRadius = cornerRadius
+            self.displayNode.clipsToBounds = !cornerRadius.isZero
+        }
+        self.modalTransition = value
     }
     
     public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
@@ -647,7 +803,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
-            case UIGestureRecognizerState.began:
+            case .began:
                 guard let layout = self.validLayout else {
                     return
                 }
@@ -690,19 +846,31 @@ open class NavigationController: UINavigationController, ContainableController, 
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view!
                     
+                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress, transition in
+                        if let strongSelf = self {
+                            for i in 0 ..< strongSelf._viewControllers.count {
+                                if let controller = strongSelf._viewControllers[i].controller as? ViewController {
+                                    if i < strongSelf._viewControllers.count - 1 {
+                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: transition)
+                                    } else {
+                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: transition)
+                                    }
+                                }
+                            }
+                        }
+                    })
                     if let bottomController = bottomController as? ViewController {
                         bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
                     }
-                    
-                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
-            case UIGestureRecognizerState.changed:
+            case .changed:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let translation = recognizer.translation(in: self.view).x
-                    navigationTransitionCoordinator.progress = max(0.0, min(1.0, translation / self.view.frame.width))
+                    let progress = max(0.0, min(1.0, translation / self.view.frame.width))
+                    navigationTransitionCoordinator.progress = progress
                 }
-            case UIGestureRecognizerState.ended:
+            case .ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let velocity = recognizer.velocity(in: self.view).x
                     
@@ -872,15 +1040,26 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
-    public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+    public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
+        var animated = animated
+        
         self.scheduleAfterLayout { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             if let validLayout = strongSelf.validLayout {
-                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                let configuration = strongSelf.layoutConfiguration(for: validLayout)
+                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(configuration, layout: validLayout, index: strongSelf.viewControllers.count)
                 controllerLayout.inputHeight = nil
+                if options.contains(.removeOnMasterDetails)  {
+                    switch configuration {
+                    case .masterDetail:
+                        animated = false
+                    default:
+                        break
+                    }
+                }
                 controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
             }
             strongSelf.currentPushDisposable.set((controller.ready.get()
@@ -898,16 +1077,26 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
-    public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+    public func replaceAllButRootController(_ controller: ViewController, animated: Bool, animationOptions: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
         self.scheduleAfterLayout { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+            var animated = animated
             if let validLayout = strongSelf.validLayout {
-                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                let configuration = strongSelf.layoutConfiguration(for: validLayout)
+                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(configuration, layout: validLayout, index: strongSelf.viewControllers.count)
                 controllerLayout.inputHeight = nil
                 controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
+                switch configuration {
+                case .masterDetail:
+                    if animationOptions.contains(.removeOnMasterDetails) {
+                        animated = false
+                    }
+                case .single:
+                    break
+                }
             }
             strongSelf.currentPushDisposable.set((controller.ready.get()
             |> deliverOnMainQueue
@@ -1022,7 +1211,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if flag {
                         controller.view.frame = strongSelf.view.bounds.offsetBy(dx: 0.0, dy: strongSelf.view.bounds.height)
                         strongSelf.view.addSubview(controller.view)
-                        UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                        UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                             controller.view.frame = strongSelf.view.bounds
                         }, completion: { _ in
                             if let completion = completion {
@@ -1047,7 +1236,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = self.presentedViewController {
             if flag {
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                     controller.view.frame = self.view.bounds.offsetBy(dx: 0.0, dy: self.view.bounds.height)
                 }, completion: { _ in
                     controller.view.removeFromSuperview()

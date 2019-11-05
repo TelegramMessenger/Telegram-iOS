@@ -1,6 +1,14 @@
 import Postbox
-
+import TemporaryCachedPeerDataManager
 import TelegramUIPreferences
+import TelegramNotices
+import InstantPageUI
+import AccountContext
+import LocalMediaResources
+import WebSearchUI
+import InstantPageCache
+import SettingsUI
+import WallpaperResources
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })
@@ -27,12 +35,13 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ICloudFileResource.self, f: { ICloudFileResource(decoder: $0) })
     declareEncodable(MediaInputSettings.self, f: { MediaInputSettings(decoder: $0) })
     declareEncodable(ContactSynchronizationSettings.self, f: { ContactSynchronizationSettings(decoder: $0) })
-    declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
+    declareEncodable(CachedChannelAdminRanks.self, f: { CachedChannelAdminRanks(decoder: $0) })
     declareEncodable(StickerSettings.self, f: { StickerSettings(decoder: $0) })
     declareEncodable(InstantPagePresentationSettings.self, f: { InstantPagePresentationSettings(decoder: $0) })
     declareEncodable(InstantPageStoredState.self, f: { InstantPageStoredState(decoder: $0) })
     declareEncodable(InstantPageStoredDetailsState.self, f: { InstantPageStoredDetailsState(decoder: $0) })
     declareEncodable(CachedInstantPage.self, f: { CachedInstantPage(decoder: $0) })
+    declareEncodable(CachedWallpaper.self, f: { CachedWallpaper(decoder: $0) })
     declareEncodable(WatchPresetSettings.self, f: { WatchPresetSettings(decoder: $0) })
     declareEncodable(WebSearchSettings.self, f: { WebSearchSettings(decoder: $0) })
     declareEncodable(RecentWebSearchQueryItem.self, f: { RecentWebSearchQueryItem(decoder: $0) })

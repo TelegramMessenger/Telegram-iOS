@@ -21,7 +21,6 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             
             let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
             
-            let apiId: Int32 = buildConfig.apiId
             let languagesCategory = "ios"
             
             let appGroupName = "group.\(baseAppBundleId)"
@@ -38,7 +37,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            self.impl = NotificationViewControllerImpl(initializationData: NotificationViewControllerInitializationData(appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData), setPreferredContentSize: { [weak self] size in
+            self.impl = NotificationViewControllerImpl(initializationData: NotificationViewControllerInitializationData(appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData(withAppToken: nil)), setPreferredContentSize: { [weak self] size in
                 self?.preferredContentSize = size
             })
         }

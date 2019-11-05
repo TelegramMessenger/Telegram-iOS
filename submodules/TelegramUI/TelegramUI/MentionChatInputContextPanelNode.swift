@@ -5,6 +5,9 @@ import Postbox
 import TelegramCore
 import Display
 import TelegramPresentationData
+import MergeLists
+import TextFormat
+import AccountContext
 
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int

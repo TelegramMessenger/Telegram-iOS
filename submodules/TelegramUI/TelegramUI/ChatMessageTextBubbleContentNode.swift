@@ -4,6 +4,10 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import Postbox
+import TextFormat
+import UrlEscaping
+import TelegramUniversalVideoContent
+import TextSelectionNode
 
 private final class CachedChatMessageText {
     let text: String
@@ -36,6 +40,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -60,6 +65,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
             self?.item?.controllerInteraction.openUrl(url, false, false)
         }
+        
+        self.statusNode.openReactions = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.openMessageReactions(item.message.id)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -82,7 +94,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
                 for media in item.message.media {
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" || content.type == "telegram_theme" {
                         maxTextWidth = layoutConstants.wallpapers.maxTextWidth
                         break
                     }
@@ -92,22 +104,29 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in item.message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
                 }
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
+                
+                var dateReactions: [MessageReaction] = []
+                var dateReactionCount = 0
+                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                    for reaction in reactionsAttribute.reactions {
+                        if reaction.isSelected {
+                            dateReactions.insert(reaction, at: 0)
+                        } else {
+                            dateReactions.append(reaction)
+                        }
+                        dateReactionCount += Int(reaction.count)
+                    }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -131,7 +150,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
                     statusSize = size
                     statusApply = apply
                 }
@@ -224,15 +243,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 
-                let bubbleTheme = item.presentationData.theme.theme.chat.bubble
+                let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 let textFont = item.presentationData.messageFont
                 let forceStatusNewline = false
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
                 } else {
-                    attributedText = NSAttributedString(string: rawText, font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
+                    attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
                 var cutout: TextNodeCutout?
@@ -242,7 +261,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets))
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
@@ -321,6 +340,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
+                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             let _ = textApply()
                             
                             if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
@@ -350,6 +370,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
                             }
                             strongSelf.textNode.frame = adjustedTextFrame
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
+                                textSelectionNode.frame = adjustedTextFrame
+                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
+                            }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
@@ -376,27 +404,30 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
-            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+        if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
-                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText)
+                if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
                 return .url(url: url, concealed: concealed)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
-            } else if let timecode = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+            } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
                 return .timecode(timecode.time, timecode.text)
             } else {
                 return .none
             }
         } else {
+            if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
+                return .ignore
+            }
             return .none
         }
     }
@@ -416,7 +447,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         TelegramTextAttributes.Timecode
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.textNode.attributeRects(name: name, at: index)
                             break
                         }
@@ -429,7 +460,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }
@@ -448,13 +479,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if let item = self.item {
             let textNodeFrame = self.textNode.frame
             if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-                if let value = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                if let value = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                     if let rects = self.textNode.attributeRects(name: TelegramTextAttributes.URL, at: index), !rects.isEmpty {
                         var rect = rects[0]
                         for i in 1 ..< rects.count {
                             rect = rect.union(rects[i])
                         }
-                        return (item.message, .url(self, rect, value))
+                        var concealed = true
+                        if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                            concealed = !doesUrlMatchText(url: value, text: attributeText, fullText: fullText)
+                        }
+                        return (item.message, .url(self, rect, value, concealed))
                     }
                 }
             }
@@ -478,7 +513,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             if self.textHighlightingNodes.count < i {
                 textHighlightNode = self.textHighlightingNodes[i]
             } else {
-                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingTextHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingTextHighlightColor)
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.textHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.textHighlightColor)
                 self.textHighlightingNodes.append(textHighlightNode)
                 self.insertSubnode(textHighlightNode, belowSubnode: self.textNode)
             }
@@ -489,5 +524,65 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             self.textHighlightingNodes[i].removeFromSupernode()
             self.textHighlightingNodes.remove(at: i)
         }
+    }
+    
+    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    override func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+                let selectionColor: UIColor
+                let knobColor: UIColor
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    selectionColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                } else {
+                    selectionColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
+                }
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
+                    self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                })
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
+                textSelectionNode.frame = self.textNode.frame
+                textSelectionNode.highlightAreaNode.frame = self.textNode.frame
+            }
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            self.updateIsTextSelectionActive?(false)
+            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                textSelectionNode?.removeFromSupernode()
+            })
+        }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

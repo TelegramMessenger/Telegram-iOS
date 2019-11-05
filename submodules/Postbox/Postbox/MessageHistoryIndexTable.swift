@@ -175,7 +175,7 @@ final class MessageHistoryIndexTable: Table {
         
         let value = WriteBuffer()
         var flags: Int8 = HistoryEntryTypeMessage
-        if message.flags.contains(.Incoming) {
+        if !message.flags.intersection(.IsIncomingMask).isEmpty {
             flags |= HistoryEntryMessageFlagIncoming
         }
         var timestamp: Int32 = index.timestamp

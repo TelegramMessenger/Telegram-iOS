@@ -1,0 +1,1347 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		091EABA5231DAC7500A0EC14 /* ThemeNameGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */; };
+		09B4A9B823102B7A005C2E08 /* EditThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B723102B7A005C2E08 /* EditThemeController.swift */; };
+		D03E465223075D930049C28B /* SettingsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E465023075D930049C28B /* SettingsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D03E466823075E660049C28B /* TabBarAccountSwitchControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465C23075E630049C28B /* TabBarAccountSwitchControllerNode.swift */; };
+		D03E466923075E660049C28B /* LogoutOptionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465D23075E630049C28B /* LogoutOptionsController.swift */; };
+		D03E466A23075E660049C28B /* DebugController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465E23075E640049C28B /* DebugController.swift */; };
+		D03E466B23075E660049C28B /* ChangePhoneNumberControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465F23075E640049C28B /* ChangePhoneNumberControllerNode.swift */; };
+		D03E466C23075E660049C28B /* ChangePhoneNumberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466023075E640049C28B /* ChangePhoneNumberController.swift */; };
+		D03E466D23075E660049C28B /* EditSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466123075E640049C28B /* EditSettingsController.swift */; };
+		D03E466E23075E660049C28B /* TabBarAccountSwitchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466223075E640049C28B /* TabBarAccountSwitchController.swift */; };
+		D03E466F23075E660049C28B /* UsernameSetupController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466323075E650049C28B /* UsernameSetupController.swift */; };
+		D03E467023075E660049C28B /* DebugAccountsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466423075E650049C28B /* DebugAccountsController.swift */; };
+		D03E467123075E660049C28B /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466523075E650049C28B /* SettingsController.swift */; };
+		D03E467223075E660049C28B /* ChangePhoneNumberCodeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466623075E660049C28B /* ChangePhoneNumberCodeController.swift */; };
+		D03E467323075E660049C28B /* ChangePhoneNumberIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E466723075E660049C28B /* ChangePhoneNumberIntroController.swift */; };
+		D03E467923075EC70049C28B /* NotificationsAndSounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E467723075EC60049C28B /* NotificationsAndSounds.swift */; };
+		D03E467A23075EC70049C28B /* NotificationSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E467823075EC70049C28B /* NotificationSearchItem.swift */; };
+		D03E467F23075EE90049C28B /* NotificationExceptionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E467C23075EE90049C28B /* NotificationExceptionSettingsController.swift */; };
+		D03E468023075EE90049C28B /* NotificationExceptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E467D23075EE90049C28B /* NotificationExceptions.swift */; };
+		D03E468123075EE90049C28B /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E467E23075EE90049C28B /* NotificationExceptionControllerNode.swift */; };
+		D03E468A23075F010049C28B /* SettingsSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468523075EFF0049C28B /* SettingsSearchRecentQueries.swift */; };
+		D03E468B23075F010049C28B /* SettingsSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468623075F000049C28B /* SettingsSearchItem.swift */; };
+		D03E468C23075F010049C28B /* SettingsSearchableItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468723075F000049C28B /* SettingsSearchableItems.swift */; };
+		D03E468D23075F010049C28B /* SettingsSearchResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468823075F000049C28B /* SettingsSearchResultItem.swift */; };
+		D03E468E23075F010049C28B /* SettingsSearchRecentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468923075F000049C28B /* SettingsSearchRecentItem.swift */; };
+		D03E469D23075F2C0049C28B /* SelectivePrivacySettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E468F23075F290049C28B /* SelectivePrivacySettingsController.swift */; };
+		D03E469E23075F2C0049C28B /* ConfirmPhoneNumberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469023075F2A0049C28B /* ConfirmPhoneNumberController.swift */; };
+		D03E469F23075F2C0049C28B /* TwoStepVerificationResetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469123075F2A0049C28B /* TwoStepVerificationResetController.swift */; };
+		D03E46A023075F2C0049C28B /* PrivacyIntroControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469223075F2A0049C28B /* PrivacyIntroControllerNode.swift */; };
+		D03E46A123075F2C0049C28B /* PasscodeOptionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469323075F2A0049C28B /* PasscodeOptionsController.swift */; };
+		D03E46A223075F2C0049C28B /* PrivacyAndSecurityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469423075F2A0049C28B /* PrivacyAndSecurityController.swift */; };
+		D03E46A323075F2C0049C28B /* CreatePasswordController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469523075F2A0049C28B /* CreatePasswordController.swift */; };
+		D03E46A423075F2C0049C28B /* ForwardPrivacyChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469623075F2A0049C28B /* ForwardPrivacyChatPreviewItem.swift */; };
+		D03E46A523075F2C0049C28B /* PrivacyIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469723075F2B0049C28B /* PrivacyIntroController.swift */; };
+		D03E46A623075F2C0049C28B /* TwoStepVerificationPasswordEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469823075F2B0049C28B /* TwoStepVerificationPasswordEntryController.swift */; };
+		D03E46A723075F2C0049C28B /* SelectivePrivacySettingsPeersController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469923075F2B0049C28B /* SelectivePrivacySettingsPeersController.swift */; };
+		D03E46A823075F2C0049C28B /* TwoStepVerificationUnlockController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469A23075F2B0049C28B /* TwoStepVerificationUnlockController.swift */; };
+		D03E46A923075F2C0049C28B /* BlockedPeersController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469B23075F2B0049C28B /* BlockedPeersController.swift */; };
+		D03E46AA23075F2C0049C28B /* DataPrivacySettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E469C23075F2C0049C28B /* DataPrivacySettingsController.swift */; };
+		D03E46B023075F4E0049C28B /* ItemListRecentSessionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46AC23075F4E0049C28B /* ItemListRecentSessionItem.swift */; };
+		D03E46B123075F4E0049C28B /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46AD23075F4E0049C28B /* ItemListWebsiteItem.swift */; };
+		D03E46B223075F4E0049C28B /* RecentSessionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46AE23075F4E0049C28B /* RecentSessionsController.swift */; };
+		D03E46B323075F4E0049C28B /* RecentSessionsEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46AF23075F4E0049C28B /* RecentSessionsEmptyStateItem.swift */; };
+		D03E46C523075F810049C28B /* DataAndStorageSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46B523075F7F0049C28B /* DataAndStorageSettingsController.swift */; };
+		D03E46C623075F810049C28B /* SaveIncomingMediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46B623075F7F0049C28B /* SaveIncomingMediaController.swift */; };
+		D03E46C723075F810049C28B /* ProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46B723075F7F0049C28B /* ProxyServerActionSheetController.swift */; };
+		D03E46C823075F810049C28B /* CalculatingCacheSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46B823075F7F0049C28B /* CalculatingCacheSizeItem.swift */; };
+		D03E46C923075F810049C28B /* StorageUsageController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46B923075F7F0049C28B /* StorageUsageController.swift */; };
+		D03E46CA23075F810049C28B /* AutodownloadDataUsagePickerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BA23075F7F0049C28B /* AutodownloadDataUsagePickerItem.swift */; };
+		D03E46CB23075F810049C28B /* ProxySettingsServerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BB23075F800049C28B /* ProxySettingsServerItem.swift */; };
+		D03E46CC23075F810049C28B /* NetworkUsageStatsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BC23075F800049C28B /* NetworkUsageStatsController.swift */; };
+		D03E46CD23075F810049C28B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BD23075F800049C28B /* AutodownloadConnectionTypeController.swift */; };
+		D03E46CE23075F810049C28B /* VoiceCallDataSavingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BE23075F800049C28B /* VoiceCallDataSavingController.swift */; };
+		D03E46CF23075F810049C28B /* ProxyServerSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46BF23075F800049C28B /* ProxyServerSettingsController.swift */; };
+		D03E46D023075F810049C28B /* AutodownloadSizeLimitItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46C023075F800049C28B /* AutodownloadSizeLimitItem.swift */; };
+		D03E46D123075F810049C28B /* ProxyListSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46C123075F810049C28B /* ProxyListSettingsController.swift */; };
+		D03E46D223075F810049C28B /* ShareProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46C223075F810049C28B /* ShareProxyServerActionSheetController.swift */; };
+		D03E46D323075F810049C28B /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46C323075F810049C28B /* AutodownloadMediaCategoryController.swift */; };
+		D03E46D423075F810049C28B /* ProxySettingsActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46C423075F810049C28B /* ProxySettingsActionItem.swift */; };
+		D03E46D923075FA40049C28B /* InstalledStickerPacksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46D623075FA40049C28B /* InstalledStickerPacksController.swift */; };
+		D03E46DA23075FA40049C28B /* ArchivedStickerPacksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46D723075FA40049C28B /* ArchivedStickerPacksController.swift */; };
+		D03E46DB23075FA40049C28B /* FeaturedStickerPacksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46D823075FA40049C28B /* FeaturedStickerPacksController.swift */; };
+		D03E470023075FE40049C28B /* ThemeColorsGridControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46DD23075FC90049C28B /* ThemeColorsGridControllerItem.swift */; };
+		D03E470123075FE40049C28B /* ThemeSettingsChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46DE23075FC90049C28B /* ThemeSettingsChatPreviewItem.swift */; };
+		D03E470223075FE40049C28B /* WallpaperColorPickerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46DF23075FC90049C28B /* WallpaperColorPickerNode.swift */; };
+		D03E470323075FE40049C28B /* ThemeGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E023075FD10049C28B /* ThemeGridControllerNode.swift */; };
+		D03E470423075FE40049C28B /* ThemeGridSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E123075FD30049C28B /* ThemeGridSearchItem.swift */; };
+		D03E470523075FE40049C28B /* ThemeSettingsAppIconItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E223075FD30049C28B /* ThemeSettingsAppIconItem.swift */; };
+		D03E470623075FE40049C28B /* ThemeGridSearchColorsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E323075FD30049C28B /* ThemeGridSearchColorsItem.swift */; };
+		D03E470723075FE40049C28B /* ThemeSettingsThemeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E423075FD40049C28B /* ThemeSettingsThemeItem.swift */; };
+		D03E470823075FE40049C28B /* WallpaperGalleryToolbarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */; };
+		D03E470923075FE40049C28B /* CustomWallpaperPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */; };
+		D03E470B23075FE40049C28B /* ThemePreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E823075FD50049C28B /* ThemePreviewControllerNode.swift */; };
+		D03E470C23075FE40049C28B /* WallpaperGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E923075FD50049C28B /* WallpaperGalleryController.swift */; };
+		D03E470D23075FE40049C28B /* ThemeSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EA23075FD50049C28B /* ThemeSettingsController.swift */; };
+		D03E470E23075FE40049C28B /* WallpaperPatternPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EB23075FD60049C28B /* WallpaperPatternPanelNode.swift */; };
+		D03E470F23075FE40049C28B /* ThemeAccentColorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EC23075FD60049C28B /* ThemeAccentColorController.swift */; };
+		D03E471023075FE40049C28B /* SettingsThemeWallpaperNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46ED23075FD60049C28B /* SettingsThemeWallpaperNode.swift */; };
+		D03E471123075FE40049C28B /* WallpaperSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EE23075FD60049C28B /* WallpaperSearchRecentQueries.swift */; };
+		D03E471223075FE40049C28B /* ThemeGridSearchContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EF23075FD70049C28B /* ThemeGridSearchContentNode.swift */; };
+		D03E471323075FE40049C28B /* ThemePreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F023075FD70049C28B /* ThemePreviewController.swift */; };
+		D03E471423075FE40049C28B /* ThemeColorsGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F123075FD70049C28B /* ThemeColorsGridController.swift */; };
+		D03E471523075FE40049C28B /* ThemeSettingsFontSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F223075FD70049C28B /* ThemeSettingsFontSizeItem.swift */; };
+		D03E471623075FE40049C28B /* WallpaperColorPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F323075FD80049C28B /* WallpaperColorPanelNode.swift */; };
+		D03E471723075FE40049C28B /* WallpaperGalleryDecorationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F423075FD80049C28B /* WallpaperGalleryDecorationNode.swift */; };
+		D03E471823075FE40049C28B /* ThemeGridSelectionPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F523075FD90049C28B /* ThemeGridSelectionPanelNode.swift */; };
+		D03E471923075FE40049C28B /* ThemeAccentColorControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F623075FD90049C28B /* ThemeAccentColorControllerNode.swift */; };
+		D03E471A23075FE40049C28B /* WallpaperCropNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F723075FD90049C28B /* WallpaperCropNode.swift */; };
+		D03E471B23075FE40049C28B /* ThemeGridControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F823075FD90049C28B /* ThemeGridControllerItem.swift */; };
+		D03E471C23075FE40049C28B /* ThemeSettingsBrightnessItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46F923075FD90049C28B /* ThemeSettingsBrightnessItem.swift */; };
+		D03E471D23075FE40049C28B /* ThemeAutoNightTimeSelectionActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FA23075FD90049C28B /* ThemeAutoNightTimeSelectionActionSheet.swift */; };
+		D03E471E23075FE40049C28B /* ThemeColorsGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FB23075FDA0049C28B /* ThemeColorsGridControllerNode.swift */; };
+		D03E471F23075FE40049C28B /* ThemeGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FC23075FDA0049C28B /* ThemeGridController.swift */; };
+		D03E472023075FE40049C28B /* WallpaperGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FD23075FDA0049C28B /* WallpaperGalleryItem.swift */; };
+		D03E472123075FE40049C28B /* ThemeSettingsAccentColorItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FE23075FDA0049C28B /* ThemeSettingsAccentColorItem.swift */; };
+		D03E472223075FE40049C28B /* ThemeAutoNightSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46FF23075FE20049C28B /* ThemeAutoNightSettingsController.swift */; };
+		D03E4725230760040049C28B /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4724230760040049C28B /* WatchSettingsController.swift */; };
+		D03E472A230760330049C28B /* LocalizationListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4727230760320049C28B /* LocalizationListItem.swift */; };
+		D03E472B230760330049C28B /* LocalizationListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4728230760320049C28B /* LocalizationListController.swift */; };
+		D03E472C230760330049C28B /* LocalizationListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4729230760330049C28B /* LocalizationListControllerNode.swift */; };
+		D03E4730230760570049C28B /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E472E230760560049C28B /* TermsOfServiceControllerNode.swift */; };
+		D03E4731230760570049C28B /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E472F230760570049C28B /* TermsOfServiceController.swift */; };
+		D03E4734230761E10049C28B /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4733230761E10049C28B /* AccountContext.framework */; };
+		D03E4736230761E50049C28B /* ActivityIndicator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4735230761E50049C28B /* ActivityIndicator.framework */; };
+		D03E4738230761EA0049C28B /* AlertUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4737230761EA0049C28B /* AlertUI.framework */; };
+		D03E473A230761ED0049C28B /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4739230761ED0049C28B /* AsyncDisplayKit.framework */; };
+		D03E473C230761F30049C28B /* AvatarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E473B230761F30049C28B /* AvatarNode.framework */; };
+		D03E473E230761FA0049C28B /* CallListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E473D230761FA0049C28B /* CallListUI.framework */; };
+		D03E4740230762020049C28B /* ChatListSearchItemHeader.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E473F230762020049C28B /* ChatListSearchItemHeader.framework */; };
+		D03E4742230762020049C28B /* ChatListSearchItemNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4741230762020049C28B /* ChatListSearchItemNode.framework */; };
+		D03E4744230762070049C28B /* ChatListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4743230762070049C28B /* ChatListUI.framework */; };
+		D03E47462307620C0049C28B /* ContactsPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47452307620C0049C28B /* ContactsPeerItem.framework */; };
+		D03E4748230762130049C28B /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4747230762130049C28B /* CoreTelephony.framework */; };
+		D03E474A2307621A0049C28B /* CountrySelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47492307621A0049C28B /* CountrySelectionUI.framework */; };
+		D03E474C230762200049C28B /* DeviceAccess.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E474B230762200049C28B /* DeviceAccess.framework */; };
+		D03E474E230762270049C28B /* DeviceLocationManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E474D230762270049C28B /* DeviceLocationManager.framework */; };
+		D03E4750230762310049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E474F230762310049C28B /* Display.framework */; };
+		D03E47522307623A0049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47512307623A0049C28B /* Foundation.framework */; };
+		D03E47542307623E0049C28B /* GalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47532307623E0049C28B /* GalleryUI.framework */; };
+		D03E4756230762460049C28B /* Geocoding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4755230762460049C28B /* Geocoding.framework */; };
+		D03E4758230762560049C28B /* ItemListAvatarAndNameInfoItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4757230762560049C28B /* ItemListAvatarAndNameInfoItem.framework */; };
+		D03E475A230762560049C28B /* ItemListPeerActionItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4759230762560049C28B /* ItemListPeerActionItem.framework */; };
+		D03E475C230762560049C28B /* ItemListPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E475B230762560049C28B /* ItemListPeerItem.framework */; };
+		D03E475E230762560049C28B /* ItemListStickerPackItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E475D230762560049C28B /* ItemListStickerPackItem.framework */; };
+		D03E4760230762560049C28B /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E475F230762560049C28B /* ItemListUI.framework */; };
+		D03E47622307625F0049C28B /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47612307625F0049C28B /* LegacyComponents.framework */; };
+		D03E4764230762670049C28B /* LegacyMediaPickerUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4763230762670049C28B /* LegacyMediaPickerUI.framework */; };
+		D03E4766230762670049C28B /* LegacyUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4765230762670049C28B /* LegacyUI.framework */; };
+		D03E4768230762710049C28B /* ListSectionHeaderNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4767230762710049C28B /* ListSectionHeaderNode.framework */; };
+		D03E476A2307628A0049C28B /* LocalAuth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47692307628A0049C28B /* LocalAuth.framework */; };
+		D03E476C2307628A0049C28B /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E476B2307628A0049C28B /* LocalizedPeerData.framework */; };
+		D03E476E2307628A0049C28B /* LocalMediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E476D2307628A0049C28B /* LocalMediaResources.framework */; };
+		D03E47702307628B0049C28B /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E476F2307628B0049C28B /* LocalAuthentication.framework */; };
+		D03E4772230762910049C28B /* MapResourceToAvatarSizes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4771230762910049C28B /* MapResourceToAvatarSizes.framework */; };
+		D03E4774230762970049C28B /* MediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4773230762970049C28B /* MediaResources.framework */; };
+		D03E47762307629D0049C28B /* MergeLists.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47752307629D0049C28B /* MergeLists.framework */; };
+		D03E4778230762A60049C28B /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4777230762A50049C28B /* MessageUI.framework */; };
+		D03E477A230762B30049C28B /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4779230762B30049C28B /* MtProtoKitDynamic.framework */; };
+		D03E477C230762C30049C28B /* NotificationSoundSelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E477B230762C30049C28B /* NotificationSoundSelectionUI.framework */; };
+		D03E477E230762C90049C28B /* OverlayStatusController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E477D230762C90049C28B /* OverlayStatusController.framework */; };
+		D03E4780230762D40049C28B /* PasscodeUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E477F230762D40049C28B /* PasscodeUI.framework */; };
+		D03E4782230762D40049C28B /* PassportUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4781230762D40049C28B /* PassportUI.framework */; };
+		D03E4784230762D40049C28B /* PasswordSetupUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4783230762D40049C28B /* PasswordSetupUI.framework */; };
+		D03E4786230762D90049C28B /* PeerAvatarGalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4785230762D90049C28B /* PeerAvatarGalleryUI.framework */; };
+		D03E4788230762E20049C28B /* PhoneInputNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4787230762E20049C28B /* PhoneInputNode.framework */; };
+		D03E478A230762E70049C28B /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4789230762E70049C28B /* PhotoResources.framework */; };
+		D03E478C230762EE0049C28B /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E478B230762EE0049C28B /* Photos.framework */; };
+		D03E478E230762F20049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E478D230762F20049C28B /* Postbox.framework */; };
+		D03E4790230762F80049C28B /* ProgressNavigationButtonNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E478F230762F80049C28B /* ProgressNavigationButtonNode.framework */; };
+		D03E4792230763040049C28B /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4791230763020049C28B /* QuickLook.framework */; };
+		D03E4794230763060049C28B /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4793230763060049C28B /* RadialStatusNode.framework */; };
+		D03E4796230763100049C28B /* SearchBarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4795230763100049C28B /* SearchBarNode.framework */; };
+		D03E4798230763160049C28B /* SearchUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4797230763160049C28B /* SearchUI.framework */; };
+		D03E479A2307631C0049C28B /* ShareController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47992307631C0049C28B /* ShareController.framework */; };
+		D03E479C230763230049C28B /* StickerPackPreviewUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E479B230763230049C28B /* StickerPackPreviewUI.framework */; };
+		D03E479E2307632C0049C28B /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E479D2307632C0049C28B /* SwiftSignalKit.framework */; };
+		D03E47A0230763400049C28B /* TelegramCallsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E479F230763400049C28B /* TelegramCallsUI.framework */; };
+		D03E47A2230763400049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47A1230763400049C28B /* TelegramCore.framework */; };
+		D03E47A4230763400049C28B /* TelegramNotices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47A3230763400049C28B /* TelegramNotices.framework */; };
+		D03E47A6230763400049C28B /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47A5230763400049C28B /* TelegramPresentationData.framework */; };
+		D03E47A8230763400049C28B /* TelegramStringFormatting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47A7230763400049C28B /* TelegramStringFormatting.framework */; };
+		D03E47AA230763400049C28B /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47A9230763400049C28B /* TelegramUIPreferences.framework */; };
+		D03E47AC230763460049C28B /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47AB230763460049C28B /* TextFormat.framework */; };
+		D03E47AE2307634C0049C28B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47AD2307634C0049C28B /* UIKit.framework */; };
+		D03E47B0230763510049C28B /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47AF230763510049C28B /* UniversalMediaPlayer.framework */; };
+		D03E47B2230763570049C28B /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47B1230763570049C28B /* UrlEscaping.framework */; };
+		D03E47B42307635C0049C28B /* WebSearchUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47B32307635C0049C28B /* WebSearchUI.framework */; };
+		D03E47B8230766870049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E47B7230766870049C28B /* FrameworkBundle.swift */; };
+		D03E47D5230767F40049C28B /* UrlHandling.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47D4230767F40049C28B /* UrlHandling.framework */; };
+		D03E480C230769A30049C28B /* HexColor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E480B230769A30049C28B /* HexColor.framework */; };
+		D03E483623076AE90049C28B /* QrCode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E483523076AE90049C28B /* QrCode.framework */; };
+		D03E483A23076B220049C28B /* BlurredImageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E483923076B210049C28B /* BlurredImageNode.swift */; };
+		D03E486E23076C440049C28B /* WallpaperResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E486D23076C440049C28B /* WallpaperResources.framework */; };
+		D03E48A22307742D0049C28B /* AuthorizationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48A12307742D0049C28B /* AuthorizationUI.framework */; };
+		D03E48AE230775800049C28B /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E48AD230775800049C28B /* OpenSettings.swift */; };
+		D03E48B0230775F00049C28B /* AccountUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E48AF230775EF0049C28B /* AccountUtils.swift */; };
+		D03E48B22307767B0049C28B /* CachedFaqInstantPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E48B12307767A0049C28B /* CachedFaqInstantPage.swift */; };
+		D03E48B4230776870049C28B /* InstantPageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48B3230776870049C28B /* InstantPageUI.framework */; };
+		D03E48B6230777870049C28B /* CheckNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48B5230777870049C28B /* CheckNode.framework */; };
+		D03E48E22308649C0049C28B /* CounterContollerTitleView.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */; };
+		D03E490E2308661A0049C28B /* GridMessageSelectionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */; };
+		D03E493A2308678D0049C28B /* InstantPageCache.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E49392308678D0049C28B /* InstantPageCache.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeNameGenerator.swift; sourceTree = "<group>"; };
+		09B4A9B723102B7A005C2E08 /* EditThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditThemeController.swift; sourceTree = "<group>"; };
+		D03E464D23075D930049C28B /* SettingsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SettingsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E465023075D930049C28B /* SettingsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SettingsUI.h; sourceTree = "<group>"; };
+		D03E465123075D930049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D03E465C23075E630049C28B /* TabBarAccountSwitchControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarAccountSwitchControllerNode.swift; sourceTree = "<group>"; };
+		D03E465D23075E630049C28B /* LogoutOptionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogoutOptionsController.swift; sourceTree = "<group>"; };
+		D03E465E23075E640049C28B /* DebugController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugController.swift; sourceTree = "<group>"; };
+		D03E465F23075E640049C28B /* ChangePhoneNumberControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberControllerNode.swift; sourceTree = "<group>"; };
+		D03E466023075E640049C28B /* ChangePhoneNumberController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberController.swift; sourceTree = "<group>"; };
+		D03E466123075E640049C28B /* EditSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditSettingsController.swift; sourceTree = "<group>"; };
+		D03E466223075E640049C28B /* TabBarAccountSwitchController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarAccountSwitchController.swift; sourceTree = "<group>"; };
+		D03E466323075E650049C28B /* UsernameSetupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UsernameSetupController.swift; sourceTree = "<group>"; };
+		D03E466423075E650049C28B /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
+		D03E466523075E650049C28B /* SettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
+		D03E466623075E660049C28B /* ChangePhoneNumberCodeController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberCodeController.swift; sourceTree = "<group>"; };
+		D03E466723075E660049C28B /* ChangePhoneNumberIntroController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePhoneNumberIntroController.swift; sourceTree = "<group>"; };
+		D03E467723075EC60049C28B /* NotificationsAndSounds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationsAndSounds.swift; sourceTree = "<group>"; };
+		D03E467823075EC70049C28B /* NotificationSearchItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationSearchItem.swift; sourceTree = "<group>"; };
+		D03E467C23075EE90049C28B /* NotificationExceptionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionSettingsController.swift; sourceTree = "<group>"; };
+		D03E467D23075EE90049C28B /* NotificationExceptions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptions.swift; sourceTree = "<group>"; };
+		D03E467E23075EE90049C28B /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
+		D03E468523075EFF0049C28B /* SettingsSearchRecentQueries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentQueries.swift; sourceTree = "<group>"; };
+		D03E468623075F000049C28B /* SettingsSearchItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSearchItem.swift; sourceTree = "<group>"; };
+		D03E468723075F000049C28B /* SettingsSearchableItems.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSearchableItems.swift; sourceTree = "<group>"; };
+		D03E468823075F000049C28B /* SettingsSearchResultItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSearchResultItem.swift; sourceTree = "<group>"; };
+		D03E468923075F000049C28B /* SettingsSearchRecentItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentItem.swift; sourceTree = "<group>"; };
+		D03E468F23075F290049C28B /* SelectivePrivacySettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsController.swift; sourceTree = "<group>"; };
+		D03E469023075F2A0049C28B /* ConfirmPhoneNumberController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConfirmPhoneNumberController.swift; sourceTree = "<group>"; };
+		D03E469123075F2A0049C28B /* TwoStepVerificationResetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationResetController.swift; sourceTree = "<group>"; };
+		D03E469223075F2A0049C28B /* PrivacyIntroControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacyIntroControllerNode.swift; sourceTree = "<group>"; };
+		D03E469323075F2A0049C28B /* PasscodeOptionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PasscodeOptionsController.swift; sourceTree = "<group>"; };
+		D03E469423075F2A0049C28B /* PrivacyAndSecurityController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacyAndSecurityController.swift; sourceTree = "<group>"; };
+		D03E469523075F2A0049C28B /* CreatePasswordController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreatePasswordController.swift; sourceTree = "<group>"; };
+		D03E469623075F2A0049C28B /* ForwardPrivacyChatPreviewItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ForwardPrivacyChatPreviewItem.swift; sourceTree = "<group>"; };
+		D03E469723075F2B0049C28B /* PrivacyIntroController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacyIntroController.swift; sourceTree = "<group>"; };
+		D03E469823075F2B0049C28B /* TwoStepVerificationPasswordEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationPasswordEntryController.swift; sourceTree = "<group>"; };
+		D03E469923075F2B0049C28B /* SelectivePrivacySettingsPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsPeersController.swift; sourceTree = "<group>"; };
+		D03E469A23075F2B0049C28B /* TwoStepVerificationUnlockController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationUnlockController.swift; sourceTree = "<group>"; };
+		D03E469B23075F2B0049C28B /* BlockedPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeersController.swift; sourceTree = "<group>"; };
+		D03E469C23075F2C0049C28B /* DataPrivacySettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataPrivacySettingsController.swift; sourceTree = "<group>"; };
+		D03E46AC23075F4E0049C28B /* ItemListRecentSessionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListRecentSessionItem.swift; sourceTree = "<group>"; };
+		D03E46AD23075F4E0049C28B /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
+		D03E46AE23075F4E0049C28B /* RecentSessionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentSessionsController.swift; sourceTree = "<group>"; };
+		D03E46AF23075F4E0049C28B /* RecentSessionsEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentSessionsEmptyStateItem.swift; sourceTree = "<group>"; };
+		D03E46B523075F7F0049C28B /* DataAndStorageSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataAndStorageSettingsController.swift; sourceTree = "<group>"; };
+		D03E46B623075F7F0049C28B /* SaveIncomingMediaController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SaveIncomingMediaController.swift; sourceTree = "<group>"; };
+		D03E46B723075F7F0049C28B /* ProxyServerActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxyServerActionSheetController.swift; sourceTree = "<group>"; };
+		D03E46B823075F7F0049C28B /* CalculatingCacheSizeItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CalculatingCacheSizeItem.swift; sourceTree = "<group>"; };
+		D03E46B923075F7F0049C28B /* StorageUsageController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StorageUsageController.swift; sourceTree = "<group>"; };
+		D03E46BA23075F7F0049C28B /* AutodownloadDataUsagePickerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutodownloadDataUsagePickerItem.swift; sourceTree = "<group>"; };
+		D03E46BB23075F800049C28B /* ProxySettingsServerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxySettingsServerItem.swift; sourceTree = "<group>"; };
+		D03E46BC23075F800049C28B /* NetworkUsageStatsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkUsageStatsController.swift; sourceTree = "<group>"; };
+		D03E46BD23075F800049C28B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
+		D03E46BE23075F800049C28B /* VoiceCallDataSavingController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VoiceCallDataSavingController.swift; sourceTree = "<group>"; };
+		D03E46BF23075F800049C28B /* ProxyServerSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxyServerSettingsController.swift; sourceTree = "<group>"; };
+		D03E46C023075F800049C28B /* AutodownloadSizeLimitItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutodownloadSizeLimitItem.swift; sourceTree = "<group>"; };
+		D03E46C123075F810049C28B /* ProxyListSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxyListSettingsController.swift; sourceTree = "<group>"; };
+		D03E46C223075F810049C28B /* ShareProxyServerActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareProxyServerActionSheetController.swift; sourceTree = "<group>"; };
+		D03E46C323075F810049C28B /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
+		D03E46C423075F810049C28B /* ProxySettingsActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxySettingsActionItem.swift; sourceTree = "<group>"; };
+		D03E46D623075FA40049C28B /* InstalledStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstalledStickerPacksController.swift; sourceTree = "<group>"; };
+		D03E46D723075FA40049C28B /* ArchivedStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksController.swift; sourceTree = "<group>"; };
+		D03E46D823075FA40049C28B /* FeaturedStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FeaturedStickerPacksController.swift; sourceTree = "<group>"; };
+		D03E46DD23075FC90049C28B /* ThemeColorsGridControllerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerItem.swift; sourceTree = "<group>"; };
+		D03E46DE23075FC90049C28B /* ThemeSettingsChatPreviewItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsChatPreviewItem.swift; sourceTree = "<group>"; };
+		D03E46DF23075FC90049C28B /* WallpaperColorPickerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperColorPickerNode.swift; sourceTree = "<group>"; };
+		D03E46E023075FD10049C28B /* ThemeGridControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridControllerNode.swift; sourceTree = "<group>"; };
+		D03E46E123075FD30049C28B /* ThemeGridSearchItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridSearchItem.swift; sourceTree = "<group>"; };
+		D03E46E223075FD30049C28B /* ThemeSettingsAppIconItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAppIconItem.swift; sourceTree = "<group>"; };
+		D03E46E323075FD30049C28B /* ThemeGridSearchColorsItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridSearchColorsItem.swift; sourceTree = "<group>"; };
+		D03E46E423075FD40049C28B /* ThemeSettingsThemeItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsThemeItem.swift; sourceTree = "<group>"; };
+		D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryToolbarNode.swift; sourceTree = "<group>"; };
+		D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CustomWallpaperPicker.swift; sourceTree = "<group>"; };
+		D03E46E823075FD50049C28B /* ThemePreviewControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemePreviewControllerNode.swift; sourceTree = "<group>"; };
+		D03E46E923075FD50049C28B /* WallpaperGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryController.swift; sourceTree = "<group>"; };
+		D03E46EA23075FD50049C28B /* ThemeSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsController.swift; sourceTree = "<group>"; };
+		D03E46EB23075FD60049C28B /* WallpaperPatternPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperPatternPanelNode.swift; sourceTree = "<group>"; };
+		D03E46EC23075FD60049C28B /* ThemeAccentColorController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeAccentColorController.swift; sourceTree = "<group>"; };
+		D03E46ED23075FD60049C28B /* SettingsThemeWallpaperNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsThemeWallpaperNode.swift; sourceTree = "<group>"; };
+		D03E46EE23075FD60049C28B /* WallpaperSearchRecentQueries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperSearchRecentQueries.swift; sourceTree = "<group>"; };
+		D03E46EF23075FD70049C28B /* ThemeGridSearchContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridSearchContentNode.swift; sourceTree = "<group>"; };
+		D03E46F023075FD70049C28B /* ThemePreviewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemePreviewController.swift; sourceTree = "<group>"; };
+		D03E46F123075FD70049C28B /* ThemeColorsGridController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridController.swift; sourceTree = "<group>"; };
+		D03E46F223075FD70049C28B /* ThemeSettingsFontSizeItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsFontSizeItem.swift; sourceTree = "<group>"; };
+		D03E46F323075FD80049C28B /* WallpaperColorPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperColorPanelNode.swift; sourceTree = "<group>"; };
+		D03E46F423075FD80049C28B /* WallpaperGalleryDecorationNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryDecorationNode.swift; sourceTree = "<group>"; };
+		D03E46F523075FD90049C28B /* ThemeGridSelectionPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridSelectionPanelNode.swift; sourceTree = "<group>"; };
+		D03E46F623075FD90049C28B /* ThemeAccentColorControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeAccentColorControllerNode.swift; sourceTree = "<group>"; };
+		D03E46F723075FD90049C28B /* WallpaperCropNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperCropNode.swift; sourceTree = "<group>"; };
+		D03E46F823075FD90049C28B /* ThemeGridControllerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridControllerItem.swift; sourceTree = "<group>"; };
+		D03E46F923075FD90049C28B /* ThemeSettingsBrightnessItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsBrightnessItem.swift; sourceTree = "<group>"; };
+		D03E46FA23075FD90049C28B /* ThemeAutoNightTimeSelectionActionSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeAutoNightTimeSelectionActionSheet.swift; sourceTree = "<group>"; };
+		D03E46FB23075FDA0049C28B /* ThemeColorsGridControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerNode.swift; sourceTree = "<group>"; };
+		D03E46FC23075FDA0049C28B /* ThemeGridController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGridController.swift; sourceTree = "<group>"; };
+		D03E46FD23075FDA0049C28B /* WallpaperGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryItem.swift; sourceTree = "<group>"; };
+		D03E46FE23075FDA0049C28B /* ThemeSettingsAccentColorItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAccentColorItem.swift; sourceTree = "<group>"; };
+		D03E46FF23075FE20049C28B /* ThemeAutoNightSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeAutoNightSettingsController.swift; sourceTree = "<group>"; };
+		D03E4724230760040049C28B /* WatchSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
+		D03E4727230760320049C28B /* LocalizationListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationListItem.swift; sourceTree = "<group>"; };
+		D03E4728230760320049C28B /* LocalizationListController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationListController.swift; sourceTree = "<group>"; };
+		D03E4729230760330049C28B /* LocalizationListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalizationListControllerNode.swift; sourceTree = "<group>"; };
+		D03E472E230760560049C28B /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
+		D03E472F230760570049C28B /* TermsOfServiceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
+		D03E4733230761E10049C28B /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4735230761E50049C28B /* ActivityIndicator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActivityIndicator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4737230761EA0049C28B /* AlertUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AlertUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4739230761ED0049C28B /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E473B230761F30049C28B /* AvatarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AvatarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E473D230761FA0049C28B /* CallListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CallListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E473F230762020049C28B /* ChatListSearchItemHeader.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchItemHeader.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4741230762020049C28B /* ChatListSearchItemNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchItemNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4743230762070049C28B /* ChatListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47452307620C0049C28B /* ContactsPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactsPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4747230762130049C28B /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
+		D03E47492307621A0049C28B /* CountrySelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CountrySelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E474B230762200049C28B /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E474D230762270049C28B /* DeviceLocationManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceLocationManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E474F230762310049C28B /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47512307623A0049C28B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D03E47532307623E0049C28B /* GalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4755230762460049C28B /* Geocoding.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Geocoding.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4757230762560049C28B /* ItemListAvatarAndNameInfoItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListAvatarAndNameInfoItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4759230762560049C28B /* ItemListPeerActionItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListPeerActionItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E475B230762560049C28B /* ItemListPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E475D230762560049C28B /* ItemListStickerPackItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListStickerPackItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E475F230762560049C28B /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47612307625F0049C28B /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4763230762670049C28B /* LegacyMediaPickerUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyMediaPickerUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4765230762670049C28B /* LegacyUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4767230762710049C28B /* ListSectionHeaderNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ListSectionHeaderNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47692307628A0049C28B /* LocalAuth.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalAuth.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E476B2307628A0049C28B /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E476D2307628A0049C28B /* LocalMediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalMediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E476F2307628B0049C28B /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
+		D03E4771230762910049C28B /* MapResourceToAvatarSizes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MapResourceToAvatarSizes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4773230762970049C28B /* MediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47752307629D0049C28B /* MergeLists.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MergeLists.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4777230762A50049C28B /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
+		D03E4779230762B30049C28B /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E477B230762C30049C28B /* NotificationSoundSelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = NotificationSoundSelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E477D230762C90049C28B /* OverlayStatusController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OverlayStatusController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E477F230762D40049C28B /* PasscodeUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasscodeUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4781230762D40049C28B /* PassportUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PassportUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4783230762D40049C28B /* PasswordSetupUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasswordSetupUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4785230762D90049C28B /* PeerAvatarGalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerAvatarGalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4787230762E20049C28B /* PhoneInputNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhoneInputNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4789230762E70049C28B /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E478B230762EE0049C28B /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
+		D03E478D230762F20049C28B /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E478F230762F80049C28B /* ProgressNavigationButtonNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ProgressNavigationButtonNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4791230763020049C28B /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
+		D03E4793230763060049C28B /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4795230763100049C28B /* SearchBarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SearchBarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4797230763160049C28B /* SearchUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SearchUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47992307631C0049C28B /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E479B230763230049C28B /* StickerPackPreviewUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerPackPreviewUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E479D2307632C0049C28B /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E479F230763400049C28B /* TelegramCallsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCallsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47A1230763400049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47A3230763400049C28B /* TelegramNotices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramNotices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47A5230763400049C28B /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47A7230763400049C28B /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47A9230763400049C28B /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47AB230763460049C28B /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47AD2307634C0049C28B /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D03E47AF230763510049C28B /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47B1230763570049C28B /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47B32307635C0049C28B /* WebSearchUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebSearchUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E47B7230766870049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D03E47D4230767F40049C28B /* UrlHandling.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlHandling.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E480B230769A30049C28B /* HexColor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = HexColor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E483523076AE90049C28B /* QrCode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = QrCode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E483923076B210049C28B /* BlurredImageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlurredImageNode.swift; sourceTree = "<group>"; };
+		D03E486D23076C440049C28B /* WallpaperResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WallpaperResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E48A12307742D0049C28B /* AuthorizationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AuthorizationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E48AD230775800049C28B /* OpenSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
+		D03E48AF230775EF0049C28B /* AccountUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountUtils.swift; sourceTree = "<group>"; };
+		D03E48B12307767A0049C28B /* CachedFaqInstantPage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedFaqInstantPage.swift; sourceTree = "<group>"; };
+		D03E48B3230776870049C28B /* InstantPageUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = InstantPageUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E48B5230777870049C28B /* CheckNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CheckNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CounterContollerTitleView.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GridMessageSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E49392308678D0049C28B /* InstantPageCache.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = InstantPageCache.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D03E464A23075D930049C28B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D03E493A2308678D0049C28B /* InstantPageCache.framework in Frameworks */,
+				D03E490E2308661A0049C28B /* GridMessageSelectionNode.framework in Frameworks */,
+				D03E48E22308649C0049C28B /* CounterContollerTitleView.framework in Frameworks */,
+				D03E48B6230777870049C28B /* CheckNode.framework in Frameworks */,
+				D03E48B4230776870049C28B /* InstantPageUI.framework in Frameworks */,
+				D03E48A22307742D0049C28B /* AuthorizationUI.framework in Frameworks */,
+				D03E486E23076C440049C28B /* WallpaperResources.framework in Frameworks */,
+				D03E483623076AE90049C28B /* QrCode.framework in Frameworks */,
+				D03E480C230769A30049C28B /* HexColor.framework in Frameworks */,
+				D03E47D5230767F40049C28B /* UrlHandling.framework in Frameworks */,
+				D03E47B42307635C0049C28B /* WebSearchUI.framework in Frameworks */,
+				D03E47B2230763570049C28B /* UrlEscaping.framework in Frameworks */,
+				D03E47B0230763510049C28B /* UniversalMediaPlayer.framework in Frameworks */,
+				D03E47AE2307634C0049C28B /* UIKit.framework in Frameworks */,
+				D03E47AC230763460049C28B /* TextFormat.framework in Frameworks */,
+				D03E47A0230763400049C28B /* TelegramCallsUI.framework in Frameworks */,
+				D03E47A2230763400049C28B /* TelegramCore.framework in Frameworks */,
+				D03E47A4230763400049C28B /* TelegramNotices.framework in Frameworks */,
+				D03E47A6230763400049C28B /* TelegramPresentationData.framework in Frameworks */,
+				D03E47A8230763400049C28B /* TelegramStringFormatting.framework in Frameworks */,
+				D03E47AA230763400049C28B /* TelegramUIPreferences.framework in Frameworks */,
+				D03E479E2307632C0049C28B /* SwiftSignalKit.framework in Frameworks */,
+				D03E479C230763230049C28B /* StickerPackPreviewUI.framework in Frameworks */,
+				D03E479A2307631C0049C28B /* ShareController.framework in Frameworks */,
+				D03E4798230763160049C28B /* SearchUI.framework in Frameworks */,
+				D03E4796230763100049C28B /* SearchBarNode.framework in Frameworks */,
+				D03E4794230763060049C28B /* RadialStatusNode.framework in Frameworks */,
+				D03E4792230763040049C28B /* QuickLook.framework in Frameworks */,
+				D03E4790230762F80049C28B /* ProgressNavigationButtonNode.framework in Frameworks */,
+				D03E478E230762F20049C28B /* Postbox.framework in Frameworks */,
+				D03E478C230762EE0049C28B /* Photos.framework in Frameworks */,
+				D03E478A230762E70049C28B /* PhotoResources.framework in Frameworks */,
+				D03E4788230762E20049C28B /* PhoneInputNode.framework in Frameworks */,
+				D03E4786230762D90049C28B /* PeerAvatarGalleryUI.framework in Frameworks */,
+				D03E4780230762D40049C28B /* PasscodeUI.framework in Frameworks */,
+				D03E4782230762D40049C28B /* PassportUI.framework in Frameworks */,
+				D03E4784230762D40049C28B /* PasswordSetupUI.framework in Frameworks */,
+				D03E477E230762C90049C28B /* OverlayStatusController.framework in Frameworks */,
+				D03E477C230762C30049C28B /* NotificationSoundSelectionUI.framework in Frameworks */,
+				D03E477A230762B30049C28B /* MtProtoKitDynamic.framework in Frameworks */,
+				D03E4778230762A60049C28B /* MessageUI.framework in Frameworks */,
+				D03E47762307629D0049C28B /* MergeLists.framework in Frameworks */,
+				D03E4774230762970049C28B /* MediaResources.framework in Frameworks */,
+				D03E4772230762910049C28B /* MapResourceToAvatarSizes.framework in Frameworks */,
+				D03E47702307628B0049C28B /* LocalAuthentication.framework in Frameworks */,
+				D03E476A2307628A0049C28B /* LocalAuth.framework in Frameworks */,
+				D03E476C2307628A0049C28B /* LocalizedPeerData.framework in Frameworks */,
+				D03E476E2307628A0049C28B /* LocalMediaResources.framework in Frameworks */,
+				D03E4768230762710049C28B /* ListSectionHeaderNode.framework in Frameworks */,
+				D03E4764230762670049C28B /* LegacyMediaPickerUI.framework in Frameworks */,
+				D03E4766230762670049C28B /* LegacyUI.framework in Frameworks */,
+				D03E47622307625F0049C28B /* LegacyComponents.framework in Frameworks */,
+				D03E4758230762560049C28B /* ItemListAvatarAndNameInfoItem.framework in Frameworks */,
+				D03E475A230762560049C28B /* ItemListPeerActionItem.framework in Frameworks */,
+				D03E475C230762560049C28B /* ItemListPeerItem.framework in Frameworks */,
+				D03E475E230762560049C28B /* ItemListStickerPackItem.framework in Frameworks */,
+				D03E4760230762560049C28B /* ItemListUI.framework in Frameworks */,
+				D03E4756230762460049C28B /* Geocoding.framework in Frameworks */,
+				D03E47542307623E0049C28B /* GalleryUI.framework in Frameworks */,
+				D03E47522307623A0049C28B /* Foundation.framework in Frameworks */,
+				D03E4750230762310049C28B /* Display.framework in Frameworks */,
+				D03E474E230762270049C28B /* DeviceLocationManager.framework in Frameworks */,
+				D03E474C230762200049C28B /* DeviceAccess.framework in Frameworks */,
+				D03E474A2307621A0049C28B /* CountrySelectionUI.framework in Frameworks */,
+				D03E4748230762130049C28B /* CoreTelephony.framework in Frameworks */,
+				D03E47462307620C0049C28B /* ContactsPeerItem.framework in Frameworks */,
+				D03E4744230762070049C28B /* ChatListUI.framework in Frameworks */,
+				D03E4740230762020049C28B /* ChatListSearchItemHeader.framework in Frameworks */,
+				D03E4742230762020049C28B /* ChatListSearchItemNode.framework in Frameworks */,
+				D03E473E230761FA0049C28B /* CallListUI.framework in Frameworks */,
+				D03E473C230761F30049C28B /* AvatarNode.framework in Frameworks */,
+				D03E473A230761ED0049C28B /* AsyncDisplayKit.framework in Frameworks */,
+				D03E4738230761EA0049C28B /* AlertUI.framework in Frameworks */,
+				D03E4736230761E50049C28B /* ActivityIndicator.framework in Frameworks */,
+				D03E4734230761E10049C28B /* AccountContext.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D03E464323075D930049C28B = {
+			isa = PBXGroup;
+			children = (
+				D03E465123075D930049C28B /* Info.plist */,
+				D03E464F23075D930049C28B /* Sources */,
+				D03E464E23075D930049C28B /* Products */,
+				D03E4732230761E10049C28B /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D03E464E23075D930049C28B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D03E464D23075D930049C28B /* SettingsUI.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D03E464F23075D930049C28B /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D03E467423075E6C0049C28B /* Search */,
+				D03E467623075EA90049C28B /* Notifications */,
+				D03E468223075EEB0049C28B /* Privacy and Security */,
+				D03E46B423075F610049C28B /* Data and Storage */,
+				D03E46D523075F8A0049C28B /* Stickers */,
+				D03E46DC23075FAD0049C28B /* Themes */,
+				D03E472323075FEC0049C28B /* Watch */,
+				D03E47262307600F0049C28B /* Language Selection */,
+				D03E472D2307603D0049C28B /* Terms of Service */,
+				D03E466623075E660049C28B /* ChangePhoneNumberCodeController.swift */,
+				D03E466023075E640049C28B /* ChangePhoneNumberController.swift */,
+				D03E465F23075E640049C28B /* ChangePhoneNumberControllerNode.swift */,
+				D03E466723075E660049C28B /* ChangePhoneNumberIntroController.swift */,
+				D03E466423075E650049C28B /* DebugAccountsController.swift */,
+				D03E465E23075E640049C28B /* DebugController.swift */,
+				D03E466123075E640049C28B /* EditSettingsController.swift */,
+				D03E465D23075E630049C28B /* LogoutOptionsController.swift */,
+				D03E466523075E650049C28B /* SettingsController.swift */,
+				D03E466223075E640049C28B /* TabBarAccountSwitchController.swift */,
+				D03E465C23075E630049C28B /* TabBarAccountSwitchControllerNode.swift */,
+				D03E466323075E650049C28B /* UsernameSetupController.swift */,
+				D03E483923076B210049C28B /* BlurredImageNode.swift */,
+				D03E48AD230775800049C28B /* OpenSettings.swift */,
+				D03E48AF230775EF0049C28B /* AccountUtils.swift */,
+				D03E48B12307767A0049C28B /* CachedFaqInstantPage.swift */,
+				D03E47B7230766870049C28B /* FrameworkBundle.swift */,
+				D03E465023075D930049C28B /* SettingsUI.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D03E467423075E6C0049C28B /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				D03E468723075F000049C28B /* SettingsSearchableItems.swift */,
+				D03E468623075F000049C28B /* SettingsSearchItem.swift */,
+				D03E468923075F000049C28B /* SettingsSearchRecentItem.swift */,
+				D03E468523075EFF0049C28B /* SettingsSearchRecentQueries.swift */,
+				D03E468823075F000049C28B /* SettingsSearchResultItem.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		D03E467623075EA90049C28B /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				D03E467B23075EC90049C28B /* Exceptions */,
+				D03E467723075EC60049C28B /* NotificationsAndSounds.swift */,
+				D03E467823075EC70049C28B /* NotificationSearchItem.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		D03E467B23075EC90049C28B /* Exceptions */ = {
+			isa = PBXGroup;
+			children = (
+				D03E467E23075EE90049C28B /* NotificationExceptionControllerNode.swift */,
+				D03E467D23075EE90049C28B /* NotificationExceptions.swift */,
+				D03E467C23075EE90049C28B /* NotificationExceptionSettingsController.swift */,
+			);
+			path = Exceptions;
+			sourceTree = "<group>";
+		};
+		D03E468223075EEB0049C28B /* Privacy and Security */ = {
+			isa = PBXGroup;
+			children = (
+				D03E46AB23075F350049C28B /* Recent Sessions */,
+				D03E469B23075F2B0049C28B /* BlockedPeersController.swift */,
+				D03E469023075F2A0049C28B /* ConfirmPhoneNumberController.swift */,
+				D03E469523075F2A0049C28B /* CreatePasswordController.swift */,
+				D03E469C23075F2C0049C28B /* DataPrivacySettingsController.swift */,
+				D03E469623075F2A0049C28B /* ForwardPrivacyChatPreviewItem.swift */,
+				D03E469323075F2A0049C28B /* PasscodeOptionsController.swift */,
+				D03E469423075F2A0049C28B /* PrivacyAndSecurityController.swift */,
+				D03E469723075F2B0049C28B /* PrivacyIntroController.swift */,
+				D03E469223075F2A0049C28B /* PrivacyIntroControllerNode.swift */,
+				D03E468F23075F290049C28B /* SelectivePrivacySettingsController.swift */,
+				D03E469923075F2B0049C28B /* SelectivePrivacySettingsPeersController.swift */,
+				D03E469823075F2B0049C28B /* TwoStepVerificationPasswordEntryController.swift */,
+				D03E469123075F2A0049C28B /* TwoStepVerificationResetController.swift */,
+				D03E469A23075F2B0049C28B /* TwoStepVerificationUnlockController.swift */,
+			);
+			path = "Privacy and Security";
+			sourceTree = "<group>";
+		};
+		D03E46AB23075F350049C28B /* Recent Sessions */ = {
+			isa = PBXGroup;
+			children = (
+				D03E46AC23075F4E0049C28B /* ItemListRecentSessionItem.swift */,
+				D03E46AD23075F4E0049C28B /* ItemListWebsiteItem.swift */,
+				D03E46AE23075F4E0049C28B /* RecentSessionsController.swift */,
+				D03E46AF23075F4E0049C28B /* RecentSessionsEmptyStateItem.swift */,
+			);
+			path = "Recent Sessions";
+			sourceTree = "<group>";
+		};
+		D03E46B423075F610049C28B /* Data and Storage */ = {
+			isa = PBXGroup;
+			children = (
+				D03E46BD23075F800049C28B /* AutodownloadConnectionTypeController.swift */,
+				D03E46BA23075F7F0049C28B /* AutodownloadDataUsagePickerItem.swift */,
+				D03E46C323075F810049C28B /* AutodownloadMediaCategoryController.swift */,
+				D03E46C023075F800049C28B /* AutodownloadSizeLimitItem.swift */,
+				D03E46B823075F7F0049C28B /* CalculatingCacheSizeItem.swift */,
+				D03E46B523075F7F0049C28B /* DataAndStorageSettingsController.swift */,
+				D03E46BC23075F800049C28B /* NetworkUsageStatsController.swift */,
+				D03E46C123075F810049C28B /* ProxyListSettingsController.swift */,
+				D03E46B723075F7F0049C28B /* ProxyServerActionSheetController.swift */,
+				D03E46BF23075F800049C28B /* ProxyServerSettingsController.swift */,
+				D03E46C423075F810049C28B /* ProxySettingsActionItem.swift */,
+				D03E46BB23075F800049C28B /* ProxySettingsServerItem.swift */,
+				D03E46B623075F7F0049C28B /* SaveIncomingMediaController.swift */,
+				D03E46C223075F810049C28B /* ShareProxyServerActionSheetController.swift */,
+				D03E46B923075F7F0049C28B /* StorageUsageController.swift */,
+				D03E46BE23075F800049C28B /* VoiceCallDataSavingController.swift */,
+			);
+			path = "Data and Storage";
+			sourceTree = "<group>";
+		};
+		D03E46D523075F8A0049C28B /* Stickers */ = {
+			isa = PBXGroup;
+			children = (
+				D03E46D723075FA40049C28B /* ArchivedStickerPacksController.swift */,
+				D03E46D823075FA40049C28B /* FeaturedStickerPacksController.swift */,
+				D03E46D623075FA40049C28B /* InstalledStickerPacksController.swift */,
+			);
+			path = Stickers;
+			sourceTree = "<group>";
+		};
+		D03E46DC23075FAD0049C28B /* Themes */ = {
+			isa = PBXGroup;
+			children = (
+				D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */,
+				D03E46ED23075FD60049C28B /* SettingsThemeWallpaperNode.swift */,
+				D03E46EC23075FD60049C28B /* ThemeAccentColorController.swift */,
+				D03E46F623075FD90049C28B /* ThemeAccentColorControllerNode.swift */,
+				D03E46FF23075FE20049C28B /* ThemeAutoNightSettingsController.swift */,
+				D03E46FA23075FD90049C28B /* ThemeAutoNightTimeSelectionActionSheet.swift */,
+				D03E46F123075FD70049C28B /* ThemeColorsGridController.swift */,
+				D03E46DD23075FC90049C28B /* ThemeColorsGridControllerItem.swift */,
+				D03E46FB23075FDA0049C28B /* ThemeColorsGridControllerNode.swift */,
+				D03E46FC23075FDA0049C28B /* ThemeGridController.swift */,
+				D03E46F823075FD90049C28B /* ThemeGridControllerItem.swift */,
+				D03E46E023075FD10049C28B /* ThemeGridControllerNode.swift */,
+				D03E46E323075FD30049C28B /* ThemeGridSearchColorsItem.swift */,
+				D03E46EF23075FD70049C28B /* ThemeGridSearchContentNode.swift */,
+				D03E46E123075FD30049C28B /* ThemeGridSearchItem.swift */,
+				D03E46F523075FD90049C28B /* ThemeGridSelectionPanelNode.swift */,
+				D03E46F023075FD70049C28B /* ThemePreviewController.swift */,
+				D03E46E823075FD50049C28B /* ThemePreviewControllerNode.swift */,
+				D03E46FE23075FDA0049C28B /* ThemeSettingsAccentColorItem.swift */,
+				D03E46E223075FD30049C28B /* ThemeSettingsAppIconItem.swift */,
+				D03E46F923075FD90049C28B /* ThemeSettingsBrightnessItem.swift */,
+				D03E46DE23075FC90049C28B /* ThemeSettingsChatPreviewItem.swift */,
+				D03E46EA23075FD50049C28B /* ThemeSettingsController.swift */,
+				D03E46F223075FD70049C28B /* ThemeSettingsFontSizeItem.swift */,
+				D03E46E423075FD40049C28B /* ThemeSettingsThemeItem.swift */,
+				D03E46F323075FD80049C28B /* WallpaperColorPanelNode.swift */,
+				D03E46DF23075FC90049C28B /* WallpaperColorPickerNode.swift */,
+				D03E46F723075FD90049C28B /* WallpaperCropNode.swift */,
+				D03E46E923075FD50049C28B /* WallpaperGalleryController.swift */,
+				D03E46F423075FD80049C28B /* WallpaperGalleryDecorationNode.swift */,
+				D03E46FD23075FDA0049C28B /* WallpaperGalleryItem.swift */,
+				D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */,
+				D03E46EB23075FD60049C28B /* WallpaperPatternPanelNode.swift */,
+				D03E46EE23075FD60049C28B /* WallpaperSearchRecentQueries.swift */,
+				09B4A9B723102B7A005C2E08 /* EditThemeController.swift */,
+				091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */,
+			);
+			path = Themes;
+			sourceTree = "<group>";
+		};
+		D03E472323075FEC0049C28B /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				D03E4724230760040049C28B /* WatchSettingsController.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		D03E47262307600F0049C28B /* Language Selection */ = {
+			isa = PBXGroup;
+			children = (
+				D03E4728230760320049C28B /* LocalizationListController.swift */,
+				D03E4729230760330049C28B /* LocalizationListControllerNode.swift */,
+				D03E4727230760320049C28B /* LocalizationListItem.swift */,
+			);
+			path = "Language Selection";
+			sourceTree = "<group>";
+		};
+		D03E472D2307603D0049C28B /* Terms of Service */ = {
+			isa = PBXGroup;
+			children = (
+				D03E472F230760570049C28B /* TermsOfServiceController.swift */,
+				D03E472E230760560049C28B /* TermsOfServiceControllerNode.swift */,
+			);
+			path = "Terms of Service";
+			sourceTree = "<group>";
+		};
+		D03E4732230761E10049C28B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D03E49392308678D0049C28B /* InstantPageCache.framework */,
+				D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */,
+				D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */,
+				D03E48B5230777870049C28B /* CheckNode.framework */,
+				D03E48B3230776870049C28B /* InstantPageUI.framework */,
+				D03E48A12307742D0049C28B /* AuthorizationUI.framework */,
+				D03E486D23076C440049C28B /* WallpaperResources.framework */,
+				D03E483523076AE90049C28B /* QrCode.framework */,
+				D03E480B230769A30049C28B /* HexColor.framework */,
+				D03E47D4230767F40049C28B /* UrlHandling.framework */,
+				D03E47B32307635C0049C28B /* WebSearchUI.framework */,
+				D03E47B1230763570049C28B /* UrlEscaping.framework */,
+				D03E47AF230763510049C28B /* UniversalMediaPlayer.framework */,
+				D03E47AD2307634C0049C28B /* UIKit.framework */,
+				D03E47AB230763460049C28B /* TextFormat.framework */,
+				D03E479F230763400049C28B /* TelegramCallsUI.framework */,
+				D03E47A1230763400049C28B /* TelegramCore.framework */,
+				D03E47A3230763400049C28B /* TelegramNotices.framework */,
+				D03E47A5230763400049C28B /* TelegramPresentationData.framework */,
+				D03E47A7230763400049C28B /* TelegramStringFormatting.framework */,
+				D03E47A9230763400049C28B /* TelegramUIPreferences.framework */,
+				D03E479D2307632C0049C28B /* SwiftSignalKit.framework */,
+				D03E479B230763230049C28B /* StickerPackPreviewUI.framework */,
+				D03E47992307631C0049C28B /* ShareController.framework */,
+				D03E4797230763160049C28B /* SearchUI.framework */,
+				D03E4795230763100049C28B /* SearchBarNode.framework */,
+				D03E4793230763060049C28B /* RadialStatusNode.framework */,
+				D03E4791230763020049C28B /* QuickLook.framework */,
+				D03E478F230762F80049C28B /* ProgressNavigationButtonNode.framework */,
+				D03E478D230762F20049C28B /* Postbox.framework */,
+				D03E478B230762EE0049C28B /* Photos.framework */,
+				D03E4789230762E70049C28B /* PhotoResources.framework */,
+				D03E4787230762E20049C28B /* PhoneInputNode.framework */,
+				D03E4785230762D90049C28B /* PeerAvatarGalleryUI.framework */,
+				D03E477F230762D40049C28B /* PasscodeUI.framework */,
+				D03E4781230762D40049C28B /* PassportUI.framework */,
+				D03E4783230762D40049C28B /* PasswordSetupUI.framework */,
+				D03E477D230762C90049C28B /* OverlayStatusController.framework */,
+				D03E477B230762C30049C28B /* NotificationSoundSelectionUI.framework */,
+				D03E4779230762B30049C28B /* MtProtoKitDynamic.framework */,
+				D03E4777230762A50049C28B /* MessageUI.framework */,
+				D03E47752307629D0049C28B /* MergeLists.framework */,
+				D03E4773230762970049C28B /* MediaResources.framework */,
+				D03E4771230762910049C28B /* MapResourceToAvatarSizes.framework */,
+				D03E476F2307628B0049C28B /* LocalAuthentication.framework */,
+				D03E47692307628A0049C28B /* LocalAuth.framework */,
+				D03E476B2307628A0049C28B /* LocalizedPeerData.framework */,
+				D03E476D2307628A0049C28B /* LocalMediaResources.framework */,
+				D03E4767230762710049C28B /* ListSectionHeaderNode.framework */,
+				D03E4763230762670049C28B /* LegacyMediaPickerUI.framework */,
+				D03E4765230762670049C28B /* LegacyUI.framework */,
+				D03E47612307625F0049C28B /* LegacyComponents.framework */,
+				D03E4757230762560049C28B /* ItemListAvatarAndNameInfoItem.framework */,
+				D03E4759230762560049C28B /* ItemListPeerActionItem.framework */,
+				D03E475B230762560049C28B /* ItemListPeerItem.framework */,
+				D03E475D230762560049C28B /* ItemListStickerPackItem.framework */,
+				D03E475F230762560049C28B /* ItemListUI.framework */,
+				D03E4755230762460049C28B /* Geocoding.framework */,
+				D03E47532307623E0049C28B /* GalleryUI.framework */,
+				D03E47512307623A0049C28B /* Foundation.framework */,
+				D03E474F230762310049C28B /* Display.framework */,
+				D03E474D230762270049C28B /* DeviceLocationManager.framework */,
+				D03E474B230762200049C28B /* DeviceAccess.framework */,
+				D03E47492307621A0049C28B /* CountrySelectionUI.framework */,
+				D03E4747230762130049C28B /* CoreTelephony.framework */,
+				D03E47452307620C0049C28B /* ContactsPeerItem.framework */,
+				D03E4743230762070049C28B /* ChatListUI.framework */,
+				D03E473F230762020049C28B /* ChatListSearchItemHeader.framework */,
+				D03E4741230762020049C28B /* ChatListSearchItemNode.framework */,
+				D03E473D230761FA0049C28B /* CallListUI.framework */,
+				D03E473B230761F30049C28B /* AvatarNode.framework */,
+				D03E4739230761ED0049C28B /* AsyncDisplayKit.framework */,
+				D03E4737230761EA0049C28B /* AlertUI.framework */,
+				D03E4735230761E50049C28B /* ActivityIndicator.framework */,
+				D03E4733230761E10049C28B /* AccountContext.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D03E464823075D930049C28B /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D03E465223075D930049C28B /* SettingsUI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D03E464C23075D930049C28B /* SettingsUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D03E465523075D930049C28B /* Build configuration list for PBXNativeTarget "SettingsUI" */;
+			buildPhases = (
+				D03E464823075D930049C28B /* Headers */,
+				D03E464923075D930049C28B /* Sources */,
+				D03E464A23075D930049C28B /* Frameworks */,
+				D03E464B23075D930049C28B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SettingsUI;
+			productName = SettingsUI;
+			productReference = D03E464D23075D930049C28B /* SettingsUI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D03E464423075D930049C28B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D03E464C23075D930049C28B = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D03E464723075D930049C28B /* Build configuration list for PBXProject "SettingsUI_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D03E464323075D930049C28B;
+			productRefGroup = D03E464E23075D930049C28B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D03E464C23075D930049C28B /* SettingsUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D03E464B23075D930049C28B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D03E464923075D930049C28B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D03E468023075EE90049C28B /* NotificationExceptions.swift in Sources */,
+				D03E46D423075F810049C28B /* ProxySettingsActionItem.swift in Sources */,
+				D03E466923075E660049C28B /* LogoutOptionsController.swift in Sources */,
+				D03E469D23075F2C0049C28B /* SelectivePrivacySettingsController.swift in Sources */,
+				D03E4725230760040049C28B /* WatchSettingsController.swift in Sources */,
+				D03E468D23075F010049C28B /* SettingsSearchResultItem.swift in Sources */,
+				D03E470923075FE40049C28B /* CustomWallpaperPicker.swift in Sources */,
+				D03E46A123075F2C0049C28B /* PasscodeOptionsController.swift in Sources */,
+				D03E470623075FE40049C28B /* ThemeGridSearchColorsItem.swift in Sources */,
+				D03E46B223075F4E0049C28B /* RecentSessionsController.swift in Sources */,
+				D03E471F23075FE40049C28B /* ThemeGridController.swift in Sources */,
+				D03E48B22307767B0049C28B /* CachedFaqInstantPage.swift in Sources */,
+				D03E471A23075FE40049C28B /* WallpaperCropNode.swift in Sources */,
+				D03E46A523075F2C0049C28B /* PrivacyIntroController.swift in Sources */,
+				D03E46A023075F2C0049C28B /* PrivacyIntroControllerNode.swift in Sources */,
+				D03E46C523075F810049C28B /* DataAndStorageSettingsController.swift in Sources */,
+				D03E467923075EC70049C28B /* NotificationsAndSounds.swift in Sources */,
+				D03E470423075FE40049C28B /* ThemeGridSearchItem.swift in Sources */,
+				D03E466E23075E660049C28B /* TabBarAccountSwitchController.swift in Sources */,
+				D03E46D223075F810049C28B /* ShareProxyServerActionSheetController.swift in Sources */,
+				D03E468A23075F010049C28B /* SettingsSearchRecentQueries.swift in Sources */,
+				D03E47B8230766870049C28B /* FrameworkBundle.swift in Sources */,
+				D03E472023075FE40049C28B /* WallpaperGalleryItem.swift in Sources */,
+				D03E471723075FE40049C28B /* WallpaperGalleryDecorationNode.swift in Sources */,
+				D03E46B123075F4E0049C28B /* ItemListWebsiteItem.swift in Sources */,
+				D03E470723075FE40049C28B /* ThemeSettingsThemeItem.swift in Sources */,
+				D03E46D123075F810049C28B /* ProxyListSettingsController.swift in Sources */,
+				D03E472223075FE40049C28B /* ThemeAutoNightSettingsController.swift in Sources */,
+				D03E470D23075FE40049C28B /* ThemeSettingsController.swift in Sources */,
+				D03E46D023075F810049C28B /* AutodownloadSizeLimitItem.swift in Sources */,
+				D03E46DA23075FA40049C28B /* ArchivedStickerPacksController.swift in Sources */,
+				D03E467323075E660049C28B /* ChangePhoneNumberIntroController.swift in Sources */,
+				D03E466C23075E660049C28B /* ChangePhoneNumberController.swift in Sources */,
+				D03E470123075FE40049C28B /* ThemeSettingsChatPreviewItem.swift in Sources */,
+				D03E471123075FE40049C28B /* WallpaperSearchRecentQueries.swift in Sources */,
+				D03E467023075E660049C28B /* DebugAccountsController.swift in Sources */,
+				D03E46CC23075F810049C28B /* NetworkUsageStatsController.swift in Sources */,
+				D03E466D23075E660049C28B /* EditSettingsController.swift in Sources */,
+				D03E46CD23075F810049C28B /* AutodownloadConnectionTypeController.swift in Sources */,
+				D03E46CB23075F810049C28B /* ProxySettingsServerItem.swift in Sources */,
+				D03E471323075FE40049C28B /* ThemePreviewController.swift in Sources */,
+				D03E48AE230775800049C28B /* OpenSettings.swift in Sources */,
+				D03E46A423075F2C0049C28B /* ForwardPrivacyChatPreviewItem.swift in Sources */,
+				D03E470323075FE40049C28B /* ThemeGridControllerNode.swift in Sources */,
+				D03E468C23075F010049C28B /* SettingsSearchableItems.swift in Sources */,
+				D03E48B0230775F00049C28B /* AccountUtils.swift in Sources */,
+				D03E472B230760330049C28B /* LocalizationListController.swift in Sources */,
+				D03E470F23075FE40049C28B /* ThemeAccentColorController.swift in Sources */,
+				D03E471C23075FE40049C28B /* ThemeSettingsBrightnessItem.swift in Sources */,
+				D03E46B323075F4E0049C28B /* RecentSessionsEmptyStateItem.swift in Sources */,
+				D03E472123075FE40049C28B /* ThemeSettingsAccentColorItem.swift in Sources */,
+				D03E469E23075F2C0049C28B /* ConfirmPhoneNumberController.swift in Sources */,
+				D03E46C723075F810049C28B /* ProxyServerActionSheetController.swift in Sources */,
+				D03E468123075EE90049C28B /* NotificationExceptionControllerNode.swift in Sources */,
+				D03E46C623075F810049C28B /* SaveIncomingMediaController.swift in Sources */,
+				D03E471223075FE40049C28B /* ThemeGridSearchContentNode.swift in Sources */,
+				D03E470223075FE40049C28B /* WallpaperColorPickerNode.swift in Sources */,
+				D03E471023075FE40049C28B /* SettingsThemeWallpaperNode.swift in Sources */,
+				D03E471E23075FE40049C28B /* ThemeColorsGridControllerNode.swift in Sources */,
+				D03E471823075FE40049C28B /* ThemeGridSelectionPanelNode.swift in Sources */,
+				D03E46A223075F2C0049C28B /* PrivacyAndSecurityController.swift in Sources */,
+				D03E46D323075F810049C28B /* AutodownloadMediaCategoryController.swift in Sources */,
+				D03E46DB23075FA40049C28B /* FeaturedStickerPacksController.swift in Sources */,
+				D03E483A23076B220049C28B /* BlurredImageNode.swift in Sources */,
+				D03E471923075FE40049C28B /* ThemeAccentColorControllerNode.swift in Sources */,
+				D03E467F23075EE90049C28B /* NotificationExceptionSettingsController.swift in Sources */,
+				D03E466A23075E660049C28B /* DebugController.swift in Sources */,
+				D03E46C923075F810049C28B /* StorageUsageController.swift in Sources */,
+				D03E470523075FE40049C28B /* ThemeSettingsAppIconItem.swift in Sources */,
+				D03E471523075FE40049C28B /* ThemeSettingsFontSizeItem.swift in Sources */,
+				D03E46AA23075F2C0049C28B /* DataPrivacySettingsController.swift in Sources */,
+				D03E467123075E660049C28B /* SettingsController.swift in Sources */,
+				091EABA5231DAC7500A0EC14 /* ThemeNameGenerator.swift in Sources */,
+				D03E46A923075F2C0049C28B /* BlockedPeersController.swift in Sources */,
+				D03E469F23075F2C0049C28B /* TwoStepVerificationResetController.swift in Sources */,
+				D03E472A230760330049C28B /* LocalizationListItem.swift in Sources */,
+				D03E46A823075F2C0049C28B /* TwoStepVerificationUnlockController.swift in Sources */,
+				D03E470B23075FE40049C28B /* ThemePreviewControllerNode.swift in Sources */,
+				D03E470823075FE40049C28B /* WallpaperGalleryToolbarNode.swift in Sources */,
+				D03E466F23075E660049C28B /* UsernameSetupController.swift in Sources */,
+				D03E46C823075F810049C28B /* CalculatingCacheSizeItem.swift in Sources */,
+				D03E471423075FE40049C28B /* ThemeColorsGridController.swift in Sources */,
+				D03E46A723075F2C0049C28B /* SelectivePrivacySettingsPeersController.swift in Sources */,
+				D03E46A323075F2C0049C28B /* CreatePasswordController.swift in Sources */,
+				D03E4731230760570049C28B /* TermsOfServiceController.swift in Sources */,
+				D03E46CF23075F810049C28B /* ProxyServerSettingsController.swift in Sources */,
+				D03E468E23075F010049C28B /* SettingsSearchRecentItem.swift in Sources */,
+				D03E467223075E660049C28B /* ChangePhoneNumberCodeController.swift in Sources */,
+				D03E466823075E660049C28B /* TabBarAccountSwitchControllerNode.swift in Sources */,
+				09B4A9B823102B7A005C2E08 /* EditThemeController.swift in Sources */,
+				D03E471623075FE40049C28B /* WallpaperColorPanelNode.swift in Sources */,
+				D03E470023075FE40049C28B /* ThemeColorsGridControllerItem.swift in Sources */,
+				D03E468B23075F010049C28B /* SettingsSearchItem.swift in Sources */,
+				D03E470E23075FE40049C28B /* WallpaperPatternPanelNode.swift in Sources */,
+				D03E466B23075E660049C28B /* ChangePhoneNumberControllerNode.swift in Sources */,
+				D03E46CA23075F810049C28B /* AutodownloadDataUsagePickerItem.swift in Sources */,
+				D03E470C23075FE40049C28B /* WallpaperGalleryController.swift in Sources */,
+				D03E471D23075FE40049C28B /* ThemeAutoNightTimeSelectionActionSheet.swift in Sources */,
+				D03E46CE23075F810049C28B /* VoiceCallDataSavingController.swift in Sources */,
+				D03E46B023075F4E0049C28B /* ItemListRecentSessionItem.swift in Sources */,
+				D03E471B23075FE40049C28B /* ThemeGridControllerItem.swift in Sources */,
+				D03E467A23075EC70049C28B /* NotificationSearchItem.swift in Sources */,
+				D03E4730230760570049C28B /* TermsOfServiceControllerNode.swift in Sources */,
+				D03E46A623075F2C0049C28B /* TwoStepVerificationPasswordEntryController.swift in Sources */,
+				D03E472C230760330049C28B /* LocalizationListControllerNode.swift in Sources */,
+				D03E46D923075FA40049C28B /* InstalledStickerPacksController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D03E465323075D930049C28B /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D03E465423075D930049C28B /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D03E465623075D930049C28B /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SettingsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D03E465723075D930049C28B /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SettingsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D03E465823075DEB0049C28B /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D03E465923075DEB0049C28B /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SettingsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D03E465A23075DF90049C28B /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D03E465B23075DF90049C28B /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SettingsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D03E464723075D930049C28B /* Build configuration list for PBXProject "SettingsUI_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D03E465323075D930049C28B /* DebugAppStoreLLC */,
+				D03E465823075DEB0049C28B /* DebugHockeyapp */,
+				D03E465423075D930049C28B /* ReleaseAppStoreLLC */,
+				D03E465A23075DF90049C28B /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D03E465523075D930049C28B /* Build configuration list for PBXNativeTarget "SettingsUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D03E465623075D930049C28B /* DebugAppStoreLLC */,
+				D03E465923075DEB0049C28B /* DebugHockeyapp */,
+				D03E465723075D930049C28B /* ReleaseAppStoreLLC */,
+				D03E465B23075DF90049C28B /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D03E464423075D930049C28B /* Project object */;
+}

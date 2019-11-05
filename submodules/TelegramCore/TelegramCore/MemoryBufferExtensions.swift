@@ -9,7 +9,7 @@ import Foundation
 
 
 public extension MemoryBuffer {
-    public convenience init(_ buffer: Buffer) {
+    convenience init(_ buffer: Buffer) {
         let memory = malloc(Int(buffer.size))!
         memcpy(memory, buffer.data, Int(buffer.size))
         self.init(memory: memory, capacity: Int(buffer.size), length: Int(buffer.size), freeWhenDone: true)

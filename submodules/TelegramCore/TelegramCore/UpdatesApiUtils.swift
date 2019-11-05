@@ -100,7 +100,7 @@ extension Api.MessageMedia {
 extension Api.Message {
     var rawId: Int32 {
         switch self {
-            case let .message(_, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(_, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return id
             case let .messageEmpty(id):
                 return id
@@ -109,19 +109,25 @@ extension Api.Message {
         }
     }
     
-    var id: MessageId? {
+    func id(namespace: MessageId.Namespace = Namespaces.Message.Cloud) -> MessageId? {
         switch self {
-            case let .message(flags, id, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(flags, id, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                        let id: PeerId.Id
+                        if namespace == Namespaces.Message.ScheduledCloud {
+                            id = userId
+                        } else {
+                            id = (flags & Int32(2)) != 0 ? userId : (fromId ?? userId)
+                        }
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 }
-                return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
+                return MessageId(peerId: peerId, namespace: namespace, id: id)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, _, _, _):
@@ -134,14 +140,13 @@ extension Api.Message {
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 }
-                
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
     }
 
     var timestamp: Int32? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _):
+            case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _):
                 return date
             case let .messageService(_, _, _, _, _, date, _):
                 return date
@@ -152,7 +157,7 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _):
+            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _):
                 return media?.preCachedResources
             default:
                 return nil
@@ -238,9 +243,9 @@ extension Api.Update {
     var messageId: MessageId? {
         switch self {
             case let .updateNewMessage(message, _, _):
-                return message.id
+                return message.id()
             case let .updateNewChannelMessage(message, _, _):
-                return message.id
+                return message.id()
             default:
                 return nil
         }
@@ -255,6 +260,8 @@ extension Api.Update {
             case let .updateEditMessage(message, _, _):
                 return message
             case let .updateEditChannelMessage(message, _, _):
+                return message
+            case let .updateNewScheduledMessage(message):
                 return message
             default:
                 return nil
@@ -315,6 +322,8 @@ extension Api.Update {
                 }
             case let .updateDraftMessage(peer: peer, draft: _):
                 return [peer.peerId]
+            case let .updateNewScheduledMessage(message):
+                return apiMessagePeerIds(message)
             default:
                 return []
         }
@@ -327,6 +336,8 @@ extension Api.Update {
             case let .updateNewChannelMessage(message, _, _):
                 return apiMessageAssociatedMessageIds(message)
             case let .updateEditChannelMessage(message, _, _):
+                return apiMessageAssociatedMessageIds(message)
+            case let .updateNewScheduledMessage(message):
                 return apiMessageAssociatedMessageIds(message)
             default:
                 break

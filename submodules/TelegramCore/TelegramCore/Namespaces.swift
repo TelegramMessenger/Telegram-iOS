@@ -10,6 +10,10 @@ public struct Namespaces {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
         public static let SecretIncoming: Int32 = 2
+        public static let ScheduledCloud: Int32 = 3
+        public static let ScheduledLocal: Int32 = 4
+        
+        public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
     }
     
     public struct Media {
@@ -42,6 +46,7 @@ public struct Namespaces {
         public static let CloudStickerPacks: Int32 = 0
         public static let CloudMaskPacks: Int32 = 1
         public static let EmojiKeywords: Int32 = 2
+        public static let CloudAnimatedEmoji: Int32 = 3
     }
     
     public struct OrderedItemList {
@@ -54,6 +59,7 @@ public struct Namespaces {
         public static let CloudWallpapers: Int32 = 6
         public static let CloudSavedStickers: Int32 = 7
         public static let RecentlyUsedHashtags: Int32 = 8
+        public static let CloudThemes: Int32 = 9
     }
     
     struct CachedItemCollection {
@@ -65,6 +71,7 @@ public struct Namespaces {
         public static let cachedStickerQueryResults: Int8 = 5
         public static let cachedSecureIdConfiguration: Int8 = 6
         public static let cachedWallpapersConfiguration: Int8 = 7
+        public static let cachedThemesConfiguration: Int8 = 7
     }
     
     struct UnorderedItemList {
@@ -106,6 +113,8 @@ public extension LocalMessageTags {
 
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
+    static let updateReaction = PendingMessageActionType(rawValue: 1)
+    static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -134,9 +143,9 @@ public struct OperationLogTags {
 }
 
 public extension PeerSummaryCounterTags {
-    public static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
-    public static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
-    public static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+    static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
+    static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
+    static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
 }
 
 private enum PreferencesKeyValues: Int32 {
@@ -153,6 +162,7 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
+    case secretChatSettings = 17
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -245,6 +255,11 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.contactsSettings.rawValue)
         return key
     }()
+    public static let secretChatSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.secretChatSettings.rawValue)
+        return key
+    }()
 }
 
 private enum SharedDataKeyValues: Int32 {
@@ -253,6 +268,7 @@ private enum SharedDataKeyValues: Int32 {
     case localizationSettings = 3
     case proxySettings = 4
     case autodownloadSettings = 5
+    case themeSettings = 6
 }
 
 public struct SharedDataKeys {
@@ -283,6 +299,12 @@ public struct SharedDataKeys {
     public static let autodownloadSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.autodownloadSettings.rawValue)
+        return key
+    }()
+    
+    public static let themeSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.themeSettings.rawValue)
         return key
     }()
 }

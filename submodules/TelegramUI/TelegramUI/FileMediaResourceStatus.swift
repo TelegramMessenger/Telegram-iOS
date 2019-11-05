@@ -4,21 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
-
-enum FileMediaResourcePlaybackStatus {
-    case playing
-    case paused
-}
-
-struct FileMediaResourceStatus {
-    let mediaStatus: FileMediaResourceMediaStatus
-    let fetchStatus: MediaResourceStatus
-}
-
-enum FileMediaResourceMediaStatus {
-    case fetchStatus(MediaResourceStatus)
-    case playbackStatus(FileMediaResourcePlaybackStatus)
-}
+import AccountContext
 
 private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {
@@ -52,7 +38,7 @@ func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMedia
     }
     
     if message.flags.isSending {
-        return combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), context.account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
+        return combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 }, playbackStatus)
         |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
             let mediaStatus: FileMediaResourceMediaStatus
             if let playbackStatus = playbackStatus {

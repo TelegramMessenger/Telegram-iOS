@@ -308,3 +308,85 @@ void applyKeyboardAutocorrection() {
 #pragma clang diagnostic pop
     }
 }
+
+@interface AboveStatusBarWindowController : UIViewController
+
+@property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
+
+@end
+
+@implementation AboveStatusBarWindowController
+
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
+    self = [super initWithNibName:nil bundle:nil];
+    if (self != nil) {
+        self.extendedLayoutIncludesOpaqueBars = true;
+    }
+    return self;
+}
+
+- (void)loadView {
+    self.view = [[UIView alloc] initWithFrame:CGRectZero];
+    self.view.opaque = false;
+    self.view.backgroundColor = nil;
+    [self viewDidLoad];
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
+}
+
+@end
+
+@implementation AboveStatusBarWindow
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        self.windowLevel = UIWindowLevelStatusBar + 1.0f;
+        self.rootViewController = [[AboveStatusBarWindowController alloc] initWithNibName:nil bundle:nil];
+        if (self.gestureRecognizers != nil) {
+            for (UIGestureRecognizer *recognizer in self.gestureRecognizers) {
+                recognizer.delaysTouchesBegan = false;
+            }
+        }
+    }
+    return self;
+}
+
+- (void)setSupportedOrientations:(UIInterfaceOrientationMask (^)(void))supportedOrientations {
+    _supportedOrientations = [supportedOrientations copy];
+    ((AboveStatusBarWindowController *)self.rootViewController).supportedOrientations = _supportedOrientations;
+}
+
+- (BOOL)shouldAffectStatusBarAppearance {
+    return false;
+}
+
+- (BOOL)canBecomeKeyWindow {
+    return false;
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *result = [super hitTest:point withEvent:event];
+    if (result == self || result == self.rootViewController.view) {
+        return nil;
+    }
+    return result;
+}
+
++ (void)initialize {
+    NSString *canAffectSelectorString = [@[@"_can", @"Affect", @"Status", @"Bar", @"Appearance"] componentsJoinedByString:@""];
+    SEL canAffectSelector = NSSelectorFromString(canAffectSelectorString);
+    Method shouldAffectMethod = class_getInstanceMethod(self, @selector(shouldAffectStatusBarAppearance));
+    IMP canAffectImplementation = method_getImplementation(shouldAffectMethod);
+    class_addMethod(self, canAffectSelector, canAffectImplementation, method_getTypeEncoding(shouldAffectMethod));
+    
+    NSString *canBecomeKeySelectorString = [NSString stringWithFormat:@"_%@", NSStringFromSelector(@selector(canBecomeKeyWindow))];
+    SEL canBecomeKeySelector = NSSelectorFromString(canBecomeKeySelectorString);
+    Method canBecomeKeyMethod = class_getInstanceMethod(self, @selector(canBecomeKeyWindow));
+    IMP canBecomeKeyImplementation = method_getImplementation(canBecomeKeyMethod);
+    class_addMethod(self, canBecomeKeySelector, canBecomeKeyImplementation, method_getTypeEncoding(canBecomeKeyMethod));
+}
+
+@end

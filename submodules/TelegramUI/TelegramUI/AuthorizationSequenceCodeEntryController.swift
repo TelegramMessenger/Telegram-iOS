@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequenceCodeEntryController: ViewController {
     private var controllerNode: AuthorizationSequenceCodeEntryControllerNode {
@@ -46,7 +47,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         

@@ -52,7 +52,7 @@ public class OutgoingMessageInfoAttribute: MessageAttribute {
 }
 
 public extension Message {
-    public var isSentOrAcknowledged: Bool {
+    var isSentOrAcknowledged: Bool {
         if self.flags.contains(.Failed) {
             return false
         } else if self.flags.isSending {

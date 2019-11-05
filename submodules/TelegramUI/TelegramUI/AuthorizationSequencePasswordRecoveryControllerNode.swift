@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AuthorizationUI
 
 final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -57,7 +58,7 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         self.codeField.textField.textAlignment = .center
         self.codeField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryCode, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         self.codeField.textField.returnKeyType = .done
-        self.codeField.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor
         

@@ -1,7 +1,7 @@
 import Foundation
 
 public final class QueueLocalObject<T: AnyObject> {
-    private let queue: Queue
+    public let queue: Queue
     private var valueRef: Unmanaged<T>?
     
     public init(queue: Queue, generate: @escaping () -> T) {

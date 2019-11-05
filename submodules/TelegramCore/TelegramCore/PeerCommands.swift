@@ -7,12 +7,17 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public struct PeerCommand: Equatable {
+public struct PeerCommand: Hashable {
     public let peer: Peer
     public let command: BotCommand
     
     public static func ==(lhs: PeerCommand, rhs: PeerCommand) -> Bool {
         return lhs.peer.isEqual(rhs.peer) && lhs.command == rhs.command
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.peer.id)
+        hasher.combine(self.command)
     }
 }
 

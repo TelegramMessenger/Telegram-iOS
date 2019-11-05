@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramStringFormatting
 
 final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
     private let textNode: ImmediateTextNode

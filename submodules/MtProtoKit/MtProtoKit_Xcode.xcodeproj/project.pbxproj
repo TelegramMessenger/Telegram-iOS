@@ -461,10 +461,10 @@
 		D0CD98CB1D74BA9500F41187 /* MTTcpConnectionBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */; };
 		D0CD98CC1D74BA9700F41187 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
 		D0CD98CD1D74BA9700F41187 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
-		D0CD98DE1D74BAEA00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98DF1D74BAEA00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98E21D74BAEB00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		D0CD98E31D74BAEB00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D0CD98DE1D74BAEA00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; };
+		D0CD98DF1D74BAEA00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; };
+		D0CD98E21D74BAEB00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; };
+		D0CD98E31D74BAEB00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; };
 		D0CD98E41D74BAF400F41187 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
 		D0CD98E51D74BAF400F41187 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
 		D0CD98E81D75C0BB00F41187 /* MTMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35018B1631900C65116 /* MTMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1929,6 +1929,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = D05A830918AFB3F9007F1076;
@@ -2492,6 +2493,7 @@
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -2769,6 +2771,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3016,6 +3019,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3263,6 +3267,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3671,6 +3676,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3897,6 +3903,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4116,6 +4123,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4334,6 +4342,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4552,6 +4561,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4792,6 +4802,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5129,6 +5140,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5222,6 +5234,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5273,6 +5286,7 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5521,6 +5535,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_TREAT_WARNINGS_AS_ERRORS = NO;
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";

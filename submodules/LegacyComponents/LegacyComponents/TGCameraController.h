@@ -35,6 +35,8 @@ typedef enum {
 @property (nonatomic, assign) bool inhibitMultipleCapture;
 @property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, assign) bool hasTimer;
+@property (nonatomic, assign) bool hasSilentPosting;
+@property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, assign) bool shortcut;
 

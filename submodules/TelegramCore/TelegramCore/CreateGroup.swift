@@ -19,7 +19,9 @@ public enum CreateGroupError {
     case generic
     case privacy
     case restricted
+    case tooMuchJoined
     case tooMuchLocationBasedGroups
+    case serverProvided(String)
 }
 
 public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
