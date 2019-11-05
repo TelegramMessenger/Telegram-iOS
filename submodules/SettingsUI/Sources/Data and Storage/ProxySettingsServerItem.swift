@@ -101,7 +101,7 @@ final class ProxySettingsServerItem: ListViewItem, ItemListItem {
 private let titleFont = Font.regular(17.0)
 private let statusFont = Font.regular(14.0)
 
-class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
+private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

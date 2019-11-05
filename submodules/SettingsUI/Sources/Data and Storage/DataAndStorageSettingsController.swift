@@ -485,6 +485,9 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     
     let actionsDisposable = DisposableSet()
     
+    let cacheUsagePromise = Promise<CacheUsageStatsResult?>()
+    cacheUsagePromise.set(cacheUsageStats(context: context))
+    
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
@@ -526,7 +529,7 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
-        pushControllerImpl?(storageUsageController(context: context))
+        pushControllerImpl?(storageUsageController(context: context, cacheUsagePromise: cacheUsagePromise))
     }, openNetworkUsage: {
         pushControllerImpl?(networkUsageStatsController(context: context))
     }, openProxy: {

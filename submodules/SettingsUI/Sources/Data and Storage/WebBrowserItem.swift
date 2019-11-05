@@ -9,7 +9,7 @@ import ItemListUI
 import PhotoResources
 import OpenInExternalAppUI
 
-public class WebBrowserItem: ListViewItem, ItemListItem {
+class WebBrowserItem: ListViewItem, ItemListItem {
     let account: Account
     let theme: PresentationTheme
     let title: String
@@ -71,7 +71,7 @@ public class WebBrowserItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-public class WebBrowserItemNode: ListViewItemNode {
+private final class WebBrowserItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

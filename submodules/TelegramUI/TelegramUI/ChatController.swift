@@ -3454,8 +3454,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
                     return
                 }
-                guard checkAvailableDiskSpace(context: strongSelf.context, present: { [weak self] c, a in
-                    self?.present(c, in: .window(.root), with: a)
+                guard checkAvailableDiskSpace(context: strongSelf.context, push: { [weak self] c in
+                    self?.push(c)
                 }) else {
                     return
                 }
@@ -5292,8 +5292,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
-                                        let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: true, action: { _ in }), in: .current)
                                     }
                                 }))
 

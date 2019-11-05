@@ -148,33 +148,35 @@ class ItemListCallListItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { item, params, neighbors in
-            if self.callNodes.count != item.messages.count {
-                for pair in self.callNodes {
+        return { [weak self] item, params, neighbors in
+            if let strongSelf = self, strongSelf.callNodes.count != item.messages.count {
+                for pair in strongSelf.callNodes {
                     pair.0.removeFromSupernode()
                     pair.1.removeFromSupernode()
                 }
                 
-                self.callNodes = []
+                strongSelf.callNodes = []
                 
                 for _ in item.messages {
                     let timeNode = TextNode()
                     timeNode.isUserInteractionEnabled = false
-                    self.addSubnode(timeNode)
+                    strongSelf.addSubnode(timeNode)
                     
                     let typeNode = TextNode()
                     typeNode.isUserInteractionEnabled = false
-                    self.addSubnode(typeNode)
+                    strongSelf.addSubnode(typeNode)
                     
-                    self.callNodes.append((timeNode, typeNode))
+                    strongSelf.callNodes.append((timeNode, typeNode))
                 }
             }
             
             var makeNodesLayout: [((TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode), (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode))] = []
-            for nodes in self.callNodes {
-                let makeTimeLayout = TextNode.asyncLayout(nodes.0)
-                let makeTypeLayout = TextNode.asyncLayout(nodes.1)
-                makeNodesLayout.append((makeTimeLayout, makeTypeLayout))
+            if let strongSelf = self {
+                for nodes in strongSelf.callNodes {
+                    let makeTimeLayout = TextNode.asyncLayout(nodes.0)
+                    let makeTypeLayout = TextNode.asyncLayout(nodes.1)
+                    makeNodesLayout.append((makeTimeLayout, makeTypeLayout))
+                }
             }
     
             var updatedTheme: PresentationTheme?
