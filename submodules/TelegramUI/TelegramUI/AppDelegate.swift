@@ -1147,8 +1147,21 @@ final class SharedApplicationContext {
             
             if let authContextValue = self.authContextValue {
                 authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
-                authContextValue.rootController.view.endEditing(true)
-                authContextValue.rootController.dismiss()
+                if authContextValue.authorizationCompleted {
+                    let accountId = authContextValue.account.id
+                    let _ = (self.context.get()
+                    |> filter { context in
+                        return context?.context.account.id == accountId
+                    }
+                    |> take(1)
+                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
+                    |> deliverOnMainQueue).start(completed: {                        authContextValue.rootController.view.endEditing(true)
+                        authContextValue.rootController.dismiss()
+                    })
+                } else {
+                    authContextValue.rootController.view.endEditing(true)
+                    authContextValue.rootController.dismiss()
+                }
             }
             self.authContextValue = context
             if let context = context {
