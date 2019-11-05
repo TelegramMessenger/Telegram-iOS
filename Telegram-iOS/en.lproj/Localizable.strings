@@ -3868,6 +3868,11 @@ Unused sets are archived when you add more.";
 "GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
 "GroupPermission.AddMembersNotAvailable" = "You don't have persmission to add members.";
 
+"Channel.EditAdmin.PermissionEnabledByDefault" = "This option is permitted for all members in Group Permissions.";
+
+"GroupPermission.EditingDisabled" = "You cannot edit restrictions of this user.";
+"GroupPermission.PermissionDisabledByDefault" = "This option is disabled for all members in Group Permissions.";
+
 "Channel.Management.RemovedBy" = "Removed by %@";
 
 "GroupRemoved.Title" = "Removed Users";
@@ -4497,6 +4502,8 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.AdminLog.DisabledSlowmode" = "%@ disabled slowmode";
 "Channel.AdminLog.SetSlowmode" = "%1$@ set slowmode to %2$@";
 
+"GroupInfo.Permissions.EditingDisabled" = "You cannot edit this permission.";
+
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
 "Chat.AttachmentLimitReached" = "You can't select more items.";
@@ -5030,7 +5037,7 @@ Any member of this group will be able to see messages in the channel.";
 "TwoFactorSetup.Password.Action" = "Create Password";
 
 "TwoFactorSetup.Email.Title" = "Recovery Email";
-"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset you password and restore\n access to your Telegram account.";
+"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset you password and restore access to your Telegram account.";
 "TwoFactorSetup.Email.Placeholder" = "Your email address";
 "TwoFactorSetup.Email.Action" = "Continue";
 "TwoFactorSetup.Email.SkipAction" = "Skip setting email";
@@ -5075,3 +5082,6 @@ Any member of this group will be able to see messages in the channel.";
 "ClearCache.StorageFree" = "Free";
 "ClearCache.ClearCache" = "Clear Telegram Cache";
 "ClearCache.Clear" = "Clear";
+
+"ChatList.DeletedChats_1" = "Deleted 1 chat";
+"ChatList.DeletedChats_any" = "Deleted %@ chats";

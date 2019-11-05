@@ -15,12 +15,14 @@ public final class PasscodeEntryControllerPresentationArguments {
     let fadeIn: Bool
     let lockIconInitialFrame: () -> CGRect
     let cancel: (() -> Void)?
+    let modalPresentation: Bool
     
-    public init(animated: Bool = true, fadeIn: Bool = false, lockIconInitialFrame: @escaping () -> CGRect = { return CGRect() }, cancel: (() -> Void)? = nil) {
+    public init(animated: Bool = true, fadeIn: Bool = false, lockIconInitialFrame: @escaping () -> CGRect = { return CGRect() }, cancel: (() -> Void)? = nil, modalPresentation: Bool = false) {
         self.animated = animated
         self.fadeIn = fadeIn
         self.lockIconInitialFrame = lockIconInitialFrame
         self.cancel = cancel
+        self.modalPresentation = modalPresentation
     }
 }
 
@@ -111,18 +113,22 @@ public final class PasscodeEntryController: ViewController {
         let biometricsType: LocalAuthBiometricAuthentication?
         if case let .enabled(data) = self.biometrics {
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                #if targetEnvironment(simulator)
+                biometricsType = .touchId
+                #else
                 if data == LocalAuth.evaluatedPolicyDomainState || (data == nil && !self.applicationBindings.isMainApp) {
                     biometricsType = LocalAuth.biometricAuthentication
                 } else {
                     biometricsType = nil
                 }
+                #endif
             } else {
                 biometricsType = LocalAuth.biometricAuthentication
             }
         } else {
             biometricsType = nil
         }
-        self.displayNode = PasscodeEntryControllerNode(accountManager: self.accountManager, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, statusBar: self.statusBar)
+        self.displayNode = PasscodeEntryControllerNode(accountManager: self.accountManager, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, passcodeType: passcodeType, biometricsType: biometricsType, arguments: self.arguments, statusBar: self.statusBar, modalPresentation: self.arguments.modalPresentation)
         self.displayNodeDidLoad()
         
         let _ = (self.appLockContext.invalidAttempts

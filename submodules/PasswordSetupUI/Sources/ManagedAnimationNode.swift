@@ -6,14 +6,8 @@ import RLottieBinding
 import AppBundle
 import GZip
 
-enum ManagedAnimationTrackState {
-    case intro
-    case loop
-    case outro
-}
-
 private final class ManagedAnimationState {
-    var item: ManagedAnimationItem
+    let item: ManagedAnimationItem
     
     private let instance: LottieInstance
     
@@ -21,33 +15,40 @@ private final class ManagedAnimationState {
     let fps: Double
     
     var startTime: Double?
-    var trackState: ManagedAnimationTrackState?
-    var trackingFrameState: (Int, Int)?
     var frameIndex: Int?
     
     private let renderContext: DrawingContext
     
-    init?(item: ManagedAnimationItem) {
-        guard let path = getAppBundle().path(forResource: item.name, ofType: "tgs") else {
-            return nil
-        }
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            return nil
-        }
-        guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
-            return nil
-        }
-        guard let instance = LottieInstance(data: unpackedData, cacheKey: item.name) else {
-            return nil
+    init?(displaySize: CGSize, item: ManagedAnimationItem, current: ManagedAnimationState?) {
+        let resolvedInstance: LottieInstance
+        let renderContext: DrawingContext
+        
+        if let current = current {
+            resolvedInstance = current.instance
+            renderContext = current.renderContext
+        } else {
+            guard let path = getAppBundle().path(forResource: item.name, ofType: "tgs") else {
+                return nil
+            }
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                return nil
+            }
+            guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
+                return nil
+            }
+            guard let instance = LottieInstance(data: unpackedData, cacheKey: item.name) else {
+                return nil
+            }
+            resolvedInstance = instance
+            renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, premultiplied: true, clear: true)
         }
         
         self.item = item
-        self.instance = instance
+        self.instance = resolvedInstance
+        self.renderContext = renderContext
         
-        self.frameCount = Int(instance.frameCount)
-        self.fps = Double(instance.frameRate)
-        
-        self.renderContext = DrawingContext(size: instance.dimensions, scale: UIScreenScale, premultiplied: true, clear: true)
+        self.frameCount = Int(self.instance.frameCount)
+        self.fps = Double(self.instance.frameRate)
     }
     
     func draw() -> UIImage? {
@@ -56,34 +57,23 @@ private final class ManagedAnimationState {
     }
 }
 
-enum ManagedAnimationActionAtEnd {
-    case pause
-    case advance
-    case loop
-}
-
-struct ManagedAnimationTrack: Equatable {
-    let frameRange: Range<Int>
+struct ManagedAnimationFrameRange: Equatable {
+    var startFrame: Int
+    var endFrame: Int
 }
 
 struct ManagedAnimationItem: Equatable {
     let name: String
-    var intro: ManagedAnimationTrack?
-    var loop: ManagedAnimationTrack?
-    var outro: ManagedAnimationTrack?
+    var frames: ManagedAnimationFrameRange
 }
 
-final class ManagedAnimationNode: ASDisplayNode {
+class ManagedAnimationNode: ASDisplayNode {
     let intrinsicSize: CGSize
     
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
     
-    private var items: [ManagedAnimationState] = []
-    
-    var currentItemName: String? {
-        return self.items.first?.item.name
-    }
+    private var state: ManagedAnimationState?
     
     init(size: CGSize) {
         self.intrinsicSize = size
@@ -121,136 +111,174 @@ final class ManagedAnimationNode: ASDisplayNode {
     }
     
     private func updateAnimation() {
-        guard let item = self.items.first else {
+        guard let state = self.state else {
             return
         }
         let timestamp = CACurrentMediaTime()
+        
         var startTime: Double
-        let maybeTrackState: ManagedAnimationTrackState?
-        if let current = item.startTime {
+        if let current = state.startTime {
             startTime = current
         } else {
             startTime = timestamp
-            item.startTime = startTime
-        }
-        if let current = item.trackState {
-            maybeTrackState = current
-        } else if let _ = item.item.intro {
-            maybeTrackState = .intro
-        } else if let _ = item.item.loop {
-            maybeTrackState = .loop
-        } else if let _ = item.item.outro {
-            maybeTrackState = .outro
-        } else {
-            maybeTrackState = nil
-        }
-        if item.trackState != maybeTrackState {
-            item.trackState = maybeTrackState
-            item.startTime = timestamp
-            startTime = timestamp
+            state.startTime = startTime
         }
         
-        guard let trackState = maybeTrackState else {
-            self.items.removeFirst()
-            return
-        }
+        let fps = state.fps
+        let frameRange = state.item.frames
         
-        var fps = item.fps
+        let duration: Double = 0.3
+        var t = (timestamp - startTime) / duration
+        t = max(0.0, t)
+        t = min(1.0, t)
+        let frameOffset = Int(Double(frameRange.startFrame) * (1.0 - t) + Double(frameRange.startFrame) * t)
+        let lowerBound = min(frameRange.startFrame, state.frameCount - 1)
+        let upperBound = min(frameRange.endFrame, state.frameCount - 1)
+        let frameIndex = max(lowerBound, min(upperBound, frameOffset))
         
-        let track: ManagedAnimationTrack
-        switch trackState {
-        case .intro:
-            track = item.item.intro!
-        case .loop:
-            track = item.item.loop!
-            if self.items.count > 1 {
-                //fps *= 2.0
-            }
-        case .outro:
-            track = item.item.outro!
-        }
-        
-        let frameIndex: Int
-        if let (startFrame, endFrame) = item.trackingFrameState {
-            let duration: Double = 0.3
-            var t = (timestamp - startTime) / duration
-            t = max(0.0, t)
-            t = min(1.0, t)
-            let frameOffset = Int(Double(startFrame) * (1.0 - t) + Double(endFrame) * t)
-            let lowerBound = min(track.frameRange.lowerBound, item.frameCount - 1)
-            let upperBound = min(track.frameRange.upperBound, item.frameCount)
-            frameIndex = max(lowerBound, min(upperBound, frameOffset))
-        } else {
-            let frameOffset = Int((timestamp - startTime) * fps)
-            let lowerBound = min(track.frameRange.lowerBound, item.frameCount - 1)
-            let upperBound = min(track.frameRange.upperBound, item.frameCount)
-            if frameOffset >= upperBound - lowerBound {
-                switch trackState {
-                case .intro:
-                    if let _ = item.item.loop {
-                        item.trackState = .loop
-                        item.startTime = timestamp
-                        return
-                    } else if let _ = item.item.outro {
-                        item.trackState = .outro
-                        item.startTime = timestamp
-                        return
-                    } else {
-                        self.items.removeFirst()
-                        return
-                    }
-                case .loop:
-                    if self.items.count > 1 {
-                        if let _ = item.item.outro {
-                            item.trackState = .outro
-                            item.startTime = timestamp
-                        } else {
-                            self.items.removeFirst()
-                        }
-                        return
-                    } else {
-                        item.startTime = timestamp
-                        frameIndex = lowerBound
-                    }
-                case .outro:
-                    self.items.removeFirst()
-                    return
-                }
-            } else {
-                frameIndex = lowerBound + frameOffset % (upperBound - lowerBound)
-            }
-        }
-        
-        if item.frameIndex != frameIndex {
-            item.frameIndex = frameIndex
-            if let image = item.draw() {
+        if state.frameIndex != frameIndex {
+            state.frameIndex = frameIndex
+            if let image = state.draw() {
                 self.imageNode.image = image
             }
         }
     }
     
-    func switchTo(_ item: ManagedAnimationItem, noOutro: Bool = false) {
-        if let state = ManagedAnimationState(item: item) {
-            if let last = self.items.last {
-                if last.item.name == item.name {
-                    return
-                }
-            }
-            if let first = self.items.first {
-                if noOutro {
-                    first.item.outro = nil
-                }
-            }
-            self.items.append(state)
-            self.updateAnimation()
+    func trackTo(item: ManagedAnimationItem, frameIndex: Int) {
+        if let state = self.state, state.item.name == item.name {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+        } else {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
         }
+        self.updateAnimation()
+    }
+}
+
+enum ManagedMonkeyAnimationState: Equatable {
+    case idle
+    case eyesClosed
+    case peeking
+    case tracking(CGFloat)
+}
+
+/*private let animationIdle = ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle",
+    intro: nil,
+    loop: ManagedAnimationTrack(frameRange: 0 ..< 1),
+    outro: nil
+)
+ 
+ private let animationIdle = ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle",
+     intro: nil,
+     loop: ManagedAnimationTrack(frameRange: 0 ..< 1),
+     outro: nil
+ )
+
+ private let animationTracking = ManagedAnimationItem(name: "TwoFactorSetupMonkeyTracking",
+     intro: nil,
+     loop: ManagedAnimationTrack(frameRange: 0 ..< Int.max),
+     outro: nil
+ )
+
+ private let animationHide = ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose",
+     intro: ManagedAnimationTrack(frameRange: 0 ..< 41),
+     loop: ManagedAnimationTrack(frameRange: 40 ..< 41),
+     outro: ManagedAnimationTrack(frameRange: 60 ..< 99)
+ )
+
+ private let animationHideNoOutro = ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose",
+     intro: ManagedAnimationTrack(frameRange: 0 ..< 41),
+     loop: ManagedAnimationTrack(frameRange: 40 ..< 41),
+     outro: nil
+ )
+
+ private let animationHideNoIntro = ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose",
+     intro: nil,
+     loop: ManagedAnimationTrack(frameRange: 40 ..< 41),
+     outro: ManagedAnimationTrack(frameRange: 60 ..< 99)
+ )
+
+ private let animationHideOutro = ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose",
+     intro: nil,
+     loop: nil,
+     outro: ManagedAnimationTrack(frameRange: 60 ..< 99)
+ )
+
+ private let animationPeek = ManagedAnimationItem(name: "TwoFactorSetupMonkeyPeek",
+     intro: ManagedAnimationTrack(frameRange: 0 ..< 14),
+     loop: ManagedAnimationTrack(frameRange: 13 ..< 14),
+     outro: ManagedAnimationTrack(frameRange: 14 ..< 34)
+ )
+
+ private let animationMail = ManagedAnimationItem(name: "TwoFactorSetupMail",
+     intro: ManagedAnimationTrack(frameRange: 0 ..< Int.max),
+     loop: ManagedAnimationTrack(frameRange: Int.max - 1 ..< Int.max),
+     outro: nil
+ )
+
+ private let animationHint = ManagedAnimationItem(name: "TwoFactorSetupHint",
+     intro: ManagedAnimationTrack(frameRange: 0 ..< Int.max),
+     loop: ManagedAnimationTrack(frameRange: Int.max - 1 ..< Int.max),
+     outro: nil
+ )*/
+
+final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
+    private var state: ManagedMonkeyAnimationState = .idle
+    
+    init() {
+        super.init(size: CGSize(width: 136.0, height: 136.0))
+        
+        self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0)), frameIndex: 0)
     }
     
-    func trackTo(frameIndex: Int) {
-        if let first = self.items.first {
-            first.startTime = CACurrentMediaTime()
-            first.trackingFrameState = (first.frameIndex ?? 0, frameIndex)
-            self.updateAnimation()
+    func setState(_ state: ManagedMonkeyAnimationState) {
+        let previousState = self.state
+        self.state = state
+        
+        switch previousState {
+        case .idle:
+            switch state {
+            case .idle:
+                break
+            case .eyesClosed:
+                break
+            case .peeking:
+                break
+            case let .tracking(value):
+                break
+            }
+        case .eyesClosed:
+            switch state {
+            case .idle:
+                break
+            case .eyesClosed:
+                break
+            case .peeking:
+                break
+            case let .tracking(value):
+                break
+            }
+        case .peeking:
+            switch state {
+            case .idle:
+                break
+            case .eyesClosed:
+                break
+            case .peeking:
+                break
+            case let .tracking(value):
+                break
+            }
+        case let .tracking(previousValue):
+            switch state {
+            case .idle:
+                break
+            case .eyesClosed:
+                break
+            case .peeking:
+                break
+            case let .tracking(value):
+                break
+            }
         }
     }
 }

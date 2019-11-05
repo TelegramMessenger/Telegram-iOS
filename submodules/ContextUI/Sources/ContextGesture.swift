@@ -93,11 +93,21 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
-        if let shouldBegin = self.shouldBegin, let touch = touches.first {
+        guard let touch = touches.first else {
+            return
+        }
+        
+        if let shouldBegin = self.shouldBegin {
             if !shouldBegin(touch.location(in: self.view)) {
                 self.state = .failed
                 return
             }
+        }
+        
+        let windowLocation = touch.location(in: nil)
+        if windowLocation.x < 8.0 {
+            self.state = .failed
+            return
         }
         
         if self.delayTimer == nil {

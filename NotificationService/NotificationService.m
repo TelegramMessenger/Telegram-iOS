@@ -217,9 +217,9 @@ static void reportMemory() {
             peerId = makePeerId(PeerNamespaceCloudChannel, [channelIdString intValue]);
         }
         
-        if (_countIncomingMessage && _deviceSpecificEncryptionParameters) {
+        /*if (_countIncomingMessage && _deviceSpecificEncryptionParameters) {
             _countIncomingMessage(_rootPath, account.accountId, _deviceSpecificEncryptionParameters, peerId, messageId);
-        }
+        }*/
         
         NSString *silentString = decryptedPayload[@"silent"];
         if ([silentString isKindOfClass:[NSString class]]) {

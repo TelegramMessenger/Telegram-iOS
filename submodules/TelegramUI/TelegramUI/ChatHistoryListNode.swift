@@ -571,7 +571,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let nextTransitionVersion = Atomic<Int>(value: 0)
         
-        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get(), animatedEmojiStickers).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
+        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
+            historyViewUpdate,
+            self.chatPresentationDataPromise.get(),
+            selectedMessages,
+            automaticDownloadNetworkType,
+            self.historyAppearsClearedPromise.get(),
+            animatedEmojiStickers
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {

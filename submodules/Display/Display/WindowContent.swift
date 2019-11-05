@@ -318,6 +318,19 @@ public class Window1 {
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
         self.topPresentationContext = PresentationContext()
         
+        self.presentationContext.topLevelSubview = { [weak self] in
+            guard let strongSelf = self else {
+                return nil
+            }
+            if let first = strongSelf.topPresentationContext.controllers.first {
+                return first.0.displayNode.view
+            }
+            if let first = strongSelf._topLevelOverlayControllers.first {
+                return first.view
+            }
+            return nil
+        }
+        
         self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
             self?.isInteractionBlocked = value
         }
@@ -762,8 +775,6 @@ public class Window1 {
                     }
                 }
             }
-            
-            self.presentationContext.topLevelSubview = self._topLevelOverlayControllers.first?.view
         }
     }
     

@@ -17,6 +17,7 @@
   generate_missing_umbrella_headers = true
   iphonesimulator_target_sdk_version = 9.0
   iphoneos_target_sdk_version = 9.0
+  watchos_target_sdk_version = 5.0
   provisioning_profile_read_command = security cms -Di
   xctool_default_destination_specifier = platform=iOS Simulator,OS=latest
   xctool_path = tools/xctool/bin/xctool

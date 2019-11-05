@@ -973,6 +973,22 @@ public class GalleryController: ViewController, StandalonePresentableController 
         self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(self.context.account.id))
     }
     
+    override public func didAppearInContextPreview() {
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() {
+            let message = self.entries[centralItemNode.index].message
+            self.centralItemTitle.set(centralItemNode.title())
+            self.centralItemTitleView.set(centralItemNode.titleView())
+            self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
+            self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
+            self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
+            self.centralItemFooterContentNode.set(centralItemNode.footerContent())
+            
+            if let (media, _) = mediaForMessage(message: message) {
+                centralItemNode.activateAsInitial()
+            }
+        }
+    }
+    
     override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         

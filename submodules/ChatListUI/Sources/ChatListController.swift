@@ -1208,35 +1208,62 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     return
                 }
                 
-                let context = strongSelf.context
-                let presentationData = strongSelf.presentationData
-                let progressSignal = Signal<Never, NoError> { subscriber in
-                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                    self?.present(controller, in: .window(.root))
-                    return ActionDisposable { [weak controller] in
-                        Queue.mainQueue().async() {
-                            controller?.dismiss()
-                        }
-                    }
-                }
-                |> runOn(Queue.mainQueue())
-                |> delay(0.8, queue: Queue.mainQueue())
-                let progressDisposable = progressSignal.start()
-                
-                let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
+                strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                    var state = state
                     for peerId in peerIds {
-                        removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                        state.pendingRemovalPeerIds.insert(peerId)
                     }
-                }
-                |> afterDisposed {
-                    Queue.mainQueue().async {
-                        progressDisposable.dispose()
-                    }
-                }
-                let _ = (signal
-                |> deliverOnMainQueue).start(completed: {
-                    self?.donePressed()
+                    return state
                 })
+                
+                let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
+                
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if shouldCommit {
+                        let context = strongSelf.context
+                        let presentationData = strongSelf.presentationData
+                        let progressSignal = Signal<Never, NoError> { subscriber in
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                            self?.present(controller, in: .window(.root))
+                            return ActionDisposable { [weak controller] in
+                                Queue.mainQueue().async() {
+                                    controller?.dismiss()
+                                }
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.8, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.start()
+                        
+                        let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
+                            for peerId in peerIds {
+                                removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                            }
+                        }
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
+                        let _ = (signal
+                        |> deliverOnMainQueue).start()
+                    } else {
+                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                            var state = state
+                            for peerId in peerIds {
+                                state.pendingRemovalPeerIds.remove(peerId)
+                            }
+                            return state
+                        })
+                        self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                    }
+                }), in: .current)
+                
+                strongSelf.donePressed()
             }))
             
             actionSheet.setItemGroups([

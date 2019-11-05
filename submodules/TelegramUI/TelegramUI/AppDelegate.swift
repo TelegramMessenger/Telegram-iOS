@@ -1147,8 +1147,21 @@ final class SharedApplicationContext {
             
             if let authContextValue = self.authContextValue {
                 authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
-                authContextValue.rootController.view.endEditing(true)
-                authContextValue.rootController.dismiss()
+                if authContextValue.authorizationCompleted {
+                    let accountId = authContextValue.account.id
+                    let _ = (self.context.get()
+                    |> filter { context in
+                        return context?.context.account.id == accountId
+                    }
+                    |> take(1)
+                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
+                    |> deliverOnMainQueue).start(completed: {                        authContextValue.rootController.view.endEditing(true)
+                        authContextValue.rootController.dismiss()
+                    })
+                } else {
+                    authContextValue.rootController.view.endEditing(true)
+                    authContextValue.rootController.dismiss()
+                }
             }
             self.authContextValue = context
             if let context = context {
@@ -1457,7 +1470,7 @@ final class SharedApplicationContext {
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
         if #available(iOS 9.0, *) {
-            guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+            /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
                 return
             }
             encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -1525,16 +1538,17 @@ final class SharedApplicationContext {
                         }
                     }
                 }
-            }
-                
-                /*.start(next: { sharedApplicationContext in
+            }*/
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
                 sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                 
                 if case PKPushType.voIP = type {
                     Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
                     sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
                 }
-            })*/
+            })
         }
     }
     

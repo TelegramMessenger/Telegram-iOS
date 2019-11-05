@@ -250,6 +250,9 @@ public enum ViewControllerNavigationPresentation {
         return nil
     }
     
+    open func didAppearInContextPreview() {
+    }
+    
     private func updateScrollToTopView() {
         /*if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {

@@ -159,7 +159,7 @@ public class ManagedAudioSessionControl {
 
 public final class ManagedAudioSession {
     private var nextId: Int32 = 0
-    private let queue = Queue()
+    private let queue: Queue
     private let hasLoudspeaker: Bool
     private var holders: [HolderRecord] = []
     private var currentTypeAndOutputMode: (ManagedAudioSessionType, AudioSessionOutputMode)?
@@ -175,6 +175,8 @@ public final class ManagedAudioSession {
     private let isPlaybackActiveSubscribers = Bag<(Bool) -> Void>()
     
     public init() {
+        self.queue = Queue()
+        
         self.hasLoudspeaker = UIDevice.current.model == "iPhone"
         
         let queue = self.queue
@@ -522,21 +524,23 @@ public final class ManagedAudioSession {
                     if deactivate {
                         self.holders[activeIndex].active = false
                         let id = self.holders[activeIndex].id
-                        self.holders[activeIndex].deactivatingDisposable = (self.holders[activeIndex].deactivate() |> deliverOn(self.queue)).start(completed: { [weak self] in
-                            if let strongSelf = self {
-                                var index = 0
-                                for currentRecord in strongSelf.holders {
-                                    if currentRecord.id == id {
-                                        currentRecord.deactivatingDisposable = nil
-                                        if currentRecord.once {
-                                            strongSelf.holders.remove(at: index)
-                                        }
-                                        break
-                                    }
-                                    index += 1
-                                }
-                                strongSelf.updateHolders()
+                        self.holders[activeIndex].deactivatingDisposable = (self.holders[activeIndex].deactivate()
+                        |> deliverOn(self.queue)).start(completed: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
                             }
+                            var index = 0
+                            for currentRecord in strongSelf.holders {
+                                if currentRecord.id == id {
+                                    currentRecord.deactivatingDisposable = nil
+                                    if currentRecord.once {
+                                        strongSelf.holders.remove(at: index)
+                                    }
+                                    break
+                                }
+                                index += 1
+                            }
+                            strongSelf.updateHolders()
                         })
                     }
                 } else if activeIndex == nil {
@@ -753,15 +757,15 @@ public final class ManagedAudioSession {
                 
                 try AVAudioSession.sharedInstance().setActive(true, options: [.notifyOthersOnDeactivation])
                 
-                print("AudioSession activate: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                print("\(CFAbsoluteTimeGetCurrent()) AudioSession activate: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 self.updateCurrentAudioRouteInfo()
                 
-                print("AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                print("\(CFAbsoluteTimeGetCurrent()) AudioSession updateCurrentAudioRouteInfo: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 try self.setupOutputMode(outputMode, type: type)
                 
-                print("AudioSession setupOutputMode: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                print("\(CFAbsoluteTimeGetCurrent()) AudioSession setupOutputMode: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 if case .voiceCall = type {
                     try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)

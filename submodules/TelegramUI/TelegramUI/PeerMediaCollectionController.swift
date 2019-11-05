@@ -942,5 +942,6 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
     
     func animatedIn() {
+        self.controller.didAppearInContextPreview()
     }
 }

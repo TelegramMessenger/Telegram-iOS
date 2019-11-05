@@ -606,7 +606,7 @@ struct ctr_state {
                             NSData *effectiveSecret = strongSelf->_mtpSecret.secret;
                             uint8_t cHMAC[CC_SHA256_DIGEST_LENGTH];
                             CCHmac(kCCHmacAlgSHA256, effectiveSecret.bytes, effectiveSecret.length, helloData.bytes, helloData.length, cHMAC);
-                            int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
+                            int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970] + [MTContext fixedTimeDifference];
                             uint8_t *timestampValue = (uint8_t *)&timestamp;
                             for (int i = 0; i < 4; i++) {
                                 cHMAC[CC_SHA256_DIGEST_LENGTH - 4 + i] ^= timestampValue[i];

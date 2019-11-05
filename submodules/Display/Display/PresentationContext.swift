@@ -56,7 +56,7 @@ public final class PresentationContext {
     
     private var presentationDisposables = DisposableSet()
     
-    var topLevelSubview: UIView?
+    var topLevelSubview: () -> UIView? = { nil }
     
     var isCurrentlyOpaque: Bool {
         for (controller, _) in self.controllers {
@@ -93,7 +93,7 @@ public final class PresentationContext {
         if let topController = topController {
             return topController.view
         } else {
-            return self.topLevelSubview
+            return self.topLevelSubview()
         }
     }
     
@@ -259,7 +259,7 @@ public final class PresentationContext {
         if let view = self.view, let layout = self.layout {
             for (controller, _) in self.controllers {
                 controller.viewWillAppear(false)
-                if let topLevelSubview = self.topLevelSubview {
+                if let topLevelSubview = self.topLevelSubview() {
                     view.insertSubview(controller.view, belowSubview: topLevelSubview)
                 } else {
                     view.addSubview(controller.view)

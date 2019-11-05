@@ -38,6 +38,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     private var strings: PresentationStrings
     public let theme: PresentationTheme
     private let openUrl: (String) -> Void
+    private let authorizationCompleted: () -> Void
     
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
@@ -50,7 +51,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     private var didSetReady = false
     
-    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
@@ -59,6 +60,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         self.strings = strings
         self.theme = theme
         self.openUrl = openUrl
+        self.authorizationCompleted = authorizationCompleted
         
         let navigationStatusBar: NavigationStatusBarStyle
         switch theme.rootController.statusBarStyle {
@@ -719,68 +721,68 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     
     private func updateState(state: InnerState) {
         switch state {
-            case .authorized:
-                break
-            case let .state(state):
-                switch state {
-                    case .empty:
-                        if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
-                        } else {
-                            var controllers: [ViewController] = []
-                            if self.otherAccountPhoneNumbers.1.isEmpty {
-                                controllers.append(self.splashController())
-                            } else {
-                                controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
-                            }
-                            self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                        }
-                    case let .phoneEntry(countryCode, number):
+        case .authorized:
+            self.authorizationCompleted()
+        case let .state(state):
+            switch state {
+                case .empty:
+                    if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
+                    } else {
                         var controllers: [ViewController] = []
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
-                            controllers.append(self.splashController())
-                        }
-                        controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
-                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
-                        var controllers: [ViewController] = []
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
-                            controllers.append(self.splashController())
-                        }
-                        controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
-                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
-                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
-                        var controllers: [ViewController] = []
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
-                            controllers.append(self.splashController())
-                        }
-                        controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset, syncContacts: syncContacts))
-                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .passwordRecovery(_, _, _, emailPattern, syncContacts):
-                        var controllers: [ViewController] = []
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
-                            controllers.append(self.splashController())
-                        }
-                        controllers.append(self.passwordRecoveryController(emailPattern: emailPattern, syncContacts: syncContacts))
-                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .awaitingAccountReset(protectedUntil, number, _):
-                        var controllers: [ViewController] = []
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
-                            controllers.append(self.splashController())
-                        }
-                        controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
-                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                    case let .signUp(_, _, firstName, lastName, termsOfService, _):
-                        var controllers: [ViewController] = []
-                        var displayCancel = false
-                        if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        if self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         } else {
-                            displayCancel = true
+                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
                         }
-                        controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService, displayCancel: displayCancel))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                }
+                    }
+                case let .phoneEntry(countryCode, number):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
+                    controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset, syncContacts: syncContacts))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .passwordRecovery(_, _, _, emailPattern, syncContacts):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.passwordRecoveryController(emailPattern: emailPattern, syncContacts: syncContacts))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .awaitingAccountReset(protectedUntil, number, _):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .signUp(_, _, firstName, lastName, termsOfService, _):
+                    var controllers: [ViewController] = []
+                    var displayCancel = false
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    } else {
+                        displayCancel = true
+                    }
+                    controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService, displayCancel: displayCancel))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+            }
         }
     }
     
