@@ -2,7 +2,6 @@ import Foundation
 import MtProtoKit
 import TelegramApi
 
-
 private let apiPrefix: String = {
     let type = _typeName(Api.User.self)
     let userType = "User"
@@ -211,7 +210,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 107
+        return 106
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

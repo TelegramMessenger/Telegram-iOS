@@ -48,6 +48,9 @@
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 
++ (int32_t)fixedTimeDifference;
++ (void)setFixedTimeDifference:(int32_t)fixedTimeDifference;
+
 - (instancetype)initWithSerialization:(id<MTSerialization>)serialization encryptionProvider:(id<EncryptionProvider>)encryptionProvider apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
 - (void)performBatchUpdates:(void (^)())block;
