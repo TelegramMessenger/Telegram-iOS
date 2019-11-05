@@ -402,10 +402,19 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
     }
     
     func authorizeAccessToCamera(completion: @escaping () -> Void) {
-        AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
+        AVCaptureDevice.requestAccess(for: AVMediaType.video) { [weak self] response in
+            guard let strongSelf = self else {
+                return
+            }
             Queue.mainQueue().async {
                 if response {
                     completion()
+                } else {
+                    let presentationData = strongSelf.presentationData
+                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Wallet_AccessDenied_Title, text: presentationData.strings.Wallet_AccessDenied_Camera, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Intro_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Wallet_AccessDenied_Settings, action: {
+                        strongSelf.openPlatformSettings()
+                    })])
+                    strongSelf.window.present(controller, on: .root)
                 }
             }
         }
@@ -540,7 +549,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         let presentationData = WalletPresentationData(
             theme: WalletTheme(
                 info: WalletInfoTheme(
-                    buttonBackgroundColor: accentColor,
+                    buttonBackgroundColor: UIColor(rgb: 0x32aafe),
                     buttonTextColor: .white,
                     incomingFundsTitleColor: UIColor(rgb: 0x00b12c),
                     outgoingFundsTitleColor: UIColor(rgb: 0xff3b30)
