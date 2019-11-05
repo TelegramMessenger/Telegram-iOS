@@ -219,8 +219,10 @@ NSArray * TGQueryStringComponentsFromKeyAndArrayValue(NSString *key, NSArray *va
     
     NSString *urlString = [NSString stringWithFormat:@"%@?%@", [TGShareFoursquareVenueEndpointUrl stringByAppendingPathComponent:venueId], TGQueryStringFromParametersWithEncoding([self _defaultParametersForFoursquare], NSUTF8StringEncoding)];
     
-    return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:urlString]] mapToSignal:^id(NSData *data)
+    return [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:urlString]] mapToSignal:^id(MTHttpResponse *response)
     {
+        NSData *data = response.data;
+        
         id json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
         
         if (![json respondsToSelector:@selector(objectForKey:)])
@@ -258,8 +260,10 @@ NSArray * TGQueryStringComponentsFromKeyAndArrayValue(NSString *key, NSArray *va
 {
     NSString *shortenerUrl = [NSString stringWithFormat:@"%@?fields=longUrl,status&shortUrl=%@&key=%@", TGShareGoogleShortenerEndpointUrl, TGURLEncodedStringFromStringWithEncoding(url.absoluteString, NSUTF8StringEncoding), TGShareGoogleAPIKey];
     
-    MTSignal *shortenerSignal = [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:shortenerUrl]] mapToSignal:^MTSignal *(NSData *data)
+    MTSignal *shortenerSignal = [[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:shortenerUrl]] mapToSignal:^MTSignal *(MTHttpResponse *response)
         {
+        NSData *data = response.data;
+        
         id json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
         if (![json respondsToSelector:@selector(objectForKey:)])
             return [MTSignal fail:nil];
