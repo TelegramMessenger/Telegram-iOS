@@ -37,28 +37,28 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     var scrollToItem: ListViewScrollToItem?
     
     switch reason {
-        case let .Initial(fadeIn):
-            if fadeIn {
-                animateIn = true
-            } else {
-                let _ = options.insert(.LowLatency)
-                let _ = options.insert(.Synchronous)
-                let _ = options.insert(.PreferSynchronousResourceLoading)
+    case let .Initial(fadeIn):
+        if fadeIn {
+            animateIn = true
+        } else {
+            let _ = options.insert(.LowLatency)
+            let _ = options.insert(.Synchronous)
+            let _ = options.insert(.PreferSynchronousResourceLoading)
+        }
+    case .InteractiveChanges:
+        let _ = options.insert(.AnimateAlpha)
+        let _ = options.insert(.AnimateInsertion)
+        
+        for (index, _, _) in mergeResult.indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
+            let adjustedIndex = updatedCount - 1 - index
+            if adjustedIndex == maxAnimatedInsertionIndex + 1 {
+                maxAnimatedInsertionIndex += 1
             }
-        case .InteractiveChanges:
-            let _ = options.insert(.AnimateAlpha)
-            let _ = options.insert(.AnimateInsertion)
-            
-            for (index, _, _) in mergeResult.indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
-                let adjustedIndex = updatedCount - 1 - index
-                if adjustedIndex == maxAnimatedInsertionIndex + 1 {
-                    maxAnimatedInsertionIndex += 1
-                }
-            }
-        case .Reload:
-            stationaryItemRange = (0, Int.max)
-        case .HoleReload:
-            stationaryItemRange = (0, Int.max)
+        }
+    case .Reload:
+        stationaryItemRange = (0, Int.max)
+    case .HoleReload:
+        stationaryItemRange = (0, Int.max)
     }
     
     for (index, entry, previousIndex) in mergeResult.indicesAndItems {

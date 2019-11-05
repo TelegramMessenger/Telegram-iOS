@@ -2203,9 +2203,13 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         updateDescription = .complete()
                     }
                     
-                    let signal = combineLatest(updateTitle, updateDescription)
+                    let signal = combineLatest(queue: .mainQueue(),
+                        updateTitle,
+                        updateDescription
+                    )
                     
-                    updatePeerNameDisposable.set((signal |> deliverOnMainQueue).start(error: { _ in
+                    updatePeerNameDisposable.set((signal
+                    |> deliverOnMainQueue).start(error: { _ in
                         updateState { state in
                             return state.withUpdatedSavingData(false)
                         }
