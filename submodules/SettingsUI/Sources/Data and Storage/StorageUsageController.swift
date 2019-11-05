@@ -213,8 +213,10 @@ private enum StorageUsageEntry: ItemListNodeEntry {
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .clearAll(theme, text, enabled):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.openClearAll()
+                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if enabled {
+                        arguments.openClearAll()
+                    }
                 })
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -228,7 +230,6 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in
-                    
                 })
         }
     }
@@ -253,8 +254,6 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     
     entries.append(.storageHeader(presentationData.theme, presentationData.strings.ClearCache_StorageTitle(stringForDeviceType().uppercased()).0))
     if let cacheStats = cacheStats, case let .result(stats) = cacheStats {
-        //entries.append(.immutableSize(presentationData.theme, presentationData.strings.Cache_ServiceFiles, dataSizeString(stats.immutableSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-        
         var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
         var peerIndices: [PeerId: Int] = [:]
