@@ -32,5 +32,7 @@
 	<array>
 		<string>X834Q8SBVP.org.telegram.Telegram-iOS</string>
 	</array>
+	<key>com.apple.developer.pushkit.unrestricted-voip</key>
+	<true/>
 </dict>
 </plist>
