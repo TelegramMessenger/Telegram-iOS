@@ -203,7 +203,6 @@ framework(
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/CoreAudio.framework",
         "$SDKROOT/System/Library/Frameworks/WebKit.framework",
-        "$SDKROOT/System/Library/Frameworks/Intents.framework",
     ],
     weak_frameworks = [
         "Vision",
@@ -211,5 +210,6 @@ framework(
         "CallKit",
         "PassKit",
         "Contacts",
+        "Intents",
     ],
 )

@@ -237,7 +237,7 @@ using AS::MutexLocker;
       UIImage *image = nil;
 
       if (shouldCreateGraphicsContext && !currentContext) {
-        ASDisplayNodeAssert(NO, @"Failed to create a CGContext (size: %@)", NSStringFromCGSize(bounds.size));
+        //ASDisplayNodeAssert(NO, @"Failed to create a CGContext (size: %@)", NSStringFromCGSize(bounds.size));
         return nil;
       }
 
