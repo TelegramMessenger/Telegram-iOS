@@ -13,7 +13,7 @@ import PresentationDataUtils
 
 private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: Int32) -> String {
     if timeout > 1 * 31 * 24 * 60 * 60 {
-        return strings.MessageTimer_Forever
+        return strings.ClearCache_Forever
     } else {
         return timeIntervalString(strings: strings, value: timeout)
     }
