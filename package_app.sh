@@ -146,6 +146,7 @@ REMOVE_ENTITLEMENT_KEYS=(\
 COPY_ENTITLEMENT_KEYS=(\
 	"com.apple.developer.associated-domains" \
 	"com.apple.developer.icloud-services" \
+	"com.apple.developer.pushkit.unrestricted-voip" \
 )
 
 REPLACE_TO_PRODUCTION_ENTITLEMENT_KEYS=(\
@@ -217,9 +218,12 @@ for ITEM in $APP_ITEMS_WITH_PROVISIONING_PROFILE; do
 					VALUE=$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$PROFILE_ENTITLEMENTS_PATH" 2>/dev/null || echo "")
 					if [ ! -z "$VALUE" ]; then
 			            PLUTIL_KEY=$(echo "$KEY" | sed 's/\./\\\./g')
-			            VALUE=$(plutil -extract "$PLUTIL_KEY" xml1 -o - "${!ENTITLEMENTS_VAR}")
-			            /usr/libexec/PlistBuddy -c "Delete $KEY" "$PROFILE_ENTITLEMENTS_PATH" 2>/dev/null
-			            plutil -insert "$PLUTIL_KEY" -xml "$VALUE" "$PROFILE_ENTITLEMENTS_PATH"
+			            TEST_VALUE=$(plutil -extract "$PLUTIL_KEY" xml1 -o - "${!ENTITLEMENTS_VAR}" 1>/dev/null || echo "error")
+			            if [ "$TEST_VALUE" != "error" ]; then
+				            VALUE=$(plutil -extract "$PLUTIL_KEY" xml1 -o - "${!ENTITLEMENTS_VAR}")
+				            /usr/libexec/PlistBuddy -c "Delete $KEY" "$PROFILE_ENTITLEMENTS_PATH" 2>/dev/null
+				            plutil -insert "$PLUTIL_KEY" -xml "$VALUE" "$PROFILE_ENTITLEMENTS_PATH"
+				        fi
 			        fi
 		        done
 			fi
