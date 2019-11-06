@@ -5461,7 +5461,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
                             } else {
-                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime)
+                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                             }
                             if !inputText.string.isEmpty {
                                 //strongSelf.clearInputText()
