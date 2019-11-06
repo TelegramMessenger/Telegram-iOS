@@ -11,48 +11,39 @@ import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
 
-enum AutomaticDownloadDataUsage: Int {
-    case low
-    case medium
-    case high
-    case custom
-    
-    init(preset: MediaAutoDownloadPreset) {
-        switch preset {
-            case .low:
-                self = .low
-            case .medium:
-                self = .medium
-            case .high:
-                self = .high
-            case .custom:
-                self = .custom
-        }
+private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: Int32) -> String {
+    if timeout > 1 * 31 * 24 * 60 * 60 {
+        return strings.MessageTimer_Forever
+    } else {
+        return timeIntervalString(strings: strings, value: timeout)
     }
 }
 
-final class AutodownloadDataUsagePickerItem: ListViewItem, ItemListItem {
+private let keepMediaTimeoutValues: [Int32] = [
+    3 * 24 * 60 * 60,
+    7 * 24 * 60 * 60,
+    1 * 31 * 24 * 60 * 60,
+    Int32.max
+]
+
+final class KeepMediaDurationPickerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let value: AutomaticDownloadDataUsage
-    let customPosition: Int?
-    let enabled: Bool
+    let value: Int32
     let sectionId: ItemListSectionId
-    let updated: (AutomaticDownloadDataUsage) -> Void
+    let updated: (Int32) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, value: AutomaticDownloadDataUsage, customPosition: Int?, enabled: Bool, sectionId: ItemListSectionId, updated: @escaping (AutomaticDownloadDataUsage) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
         self.theme = theme
         self.strings = strings
         self.value = value
-        self.customPosition = customPosition
-        self.enabled = enabled
         self.sectionId = sectionId
         self.updated = updated
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = AutodownloadDataUsagePickerItemNode()
+            let node = KeepMediaDurationPickerItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -68,7 +59,7 @@ final class AutodownloadDataUsagePickerItem: ListViewItem, ItemListItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? AutodownloadDataUsagePickerItemNode {
+            if let nodeValue = node() as? KeepMediaDurationPickerItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -93,19 +84,16 @@ private func generateKnobImage() -> UIImage? {
     })
 }
 
-private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
+private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let lowTextNode: TextNode
-    private let mediumTextNode: TextNode
-    private let highTextNode: TextNode
-    private let customTextNode: TextNode
+    private let textNodes: [TextNode]
     private var sliderView: TGPhotoEditorSliderView?
     
-    private var item: AutodownloadDataUsagePickerItem?
+    private var item: KeepMediaDurationPickerItem?
     private var layoutParams: ListViewItemLayoutParams?
     
     init() {
@@ -120,50 +108,29 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         
         self.maskNode = ASImageNode()
         
-        self.lowTextNode = TextNode()
-        self.lowTextNode.isUserInteractionEnabled = false
-        self.lowTextNode.displaysAsynchronously = false
-        
-        self.mediumTextNode = TextNode()
-        self.mediumTextNode.isUserInteractionEnabled = false
-        self.mediumTextNode.displaysAsynchronously = false
-        
-        self.highTextNode = TextNode()
-        self.highTextNode.isUserInteractionEnabled = false
-        self.highTextNode.displaysAsynchronously = false
-      
-        self.customTextNode = TextNode()
-        self.customTextNode.isUserInteractionEnabled = false
-        self.customTextNode.displaysAsynchronously = false
-        
+        var textNodes: [TextNode] = []
+        for i in 0 ..< 4 {
+            let textNode = TextNode()
+            textNode.isUserInteractionEnabled = false
+            textNode.displaysAsynchronously = false
+            textNodes.append(textNode)
+        }
+        self.textNodes = textNodes
+
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.lowTextNode)
-        self.addSubnode(self.mediumTextNode)
-        self.addSubnode(self.highTextNode)
-        self.addSubnode(self.customTextNode)
+        for textNode in textNodes {
+            self.addSubnode(textNode)
+        }
     }
     
     func updateSliderView() {
         if let sliderView = self.sliderView, let item = self.item {
-            sliderView.maximumValue = 2.0 + (item.customPosition != nil ? 1 : 0)
-            sliderView.positionsCount = 3 + (item.customPosition != nil ? 1 : 0)
-            var value = item.value.rawValue
-            if let customPosition = item.customPosition {
-                if case .custom = item.value {
-                    value = customPosition
-                } else {
-                    if value >= customPosition {
-                        value += 1
-                    }
-                }
-            }
+            sliderView.maximumValue = 3.0
+            sliderView.positionsCount = 4
             
+            let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0
             sliderView.value = CGFloat(value)
-            
-            sliderView.isUserInteractionEnabled = item.enabled
-            sliderView.alpha = item.enabled ? 1.0 : 0.4
-            sliderView.layer.allowsGroupOpacity = !item.enabled
         }
     }
     
@@ -176,23 +143,14 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         sliderView.lineSize = 2.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 2.0 + (self.item?.customPosition != nil ? 1 : 0)
+        sliderView.maximumValue = 3.0
         sliderView.startValue = 0.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        sliderView.positionsCount = 3 + (self.item?.customPosition != nil ? 1 : 0)
+        sliderView.positionsCount = 4
         sliderView.useLinesForPositions = true
         if let item = self.item, let params = self.layoutParams {
-            var value = item.value.rawValue
-            if let customPosition = item.customPosition {
-                if case .custom = item.value {
-                    value = customPosition
-                } else {
-                    if value >= customPosition {
-                        value += 1
-                    }
-                }
-            }
-            
+            let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0
+          
             sliderView.value = CGFloat(value)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.disclosureArrowColor
@@ -210,13 +168,13 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         self.updateSliderView()
     }
     
-    func asyncLayout() -> (_ item: AutodownloadDataUsagePickerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: KeepMediaDurationPickerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
-        let makeLowTextLayout = TextNode.asyncLayout(self.lowTextNode)
-        let makeMediumTextLayout = TextNode.asyncLayout(self.mediumTextNode)
-        let makeHighTextLayout = TextNode.asyncLayout(self.highTextNode)
-        let makeCustomTextLayout = TextNode.asyncLayout(self.customTextNode)
-        
+        var makeTextLayouts: [(TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = []
+        for textNode in self.textNodes {
+            makeTextLayouts.append(TextNode.asyncLayout(textNode))
+        }
+
         return { item, params, neighbors in
             var themeUpdated = false
             if currentItem?.theme !== item.theme {
@@ -227,13 +185,15 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let (lowTextLayout, lowTextApply) = makeLowTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.AutoDownloadSettings_DataUsageLow, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-
-            let (mediumTextLayout, mediumTextApply) = makeMediumTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.AutoDownloadSettings_DataUsageMedium, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (highTextLayout, highTextApply) = makeHighTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.AutoDownloadSettings_DataUsageHigh, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (customTextLayout, customTextApply) = makeCustomTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.AutoDownloadSettings_DataUsageCustom, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            var textLayouts: [TextNodeLayout] = []
+            var textApplies: [() -> TextNode] = []
+                                    
+            for i in 0 ..< makeTextLayouts.count {
+                let makeTextLayout = makeTextLayouts[i]
+                let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: stringForKeepMediaTimeout(strings: item.strings, timeout: keepMediaTimeoutValues[i]), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+                textLayouts.append(textLayout)
+                textApplies.append(textApply)
+            }
             
             contentSize = CGSize(width: params.width, height: 88.0)
             insets = itemListNeighborsGroupedInsets(neighbors)
@@ -277,7 +237,7 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
                     let bottomStripeOffset: CGFloat
                     switch neighbors.bottom {
                     case .sameSection(false):
-                        bottomStripeInset = 0.0 //params.leftInset + 16.0
+                        bottomStripeInset = 0.0
                         bottomStripeOffset = -separatorHeight
                     default:
                         bottomStripeInset = 0.0
@@ -293,16 +253,13 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    let _ = lowTextApply()
-                    let _ = mediumTextApply()
-                    let _ = highTextApply()
-                    let _ = customTextApply()
+                    for apply in textApplies {
+                        let _ = apply()
+                    }
                     
-                    var textNodes: [(TextNode, CGSize)] = [(strongSelf.lowTextNode, lowTextLayout.size),
-                                                           (strongSelf.mediumTextNode, mediumTextLayout.size),
-                                                           (strongSelf.highTextNode, highTextLayout.size)]
-                    if let customPosition = item.customPosition {
-                        textNodes.insert((strongSelf.customTextNode, customTextLayout.size), at: customPosition)
+                    var textNodes: [(TextNode, CGSize)] = []
+                    for (node, size) in zip(strongSelf.textNodes, textLayouts.map { $0.size }) {
+                        textNodes.append((node, size))
                     }
                     
                     let delta = (params.width - params.leftInset - params.rightInset - 18.0 * 2.0) / CGFloat(textNodes.count - 1)
@@ -345,27 +302,14 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    @objc func sliderValueChanged() {
+    @objc private func sliderValueChanged() {
         guard let sliderView = self.sliderView else {
             return
         }
         
         let position = Int(sliderView.value)
-        var value: AutomaticDownloadDataUsage?
-        
-        if let customPosition = self.item?.customPosition {
-            if position == customPosition {
-                value = .custom
-            } else {
-                value = AutomaticDownloadDataUsage(rawValue: position > customPosition ? (position - 1) : position)
-            }
-        } else {
-            value = AutomaticDownloadDataUsage(rawValue: position)
-        }
-        
-        if let value = value {
-            self.item?.updated(value)
-        }
+        let value = keepMediaTimeoutValues[position]
+        self.item?.updated(value)
     }
 }
 

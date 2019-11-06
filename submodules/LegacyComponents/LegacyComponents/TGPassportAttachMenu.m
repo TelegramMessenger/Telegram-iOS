@@ -382,7 +382,7 @@
         
         [strongCameraView attachPreviewViewAnimated:true];
     };
-    controller.finishedWithResults = ^(__unused TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem)
+    controller.finishedWithResults = ^(__unused TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, __unused bool silentPosting, __unused int32_t scheduleTime)
     {
         __strong TGMenuSheetController *strongMenuController = weakMenuController;
         if (strongMenuController == nil)

@@ -295,6 +295,9 @@
                     if (!found)
                         fileName = asset.fileName;
                 }
+                if (fileName == nil) {
+                    fileName = asset.fileName;
+                }
                 
                 if (iosMajorVersion() >= 10 && [dataUTI rangeOfString:@"heic"].location != NSNotFound)
                 {

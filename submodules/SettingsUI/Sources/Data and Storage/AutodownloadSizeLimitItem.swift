@@ -49,7 +49,7 @@ private func sizeValue(for sliderValue: CGFloat) -> Int32 {
     return 0
 }
 
-class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
+final class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let decimalSeparator: String
     let text: String
@@ -109,7 +109,7 @@ private func generateKnobImage() -> UIImage? {
     })
 }
 
-class AutodownloadSizeLimitItemNode: ListViewItemNode {
+private final class AutodownloadSizeLimitItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

@@ -11,7 +11,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -27,6 +27,12 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
         controller.inhibitMultipleCapture = editingMedia
     } else {
         controller = TGCameraController()
+    }
+    
+    controller.presentScheduleController = { done in
+        presentSchedulePicker { time in
+            done?(time)
+        }
     }
     
     if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -99,10 +105,10 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
         legacyController?.dismiss()
     }
     
-    controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem in
+    controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: legacyAssetPickerItemGenerator())
-            sendMessagesWithSignals(signals)
+            sendMessagesWithSignals(signals, silentPosting, scheduleTime)
         }
         
         menuController?.dismiss(animated: false)
@@ -118,7 +124,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
                 description["timer"] = timer
             }
             if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
-                sendMessagesWithSignals([SSignal.single(item)])
+                sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
         
@@ -143,7 +149,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
                 description["timer"] = timer
             }
             if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil) {
-                sendMessagesWithSignals([SSignal.single(item)])
+                sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
         menuController?.dismiss(animated: false)
@@ -193,7 +199,7 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
         legacyController?.dismiss()
     }
     
-    controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem in
+    controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, _, _ in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
             if let parentController = parentController {
@@ -218,77 +224,7 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
                 }), showInChat: nil, externalShare: false), in: .window(.root))
             }
         }
-        
-        //legacyController?.dismissWithAnimation()
     }
     
     parentController.present(legacyController, in: .window(.root))
-
-    
-    /*TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:[[TGLegacyComponentsContext shared] makeOverlayWindowManager] parentController:TGAppDelegateInstance.rootController contentController:controller];
-    controllerWindow.hidden = false;
-    
-    CGSize screenSize = TGScreenSize();
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
-    controllerWindow.frame = CGRectMake(0, 0, screenSize.width, screenSize.height);
-    
-    CGRect startFrame = CGRectMake(0, screenSize.height, screenSize.width, screenSize.height);
-    [controller beginTransitionInFromRect:startFrame];
-    
-    __weak TGCameraController *weakCameraController = controller;
-    controller.finishedWithResults = ^(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem)
-    {
-        __autoreleasing NSString *disabledMessage = nil;
-        if (![TGApplicationFeatures isPhotoUploadEnabledForPeerType:TGApplicationFeaturePeerPrivate disabledMessage:&disabledMessage])
-        {
-            [TGCustomAlertView presentAlertWithTitle:TGLocalized(@"FeatureDisabled.Oops") message:disabledMessage cancelButtonTitle:TGLocalized(@"Common.OK") okButtonTitle:nil completionBlock:nil];
-            return;
-        }
-        
-        __strong TGCameraController *strongCameraController = weakCameraController;
-        if (strongCameraController == nil)
-        return;
-        
-        [TGCameraController showTargetController:[TGCameraController resultSignalsForSelectionContext:selectionContext editingContext:editingContext currentItem:currentItem storeAssets:false saveEditedPhotos:false descriptionGenerator:^id(id item, NSString *caption, NSArray *entities, __unused NSString *stickers)
-            {
-            if ([item isKindOfClass:[NSDictionary class]])
-            {
-            NSDictionary *dict = (NSDictionary *)item;
-            NSString *type = dict[@"type"];
-            
-            if ([type isEqualToString:@"editedPhoto"])
-            {
-            NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
-            result[@"type"] = @"image";
-            result[@"image"] = dict[@"image"];
-            if (caption.length > 0)
-            result[@"caption"] = caption;
-            if (entities.count > 0)
-            result[@"entities"] = entities;
-            if (dict[@"stickers"] != nil)
-            result[@"stickers"] = dict[@"stickers"];
-            
-            return result;
-            }
-            else if ([type isEqualToString:@"cameraVideo"])
-            {
-            NSMutableDictionary *result = [[NSMutableDictionary alloc] init];
-            result[@"type"] = @"cameraVideo";
-            result[@"url"] = dict[@"url"];
-            if (dict[@"adjustments"] != nil)
-            result[@"adjustments"] = dict[@"adjustments"];
-            if (entities.count > 0)
-            result[@"entities"] = entities;
-            if (dict[@"stickers"] != nil)
-            result[@"stickers"] = dict[@"stickers"];
-            if (dict[@"previewImage"] != nil)
-            result[@"previewImage"] = dict[@"previewImage"];
-            
-            return result;
-            }
-            }
-            
-            return nil;
-            }] cameraController:strongCameraController resultController:controller navigationController:(TGNavigationController *)controller.navigationController];
-    };*/
 }

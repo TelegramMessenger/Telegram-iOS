@@ -5075,5 +5075,13 @@ Any member of this group will be able to see messages in the channel.";
 
 "Group.ErrorSupergroupConversionNotPossible" = "Sorry, you are a member of too many groups and channels. Please leave some before creating a new one.";
 
+"ClearCache.StorageTitle" = "%@ STORAGE";
+"ClearCache.StorageCache" = "Telegram Cache";
+"ClearCache.StorageServiceFiles" = "Telegram Service Files";
+"ClearCache.StorageOtherApps" = "Other Apps";
+"ClearCache.StorageFree" = "Free";
+"ClearCache.ClearCache" = "Clear Telegram Cache";
+"ClearCache.Clear" = "Clear";
+
 "ChatList.DeletedChats_1" = "Deleted 1 chat";
 "ChatList.DeletedChats_any" = "Deleted %@ chats";

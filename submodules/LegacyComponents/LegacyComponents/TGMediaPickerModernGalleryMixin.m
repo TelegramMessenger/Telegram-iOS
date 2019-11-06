@@ -1,5 +1,7 @@
 #import "TGMediaPickerModernGalleryMixin.h"
 
+#import "LegacyComponentsInternal.h"
+
 #import <LegacyComponents/LegacyComponents.h>
 
 #import <LegacyComponents/TGModernGalleryController.h>
@@ -144,8 +146,10 @@
             if (strongSelf == nil || !(hasSilentPosting || hasSchedule))
                 return;
             
-            UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-            [generator impactOccurred];
+            if (iosMajorVersion() >= 10) {
+                UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+                [generator impactOccurred];
+            }
             
             bool effectiveHasSchedule = hasSchedule;
             for (id item in strongSelf->_galleryModel.selectionContext.selectedItems)
