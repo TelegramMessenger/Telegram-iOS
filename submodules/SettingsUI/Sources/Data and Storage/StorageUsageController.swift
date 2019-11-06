@@ -433,11 +433,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                         let title: String
                         var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
-                        selectedSize = filteredSize
-                        
                         if otherSize.0 {
                             filteredSize += otherSize.1
                         }
+                        selectedSize = filteredSize
                         
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
