@@ -163,7 +163,8 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4),
         scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
         pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7),
-        inputClearButtonColor: UIColor(rgb: 0xcccccc)
+        inputClearButtonColor: UIColor(rgb: 0xcccccc),
+        itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: UIColor(rgb: 0xc8c7cc), color3: UIColor(rgb: 0xf2f1f7))
     )
     
     let chatList = PresentationThemeChatList(

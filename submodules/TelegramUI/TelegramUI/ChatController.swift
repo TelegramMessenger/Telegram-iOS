@@ -1702,7 +1702,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         }, displaySwipeToReplyHint: {  [weak self] in
-            if let strongSelf = self {
+            if let strongSelf = self, let validLayout = strongSelf.validLayout, min(validLayout.size.width, validLayout.size.height) > 320.0 {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: true, action: { _ in }), in: .window(.root))
             }
         }, requestMessageUpdate: { [weak self] id in
