@@ -388,11 +388,11 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     
     // MARK: - INSearchForMessagesIntentHandling
     
-    func resolveAttributes(for intent: INSearchForMessagesIntent, with completion: @escaping (INMessageAttributeOptionsResolutionResult) -> Void) {
+    public func resolveAttributes(for intent: INSearchForMessagesIntent, with completion: @escaping (INMessageAttributeOptionsResolutionResult) -> Void) {
         completion(.success(with: .unread))
     }
     
-    func handle(intent: INSearchForMessagesIntent, completion: @escaping (INSearchForMessagesIntentResponse) -> Void) {
+    public func handle(intent: INSearchForMessagesIntent, completion: @escaping (INSearchForMessagesIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)
@@ -440,7 +440,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     
     // MARK: - INSetMessageAttributeIntentHandling
     
-    func resolveAttribute(for intent: INSetMessageAttributeIntent, with completion: @escaping (INMessageAttributeResolutionResult) -> Void) {
+    public func resolveAttribute(for intent: INSetMessageAttributeIntent, with completion: @escaping (INMessageAttributeResolutionResult) -> Void) {
         let supportedAttributes: [INMessageAttribute] = [.read, .unread]
         var attribute = intent.attribute
         if attribute == .flagged {
@@ -453,7 +453,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }
     }
     
-    func handle(intent: INSetMessageAttributeIntent, completion: @escaping (INSetMessageAttributeIntentResponse) -> Void) {
+    public func handle(intent: INSetMessageAttributeIntent, completion: @escaping (INSetMessageAttributeIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
@@ -512,7 +512,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     
     // MARK: - INStartAudioCallIntentHandling
     
-    func resolveContacts(for intent: INStartAudioCallIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
+    public func resolveContacts(for intent: INStartAudioCallIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             completion([INPersonResolutionResult.notRequired()])
             return
@@ -523,11 +523,11 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     }
     
     @available(iOSApplicationExtension 11.0, *)
-    func resolveDestinationType(for intent: INStartAudioCallIntent, with completion: @escaping (INCallDestinationTypeResolutionResult) -> Void) {
+    public func resolveDestinationType(for intent: INStartAudioCallIntent, with completion: @escaping (INCallDestinationTypeResolutionResult) -> Void) {
         completion(.success(with: .normal))
     }
     
-    func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {
+    public func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
@@ -562,15 +562,15 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     // MARK: - INSearchCallHistoryIntentHandling
     
     @available(iOSApplicationExtension 11.0, *)
-    func resolveCallTypes(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeOptionsResolutionResult) -> Void) {
+    public func resolveCallTypes(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeOptionsResolutionResult) -> Void) {
         completion(.success(with: .missed))
     }
     
-    func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
+    public func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
         completion(.success(with: .missed))
     }
     
-    func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
+    public func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)
