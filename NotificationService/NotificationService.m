@@ -111,7 +111,7 @@ static void reportMemory() {
 
 - (void)completeWithBestAttemptContent {
     _contentReady = true;
-    //_updatedUnreadCount = @(-1);
+    _updatedUnreadCount = @(-1);
     if (_contentReady && _updatedUnreadCount) {
         [self _internalComplete];
     }
