@@ -50,7 +50,8 @@ enum IntentHandlingError {
 }
 
 @available(iOSApplicationExtension 10.0, *)
-class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
+@objc(IntentHandler)
+public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
     
     private let resolvePersonsDisposable = MetaDisposable()
@@ -133,7 +134,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         self.actionDisposable.dispose()
     }
     
-    override func handler(for intent: INIntent) -> Any {
+    override public func handler(for intent: INIntent) -> Any {
         return self
     }
     
@@ -264,7 +265,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     // MARK: - INSendMessageIntentHandling
     
-    func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
+     public func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INPersonResolutionResult]) -> Void) {
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             completion([INPersonResolutionResult.notRequired()])
             return
@@ -275,7 +276,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     @available(iOSApplicationExtension 11.0, *)
-    func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
+    public func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
         if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
             let account = self.accountPromise.get()
             
@@ -318,7 +319,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
     }
     
-    func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
+    public func resolveContent(for intent: INSendMessageIntent, with completion: @escaping (INStringResolutionResult) -> Void) {
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             completion(INStringResolutionResult.notRequired())
             return
@@ -330,7 +331,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         }
     }
     
-    func confirm(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
+    public func confirm(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
         guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
             let response = INSendMessageIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
@@ -341,7 +342,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         completion(response)
     }
     
-    func handle(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
+    public func handle(intent: INSendMessageIntent, completion: @escaping (INSendMessageIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
