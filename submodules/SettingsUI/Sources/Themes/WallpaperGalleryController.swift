@@ -384,10 +384,11 @@ public class WallpaperGalleryController: ViewController {
                                     let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
+                                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         var chatWallpaper = current.chatWallpaper
-                                        if automaticThemeShouldSwitchNow(settings: current.automaticThemeSwitchSetting, systemUserInterfaceStyle: .light) {
+                                        if autoNightModeTriggered {
                                             themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
                                         } else {
                                             themeSpecificChatWallpapers[current.theme.index] = wallpaper
