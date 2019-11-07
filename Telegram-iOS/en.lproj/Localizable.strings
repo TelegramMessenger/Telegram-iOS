@@ -5082,6 +5082,9 @@ Any member of this group will be able to see messages in the channel.";
 "ClearCache.StorageFree" = "Free";
 "ClearCache.ClearCache" = "Clear Telegram Cache";
 "ClearCache.Clear" = "Clear";
+"ClearCache.Forever" = "Forever";
 
 "ChatList.DeletedChats_1" = "Deleted 1 chat";
 "ChatList.DeletedChats_any" = "Deleted %@ chats";
+
+"Appearance.ColorThemeNight" = "COLOR THEME — AUTO-NIGHT MODE";

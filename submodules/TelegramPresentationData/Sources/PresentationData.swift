@@ -26,16 +26,6 @@ public struct PresentationDateTimeFormat: Equatable {
     }
 }
 
-public struct PresentationVolumeControlStatusBarIcons: Equatable {
-    public let offIcon: UIImage
-    public let halfIcon: UIImage
-    public let fullIcon: UIImage
-    
-    public var images: (UIImage, UIImage, UIImage) {
-        return (self.offIcon, self.halfIcon, self.fullIcon)
-    }
-}
-
 public struct PresentationAppIcon: Equatable {
     public let name: String
     public let imageName: String
@@ -61,8 +51,8 @@ public enum PresentationDateFormat {
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
+    public let autoNightModeTriggered: Bool
     public let chatWallpaper: TelegramWallpaper
-    public let volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons
     public let fontSize: PresentationFontSize
     public let dateTimeFormat: PresentationDateTimeFormat
     public let nameDisplayOrder: PresentationPersonNameOrder
@@ -70,11 +60,11 @@ public final class PresentationData: Equatable {
     public let disableAnimations: Bool
     public let largeEmoji: Bool
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, autoNightModeTriggered: Bool, chatWallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool) {
         self.strings = strings
         self.theme = theme
+        self.autoNightModeTriggered = autoNightModeTriggered
         self.chatWallpaper = chatWallpaper
-        self.volumeControlStatusBarIcons = volumeControlStatusBarIcons
         self.fontSize = fontSize
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -84,7 +74,7 @@ public final class PresentationData: Equatable {
     }
     
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
-        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.volumeControlStatusBarIcons == rhs.volumeControlStatusBarIcons && lhs.fontSize == rhs.fontSize && lhs.dateTimeFormat == rhs.dateTimeFormat && lhs.disableAnimations == rhs.disableAnimations && lhs.largeEmoji == rhs.largeEmoji
+        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.autoNightModeTriggered == rhs.autoNightModeTriggered && lhs.chatWallpaper == rhs.chatWallpaper && lhs.fontSize == rhs.fontSize && lhs.dateTimeFormat == rhs.dateTimeFormat && lhs.disableAnimations == rhs.disableAnimations && lhs.largeEmoji == rhs.largeEmoji
     }
 }
 
@@ -114,11 +104,6 @@ public func dictFromLocalization(_ value: Localization) -> [String: String] {
         }
     }
     return dict
-}
-
-private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBarIcons {
-    let bundle = getAppBundle()
-    return PresentationVolumeControlStatusBarIcons(offIcon: UIImage(named: "Components/Volume/VolumeOff", in: bundle, compatibleWith: nil)!, halfIcon: UIImage(named: "Components/Volume/VolumeHalf", in: bundle, compatibleWith: nil)!, fullIcon: UIImage(named: "Components/Volume/VolumeFull", in: bundle, compatibleWith: nil)!)
 }
 
 private func currentDateTimeFormat() -> PresentationDateTimeFormat {
@@ -249,10 +234,13 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
         
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
+        let autoNightModeTriggered: Bool
         if automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle) {
             effectiveTheme = themeSettings.automaticThemeSwitchSetting.theme
+            autoNightModeTriggered = true
         } else {
             effectiveTheme = themeSettings.theme
+            autoNightModeTriggered = false
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
@@ -276,7 +264,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -499,11 +487,11 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                 if inForeground {
                     return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: systemUserInterfaceStyle)
                     |> distinctUntilChanged
-                    |> map { shouldSwitch in
+                    |> map { autoNightModeTriggered in
                         var effectiveTheme: PresentationThemeReference
                         var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
                         
-                        if shouldSwitch {
+                        if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
                                 effectiveChatWallpaper = themeSpecificWallpaper
@@ -546,7 +534,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         let nameDisplayOrder = contactSettings.nameDisplayOrder
                         let nameSortOrder = currentPersonNameSortOrder()
                         
-                        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
+                        return PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
                     }
                 } else {
                     return .complete()
@@ -562,5 +550,5 @@ public func defaultPresentationData() -> PresentationData {
     let nameSortOrder = currentPersonNameSortOrder()
     
     let themeSettings = PresentationThemeSettings.defaultSettings
-    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin(WallpaperSettings()), volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, autoNightModeTriggered: false, chatWallpaper: .builtin(WallpaperSettings()), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji)
 }

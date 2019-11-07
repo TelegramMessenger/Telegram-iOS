@@ -180,7 +180,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
             let inset: CGFloat = 16.0
             let horizontalSpacing: CGFloat = 32.0
             let verticalSpacing: CGFloat = 22.0
-            var textOrigin: CGPoint = CGPoint(x: horizontalSpacing, y: 52.0)
+            var textOrigin: CGPoint = CGPoint(x: params.leftInset + horizontalSpacing, y: 52.0)
             
             for i in 0 ..< item.categories.count {
                 let makeTextLayout = makeNodesLayout[i]
@@ -281,7 +281,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
                         
                         var categoryWidth = max(floor(lineWidth * category.fraction), 2.0)
                         if i == strongSelf.lineNodes.count - 1 {
-                            categoryWidth = lineWidth - (lineOrigin.x - lineInset)
+                            categoryWidth = max(0.0, lineWidth - (lineOrigin.x - lineInset))
                         }
                         
                         let lineRect = CGRect(origin: lineOrigin, size: CGSize(width: categoryWidth, height: 21.0))

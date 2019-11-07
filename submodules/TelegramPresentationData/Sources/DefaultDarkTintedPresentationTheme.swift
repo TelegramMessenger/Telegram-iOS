@@ -155,7 +155,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23),
         scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),
-        inputClearButtonColor: mainSecondaryColor
+        inputClearButtonColor: mainSecondaryColor,
+        itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: UIColor(rgb: 0x929196), color3: UIColor(rgb: 0x333333))
     )
     
     let chatList = PresentationThemeChatList(

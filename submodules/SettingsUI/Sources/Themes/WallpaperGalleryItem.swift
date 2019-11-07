@@ -292,8 +292,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             }
                             fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                            let account = context.account
-                            statusSignal = context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
+                            let account = self.context.account
+                            statusSignal = self.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
                             |> take(1)
                             |> mapToSignal { status -> Signal<MediaResourceStatus, NoError> in
                                 if case .Local = status {
