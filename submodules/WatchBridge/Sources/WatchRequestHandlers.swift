@@ -402,7 +402,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                             if let peer = peer, let representation = peer.smallProfileImage {
                                 let imageData = peerAvatarImageData(account: context.account, peer: peer, authorOfMessage: nil, representation: representation, synchronousLoad: false)
                                 if let imageData = imageData {
-                                    return imageData |> deliverOn(Queue.concurrentDefaultQueue())
+                                    return imageData
                                     |> map { data -> UIImage? in
                                         if let data = data, let image = generateImage(targetSize, contextGenerator: { size, context -> Void in
                                             if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
@@ -429,7 +429,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                 
                 let disposable = signal.start(next: { image in
                     if let image = image, let imageData = image.jpegData(compressionQuality: compressionRate) {
-                        sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage)
+                        sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: true)
                     }
                     subscriber?.putNext(key)
                 }, completed: {

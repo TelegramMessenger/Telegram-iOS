@@ -55,6 +55,7 @@ import LocalizedPeerData
 import PhoneNumberFormat
 import SettingsUI
 import UrlWhitelist
+import AppIntents
 
 public enum ChatControllerPeekActions {
     case standard
@@ -2798,7 +2799,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
                 
-                strongSelf.donateSendMessageIntent()
+                donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, peerIds: [peerId])
             }
         }
         
@@ -5994,7 +5995,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            self.donateSendMessageIntent()
+            donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, peerIds: [peerId])
         } else {
             let mode: ChatScheduleTimeControllerMode
             if peerId == self.context.account.peerId {
@@ -7776,7 +7777,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
            actionSheet?.dismissAnimated()
             if let strongSelf = self {
                 let controller = storageUsageController(context: strongSelf.context, isModal: true)
-                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
            }
         }))
     
@@ -8065,44 +8066,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return state
             }
         })
-    }
-    
-    private func donateSendMessageIntent() {
-        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId else {
-            return
-        }
-        if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
-            let _ = (self.context.account.postbox.loadedPeerWithId(peerId)
-            |> mapToSignal { peer -> Signal<(Peer, UIImage?), NoError> in
-                let avatarImage = peerAvatarImage(account: self.context.account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil)
-                return avatarImage
-                |> map { avatarImage in
-                    return (peer, avatarImage)
-                }
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] peer, avatarImage in
-                if let strongSelf = self, let peer = peer as? TelegramUser, peer.botInfo == nil && !peer.flags.contains(.isSupport) {
-                    let recipientHandle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
-                    var nameComponents = PersonNameComponents()
-                    nameComponents.givenName = peer.firstName
-                    nameComponents.familyName = peer.lastName
-                    let displayTitle = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                    let recipient = INPerson(personHandle: recipientHandle, nameComponents: nameComponents, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
-                    let intent = INSendMessageIntent(recipients: [recipient], content: nil, speakableGroupName: INSpeakableString(spokenPhrase: displayTitle), conversationIdentifier: "tg\(peerId.id)", serviceName: nil, sender: nil)
-                    if #available(iOS 12.0, *), let avatarImage = avatarImage, let avatarImageData = avatarImage.jpegData(compressionQuality: 0.8) {
-                        intent.setImage(INImage(imageData: avatarImageData), forParameterNamed: \.groupName)
-                    }
-                    let interaction = INInteraction(intent: intent, response: nil)
-                    interaction.direction = .outgoing
-                    interaction.groupIdentifier = "sendMessage_\(strongSelf.context.account.peerId.toInt64())"
-                    interaction.donate { error in
-                        if let error = error {
-                            print(error.localizedDescription)
-                        }
-                    }
-                }
-            })
-        }
     }
     
     private func updateReminderActivity() {

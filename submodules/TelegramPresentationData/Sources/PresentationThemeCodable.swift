@@ -1014,6 +1014,7 @@ extension PresentationThemePartedColors: Codable {
         case accentControl
         case mediaActiveControl
         case mediaInactiveControl
+        case mediaControlInnerBg
         case pendingActivity
         case fileTitle
         case fileDescription
@@ -1029,6 +1030,7 @@ extension PresentationThemePartedColors: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(
             bubble: try values.decode(PresentationThemeBubbleColor.self, forKey: .bubble),
             primaryTextColor: try decodeColor(values, .primaryText),
@@ -1041,6 +1043,7 @@ extension PresentationThemePartedColors: Codable {
             accentControlColor: try decodeColor(values, .accentControl),
             mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
             mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
+            mediaControlInnerBackgroundColor: try decodeColor(values, .mediaControlInnerBg, decoder: decoder, fallbackKey: codingPath + ".bubble.withWp.bg"),
             pendingActivityColor: try decodeColor(values, .pendingActivity),
             fileTitleColor: try decodeColor(values, .fileTitle),
             fileDescriptionColor: try decodeColor(values, .fileDescription),
@@ -1068,6 +1071,7 @@ extension PresentationThemePartedColors: Codable {
         try encodeColor(&values, self.accentControlColor, .accentControl)
         try encodeColor(&values, self.mediaActiveControlColor, .mediaActiveControl)
         try encodeColor(&values, self.mediaInactiveControlColor, .mediaInactiveControl)
+        try encodeColor(&values, self.mediaControlInnerBackgroundColor, .mediaControlInnerBg)
         try encodeColor(&values, self.pendingActivityColor, .pendingActivity)
         try encodeColor(&values, self.fileTitleColor, .fileTitle)
         try encodeColor(&values, self.fileDescriptionColor, .fileDescription)

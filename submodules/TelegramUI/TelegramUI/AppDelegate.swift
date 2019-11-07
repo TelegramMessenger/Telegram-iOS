@@ -33,6 +33,7 @@ import WalletCore
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
+import AppIntents
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -178,6 +179,8 @@ final class SharedApplicationContext {
     private var authContextValue: UnauthorizedApplicationContext?
     private let authContext = Promise<UnauthorizedApplicationContext?>()
     private let authContextDisposable = MetaDisposable()
+    
+    private let logoutDisposable = MetaDisposable()
     
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
@@ -1155,7 +1158,8 @@ final class SharedApplicationContext {
                     }
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
-                    |> deliverOnMainQueue).start(completed: {                        authContextValue.rootController.view.endEditing(true)
+                    |> deliverOnMainQueue).start(completed: {
+                        authContextValue.rootController.view.endEditing(true)
                         authContextValue.rootController.dismiss()
                     })
                 } else {
@@ -1174,9 +1178,29 @@ final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     statusController.dismiss()
-                    self.mainWindow.present(context.rootController, on: .root)                }))
+                    self.mainWindow.present(context.rootController, on: .root)
+                }))
             } else {
                 authContextReadyDisposable.set(nil)
+            }
+        }))
+        
+        self.logoutDisposable.set((self.sharedContextPromise.get()
+        |> take(1)
+        |> mapToSignal { sharedContext -> Signal<Set<PeerId>, NoError> in
+            return sharedContext.sharedContext.activeAccounts
+            |> map { _, accounts, _ -> Set<PeerId> in
+                return Set(accounts.map { $0.1.peerId })
+            }
+            |> reduceLeft(value: Set<PeerId>()) { current, updated, emit in
+                if !current.isEmpty {
+                    emit(current.subtracting(current.intersection(updated)))
+                }
+                return updated
+            }
+        }).start(next: { loggedOutAccountPeerIds in
+            for peerId in loggedOutAccountPeerIds {
+                deleteAllSendMessageIntents(accountPeerId: peerId)
             }
         }))
         

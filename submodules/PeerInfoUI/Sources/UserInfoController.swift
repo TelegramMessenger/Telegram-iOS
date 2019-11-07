@@ -1362,6 +1362,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }
     startSecretChatImpl = { [weak controller] in
         let _ = (context.account.postbox.transaction { transaction -> (Peer?, PeerId?) in
+            let peer = transaction.getPeer(peerId)
             let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
             var activeIndices: [ChatListIndex] = []
             for associatedId in filteredPeerIds {
@@ -1377,65 +1378,58 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 }
             }
             activeIndices.sort()
-            
-            let peer = transaction.getPeer(peerId)
-            
             if let index = activeIndices.last {
                 return (peer, index.messageIndex.id.peerId)
             } else {
                 return (peer, nil)
             }
-        }
-        |> deliverOnMainQueue).start(next: { peer, currentPeerId in
+        } |> deliverOnMainQueue).start(next: { peer, currentPeerId in
             if let currentPeerId = currentPeerId {
                 if let navigationController = (controller?.navigationController as? NavigationController) {
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId)))
                 }
-            } else if let peer = peer as? TelegramUser {
+            } else if let controller = controller {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.UserInfo_StartSecretChatConfirmation(peer.compactDisplayTitle).0, actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.UserInfo_StartSecretChatStart, action: {
-                        var createSignal = createSecretChat(account: context.account, peerId: peerId)
-                        var cancelImpl: (() -> Void)?
-                        let progressSignal = Signal<Never, NoError> { subscriber in
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                cancelImpl?()
-                            }))
-                            presentControllerImpl?(controller, nil)
-                            return ActionDisposable { [weak controller] in
-                                Queue.mainQueue().async() {
-                                    controller?.dismiss()
-                                }
-                            }
-                        }
-                        |> runOn(Queue.mainQueue())
-                        |> delay(0.15, queue: Queue.mainQueue())
-                        let progressDisposable = progressSignal.start()
-                        
-                        createSignal = createSignal
-                        |> afterDisposed {
-                            Queue.mainQueue().async {
-                                progressDisposable.dispose()
-                            }
-                        }
-                        cancelImpl = {
-                            createSecretChatDisposable.set(nil)
-                        }
-                        
-                        createSecretChatDisposable.set((createSignal |> deliverOnMainQueue).start(next: { peerId in
-                            if let navigationController = (controller?.navigationController as? NavigationController) {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                            }
-                        }, error: { _ in
-                            if let controller = controller {
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            }
+                let displayTitle = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? ""
+                controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.UserInfo_StartSecretChatConfirmation(displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.UserInfo_StartSecretChatStart, action: {
+                    var createSignal = createSecretChat(account: context.account, peerId: peerId)
+                    var cancelImpl: (() -> Void)?
+                    let progressSignal = Signal<Never, NoError> { subscriber in
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                            cancelImpl?()
                         }))
-                    })
-                ]), nil)
+                        presentControllerImpl?(controller, nil)
+                        return ActionDisposable { [weak controller] in
+                            Queue.mainQueue().async() {
+                                controller?.dismiss()
+                            }
+                        }
+                    }
+                    |> runOn(Queue.mainQueue())
+                    |> delay(0.15, queue: Queue.mainQueue())
+                    let progressDisposable = progressSignal.start()
+                    
+                    createSignal = createSignal
+                    |> afterDisposed {
+                        Queue.mainQueue().async {
+                            progressDisposable.dispose()
+                        }
+                    }
+                    cancelImpl = {
+                        createSecretChatDisposable.set(nil)
+                    }
+                    
+                    createSecretChatDisposable.set((createSignal |> deliverOnMainQueue).start(next: { [weak controller] peerId in
+                        if let navigationController = (controller?.navigationController as? NavigationController) {
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                        }
+                    }, error: { [weak controller] _ in
+                        if let controller = controller {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        }
+                    }))
+                })]), in: .window(.root))
             }
         })
     }

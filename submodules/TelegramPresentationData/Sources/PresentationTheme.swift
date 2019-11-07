@@ -565,6 +565,7 @@ public final class PresentationThemePartedColors {
     public let accentControlColor: UIColor
     public let mediaActiveControlColor: UIColor
     public let mediaInactiveControlColor: UIColor
+    public let mediaControlInnerBackgroundColor: UIColor
     public let pendingActivityColor: UIColor
     public let fileTitleColor: UIColor
     public let fileDescriptionColor: UIColor
@@ -577,7 +578,7 @@ public final class PresentationThemePartedColors {
     public let textSelectionColor: UIColor
     public let textSelectionKnobColor: UIColor
     
-    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, mediaControlInnerBackgroundColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
         self.bubble = bubble
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -589,6 +590,7 @@ public final class PresentationThemePartedColors {
         self.accentControlColor = accentControlColor
         self.mediaActiveControlColor = mediaActiveControlColor
         self.mediaInactiveControlColor = mediaInactiveControlColor
+        self.mediaControlInnerBackgroundColor = mediaControlInnerBackgroundColor
         self.pendingActivityColor = pendingActivityColor
         self.fileTitleColor = fileTitleColor
         self.fileDescriptionColor = fileDescriptionColor

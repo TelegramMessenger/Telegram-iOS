@@ -23,6 +23,7 @@ static_library(
     	"//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AppBundle:AppBundle",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/AppIntents:AppIntents",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

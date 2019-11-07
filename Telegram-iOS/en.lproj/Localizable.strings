@@ -5090,3 +5090,6 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.DeletedChats_any" = "Deleted %@ chats";
 
 "Appearance.ColorThemeNight" = "COLOR THEME — AUTO-NIGHT MODE";
+
+"UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with\n%@?";
+"UserInfo.StartSecretChatStart" = "Start";
