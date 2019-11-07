@@ -1811,7 +1811,7 @@ final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
-                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: true)
                     return sharedContext.sharedContext.activeAccounts
                     |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
                         for account in accounts {
