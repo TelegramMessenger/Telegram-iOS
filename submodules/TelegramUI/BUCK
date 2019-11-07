@@ -197,6 +197,7 @@ framework(
         "//submodules/AppLock:AppLock",
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
         "//submodules/UrlWhitelist:UrlWhitelist",
+        "//submodules/AppIntents:AppIntents",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

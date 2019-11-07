@@ -8,6 +8,7 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import AccountContext
+import AppIntents
 
 enum ShareState {
     case preparing
@@ -26,6 +27,7 @@ func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let sharedContext: SharedAccountContext
+    private var account: Account?
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -537,6 +539,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             peerIds = self.controllerInteraction!.selectedPeers.map { $0.peerId }
         }
         
+        if let account = self.account {
+            donateSendMessageIntent(account: account, sharedContext: self.sharedContext, peerIds: peerIds)
+        }
+        
         if let signal = self.share?(self.inputFieldNode.text, peerIds) {
             self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
             let timestamp = CACurrentMediaTime()
@@ -629,6 +635,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func updatePeers(account: Account, switchableAccounts: [AccountWithInfo], peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+        self.account = account
+        
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
             peersContentNode.peersValue.set(.single(peers))
             return
