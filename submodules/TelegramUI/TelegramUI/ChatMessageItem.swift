@@ -405,10 +405,15 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
         
         if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.media.isEmpty {
-            if self.message.text.count == 1, let _ = self.associatedData.animatedEmojiStickers[self.message.text.basicEmoji.0] {
-                viewClassName = ChatMessageAnimatedStickerItemNode.self
-            } else if messageIsElligibleForLargeEmoji(self.message) {
-                viewClassName = ChatMessageStickerItemNode.self
+            if case let .message(_, _, _, attributes) = self.content {
+                switch attributes.contentTypeHint {
+                    case .largeEmoji:
+                        viewClassName = ChatMessageStickerItemNode.self
+                    case .animatedEmoji:
+                        viewClassName = ChatMessageAnimatedStickerItemNode.self
+                    default:
+                        break
+                }
             }
         }
         

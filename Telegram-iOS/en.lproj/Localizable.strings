@@ -5097,3 +5097,10 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.AccessDenied.Title" = "Please Allow Access";
 "Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
 "Wallet.AccessDenied.Settings" = "Settings";
+
+"GroupInfo.ShowMoreMembers_0" = "%@ more";
+"GroupInfo.ShowMoreMembers_1" = "%@ more";
+"GroupInfo.ShowMoreMembers_2" = "%@ more";
+"GroupInfo.ShowMoreMembers_3_10" = "%@ more";
+"GroupInfo.ShowMoreMembers_many" = "%@ more";
+"GroupInfo.ShowMoreMembers_any" = "%@ more";

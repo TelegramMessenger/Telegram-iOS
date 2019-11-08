@@ -584,7 +584,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             moreImpl?()
         })
         
-        let defaultThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
+        var defaultThemes: [PresentationThemeReference] = []
+        if presentationData.autoNightModeTriggered {
+        } else {
+            defaultThemes.append(contentsOf: [.builtin(.dayClassic), .builtin(.day)])
+        }
+        defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
+        
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
         
         var availableThemes = defaultThemes
@@ -667,7 +673,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         chatWallpaper = resolvedWallpaper ?? presentationTheme.chat.defaultWallpaper
                     }
                                         
-                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 })
             })
         }).start()
