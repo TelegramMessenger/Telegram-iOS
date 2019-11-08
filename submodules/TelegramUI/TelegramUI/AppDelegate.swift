@@ -1983,9 +1983,9 @@ final class SharedApplicationContext {
                                         var carPlayOptions = options
                                         carPlayOptions.insert(.allowInCarPlay)
                                         
-                                        if #available(iOS 13.2, *) {
-                                            carPlayOptions.insert(.allowAnnouncement)
-                                        }
+                                        //if #available(iOS 13.2, *) {
+                                        //    carPlayOptions.insert(.allowAnnouncement)
+                                        //}
                                         
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
