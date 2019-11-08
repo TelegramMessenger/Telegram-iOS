@@ -7773,23 +7773,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: peer, chatPeer: peer, action: .clearCacheSuggestion, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
         
+        var presented = false
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.ClearCache_FreeSpace, color: .accent, action: { [weak self, weak actionSheet] in
            actionSheet?.dismissAnimated()
-            if let strongSelf = self {
-                let controller = storageUsageController(context: strongSelf.context, isModal: true)
-                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
+            if let strongSelf = self, !presented {
+                presented = true
+                strongSelf.push(storageUsageController(context: strongSelf.context, isModal: true))
            }
         }))
     
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                
             })
         ])])
         self.chatDisplayNode.dismissInput()
         self.presentInGlobalOverlay(actionSheet)
-        //self.present(actionSheet, in: .window(.root))
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
