@@ -706,33 +706,46 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             self.walletContext = walletContext
             
             let beginWithController: (ViewController) -> Void = { controller in
-                navigationController.setViewControllers([controller], animated: false)
-                
-                var previousBlockchainName = initialConfigBlockchainName
-                
-                let _ = (updatedConfigValue
-                |> deliverOnMainQueue).start(next: { resolved, blockchainName in
-                    let _ = walletContext.tonInstance.validateConfig(config: resolved.value, blockchainName: blockchainName).start(error: { _ in
-                    }, completed: {
-                        let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
-                        
-                        if previousBlockchainName != blockchainName {
-                            previousBlockchainName = blockchainName
+                let begin: (Bool) -> Void = { animated in
+                    navigationController.setViewControllers([controller], animated: false)
+                    if animated {
+                        navigationController.viewControllers.last?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
+                    
+                    var previousBlockchainName = initialConfigBlockchainName
+                    
+                    let _ = (updatedConfigValue
+                    |> deliverOnMainQueue).start(next: { resolved, blockchainName in
+                        let _ = walletContext.tonInstance.validateConfig(config: resolved.value, blockchainName: blockchainName).start(error: { _ in
+                        }, completed: {
+                            let _ = walletContext.tonInstance.updateConfig(config: resolved.value, blockchainName: blockchainName).start()
                             
-                            let overlayController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                            mainWindow.present(overlayController, on: .root)
-                            
-                            let _ = (deleteAllLocalWalletsData(storage: walletContext.storage, tonInstance: walletContext.tonInstance)
-                            |> deliverOnMainQueue).start(error: { [weak overlayController] _ in
-                                overlayController?.dismiss()
-                            }, completed: { [weak overlayController] in
-                                overlayController?.dismiss()
+                            if previousBlockchainName != blockchainName {
+                                previousBlockchainName = blockchainName
                                 
-                                navigationController.setViewControllers([WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)], animated: true)
-                            })
-                        }
+                                let overlayController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                                mainWindow.present(overlayController, on: .root)
+                                
+                                let _ = (deleteAllLocalWalletsData(storage: walletContext.storage, tonInstance: walletContext.tonInstance)
+                                |> deliverOnMainQueue).start(error: { [weak overlayController] _ in
+                                    overlayController?.dismiss()
+                                }, completed: { [weak overlayController] in
+                                    overlayController?.dismiss()
+                                    
+                                    navigationController.setViewControllers([WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)], animated: true)
+                                })
+                            }
+                        })
                     })
-                })
+                }
+                
+                if let splashScreen = navigationController.viewControllers.first as? WalletApplicationSplashScreen, let _ = controller as? WalletSplashScreen {
+                    splashScreen.animateOut(completion: {
+                        begin(true)
+                    })
+                } else {
+                    begin(false)
+                }
             }
             
             let _ = (combineLatest(queue: .mainQueue(),

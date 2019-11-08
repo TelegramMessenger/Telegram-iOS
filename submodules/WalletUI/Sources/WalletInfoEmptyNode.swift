@@ -118,21 +118,16 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: WalletInfoEmptyItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
-        let sideInset: CGFloat = 32.0
-        let buttonSideInset: CGFloat = 48.0
-        let iconSpacing: CGFloat = 5.0
-        let titleSpacing: CGFloat = 19.0
-        let termsSpacing: CGFloat = 11.0
-        let buttonHeight: CGFloat = 50.0
-        
-        let iconSize = CGSize(width: 140.0, height: 140.0)
-        self.animationNode.updateLayout(size: iconSize)
-        
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
         
         return { [weak self] item, params in
+            var iconSpacing: CGFloat = 5.0
+            var titleSpacing: CGFloat = 19.0
+            var iconSize = CGSize(width: 140.0, height: 140.0)
+            let contentVerticalOrigin: CGFloat = 10.0
+            
             let sideInset: CGFloat = 16.0
             var iconOffset = CGPoint()
             
@@ -149,14 +144,25 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
             addressString.insert("\n", at: addressString.index(addressString.startIndex, offsetBy: addressString.count / 2))
             let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: addressString, font: Font.monospace(16.0), textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentVerticalOrigin: CGFloat = 32.0
+            let availableHeight = params.availableHeight - contentVerticalOrigin * 2.0
+            
+            let rawContentHeight: CGFloat = iconSize.height + titleLayout.size.height + textLayout.size.height + addressLayout.size.height
+            let contentSpacing = iconSpacing + titleSpacing + titleSpacing
+            let contentSpacingFactor = max(0.2, min(1.0, (availableHeight - rawContentHeight) / contentSpacing))
+            
+            if contentSpacingFactor < 0.25 {
+                iconSize = CGSize(width: 90.0, height: 90.0)
+            }
+            
+            iconSpacing = floor(iconSpacing * contentSpacingFactor)
+            titleSpacing = floor(titleSpacing * contentSpacingFactor)
             
             let iconFrame = CGRect(origin: CGPoint(x: floor((params.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
             let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleLayout.size)
             let textFrame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.size.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textLayout.size)
             let addressFrame = CGRect(origin: CGPoint(x: floor((params.width - addressLayout.size.width) / 2.0), y: textFrame.maxY + titleSpacing), size: addressLayout.size)
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: (item.loading ? iconFrame.maxY : addressFrame.maxY) + 32.0), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: (item.loading ? iconFrame.maxY : addressFrame.maxY) + contentVerticalOrigin), insets: UIEdgeInsets())
             
             return (layout, {
                 guard let strongSelf = self else {
@@ -178,6 +184,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 }
                 
                 strongSelf.item = item
+                
+                strongSelf.animationNode.updateLayout(size: iconSize)
                 
                 strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                 
