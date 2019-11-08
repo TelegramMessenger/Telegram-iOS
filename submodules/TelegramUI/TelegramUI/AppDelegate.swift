@@ -1566,6 +1566,50 @@ final class SharedApplicationContext {
             let _ = (self.sharedContextPromise.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+                    while encryptedPayload.count % 4 != 0 {
+                        encryptedPayload.append("=")
+                    }
+                    if let data = Data(base64Encoded: encryptedPayload) {
+                        let _ = (sharedApplicationContext.sharedContext.activeAccounts
+                        |> take(1)
+                        |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                            return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
+                                return masterNotificationsKey(account: account.1, ignoreDisabled: true)
+                                |> map { key -> (Account, MasterNotificationKey) in
+                                    return (account.1, key)
+                                }
+                            })
+                        }
+                        |> deliverOnMainQueue).start(next: { accountsAndKeys in
+                            var accountAndDecryptedPayload: (Account, Data)?
+                            for (account, key) in accountsAndKeys {
+                                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                                    accountAndDecryptedPayload = (account, decryptedData)
+                                    break
+                                }
+                            }
+                            
+                            if let (account, decryptedData) = accountAndDecryptedPayload {
+                                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                                    if var updateString = decryptedDict["updates"] as? String {
+                                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                                        while updateString.count % 4 != 0 {
+                                            updateString.append("=")
+                                        }
+                                        if let updateData = Data(base64Encoded: updateString) {
+                                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
                 sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                 
                 if case PKPushType.voIP = type {
