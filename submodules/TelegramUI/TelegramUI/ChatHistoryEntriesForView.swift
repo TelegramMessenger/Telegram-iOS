@@ -11,13 +11,17 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     }
     var entries: [ChatHistoryEntry] = []
     var adminRanks: [PeerId: CachedChannelAdminRank] = [:]
+    var stickersEnabled = true
     if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
                 if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data as? CachedChannelAdminRanks {
                     adminRanks = data.ranks
                 }
-                break
+            } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel {
+                if let defaultBannedRights = channel.defaultBannedRights, defaultBannedRights.flags.contains(.banSendStickers) {
+                    stickersEnabled = false
+                }
             }
         }
     }
@@ -42,7 +46,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
         if presentationData.largeEmoji, entry.message.media.isEmpty {
-            if entry.message.text.count == 1, let _ = associatedData.animatedEmojiStickers[entry.message.text.basicEmoji.0] {
+            if stickersEnabled && entry.message.text.count == 1, let _ = associatedData.animatedEmojiStickers[entry.message.text.basicEmoji.0] {
                 contentTypeHint = .animatedEmoji
             } else if messageIsElligibleForLargeEmoji(entry.message) {
                 contentTypeHint = .largeEmoji
