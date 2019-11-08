@@ -24,7 +24,7 @@ final class StickerPanePeerSpecificSetupGridItem: GridItem {
         self.dismiss = dismiss
         self.fillsRowWithDynamicHeight = { width in
             let makeDescriptionLayout = TextNode.asyncLayout(nil)
-            let params = ListViewItemLayoutParams(width: width, leftInset: 0.0, rightInset: 0.0)
+            let params = ListViewItemLayoutParams(width: width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0)
             let leftInset: CGFloat = 12.0
             let rightInset: CGFloat = 16.0
             let (descriptionLayout, _) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Stickers_GroupStickersHelp, font: statusFont, textColor: .black), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -127,7 +127,7 @@ class StickerPanePeerSpecificSetupGridItemNode: GridItemNode {
             return
         }
         
-        let params = ListViewItemLayoutParams(width: self.bounds.size.width, leftInset: 0.0, rightInset: 0.0)
+        let params = ListViewItemLayoutParams(width: self.bounds.size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.size.height)
         
         let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
