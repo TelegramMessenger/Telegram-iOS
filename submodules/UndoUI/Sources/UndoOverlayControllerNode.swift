@@ -31,7 +31,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let effectView: UIView
     
     private let animationBackgroundColor: UIColor
-    
+        
     private var originalRemainingSeconds: Int
     private var remainingSeconds: Int
     private var timer: SwiftSignalKit.Timer?
@@ -261,7 +261,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let firstLayout = self.validLayout == nil
         self.validLayout = layout
         
-        let leftInset: CGFloat = 50.0
+        var leftInset: CGFloat = 50.0
+        if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+            if iconSize.width > leftInset {
+                leftInset = iconSize.width - 8.0
+            }
+        }
         let rightInset: CGFloat = 16.0
         var contentHeight: CGFloat = 20.0
         
