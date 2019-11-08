@@ -43,7 +43,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         
         let additionalSize = CGSize(width: screenSize.width, height: screenSize.height + 20.0)
         for device in DeviceMetrics.allCases {
-            if let _ = onScreenNavigationHeight, device.onScreenNavigationHeight(inLandscape: false) == nil {
+            if let _ = onScreenNavigationHeight, device.onScreenNavigationHeight(inLandscape: false, systemOnScreenNavigationHeight: nil) == nil {
                 if case .tablet = device.type {
                     if screenSize.height == 1024.0 && screenSize.width == 768.0 {
                     } else {
@@ -111,16 +111,22 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         }
     }
     
-    func onScreenNavigationHeight(inLandscape: Bool) -> CGFloat? {
+    func onScreenNavigationHeight(inLandscape: Bool, systemOnScreenNavigationHeight: CGFloat?) -> CGFloat? {
         switch self {
-            case .iPhoneX, .iPhoneXSMax:
-                return inLandscape ? 21.0 : 34.0
-            case .iPadPro3rdGen, .iPadPro11Inch:
+        case .iPhoneX, .iPhoneXSMax:
+            return inLandscape ? 21.0 : 34.0
+        case .iPadPro3rdGen, .iPadPro11Inch:
+            return 21.0
+        case .iPad, .iPadPro, .iPadPro10Inch:
+            if let systemOnScreenNavigationHeight = systemOnScreenNavigationHeight, !systemOnScreenNavigationHeight.isZero {
                 return 21.0
-            case let .unknown(_, _, onScreenNavigationHeight):
-                return onScreenNavigationHeight
-            default:
+            } else {
                 return nil
+            }
+        case let .unknown(_, _, onScreenNavigationHeight):
+            return onScreenNavigationHeight
+        default:
+            return nil
         }
     }
     
