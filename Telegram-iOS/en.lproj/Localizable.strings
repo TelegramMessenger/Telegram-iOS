@@ -5093,3 +5093,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with\n%@?";
 "UserInfo.StartSecretChatStart" = "Start";
+
+"Wallet.AccessDenied.Title" = "Please Allow Access";
+"Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
+"Wallet.AccessDenied.Settings" = "Settings";
