@@ -935,6 +935,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     let controller = ItemListController(context: context, state: signal)
     if isModal {
         controller.navigationPresentation = .modal
+        controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     presentControllerImpl = { [weak controller] c, contextType, a in
         controller?.present(c, in: contextType, with: a)

@@ -851,7 +851,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         }];
         
         CLLocationCoordinate2D coordinate = _currentUserLocation.coordinate;
-        searchSignal = [self.nearbyPlacesSignal(searchQuery, _currentUserLocation) deliverOn:[SQueue mainQueue]];
+        searchSignal = [searchSignal then:[self.nearbyPlacesSignal(searchQuery, _currentUserLocation) deliverOn:[SQueue mainQueue]]];
         
         if (_searchDisposable == nil)
             _searchDisposable = [[SMetaDisposable alloc] init];

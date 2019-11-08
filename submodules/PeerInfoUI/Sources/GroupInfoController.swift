@@ -40,7 +40,8 @@ import AppBundle
 import Markdown
 import LocalizedPeerData
 
-private let maxParticipantsDisplayedCount: Int32 = 50
+private let maxParticipantsDisplayedLimit: Int32 = 50
+private let maxParticipantsDisplayedCollapseLimit: Int32 = 60
 
 private final class GroupInfoArguments {
     let context: AccountContext
@@ -1182,8 +1183,18 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             sortedParticipants = updatedParticipants
         }
         
-        var expand = state.expandedParticipants
-        let participants = expand ? sortedParticipants : Array(sortedParticipants.prefix(Int(maxParticipantsDisplayedCount)))
+        var expanded = state.expandedParticipants
+        let participants: [RenderedChannelParticipant]
+        if expanded {
+            participants = sortedParticipants
+        } else {
+            if sortedParticipants.count > maxParticipantsDisplayedCollapseLimit {
+                participants = Array(sortedParticipants.prefix(Int(maxParticipantsDisplayedLimit)))
+            } else {
+                participants = sortedParticipants
+                expanded = true
+            }
+        }
         
         for i in 0 ..< participants.count {
             let participant = participants[i]
@@ -1249,8 +1260,8 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: true, selectable: participant.peer.id != account.peerId))
         }
         
-        if !expand && memberCount > maxParticipantsDisplayedCount {
-            entries.append(GroupInfoEntry.expand(presentationData.theme, presentationData.strings.GroupInfo_ShowMoreMembers(Int32(memberCount - maxParticipantsDisplayedCount))))
+        if !expanded {
+            entries.append(GroupInfoEntry.expand(presentationData.theme, presentationData.strings.GroupInfo_ShowMoreMembers(Int32(memberCount - maxParticipantsDisplayedLimit))))
         }
     }
     
@@ -2489,7 +2500,9 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     
     controller.visibleBottomContentOffsetChanged = { offset in
         if let (peerId, loadMoreControl) = loadMoreControl.with({ $0 }), case let .known(value) = offset, value < 40.0 {
-            context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+            if stateValue.with({ $0 }).expandedParticipants {
+                context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+            }
         }
     }
     return controller
