@@ -18,6 +18,12 @@ private final class LegacyImagePickerController: LegacyController, TGLegacyCamer
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        self.view.disablesInteractiveModalDismiss = true
+    }
+    
     func legacyCameraControllerCompletedWithNoResult() {
         self.completion(nil)
     }

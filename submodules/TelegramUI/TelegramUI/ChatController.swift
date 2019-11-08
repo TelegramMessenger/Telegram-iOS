@@ -5705,6 +5705,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
                         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+                        legacyController?.view.disablesInteractiveModalDismiss = true
                     }
                     let controller = generator(legacyController.context)
                     legacyController.bind(controller: controller)
