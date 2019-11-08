@@ -430,14 +430,17 @@ final class AccountManagerImpl {
     }
 }
 
+private let sharedQueue = Queue()
+
 public final class AccountManager {
     public let basePath: String
     public let mediaBox: MediaBox
-    private let queue = Queue()
+    private let queue: Queue
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
     
     public init(basePath: String) {
+        self.queue = sharedQueue
         self.basePath = basePath
         var temporarySessionId: Int64 = 0
         arc4random_buf(&temporarySessionId, 8)

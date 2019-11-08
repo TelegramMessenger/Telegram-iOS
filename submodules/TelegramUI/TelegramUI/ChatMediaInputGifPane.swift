@@ -96,6 +96,32 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         let emptySize = self.emptyNode.updateLayout(size)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))
         
+        self.updateMultiplexedNodeLayout(changedIsExpanded: changedIsExpanded, transition: transition)
+    }
+    
+    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
+        if let multiplexedNode = self.multiplexedNode {
+            return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
+        } else {
+            return nil
+        }
+    }
+    
+    override var isEmpty: Bool {
+        return self.multiplexedNode?.files.isEmpty ?? true
+    }
+    
+    override func willEnterHierarchy() {
+        super.willEnterHierarchy()
+        
+        self.initializeIfNeeded()
+    }
+    
+    private func updateMultiplexedNodeLayout(changedIsExpanded: Bool, transition: ContainedViewLayoutTransition) {
+        guard let (size, topInset, bottomInset, isExpanded, isVisible, deviceMetrics) = self.validLayout else {
+            return
+        }
+        
         if let multiplexedNode = self.multiplexedNode {
             let previousBounds = multiplexedNode.scrollNode.layer.bounds
             multiplexedNode.topInset = topInset + 60.0
@@ -120,24 +146,6 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             multiplexedNode.updateLayout(size: nodeFrame.size, transition: transition)
             self.searchPlaceholderNode.frame = CGRect(x: 0.0, y: 41.0, width: size.width, height: 56.0)
         }
-    }
-    
-    func fileAt(point: CGPoint) -> (FileMediaReference, CGRect)? {
-        if let multiplexedNode = self.multiplexedNode {
-            return multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY))
-        } else {
-            return nil
-        }
-    }
-    
-    override var isEmpty: Bool {
-        return self.multiplexedNode?.files.isEmpty ?? true
-    }
-    
-    override func willEnterHierarchy() {
-        super.willEnterHierarchy()
-        
-        self.initializeIfNeeded()
     }
     
     func initializeIfNeeded() {
@@ -215,6 +223,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                     fixListScrolling(multiplexedNode)
                 }
             }
+            
+            self.updateMultiplexedNodeLayout(changedIsExpanded: false, transition: .immediate)
         }
     }
 }

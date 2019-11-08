@@ -467,6 +467,11 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             currentParent = currentParent?.superview
         }
+        if let controller = self.container.controllers.last {
+            if controller.view.disablesInteractiveModalDismiss {
+                enableScrolling = false
+            }
+        }
         self.isInteractiveDimissEnabled = enableScrolling
         if let layout = self.validLayout {
             if layout.inputHeight != nil && layout.inputHeight != 0.0 {

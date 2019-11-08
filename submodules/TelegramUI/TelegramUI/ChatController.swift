@@ -1430,7 +1430,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
                     return transaction.getMessageFailedGroup(id) ?? []
                 } |> deliverOnMainQueue).start(next: { messages in
-                    guard let strongSelf = self, let message = messages.filter({ $0.id == id }).first else {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var groups: [UInt32: [Message]] = [:]
+                    var notGrouped: [Message] = []
+                    for message in messages {
+                        if let groupInfo = message.groupInfo {
+                            if groups[groupInfo.stableId] == nil {
+                                groups[groupInfo.stableId] = []
+                            }
+                            groups[groupInfo.stableId]?.append(message)
+                        } else {
+                            notGrouped.append(message)
+                        }
+                    }
+                    
+                    let totalGroupCount = notGrouped.count + groups.count
+                    
+                    var maybeSelectedGroup: [Message]?
+                    for (_, group) in groups {
+                        if group.contains(where: { $0.id == id}) {
+                            maybeSelectedGroup = group
+                            break
+                        }
+                    }
+                    for message in notGrouped {
+                        if message.id == id {
+                            maybeSelectedGroup = [message]
+                        }
+                    }
+                    
+                    guard let selectedGroup = maybeSelectedGroup, let topMessage = selectedGroup.first else {
                         return
                     }
                     
@@ -1439,12 +1470,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                     }, action: { [weak self] _, f in
                         if let strongSelf = self {
-                            let _ = resendMessages(account: strongSelf.context.account, messageIds: [id]).start()
+                            let _ = resendMessages(account: strongSelf.context.account, messageIds: selectedGroup.map({ $0.id })).start()
                         }
                         f(.dismissWithoutContent)
                     })))
-                    if messages.count != 1 {
-                        actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetryAll(messages.count).0, icon: { theme in
+                    if totalGroupCount != 1 {
+                        actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetryAll(totalGroupCount).0, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                         }, action: { [weak self] _, f in
                             if let strongSelf = self {
@@ -1462,7 +1493,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         f(.dismissWithoutContent)
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: topMessage)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
@@ -5674,6 +5705,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
                         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+                        legacyController?.view.disablesInteractiveModalDismiss = true
                     }
                     let controller = generator(legacyController.context)
                     legacyController.bind(controller: controller)
