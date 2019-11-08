@@ -229,7 +229,7 @@ static void reportMemory() {
         NSData *attachmentData = nil;
         id parsedAttachment = nil;
         
-        if (_isLockedValue) {
+        if (!_isLockedValue) {
             NSString *attachmentDataString = decryptedPayload[@"attachb64"];
             if ([attachmentDataString isKindOfClass:[NSString class]]) {
                 attachmentData = parseBase64(attachmentDataString);
