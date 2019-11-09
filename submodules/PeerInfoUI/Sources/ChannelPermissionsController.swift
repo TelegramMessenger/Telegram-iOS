@@ -858,9 +858,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             return
         }
         sourcePeerId.set(.single((upgradedPeerId, true)))
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
-            navigationController.pushViewController(controller, animated: false)
-        }))
+        rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
     }
     
     controller.visibleBottomContentOffsetChanged = { offset in
