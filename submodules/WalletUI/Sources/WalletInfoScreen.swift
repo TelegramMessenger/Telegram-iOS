@@ -130,7 +130,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
+            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, walletState: (strongSelf.displayNode as! WalletInfoScreenNode).statePromise.get(), enableDebugActions: strongSelf.enableDebugActions))
         }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -578,6 +578,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     fileprivate var combinedState: CombinedWalletState?
     private var currentEntries: [WalletInfoListEntry]?
     
+    fileprivate let statePromise = Promise<(CombinedWalletState, Bool)>()
+    
     private var isReady: Bool = false
     
     let contentReady = Promise<Bool>()
@@ -817,6 +819,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.transactionListDisposable.set(nil)
         self.loadingMoreTransactions = true
         self.reloadingState = true
+        self.updateStatePromise()
         
         self.headerNode.isRefreshing = true
         self.headerNode.refreshNode.refreshProgress = 0.0
@@ -852,7 +855,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             
-                strongSelf.reloadingState = false
+            strongSelf.reloadingState = false
+            strongSelf.updateStatePromise()
             
             if let combinedState = strongSelf.combinedState {
                 strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
@@ -961,6 +965,14 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         if !self.didSetContentReady {
             self.didSetContentReady = true
             self.contentReady.set(.single(true))
+        }
+    
+        self.updateStatePromise()
+    }
+    
+    private func updateStatePromise() {
+        if let combinedState = self.combinedState {
+            self.statePromise.set(.single((combinedState, self.reloadingState)))
         }
     }
     
@@ -1105,6 +1117,10 @@ private final class WalletApplicationSplashScreenNode: ASDisplayNode {
     private let headerBackgroundNode: ASDisplayNode
     private let headerCornerNode: ASImageNode
     
+    private var isDismissed = false
+    
+    private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
+    
     init(theme: WalletTheme) {
         self.headerBackgroundNode = ASDisplayNode()
         self.headerBackgroundNode.backgroundColor = .black
@@ -1129,10 +1145,31 @@ private final class WalletApplicationSplashScreenNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.isDismissed {
+            return
+        }
+        self.validLayout = (layout, navigationHeight)
+        
         let headerHeight = navigationHeight + 260.0
         
         transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: -1.0, y: 0), size: CGSize(width: layout.size.width + 2.0, height: headerHeight)))
         transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: headerHeight), size: CGSize(width: layout.size.width, height: 10.0)))
+    }
+    
+    func animateOut(completion: @escaping () -> Void) {
+        guard let (layout, navigationHeight) = self.validLayout else {
+            completion()
+            return
+        }
+        self.isDismissed = true
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+        
+        let headerHeight = navigationHeight + 260.0
+        
+        transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: -1.0, y: -headerHeight - 10.0), size: CGSize(width: layout.size.width + 2.0, height: headerHeight)), completion: { _ in
+            completion()
+        })
+        transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -10.0), size: CGSize(width: layout.size.width, height: 10.0)))
     }
 }
 
@@ -1161,5 +1198,10 @@ public final class WalletApplicationSplashScreen: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         (self.displayNode as! WalletApplicationSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+    }
+    
+    public func animateOut(completion: @escaping () -> Void) {
+        self.statusBar.statusBarStyle = .Black
+        (self.displayNode as! WalletApplicationSplashScreenNode).animateOut(completion: completion)
     }
 }

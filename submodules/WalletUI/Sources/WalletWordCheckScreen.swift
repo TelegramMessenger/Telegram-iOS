@@ -2731,14 +2731,12 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            if node.isLast {
-                if done {
-                    action()
+            if let index = strongSelf.inputNodes.firstIndex(where: { $0 === node }) {
+                if index == strongSelf.inputNodes.count - 1 {
+                    if done {
+                        action()
+                    }
                 } else {
-                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -20.0), animated: true)
-                }
-            } else {
-                if let index = strongSelf.inputNodes.firstIndex(where: { $0 === node }), index != strongSelf.inputNodes.count - 1 {
                     strongSelf.inputNodes[index + 1].focus()
                 }
             }
@@ -2749,7 +2747,9 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
                     return
                 }
                 if node.isLast {
-                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+                    UIView.animate(withDuration: 0.3, animations: {
+                        strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -20.0), animated: false)
+                    })
                 } else {
                     strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
                 }

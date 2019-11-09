@@ -161,7 +161,17 @@
 
 @end
 
+static int32_t fixedTimeDifferenceValue = 0;
+
 @implementation MTContext
+
++ (int32_t)fixedTimeDifference {
+    return fixedTimeDifferenceValue;
+}
+
++ (void)setFixedTimeDifference:(int32_t)fixedTimeDifference {
+    fixedTimeDifferenceValue = fixedTimeDifference;
+}
 
 - (instancetype)init
 {

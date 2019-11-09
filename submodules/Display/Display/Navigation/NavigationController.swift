@@ -747,15 +747,19 @@ open class NavigationController: UINavigationController, ContainableController, 
         case .compact:
             if visibleModalCount != 0 {
                 let effectiveRootModalDismissProgress: CGFloat
+                let visibleRootModalDismissProgress: CGFloat
                 let additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
                     effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
+                    visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                     additionalModalFrameProgress = 0.0
                 } else if visibleModalCount == 2 {
                     effectiveRootModalDismissProgress = 0.0
+                    visibleRootModalDismissProgress = topModalDismissProgress
                     additionalModalFrameProgress = 1.0 - topModalDismissProgress
                 } else {
                     effectiveRootModalDismissProgress = 0.0
+                    visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                     additionalModalFrameProgress = 1.0
                 }
                 
@@ -820,8 +824,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                         maxOffset = (topInset + 10.0 - (layout.size.height - layout.size.height * maxScale) / 2.0)
                     }
                     
-                    let scale = 1.0 * effectiveRootModalDismissProgress + (1.0 - effectiveRootModalDismissProgress) * maxScale
-                    let offset = (1.0 - effectiveRootModalDismissProgress) * maxOffset
+                    let scale = 1.0 * visibleRootModalDismissProgress + (1.0 - visibleRootModalDismissProgress) * maxScale
+                    let offset = (1.0 - visibleRootModalDismissProgress) * maxOffset
                     transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset))
                 }
             } else {

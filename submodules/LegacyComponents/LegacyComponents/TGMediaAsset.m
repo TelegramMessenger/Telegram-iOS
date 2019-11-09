@@ -135,11 +135,19 @@
 
 - (NSString *)fileName
 {
-    if (self.backingAsset != nil)
-        return [self.backingAsset valueForKey:@"filename"];
-    else if (self.backingLegacyAsset != nil)
+    if (self.backingAsset != nil) {
+        NSString *fileName = [self.backingAsset valueForKey:@"filename"];
+        if (fileName == nil) {
+            NSArray *resources = [PHAssetResource assetResourcesForAsset:self.backingAsset];
+            PHAssetResource *resource = resources.firstObject;
+            if (resource != nil) {
+                fileName = resource.originalFilename;
+            }
+        }
+        return fileName;
+    } else if (self.backingLegacyAsset != nil) {
         return self.backingLegacyAsset.defaultRepresentation.filename;
-    
+    }
     return nil;
 }
 

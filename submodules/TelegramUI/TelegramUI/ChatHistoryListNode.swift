@@ -571,7 +571,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let nextTransitionVersion = Atomic<Int>(value: 0)
         
-        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get(), animatedEmojiStickers).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
+        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
+            historyViewUpdate,
+            self.chatPresentationDataPromise.get(),
+            selectedMessages,
+            automaticDownloadNetworkType,
+            self.historyAppearsClearedPromise.get(),
+            animatedEmojiStickers
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -783,7 +790,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
         }
         
-        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, appConfiguration)
+        self.presentationDataDisposable = (
+            combineLatest(queue: .mainQueue(),
+                context.sharedContext.presentationData,
+                appConfiguration)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData, appConfiguration in
             if let strongSelf = self {
                 let previousTheme = strongSelf.currentPresentationData.theme

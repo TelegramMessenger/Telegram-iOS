@@ -372,7 +372,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             width = layout.size.width
         }
         
-        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let chatNodes = self.chatNodes {
             for i in 0 ..< items.count {
                 let itemNode = chatNodes[i]
@@ -452,7 +452,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             width = layout.size.width
         }
         
-        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
             for i in 0 ..< items.count {
                 let itemNode = messageNodes[i]

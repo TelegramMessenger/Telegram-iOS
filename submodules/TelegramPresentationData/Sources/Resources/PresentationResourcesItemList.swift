@@ -21,6 +21,12 @@ public func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
 }
 
 public struct PresentationResourcesItemList {
+    public static func downArrowImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDownArrow.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/DownButton"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func disclosureArrowImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDisclosureArrow.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: theme.list.disclosureArrowColor)

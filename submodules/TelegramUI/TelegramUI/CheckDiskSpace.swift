@@ -7,7 +7,7 @@ import AlertUI
 import PresentationDataUtils
 import SettingsUI
 
-func totalDiskSpace() -> Int64 {
+private func totalDiskSpace() -> Int64 {
     do {
         let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
         return (systemAttributes[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
@@ -16,7 +16,7 @@ func totalDiskSpace() -> Int64 {
     }
 }
 
-func freeDiskSpace() -> Int64 {
+private func freeDiskSpace() -> Int64 {
     do {
         let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
         return (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
@@ -25,18 +25,16 @@ func freeDiskSpace() -> Int64 {
     }
 }
 
-func checkAvailableDiskSpace(context: AccountContext, threshold: Int64 = 100 * 1024 * 1024, present: @escaping (ViewController, Any?) -> Void) -> Bool {
+func checkAvailableDiskSpace(context: AccountContext, threshold: Int64 = 100 * 1024 * 1024, push: @escaping (ViewController) -> Void) -> Bool {
     guard freeDiskSpace() < threshold else {
         return true
     }
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = textAlertController(context: context, title: nil, text: presentationData.strings.Cache_LowDiskSpaceText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-        let controller = storageUsageController(context: context, isModal: true)
-        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        
+        push(storageUsageController(context: context, isModal: true))
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-    present(controller, nil)
+    push(controller)
     
     return false
 }

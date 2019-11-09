@@ -54,7 +54,8 @@ public final class TwoFactorAuthSplashScreen: ViewController {
             }
             switch strongSelf.mode {
             case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(context: strongSelf.context, mode: .password))
+                strongSelf.push(TwoFactorDataInputScreen(context: strongSelf.context, mode: .password, stateUpdated: { _ in
+                }))
             case .done:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return

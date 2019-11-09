@@ -33,6 +33,7 @@ import WalletCore
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
+import AppIntents
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -178,6 +179,8 @@ final class SharedApplicationContext {
     private var authContextValue: UnauthorizedApplicationContext?
     private let authContext = Promise<UnauthorizedApplicationContext?>()
     private let authContextDisposable = MetaDisposable()
+    
+    private let logoutDisposable = MetaDisposable()
     
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
@@ -1147,8 +1150,22 @@ final class SharedApplicationContext {
             
             if let authContextValue = self.authContextValue {
                 authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
-                authContextValue.rootController.view.endEditing(true)
-                authContextValue.rootController.dismiss()
+                if authContextValue.authorizationCompleted {
+                    let accountId = authContextValue.account.id
+                    let _ = (self.context.get()
+                    |> filter { context in
+                        return context?.context.account.id == accountId
+                    }
+                    |> take(1)
+                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
+                    |> deliverOnMainQueue).start(completed: {
+                        authContextValue.rootController.view.endEditing(true)
+                        authContextValue.rootController.dismiss()
+                    })
+                } else {
+                    authContextValue.rootController.view.endEditing(true)
+                    authContextValue.rootController.dismiss()
+                }
             }
             self.authContextValue = context
             if let context = context {
@@ -1161,9 +1178,29 @@ final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     statusController.dismiss()
-                    self.mainWindow.present(context.rootController, on: .root)                }))
+                    self.mainWindow.present(context.rootController, on: .root)
+                }))
             } else {
                 authContextReadyDisposable.set(nil)
+            }
+        }))
+        
+        self.logoutDisposable.set((self.sharedContextPromise.get()
+        |> take(1)
+        |> mapToSignal { sharedContext -> Signal<Set<PeerId>, NoError> in
+            return sharedContext.sharedContext.activeAccounts
+            |> map { _, accounts, _ -> Set<PeerId> in
+                return Set(accounts.map { $0.1.peerId })
+            }
+            |> reduceLeft(value: Set<PeerId>()) { current, updated, emit in
+                if !current.isEmpty {
+                    emit(current.subtracting(current.intersection(updated)))
+                }
+                return updated
+            }
+        }).start(next: { loggedOutAccountPeerIds in
+            for peerId in loggedOutAccountPeerIds {
+                deleteAllSendMessageIntents(accountPeerId: peerId)
             }
         }))
         
@@ -1457,7 +1494,7 @@ final class SharedApplicationContext {
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
         if #available(iOS 9.0, *) {
-            guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+            /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
                 return
             }
             encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -1525,16 +1562,61 @@ final class SharedApplicationContext {
                         }
                     }
                 }
-            }
-                
-                /*.start(next: { sharedApplicationContext in
+            }*/
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+                    while encryptedPayload.count % 4 != 0 {
+                        encryptedPayload.append("=")
+                    }
+                    if let data = Data(base64Encoded: encryptedPayload) {
+                        let _ = (sharedApplicationContext.sharedContext.activeAccounts
+                        |> take(1)
+                        |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                            return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
+                                return masterNotificationsKey(account: account.1, ignoreDisabled: true)
+                                |> map { key -> (Account, MasterNotificationKey) in
+                                    return (account.1, key)
+                                }
+                            })
+                        }
+                        |> deliverOnMainQueue).start(next: { accountsAndKeys in
+                            var accountAndDecryptedPayload: (Account, Data)?
+                            for (account, key) in accountsAndKeys {
+                                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                                    accountAndDecryptedPayload = (account, decryptedData)
+                                    break
+                                }
+                            }
+                            
+                            if let (account, decryptedData) = accountAndDecryptedPayload {
+                                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                                    if var updateString = decryptedDict["updates"] as? String {
+                                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                                        while updateString.count % 4 != 0 {
+                                            updateString.append("=")
+                                        }
+                                        if let updateData = Data(base64Encoded: updateString) {
+                                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
+                                            })
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
                 sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                 
                 if case PKPushType.voIP = type {
                     Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
                     sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
                 }
-            })*/
+            })
         }
     }
     
@@ -1797,7 +1879,7 @@ final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
-                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: true)
                     return sharedContext.sharedContext.activeAccounts
                     |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
                         for account in accounts {
@@ -1900,6 +1982,10 @@ final class SharedApplicationContext {
                                         
                                         var carPlayOptions = options
                                         carPlayOptions.insert(.allowInCarPlay)
+                                        
+                                        //if #available(iOS 13.2, *) {
+                                        //    carPlayOptions.insert(.allowAnnouncement)
+                                        //}
                                         
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)

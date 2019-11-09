@@ -112,7 +112,7 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
     if let color = color {
         colorValue = Int32(bitPattern: color.rgb)
         intensityValue = intensity
-    } else {
+    } else if isPattern {
         colorValue = 0xd6e2ee
         intensityValue = 50
     }
@@ -384,10 +384,11 @@ public class WallpaperGalleryController: ViewController {
                                     let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
+                                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         var chatWallpaper = current.chatWallpaper
-                                        if automaticThemeShouldSwitchNow(settings: current.automaticThemeSwitchSetting, systemUserInterfaceStyle: .light) {
+                                        if autoNightModeTriggered {
                                             themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
                                         } else {
                                             themeSpecificChatWallpapers[current.theme.index] = wallpaper
@@ -412,23 +413,41 @@ public class WallpaperGalleryController: ViewController {
                                     if options.contains(.blur) {
                                         if let resource = resource {
                                             let representation = CachedBlurredWallpaperRepresentation()
-                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start()
+
+                                            var data: Data?
+                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                data = maybeData
+                                            } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                data = maybeData
+                                            }
                                             
-                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-                                                let _ = strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start(completed: {
+                                            if let data = data {
+                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                                let _ = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                                                |> filter({ $0.complete })
+                                                |> take(1)
+                                                |> deliverOnMainQueue).start(next: { _ in
                                                     completion(wallpaper)
                                                 })
                                             }
                                         }
-                                    } else if case let .file(file) = wallpaper {
+                                    } else if case let .file(file) = wallpaper, let resource = resource {
                                         if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                                             let representation = CachedPatternWallpaperRepresentation(color: color, intensity: intensity)
-                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true).start()
                                             
-                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
-                                                let _ = strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true).start(completed: {
+                                            var data: Data?
+                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                data = maybeData
+                                            } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                data = maybeData
+                                            }
+                                            
+                                            if let data = data {
+                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                                let _ = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                                                |> filter({ $0.complete })
+                                                |> take(1)
+                                                |> deliverOnMainQueue).start(next: { _ in
                                                     completion(wallpaper)
                                                 })
                                             }
@@ -629,7 +648,7 @@ public class WallpaperGalleryController: ViewController {
         
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
             for i in 0 ..< items.count {
                 let itemNode = messageNodes[i]

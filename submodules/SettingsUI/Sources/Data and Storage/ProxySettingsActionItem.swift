@@ -12,7 +12,7 @@ enum ProxySettingsActionIcon {
     case add
 }
 
-class ProxySettingsActionItem: ListViewItem, ItemListItem {
+final class ProxySettingsActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let icon: ProxySettingsActionIcon
@@ -77,7 +77,7 @@ class ProxySettingsActionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ProxySettingsActionItemNode: ListViewItemNode {
+private final class ProxySettingsActionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

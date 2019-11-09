@@ -30,9 +30,7 @@ public final class AnimationNode : ASDisplayNode {
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
-                
-                view.logHierarchyKeypaths()
-                
+                                
                 if let colors = colors {
                     for (key, value) in colors {
                         let colorCallback = LOTColorValueCallback(color: value.cgColor)

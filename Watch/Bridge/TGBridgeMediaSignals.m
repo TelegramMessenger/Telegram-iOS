@@ -131,21 +131,14 @@
 
 + (SSignal *)_requestImageWithUrl:(NSString *)url subscription:(TGBridgeSubscription *)subscription
 {
-    SSignal *remoteSignal = [[[[[TGBridgeClient instance] requestSignalWithSubscription:subscription] onStart:^
-    {
+    SSignal *remoteSignal = [[[[TGBridgeClient instance] requestSignalWithSubscription:subscription] onStart:^
+                              {
         if (![[self mediaManager] hasUrl:url])
             [[self mediaManager] addUrl:url];
-    }] onDispose:^
+    }] then:[[self _downloadedFileWithUrl:url] onNext:^(id next)
     {
         [[self mediaManager] removeUrl:url];
-    }] mapToSignal:^SSignal *(id next)
-    {
-        return [[self _downloadedFileWithUrl:url] onNext:^(id next)
-        {
-            [[self mediaManager] removeUrl:url];
-        }];
-    }];
-    
+    }]];
     return [[self _cachedOrPendingWithUrl:url] catch:^SSignal *(id error)
     {
         return remoteSignal;

@@ -59,7 +59,22 @@ static NSData *base64_decode(NSString *str) {
         if (addressOverride != nil) {
             apvHost = addressOverride;
         }
-        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16&random_padding=%@", host, isTesting ? @"tapv3.stel.com" : apvHost, makeRandomPadding()]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16&random_padding=%@", host, isTesting ? @"tapv3.stel.com" : apvHost, makeRandomPadding()]] headers:headers] mapToSignal:^MTSignal *(MTHttpResponse *response) {
+            NSString *dateHeader = response.headers[@"Date"];
+            if ([dateHeader isKindOfClass:[NSString class]]) {
+                NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+                NSLocale *usLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+                [formatter setLocale:usLocale];
+                [formatter setDateFormat:@"EEE',' dd' 'MMM' 'yyyy HH':'mm':'ss zzz"];
+                NSDate *date = [formatter dateFromString:dateHeader];
+                if (date != nil) {
+                    double difference = [date timeIntervalSince1970] - [[NSDate date] timeIntervalSince1970];
+                    [MTContext setFixedTimeDifference:(int32_t)difference];
+                }
+            }
+            
+            NSData *data = response.data;
+            
             NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([dict respondsToSelector:@selector(objectForKey:)]) {
                 NSArray *answer = dict[@"Answer"];
@@ -145,7 +160,22 @@ static NSString *makeRandomPadding() {
         if (addressOverride != nil) {
             apvHost = addressOverride;
         }
-        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/dns-query?name=%@&type=16&random_padding=%@", host, isTesting ? @"tapv3.stel.com" : apvHost, makeRandomPadding()]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/dns-query?name=%@&type=16&random_padding=%@", host, isTesting ? @"tapv3.stel.com" : apvHost, makeRandomPadding()]] headers:headers] mapToSignal:^MTSignal *(MTHttpResponse *response) {
+            NSString *dateHeader = response.headers[@"Date"];
+            if ([dateHeader isKindOfClass:[NSString class]]) {
+                NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+                NSLocale *usLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+                [formatter setLocale:usLocale];
+                [formatter setDateFormat:@"EEE',' dd' 'MMM' 'yyyy HH':'mm':'ss zzz"];
+                NSDate *date = [formatter dateFromString:dateHeader];
+                if (date != nil) {
+                    double difference = [date timeIntervalSince1970] - [[NSDate date] timeIntervalSince1970];
+                    [MTContext setFixedTimeDifference:(int32_t)difference];
+                }
+            }
+            
+            NSData *data = response.data;
+            
             NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([dict respondsToSelector:@selector(objectForKey:)]) {
                 NSArray *answer = dict[@"Answer"];

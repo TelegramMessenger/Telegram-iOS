@@ -202,10 +202,15 @@ public final class MediaBox {
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
     }
     
-    public func storeResourceData(_ id: MediaResourceId, data: Data) {
-        self.dataQueue.async {
+    public func storeResourceData(_ id: MediaResourceId, data: Data, synchronous: Bool = false) {
+        let begin = {
             let paths = self.storePathsForId(id)
             let _ = try? data.write(to: URL(fileURLWithPath: paths.complete), options: [.atomic])
+        }
+        if synchronous {
+            begin()
+        } else {
+            self.dataQueue.async(begin)
         }
     }
     

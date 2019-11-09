@@ -7,6 +7,7 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
@@ -15,48 +16,67 @@ import ItemListPeerItem
 import DeleteChatPeerActionSheetItem
 import UndoUI
 
+private func totalDiskSpace() -> Int64 {
+    do {
+        let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+        return (systemAttributes[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
+    } catch {
+        return 0
+    }
+}
+
+private func freeDiskSpace() -> Int64 {
+    do {
+        let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+        return (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+    } catch {
+        return 0
+    }
+}
+
 private final class StorageUsageControllerArguments {
     let account: Account
-    let updateKeepMedia: () -> Void
+    let updateKeepMediaTimeout: (Int32) -> Void
     let openClearAll: () -> Void
     let openPeerMedia: (PeerId) -> Void
+    let clearPeerMedia: (PeerId) -> Void
+    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     
-    init(account: Account, updateKeepMedia: @escaping () -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void) {
+    init(account: Account, updateKeepMediaTimeout: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
         self.account = account
-        self.updateKeepMedia = updateKeepMedia
+        self.updateKeepMediaTimeout = updateKeepMediaTimeout
         self.openClearAll = openClearAll
         self.openPeerMedia = openPeerMedia
+        self.clearPeerMedia = clearPeerMedia
+        self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
     }
 }
 
 private enum StorageUsageSection: Int32 {
     case keepMedia
-    case immutableSize
-    case all
+    case storage
     case peers
 }
 
 private enum StorageUsageEntry: ItemListNodeEntry {
-    case keepMedia(PresentationTheme, String, String)
+    case keepMediaHeader(PresentationTheme, String)
+    case keepMedia(PresentationTheme, PresentationStrings, Int32)
     case keepMediaInfo(PresentationTheme, String)
     
+    case storageHeader(PresentationTheme, String)
+    case storageUsage(PresentationTheme, PresentationDateTimeFormat, [StorageUsageCategory])
     case collecting(PresentationTheme, String)
-    
-    case immutableSize(PresentationTheme, String, String)
-    
-    case clearAll(PresentationTheme, String, String, Bool)
+    case clearAll(PresentationTheme, String, Bool)
     
     case peersHeader(PresentationTheme, String)
-    case peer(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, Peer?, String)
+    case peer(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, Peer?, String, Bool)
     
     var section: ItemListSectionId {
         switch self {
-            case .keepMedia, .keepMediaInfo:
+            case .keepMediaHeader, .keepMedia, .keepMediaInfo:
                 return StorageUsageSection.keepMedia.rawValue
-            case .immutableSize:
-                return StorageUsageSection.immutableSize.rawValue
-            case .collecting, .clearAll:
-                return StorageUsageSection.all.rawValue
+            case .storageHeader, .storageUsage, .collecting, .clearAll:
+                return StorageUsageSection.storage.rawValue
             case .peersHeader, .peer:
                 return StorageUsageSection.peers.rawValue
         }
@@ -64,27 +84,37 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .keepMedia:
+            case .keepMediaHeader:
                 return 0
-            case .keepMediaInfo:
+            case .keepMedia:
                 return 1
-            case .collecting:
+            case .keepMediaInfo:
                 return 2
-            case .immutableSize:
+            case .storageHeader:
                 return 3
-            case .clearAll:
+            case .storageUsage:
                 return 4
-            case .peersHeader:
+            case .collecting:
                 return 5
-            case let .peer(index, _, _, _, _, _, _, _):
-                return 6 + index
+            case .clearAll:
+                return 6
+            case .peersHeader:
+                return 7
+            case let .peer(index, _, _, _, _, _, _, _, _):
+                return 8 + index
         }
     }
     
     static func ==(lhs: StorageUsageEntry, rhs: StorageUsageEntry) -> Bool {
         switch lhs {
-            case let .keepMedia(lhsTheme, lhsText, lhsValue):
-                if case let .keepMedia(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .keepMediaHeader(lhsTheme, lhsText):
+                if case let .keepMediaHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .keepMedia(lhsTheme, lhsStrings, lhsValue):
+                if case let .keepMedia(rhsTheme, rhsStrings, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -95,20 +125,26 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .storageHeader(lhsTheme, lhsText):
+                if case let .storageHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .storageUsage(lhsTheme, lhsDateTimeFormat, lhsCategories):
+                if case let .storageUsage(rhsTheme, rhsDateTimeFormat, rhsCategories) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsCategories == rhsCategories {
+                    return true
+                } else {
+                    return false
+                }
             case let .collecting(lhsTheme, lhsText):
                 if case let .collecting(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .immutableSize(lhsTheme, lhsText, lhsValue):
-                if case let .immutableSize(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .clearAll(lhsTheme, lhsText, lhsValue, lhsEnabled):
-                if case let .clearAll(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
+            case let .clearAll(lhsTheme, lhsText, lhsEnabled):
+                if case let .clearAll(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -119,8 +155,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-        case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsPeer, lhsChatPeer, lhsValue):
-                if case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsPeer, rhsChatPeer, rhsValue) = rhs {
+            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsPeer, lhsChatPeer, lhsValue, lhsRevealed):
+                if case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsPeer, rhsChatPeer, rhsValue, rhsRevealed) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -145,6 +181,9 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                     if lhsValue != rhsValue {
                         return false
                     }
+                    if lhsRevealed != rhsRevealed {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -159,54 +198,62 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! StorageUsageControllerArguments
         switch self {
-            case let .keepMedia(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.updateKeepMedia()
-                })
+            case let .keepMediaHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .keepMedia(theme, strings, value):
+                return KeepMediaDurationPickerItem(theme: theme, strings: strings, value: value, sectionId: self.section, updated: { updatedValue in
+                        arguments.updateKeepMediaTimeout(updatedValue)
+                    })
             case let .keepMediaInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
+            case let .storageHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .storageUsage(theme, dateTimeFormat, categories):
+                return StorageUsageItem(theme: theme, dateTimeFormat: dateTimeFormat, categories: categories, sectionId: self.section)
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
-            case let .immutableSize(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, enabled: false, titleColor: .primary, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
+            case let .clearAll(theme, text, enabled):
+                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if enabled {
+                        arguments.openClearAll()
+                    }
+                })
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .clearAll(theme, text, value, enabled):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, enabled: enabled, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    arguments.openClearAll()
-                })
-            case let .peer(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+            case let .peer(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value, revealed):
+                var options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
+                    arguments.clearPeerMedia(peer.id)
+                })]
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     let resolvedPeer = chatPeer ?? peer
                     arguments.openPeerMedia(resolvedPeer.id)
-                }, setPeerIdWithRevealedOptions: { previousId, id in
-                    
+                }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                    arguments.setPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in
-                    
                 })
         }
     }
 }
 
-private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: Int32) -> String {
-    if timeout > 1 * 31 * 24 * 60 * 60 {
-        return strings.MessageTimer_Forever
-    } else {
-        return timeIntervalString(strings: strings, value: timeout)
+private struct StoragUsageState: Equatable {
+    let peerIdWithRevealedOptions: PeerId?
+
+    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> StoragUsageState {
+        return StoragUsageState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
     }
 }
 
-private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?) -> [StorageUsageEntry] {
+private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StoragUsageState) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
-    entries.append(.keepMedia(presentationData.theme, presentationData.strings.Cache_KeepMedia, stringForKeepMediaTimeout(strings: presentationData.strings, timeout: cacheSettings.defaultCacheStorageTimeout)))
+    entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
+    entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
     entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_Help))
     
     var addedHeader = false
     
+    entries.append(.storageHeader(presentationData.theme, presentationData.strings.ClearCache_StorageTitle(stringForDeviceType().uppercased()).0))
     if let cacheStats = cacheStats, case let .result(stats) = cacheStats {
-        entries.append(.immutableSize(presentationData.theme, presentationData.strings.Cache_ServiceFiles, dataSizeString(stats.immutableSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-        
         var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
         var peerIndices: [PeerId: Int] = [:]
@@ -230,9 +277,27 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             peerSizes += combinedSize
         }
         
-        let totalSize = Int64(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
+        let telegramCacheSize = Int64(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
+        let totalTelegramSize = telegramCacheSize + stats.immutableSize
         
-        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, totalSize > 0 ? dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) : presentationData.strings.Cache_ClearEmpty, totalSize > 0))
+        var categories: [StorageUsageCategory] = []
+        let totalSpace = max(totalDiskSpace(), 1)
+        let freeSpace = freeDiskSpace()
+        let otherAppsSpace = totalSpace - freeSpace - totalTelegramSize
+        
+        let totalSpaceValue = CGFloat(totalSpace)
+        
+        if telegramCacheSize > 0 {
+            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageCache, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
+        } else {
+            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageServiceFiles, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
+        }
+        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color2))
+        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color3))
+        
+        entries.append(.storageUsage(presentationData.theme, presentationData.dateTimeFormat, categories))
+        
+        entries.append(.clearAll(presentationData.theme, presentationData.strings.ClearCache_ClearCache, telegramCacheSize > 0))
         
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {
@@ -248,7 +313,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                         chatPeer = mainPeer
                         mainPeer = associatedPeer
                     }
-                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), state.peerIdWithRevealedOptions == peer.id))
                     index += 1
                 }
             }
@@ -273,7 +338,28 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
     }
 }
 
-public func storageUsageController(context: AccountContext, isModal: Bool = false) -> ViewController {
+func cacheUsageStats(context: AccountContext) -> Signal<CacheUsageStatsResult?, NoError> {
+    let containerPath = context.sharedContext.applicationBindings.containerPath
+    let additionalPaths: [String] = [
+        NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
+        containerPath + "/Documents/files",
+        containerPath + "/Documents/video",
+        containerPath + "/Documents/audio",
+        containerPath + "/Documents/mediacache",
+        containerPath + "/Documents/tempcache_v1/store",
+    ]
+    return .single(nil)
+    |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.sharedContext.applicationBindings.containerPath + "/telegram-data/logs")
+    |> map(Optional.init))
+}
+
+public func storageUsageController(context: AccountContext, cacheUsagePromise: Promise<CacheUsageStatsResult?>? = nil, isModal: Bool = false) -> ViewController {
+    let statePromise = ValuePromise(StoragUsageState(peerIdWithRevealedOptions: nil))
+    let stateValue = Atomic(value: StoragUsageState(peerIdWithRevealedOptions: nil))
+    let updateState: ((StoragUsageState) -> StoragUsageState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
     cacheSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
     |> map { sharedData -> CacheStorageSettings in
@@ -289,59 +375,27 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
     
     var presentControllerImpl: ((ViewController, PresentationContextType, Any?) -> Void)?
     
-    let statsPromise = Promise<CacheUsageStatsResult?>()
-    let resetStats: () -> Void = {
-        let containerPath = context.sharedContext.applicationBindings.containerPath
-        let additionalPaths: [String] = [
-            NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
-            containerPath + "/Documents/files",
-            containerPath + "/Documents/video",
-            containerPath + "/Documents/audio",
-            containerPath + "/Documents/mediacache",
-            containerPath + "/Documents/tempcache_v1/store",
-        ]
-        statsPromise.set(.single(nil)
-        |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.sharedContext.applicationBindings.containerPath + "/telegram-data/logs")
-        |> map(Optional.init)))
+    var statsPromise: Promise<CacheUsageStatsResult?>
+    if let cacheUsagePromise = cacheUsagePromise {
+        statsPromise = cacheUsagePromise
+    } else {
+        statsPromise = Promise<CacheUsageStatsResult?>()
+        statsPromise.set(cacheUsageStats(context: context))
     }
-    resetStats()
+    
+    let resetStats: () -> Void = {
+        statsPromise.set(cacheUsageStats(context: context))
+    }
     
     let actionDisposables = DisposableSet()
     
     let clearDisposable = MetaDisposable()
     actionDisposables.add(clearDisposable)
     
-    let arguments = StorageUsageControllerArguments(account: context.account, updateKeepMedia: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        let timeoutAction: (Int32) -> Void = { timeout in
-            let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                return current.withUpdatedDefaultCacheStorageTimeout(timeout)
-            }).start()
-        }
-        var values: [Int32] = [
-            3 * 24 * 60 * 60,
-            7 * 24 * 60 * 60,
-            1 * 31 * 24 * 60 * 60,
-            Int32.max
-        ]
-        #if DEBUG
-        values.insert(60 * 60, at: 0)
-        #endif
-        let timeoutItems: [ActionSheetItem] = values.map { value in
-            return ActionSheetButtonItem(title: stringForKeepMediaTimeout(strings: presentationData.strings, timeout: value), action: {
-                dismissAction()
-                timeoutAction(value)
-            })
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: timeoutItems),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    let arguments = StorageUsageControllerArguments(account: context.account, updateKeepMediaTimeout: { value in
+        let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            return current.withUpdatedDefaultCacheStorageTimeout(value)
+        }).start()
     }, openClearAll: {
         let _ = (statsPromise.get()
         |> take(1)
@@ -379,11 +433,10 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                     controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                         let title: String
                         var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
-                        selectedSize = filteredSize
-                        
                         if otherSize.0 {
                             filteredSize += otherSize.1
                         }
+                        selectedSize = filteredSize
                         
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
@@ -535,8 +588,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             clearDisposable.set((signal
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
-                                let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in }), .current, nil)
                             }))
                         }
                         
@@ -717,8 +769,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 clearDisposable.set((signal
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
-                                    let deviceName = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), .current, nil)
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in }), .current, nil)
                                 }))
                             }
                             
@@ -734,18 +785,147 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                 }
             }
         })
+    }, clearPeerMedia: { peerId in
+        let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
+            if let result = result, case let .result(stats) = result {
+                var additionalPeerId: PeerId?
+                if var categories = stats.media[peerId], let peer = stats.peers[peerId] {
+                    if let channel = peer as? TelegramChannel, case .group = channel.info {
+                        for (_, peer) in stats.peers {
+                            if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference, migrationReference.peerId == peerId {
+                                if let additionalCategories = stats.media[group.id] {
+                                    additionalPeerId = group.id
+                                    categories.merge(additionalCategories, uniquingKeysWith: { lhs, rhs in
+                                        return lhs.merging(rhs, uniquingKeysWith: { lhs, rhs in
+                                            return lhs + rhs
+                                        })
+                                    })
+                                }
+                            }
+                        }
+                    }
+                    
+                    var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
+                    let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
+
+                    var totalSize: Int64 = 0
+                    
+                    for categoryId in validCategories {
+                        if let media = categories[categoryId] {
+                            var categorySize: Int64 = 0
+                            for (_, size) in media {
+                                categorySize += size
+                            }
+                            sizeIndex[categoryId] = (true, categorySize)
+                            totalSize += categorySize
+                        }
+                    }
+                    
+                    if let statsPromise = statsPromise {
+                        let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
+                        var clearMediaIds = Set<MediaId>()
+                        
+                        var media = stats.media
+                        if var categories = media[peerId] {
+                            for category in clearCategories {
+                                if let contents = categories[category] {
+                                    for (mediaId, _) in contents {
+                                        clearMediaIds.insert(mediaId)
+                                    }
+                                }
+                                categories.removeValue(forKey: category)
+                            }
+                            
+                            media[peerId] = categories
+                        }
+                        if let additionalPeerId = additionalPeerId {
+                            if var categories = media[additionalPeerId] {
+                                for category in clearCategories {
+                                    if let contents = categories[category] {
+                                        for (mediaId, _) in contents {
+                                            clearMediaIds.insert(mediaId)
+                                        }
+                                    }
+                                    categories.removeValue(forKey: category)
+                                }
+                                
+                                media[additionalPeerId] = categories
+                            }
+                        }
+                        
+                        var clearResourceIds = Set<WrappedMediaResourceId>()
+                        for id in clearMediaIds {
+                            if let ids = stats.mediaResourceIds[id] {
+                                for resourceId in ids {
+                                    clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                }
+                            }
+                        }
+                        
+                        var signal = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
+                        
+                        let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
+                        
+                        var cancelImpl: (() -> Void)?
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let progressSignal = Signal<Never, NoError> { subscriber in
+                            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                                cancelImpl?()
+                            }))
+                            presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            return ActionDisposable { [weak controller] in
+                                Queue.mainQueue().async() {
+                                    controller?.dismiss()
+                                }
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.15, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.start()
+                        
+                        signal = signal
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
+                        cancelImpl = {
+                            clearDisposable.set(nil)
+                            resetStats()
+                        }
+                        clearDisposable.set((signal
+                        |> deliverOnMainQueue).start(completed: {
+                            statsPromise.set(.single(.result(resultStats)))
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in }), .current, nil)
+                        }))
+                    }
+                }
+            }
+        })
+        
+        updateState { state in
+            return state.withUpdatedPeerIdWithRevealedOptions(nil)
+        }
+    }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+        updateState { state in
+            if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
+                return state.withUpdatedPeerIdWithRevealedOptions(peerId)
+            } else {
+                return state
+            }
+        }
     })
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get(), statePromise.get()) |> deliverOnMainQueue
+        |> map { presentationData, cacheSettings, cacheStats, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }) : nil
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Cache_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -753,6 +933,10 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         }
     
     let controller = ItemListController(context: context, state: signal)
+    if isModal {
+        controller.navigationPresentation = .modal
+        controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    }
     presentControllerImpl = { [weak controller] c, contextType, a in
         controller?.present(c, in: contextType, with: a)
     }

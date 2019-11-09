@@ -599,6 +599,8 @@
 "UserInfo.AddContact" = "Add Contact";
 "UserInfo.ShareContact" = "Share Contact";
 "UserInfo.StartSecretChat" = "Start Secret Chat";
+"UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with %@?";
+"UserInfo.StartSecretChatStart" = "Start";
 "UserInfo.DeleteContact" = "Delete Contact";
 "UserInfo.CreateNewContact" = "Create New Contact";
 "UserInfo.AddToExisting" = "Add to Existing";
@@ -3868,6 +3870,11 @@ Unused sets are archived when you add more.";
 "GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
 "GroupPermission.AddMembersNotAvailable" = "You don't have persmission to add members.";
 
+"Channel.EditAdmin.PermissionEnabledByDefault" = "This option is permitted for all members in Group Permissions.";
+
+"GroupPermission.EditingDisabled" = "You cannot edit restrictions of this user.";
+"GroupPermission.PermissionDisabledByDefault" = "This option is disabled for all members in Group Permissions.";
+
 "Channel.Management.RemovedBy" = "Removed by %@";
 
 "GroupRemoved.Title" = "Removed Users";
@@ -4497,6 +4504,8 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.AdminLog.DisabledSlowmode" = "%@ disabled slowmode";
 "Channel.AdminLog.SetSlowmode" = "%1$@ set slowmode to %2$@";
 
+"GroupInfo.Permissions.EditingDisabled" = "You cannot edit this permission.";
+
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
 "Chat.AttachmentLimitReached" = "You can't select more items.";
@@ -5030,7 +5039,7 @@ Any member of this group will be able to see messages in the channel.";
 "TwoFactorSetup.Password.Action" = "Create Password";
 
 "TwoFactorSetup.Email.Title" = "Recovery Email";
-"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset you password and restore\n access to your Telegram account.";
+"TwoFactorSetup.Email.Text" = "You can set a recovery email to be able to reset you password and restore access to your Telegram account.";
 "TwoFactorSetup.Email.Placeholder" = "Your email address";
 "TwoFactorSetup.Email.Action" = "Continue";
 "TwoFactorSetup.Email.SkipAction" = "Skip setting email";
@@ -5067,3 +5076,31 @@ Any member of this group will be able to see messages in the channel.";
 "Widget.ApplicationLocked" = "Unlock the app to use the widget";
 
 "Group.ErrorSupergroupConversionNotPossible" = "Sorry, you are a member of too many groups and channels. Please leave some before creating a new one.";
+
+"ClearCache.StorageTitle" = "%@ STORAGE";
+"ClearCache.StorageCache" = "Telegram Cache";
+"ClearCache.StorageServiceFiles" = "Telegram Service Files";
+"ClearCache.StorageOtherApps" = "Other Apps";
+"ClearCache.StorageFree" = "Free";
+"ClearCache.ClearCache" = "Clear Telegram Cache";
+"ClearCache.Clear" = "Clear";
+"ClearCache.Forever" = "Forever";
+
+"ChatList.DeletedChats_1" = "Deleted 1 chat";
+"ChatList.DeletedChats_any" = "Deleted %@ chats";
+
+"Appearance.ColorThemeNight" = "COLOR THEME — AUTO-NIGHT MODE";
+
+"UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with\n%@?";
+"UserInfo.StartSecretChatStart" = "Start";
+
+"Wallet.AccessDenied.Title" = "Please Allow Access";
+"Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
+"Wallet.AccessDenied.Settings" = "Settings";
+
+"GroupInfo.ShowMoreMembers_0" = "%@ more";
+"GroupInfo.ShowMoreMembers_1" = "%@ more";
+"GroupInfo.ShowMoreMembers_2" = "%@ more";
+"GroupInfo.ShowMoreMembers_3_10" = "%@ more";
+"GroupInfo.ShowMoreMembers_many" = "%@ more";
+"GroupInfo.ShowMoreMembers_any" = "%@ more";

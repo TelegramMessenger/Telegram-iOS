@@ -763,7 +763,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         strongSelf.labelArrowNode = updatedLabelArrowNode
                         strongSelf.containerNode.addSubnode(updatedLabelArrowNode)
                         if let image = updatedLabelArrowNode.image {
-                            let labelArrowNodeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightLabelInset - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                            let labelArrowNodeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightLabelInset - image.size.width + 8.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             transition.updateFrame(node: updatedLabelArrowNode, frame: labelArrowNodeFrame)
                             rightLabelInset += 19.0
                         }
@@ -775,10 +775,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
                     let labelFrame: CGRect
                     if case .badge = item.label {
-                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0) + 1.0), size: labelLayout.size)
                         strongSelf.labelNode.frame = labelFrame
                     } else {
-                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0) + 1.0), size: labelLayout.size)
                         transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
                     }
                     

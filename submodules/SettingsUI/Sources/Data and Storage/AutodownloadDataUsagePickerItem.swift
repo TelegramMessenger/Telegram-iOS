@@ -31,7 +31,7 @@ enum AutomaticDownloadDataUsage: Int {
     }
 }
 
-class AutodownloadDataUsagePickerItem: ListViewItem, ItemListItem {
+final class AutodownloadDataUsagePickerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let value: AutomaticDownloadDataUsage
@@ -93,7 +93,7 @@ private func generateKnobImage() -> UIImage? {
     })
 }
 
-class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
+private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

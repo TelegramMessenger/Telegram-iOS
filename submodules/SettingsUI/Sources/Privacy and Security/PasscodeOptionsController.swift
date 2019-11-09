@@ -441,7 +441,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     }
 }
 
-public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, modalPresentation: Bool = false, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
@@ -458,14 +458,18 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             return nil
         } else {
             let biometrics: PasscodeEntryControllerBiometricsMode
+            #if targetEnvironment(simulator)
+            biometrics = .enabled(nil)
+            #else
             if let passcodeSettings = passcodeSettings, passcodeSettings.enableBiometrics {
                 biometrics = .enabled(context.sharedContext.applicationBindings.isMainApp ? passcodeSettings.biometricsDomainState : passcodeSettings.shareBiometricsDomainState)
             } else {
                 biometrics = .none
             }
+            #endif
             let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
-            }))
+            }, modalPresentation: modalPresentation))
             controller.presentationCompleted = { [weak controller] in
                 Queue.mainQueue().after(0.5, { [weak controller] in
                     controller?.requestBiometrics()

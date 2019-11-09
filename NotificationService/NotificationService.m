@@ -111,7 +111,7 @@ static void reportMemory() {
 
 - (void)completeWithBestAttemptContent {
     _contentReady = true;
-    //_updatedUnreadCount = @(-1);
+    _updatedUnreadCount = @(-1);
     if (_contentReady && _updatedUnreadCount) {
         [self _internalComplete];
     }
@@ -217,9 +217,9 @@ static void reportMemory() {
             peerId = makePeerId(PeerNamespaceCloudChannel, [channelIdString intValue]);
         }
         
-        if (_countIncomingMessage && _deviceSpecificEncryptionParameters) {
+        /*if (_countIncomingMessage && _deviceSpecificEncryptionParameters) {
             _countIncomingMessage(_rootPath, account.accountId, _deviceSpecificEncryptionParameters, peerId, messageId);
-        }
+        }*/
         
         NSString *silentString = decryptedPayload[@"silent"];
         if ([silentString isKindOfClass:[NSString class]]) {
@@ -229,7 +229,7 @@ static void reportMemory() {
         NSData *attachmentData = nil;
         id parsedAttachment = nil;
         
-        if (_isLockedValue) {
+        if (!_isLockedValue) {
             NSString *attachmentDataString = decryptedPayload[@"attachb64"];
             if ([attachmentDataString isKindOfClass:[NSString class]]) {
                 attachmentData = parseBase64(attachmentDataString);

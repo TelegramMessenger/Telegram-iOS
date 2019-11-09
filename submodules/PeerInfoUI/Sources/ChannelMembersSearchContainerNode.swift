@@ -743,7 +743,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for rights in allGroupPermissionList {
+                                                for (rights, _) in allGroupPermissionList {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
@@ -1023,7 +1023,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
-                                                for rights in allGroupPermissionList {
+                                                for (rights, _) in allGroupPermissionList {
                                                     if banInfo.rights.flags.contains(rights) {
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")

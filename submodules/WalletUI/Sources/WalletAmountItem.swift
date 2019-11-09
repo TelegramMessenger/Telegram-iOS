@@ -78,7 +78,7 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
     private let measureNode: TextNode
         
     private var item: WalletAmountItem?
-    private var validLayout: (CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var tag: ItemListItemTag? {
         return self.item?.tag
@@ -166,7 +166,7 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
             return
         }
         let makeInputFieldLayout = self.inputFieldAsyncLayout()
-        let (_, _, inputFieldApply) = makeInputFieldLayout(item, ListViewItemLayoutParams(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2))
+        let (_, _, inputFieldApply) = makeInputFieldLayout(item, ListViewItemLayoutParams(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, availableHeight: validLayout.3))
         inputFieldApply()
     }
     
@@ -196,7 +196,7 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    strongSelf.validLayout = (params.width, params.leftInset, params.rightInset)
+                    strongSelf.validLayout = (params.width, params.leftInset, params.rightInset, params.availableHeight)
                     
                     if let _ = updatedTheme {
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor

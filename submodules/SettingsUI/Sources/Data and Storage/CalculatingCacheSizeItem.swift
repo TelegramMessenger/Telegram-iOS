@@ -8,7 +8,7 @@ import ItemListUI
 import PresentationDataUtils
 import ActivityIndicator
 
-class CalculatingCacheSizeItem: ListViewItem, ItemListItem {
+final class CalculatingCacheSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let sectionId: ItemListSectionId
@@ -57,7 +57,7 @@ class CalculatingCacheSizeItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(14.0)
 
-class CalculatingCacheSizeItemNode: ListViewItemNode {
+private final class CalculatingCacheSizeItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode

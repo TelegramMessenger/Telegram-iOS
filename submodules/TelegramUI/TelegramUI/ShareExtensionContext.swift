@@ -122,8 +122,10 @@ public class ShareRootControllerImpl {
             mainWindow.hostView.eventView.isHidden = false
             self.mainWindow = mainWindow
             
+            let bounds = view.bounds
+            
             view.addSubview(mainWindow.hostView.containerView)
-            mainWindow.hostView.containerView.frame = view.bounds
+            mainWindow.hostView.containerView.frame = bounds
             
             let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
             performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
@@ -162,11 +164,12 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
             } else {
                 initializeAccountManagement()
-                let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
                 let systemUserInterfaceStyle: WindowUserInterfaceStyle
@@ -203,16 +206,28 @@ public class ShareRootControllerImpl {
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return sharedContext.activeAccountsWithInfo
+                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> Set<AccountRecordId> in
+                    return Set(transaction.getRecords().map { record in
+                        return record.id
+                    })
+                })
                 |> castError(ShareAuthorizationError.self)
                 |> take(1)
-                |> mapToSignal { primary, accounts -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
-                    guard let primary = primary else {
+                |> mapToSignal { primaryAndAccounts, validAccountIds -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
+                    var (maybePrimary, accounts) = primaryAndAccounts
+                    for i in (0 ..< accounts.count).reversed() {
+                        if !validAccountIds.contains(accounts[i].account.id) {
+                            accounts.remove(at: i)
+                        }
+                    }
+                    
+                    guard let primary = maybePrimary, validAccountIds.contains(primary) else {
                         return .fail(.unauthorized)
                     }
                     guard let info = accounts.first(where: { $0.account.id == primary }) else {
                         return .fail(.unauthorized)
                     }
+                    
                     return .single((sharedContext, info.account, Array(accounts)))
                 }
             }
@@ -340,7 +355,14 @@ public class ShareRootControllerImpl {
                     context.account.resetStateManagement()
                 }
                 
-                let _ = passcodeEntryController(context: context, animateIn: true, completion: { value in
+                let modalPresentation: Bool
+                if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                    modalPresentation = true
+                } else {
+                    modalPresentation = false
+                }
+                
+                let _ = passcodeEntryController(context: context, animateIn: true, modalPresentation: modalPresentation, completion: { value in
                     if value {
                         displayShare()
                     } else {

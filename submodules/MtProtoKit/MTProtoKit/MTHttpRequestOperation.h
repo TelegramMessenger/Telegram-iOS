@@ -2,6 +2,13 @@
 
 @class MTSignal;
 
+@interface MTHttpResponse : NSObject
+
+@property (nonatomic, strong, readonly) NSDictionary *headers;
+@property (nonatomic, strong, readonly) NSData *data;
+
+@end
+
 @interface MTHttpRequestOperation : NSObject
 
 + (MTSignal *)dataForHttpUrl:(NSURL *)url;

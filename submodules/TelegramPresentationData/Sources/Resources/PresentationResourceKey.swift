@@ -31,6 +31,7 @@ public enum PresentationResourceKey: Int32 {
     case navigationPlayerMaximizedRateActiveIcon
     case navigationPlayerMaximizedRateInactiveIcon
     
+    case itemListDownArrow
     case itemListDisclosureArrow
     case itemListCheckIcon
     case itemListSecondaryCheckIcon

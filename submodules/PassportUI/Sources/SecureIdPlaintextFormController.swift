@@ -37,6 +37,8 @@ public final class SecureIdPlaintextFormController: FormController<SecureIdPlain
         
         super.init(initParams: SecureIdPlaintextFormControllerNodeInitParams(context: context, secureIdContext: secureIdContext), presentationData: self.presentationData)
         
+        self.navigationPresentation = .modal
+        
         switch type {
             case .phone:
                 self.title = self.presentationData.strings.Passport_Phone_Title

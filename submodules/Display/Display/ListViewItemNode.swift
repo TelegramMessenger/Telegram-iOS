@@ -73,11 +73,13 @@ public struct ListViewItemLayoutParams {
     public let width: CGFloat
     public let leftInset: CGFloat
     public let rightInset: CGFloat
+    public let availableHeight: CGFloat
     
-    public init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat) {
+    public init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, availableHeight: CGFloat) {
         self.width = width
         self.leftInset = leftInset
         self.rightInset = rightInset
+        self.availableHeight = availableHeight
     }
 }
 

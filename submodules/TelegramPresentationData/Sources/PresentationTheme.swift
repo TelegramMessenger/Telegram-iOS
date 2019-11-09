@@ -289,6 +289,18 @@ public final class PresentationThemeItemDisclosureActions {
     }
 }
 
+public final class PresentationThemeItemBarChart {
+    public let color1: UIColor
+    public let color2: UIColor
+    public let color3: UIColor
+    
+    public init(color1: UIColor, color2: UIColor, color3: UIColor) {
+        self.color1 = color1
+        self.color2 = color2
+        self.color3 = color3
+    }
+}
+
 public final class PresentationThemeFillStrokeForeground {
     public let fillColor: UIColor
     public let strokeColor: UIColor
@@ -346,8 +358,9 @@ public final class PresentationThemeList {
     public let scrollIndicatorColor: UIColor
     public let pageIndicatorInactiveColor: UIColor
     public let inputClearButtonColor: UIColor
+    public let itemBarChart: PresentationThemeItemBarChart
     
-    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIconColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeFillStrokeForeground, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor) {
+    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIconColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeFillStrokeForeground, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor, itemBarChart: PresentationThemeItemBarChart) {
         self.blocksBackgroundColor = blocksBackgroundColor
         self.plainBackgroundColor = plainBackgroundColor
         self.itemPrimaryTextColor = itemPrimaryTextColor
@@ -376,6 +389,7 @@ public final class PresentationThemeList {
         self.scrollIndicatorColor = scrollIndicatorColor
         self.pageIndicatorInactiveColor = pageIndicatorInactiveColor
         self.inputClearButtonColor = inputClearButtonColor
+        self.itemBarChart = itemBarChart
     }
 }
 
@@ -551,6 +565,7 @@ public final class PresentationThemePartedColors {
     public let accentControlColor: UIColor
     public let mediaActiveControlColor: UIColor
     public let mediaInactiveControlColor: UIColor
+    public let mediaControlInnerBackgroundColor: UIColor
     public let pendingActivityColor: UIColor
     public let fileTitleColor: UIColor
     public let fileDescriptionColor: UIColor
@@ -563,7 +578,7 @@ public final class PresentationThemePartedColors {
     public let textSelectionColor: UIColor
     public let textSelectionKnobColor: UIColor
     
-    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, mediaControlInnerBackgroundColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
         self.bubble = bubble
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -575,6 +590,7 @@ public final class PresentationThemePartedColors {
         self.accentControlColor = accentControlColor
         self.mediaActiveControlColor = mediaActiveControlColor
         self.mediaInactiveControlColor = mediaInactiveControlColor
+        self.mediaControlInnerBackgroundColor = mediaControlInnerBackgroundColor
         self.pendingActivityColor = pendingActivityColor
         self.fileTitleColor = fileTitleColor
         self.fileDescriptionColor = fileDescriptionColor
