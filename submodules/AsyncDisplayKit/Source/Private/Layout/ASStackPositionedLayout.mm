@@ -13,7 +13,7 @@
 #import <numeric>
 
 #import <AsyncDisplayKit/ASDimension.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASLayoutSpecUtilities.h>
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 

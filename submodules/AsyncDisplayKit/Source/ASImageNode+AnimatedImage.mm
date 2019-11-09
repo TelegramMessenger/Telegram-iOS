@@ -20,7 +20,7 @@
 #import <AsyncDisplayKit/ASImageNode+Private.h>
 #import <AsyncDisplayKit/ASImageNode+AnimatedImagePrivate.h>
 #import <AsyncDisplayKit/ASImageProtocols.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASNetworkImageNode.h>
 #import <AsyncDisplayKit/ASThread.h>
 #import <AsyncDisplayKit/ASWeakProxy.h>

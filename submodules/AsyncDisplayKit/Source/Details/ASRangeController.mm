@@ -17,7 +17,7 @@
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h> // Required for interfaceState and hierarchyState setter methods.
 #import <AsyncDisplayKit/ASElementMap.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASSignpost.h>
 #import <AsyncDisplayKit/ASTwoDimensionalArrayUtils.h>
 #import <AsyncDisplayKit/ASWeakSet.h>

@@ -9,12 +9,12 @@
 #import <UIKit/UIKit.h>
 #import <AsyncDisplayKit/ASAvailability.h>
 
-#import <AsyncDisplayKit/_ASScopeTimer.h>
+#import "Private/_ASScopeTimer.h"
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
-#import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
+#import "Private/ASLayoutSpecPrivate.h"
 #import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASThread.h>
 

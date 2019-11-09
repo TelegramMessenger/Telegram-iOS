@@ -15,7 +15,7 @@
 #import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASRangeControllerUpdateRangeProtocol+Beta.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 @implementation ASViewController
 {

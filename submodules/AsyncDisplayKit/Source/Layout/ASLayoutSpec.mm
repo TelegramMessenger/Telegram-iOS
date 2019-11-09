@@ -8,7 +8,7 @@
 //
 
 #import <AsyncDisplayKit/ASLayoutSpec.h>
-#import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
+#import "Private/ASLayoutSpecPrivate.h"
 
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 
@@ -16,7 +16,7 @@
 #import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 #import <objc/runtime.h>
 #import <map>

@@ -24,7 +24,7 @@
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASElementMap.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/UICollectionViewLayout+ASConvenience.h>
 #import <AsyncDisplayKit/ASRangeController.h>
 #import <AsyncDisplayKit/_ASCollectionViewCell.h>

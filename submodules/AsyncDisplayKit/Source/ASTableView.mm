@@ -23,7 +23,7 @@
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASElementMap.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASTableNode+Beta.h>
 #import <AsyncDisplayKit/ASRangeController.h>

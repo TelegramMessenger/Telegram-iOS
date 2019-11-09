@@ -9,7 +9,7 @@
 
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASCollections.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASTwoDimensionalArrayUtils.h>
 
 #import <vector>

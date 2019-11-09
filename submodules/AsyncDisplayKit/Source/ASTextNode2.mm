@@ -13,7 +13,7 @@
 #import <deque>
 
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
-#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
+#import "Private/ASDisplayNode+FrameworkPrivate.h"
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
@@ -23,7 +23,7 @@
 #import <AsyncDisplayKit/ASTextKitShadower.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>

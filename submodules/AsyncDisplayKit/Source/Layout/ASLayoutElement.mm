@@ -13,7 +13,7 @@
 #import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASThread.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 #import <atomic>
 #include <pthread.h>

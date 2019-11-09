@@ -32,7 +32,7 @@
 #import <AsyncDisplayKit/ASTextKitRenderer+Positioning.h>
 #import <AsyncDisplayKit/ASTextKitShadower.h>
 
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASLayout.h>
 
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>

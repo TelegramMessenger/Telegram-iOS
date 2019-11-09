@@ -12,7 +12,7 @@
 #import <UIKit/UIViewController.h>
 
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import <AsyncDisplayKit/ASResponderChainEnumerator.h>
+#import "Private/ASResponderChainEnumerator.h"
 
 @implementation ASDisplayNode (Convenience)
 

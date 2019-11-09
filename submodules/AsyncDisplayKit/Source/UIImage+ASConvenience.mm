@@ -9,7 +9,7 @@
 
 #import <AsyncDisplayKit/UIImage+ASConvenience.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASAssert.h>
 
 #pragma mark - ASDKFastImageNamed

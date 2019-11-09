@@ -10,7 +10,7 @@
 #ifndef MINIMAL_ASDK
 
 #import <AsyncDisplayKit/_ASHierarchyChangeSet.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASCollections.h>
 #import <AsyncDisplayKit/NSIndexSet+ASHelpers.h>
 #import <AsyncDisplayKit/ASAssert.h>

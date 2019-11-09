@@ -12,7 +12,7 @@
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 
 #import <AsyncDisplayKit/ASAssert.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 @interface ASInsetLayoutSpec ()
 {

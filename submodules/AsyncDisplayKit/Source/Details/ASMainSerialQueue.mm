@@ -10,7 +10,7 @@
 #import <AsyncDisplayKit/ASMainSerialQueue.h>
 
 #import <AsyncDisplayKit/ASThread.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 @interface ASMainSerialQueue ()
 {

@@ -11,7 +11,7 @@
 
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
-#import <AsyncDisplayKit/ASResponderChainEnumerator.h>
+#import "Private/ASResponderChainEnumerator.h"
 
 @implementation UIResponder (AsyncDisplayKit)
 

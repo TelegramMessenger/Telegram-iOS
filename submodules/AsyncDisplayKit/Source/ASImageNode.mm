@@ -23,7 +23,7 @@
 #import <AsyncDisplayKit/ASImageNode+AnimatedImagePrivate.h>
 #import <AsyncDisplayKit/ASImageNode+CGExtras.h>
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASHashing.h>
 #import <AsyncDisplayKit/ASWeakMap.h>

@@ -14,7 +14,7 @@
 #import <AsyncDisplayKit/ASTextUtilities.h>
 #import <AsyncDisplayKit/ASTextAttribute.h>
 #import <AsyncDisplayKit/NSAttributedString+ASText.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 #import <pthread.h>
 

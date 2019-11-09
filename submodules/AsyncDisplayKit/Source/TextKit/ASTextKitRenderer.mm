@@ -7,7 +7,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <AsyncDisplayKit/ASTextKitRenderer.h>
+#import "ASTextKitRenderer.h"
 
 #if AS_ENABLE_TEXTNODE
 
@@ -17,7 +17,7 @@
 #import <AsyncDisplayKit/ASTextKitShadower.h>
 #import <AsyncDisplayKit/ASTextKitTailTruncater.h>
 #import <AsyncDisplayKit/ASTextKitFontSizeAdjuster.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASRunLoopQueue.h>
 
 //#define LOG(...) NSLog(__VA_ARGS__)

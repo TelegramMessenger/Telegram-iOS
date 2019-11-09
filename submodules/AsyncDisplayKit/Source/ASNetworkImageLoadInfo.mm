@@ -6,8 +6,8 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <AsyncDisplayKit/ASNetworkImageLoadInfo.h>
-#import <AsyncDisplayKit/ASNetworkImageLoadInfo+Private.h>
+#import "ASNetworkImageLoadInfo.h"
+#import "Private/ASNetworkImageLoadInfo+Private.h"
 
 @implementation ASNetworkImageLoadInfo
 

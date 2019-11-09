@@ -18,7 +18,7 @@
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 
 NSString *const ASThreadDictMaxConstraintSizeKey = @"kASThreadDictMaxConstraintSizeKey";

@@ -14,7 +14,7 @@
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 
 #define __shouldSetNeedsDisplay(layer) (flags.needsDisplay \
   || (flags.setOpaque && opaque != (layer).opaque)\

@@ -10,7 +10,7 @@
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 
 #import <AsyncDisplayKit/ASLayoutSpec.h>
-#import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
+#import "Private/ASLayoutSpecPrivate.h"
 
 #pragma mark - ASNullLayoutSpec
 

@@ -35,10 +35,10 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
-#import <AsyncDisplayKit/ASInternalHelpers.h>
+#import "Private/ASInternalHelpers.h"
 #import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
 #import <AsyncDisplayKit/ASLayoutSpec.h>
-#import <AsyncDisplayKit/ASLayoutSpecPrivate.h>
+#import "Private/ASLayoutSpecPrivate.h"
 #import <AsyncDisplayKit/ASLog.h>
 #import <AsyncDisplayKit/ASMainThreadDeallocation.h>
 #import <AsyncDisplayKit/ASNodeController+Beta.h>
@@ -46,7 +46,7 @@
 #import <AsyncDisplayKit/ASSignpost.h>
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASWeakProxy.h>
-#import <AsyncDisplayKit/ASResponderChainEnumerator.h>
+#import "Private/ASResponderChainEnumerator.h"
 #import <AsyncDisplayKit/ASTipsController.h>
 
 // Conditionally time these scopes to our debug ivars (only exist in debug/profile builds)
