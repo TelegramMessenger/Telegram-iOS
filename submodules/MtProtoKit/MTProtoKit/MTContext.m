@@ -815,6 +815,9 @@ static int32_t fixedTimeDifferenceValue = 0;
                 return current;
             }];
         }
+        if (MTLogEnabled()) {
+            MTLog(@"[MTContext has chosen a scheme for DC%d: %@]", datacenterId, schemeWithEarliestFailure);
+        }
         result = schemeWithEarliestFailure;
     } synchronous:true];
     
