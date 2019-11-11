@@ -782,11 +782,8 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
             return
         }
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
-            navigationController.pushViewController(channelAdminsController(context: context, peerId: upgradedPeerId, loadCompleted: {
-                f()
-            }), animated: false)
-        }))
+        
+        rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if case let .known(value) = offset, value < 40.0 {
@@ -794,4 +791,20 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
         }
     }
     return controller
+}
+
+func rebuildControllerStackAfterSupergroupUpgrade(controller: ViewController, navigationController: NavigationController) {
+    var controllers = navigationController.viewControllers
+    for i in 0 ..< controllers.count {
+        if controllers[i] === controller {
+            for j in 0 ..< i {
+                if controllers[j] is ChatController {
+                    controllers.removeSubrange(j + 1 ... i - 1)
+                    break
+                }
+            }
+            break
+        }
+    }
+    navigationController.setViewControllers(controllers, animated: false)
 }
