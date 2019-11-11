@@ -7,7 +7,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <AsyncDisplayKit/ASMapNode.h>
+#import "ASMapNode.h"
 
 #if TARGET_OS_IOS && AS_USE_MAPKIT
 

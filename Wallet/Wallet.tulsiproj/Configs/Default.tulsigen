@@ -9,7 +9,7 @@
   ],
   "optionSet" : {
     "BazelBuildOptionsDebug" : {
-      "p" : "$(inherited)"
+      "p" : "$(inherited) -j 1"
     },
     "BazelBuildOptionsRelease" : {
       "p" : "$(inherited)"

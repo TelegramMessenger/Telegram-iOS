@@ -98,7 +98,7 @@ static void ASButtonNodeResolveVerticalAlignmentForStyle(ASLayoutElementStyle *s
 
 #else
 
-#import <AsyncDisplayKit/ASButtonNode+Private.h>
+#import "ASButtonNode+Private.h"
 
 @implementation ASButtonNode (Yoga)
 

@@ -464,8 +464,8 @@ apple_binary(
         "-DTARGET_OS_WATCH=1",
     ],
     linker_flags = [
-        "-e",
-        "_NSExtensionMain",
+        #"-e",
+        #"_NSExtensionMain",
     ],
     configs = watch_extension_binary_configs(),
     frameworks = [
