@@ -4,48 +4,64 @@ import SwiftSignalKit
 
 import SyncCore
 
-private func removeMessageMedia(message: Message, mediaBox: MediaBox) {
-    for media in message.media {
-        if let image = media as? TelegramMediaImage {
-            let _ = mediaBox.removeCachedResources(Set(image.representations.map({ WrappedMediaResourceId($0.resource.id) }))).start()
-        } else if let file = media as? TelegramMediaFile {
-            let _ = mediaBox.removeCachedResources(Set(file.previewRepresentations.map({ WrappedMediaResourceId($0.resource.id) }))).start()
-            let _ = mediaBox.removeCachedResources(Set([WrappedMediaResourceId(file.resource.id)])).start()
+func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [WrappedMediaResourceId]) {
+    if let image = media as? TelegramMediaImage {
+        for representation in image.representations {
+            resourceIds.append(WrappedMediaResourceId(representation.resource.id))
         }
+    } else if let file = media as? TelegramMediaFile {
+        for representation in file.previewRepresentations {
+            resourceIds.append(WrappedMediaResourceId(representation.resource.id))
+        }
+        resourceIds.append(WrappedMediaResourceId(file.resource.id))
+    }
+}
+
+func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [WrappedMediaResourceId]) {
+    for media in message.media {
+        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     }
 }
 
 public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true) {
+    var resourceIds: [WrappedMediaResourceId] = []
     if deleteMedia {
         for id in ids {
             if id.peerId.namespace == Namespaces.Peer.SecretChat {
                 if let message = transaction.getMessage(id) {
-                    removeMessageMedia(message: message, mediaBox: mediaBox)
+                    addMessageMediaResourceIdsToRemove(message: message, resourceIds: &resourceIds)
                 }
             }
         }
     }
-    transaction.deleteMessages(ids, forEachMedia: { media in
-        if deleteMedia {
-            processRemovedMedia(mediaBox, media)
-        }
+    if !resourceIds.isEmpty {
+        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+    }
+    transaction.deleteMessages(ids, forEachMedia: { _ in
     })
 }
 
 public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
+    var resourceIds: [WrappedMediaResourceId] = []
     transaction.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: { media in
-        processRemovedMedia(mediaBox, media)
+        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
+    if !resourceIds.isEmpty {
+        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+    }
 }
 
 public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
+        var resourceIds: [WrappedMediaResourceId] = []
         transaction.withAllMessages(peerId: peerId, { message in
-            removeMessageMedia(message: message, mediaBox: mediaBox)
+            addMessageMediaResourceIdsToRemove(message: message, resourceIds: &resourceIds)
             return true
         })
+        if !resourceIds.isEmpty {
+            let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+        }
     }
-    transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { media in
-        processRemovedMedia(mediaBox, media)
+    transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { _ in
     })
 }
