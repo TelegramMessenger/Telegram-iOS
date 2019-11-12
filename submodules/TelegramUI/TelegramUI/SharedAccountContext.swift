@@ -518,6 +518,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }, {
                     applicationBindings.openSettings()
                 })
+            }, isMediaPlaying: { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                var result = false
+                let _ = (strongSelf.mediaManager.globalMediaPlayerState
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { state in
+                    if let (_, playbackState, _) = state, case let .state(value) = playbackState, case .playing = value.status.status {
+                        result = true
+                    }
+                })
+                return result
+            }, resumeMediaPlayback: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.mediaManager.playlistControl(.playback(.play), type: nil)
             }, audioSession: self.mediaManager.audioSession, activeAccounts: self.activeAccounts |> map { _, accounts, _ in
                 return Array(accounts.map({ $0.1 }))
             })
