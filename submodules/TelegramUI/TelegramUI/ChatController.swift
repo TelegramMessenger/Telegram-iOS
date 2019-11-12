@@ -5475,6 +5475,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return result
             }
             
+            var slowModeEnabled = false
+            if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                slowModeEnabled = true
+            }
+            
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: !strongSelf.presentationInterfaceState.isScheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, presentationData: strongSelf.presentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
@@ -5542,7 +5547,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitReached, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                let text: String
+                if slowModeEnabled {
+                    text = strongSelf.presentationData.strings.Chat_SlowmodeAttachmentLimitReached
+                } else {
+                    text = strongSelf.presentationData.strings.Chat_AttachmentLimitReached
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }, presentCantSendMultipleFiles: {
                 guard let strongSelf = self else {
                     return
@@ -5694,8 +5705,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             var selectionLimit: Int = 100
+            var slowModeEnabled = false
             if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
                 selectionLimit = 10
+                slowModeEnabled = true
             }
             
             let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
@@ -5737,7 +5750,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitReached, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        
+                        let text: String
+                        if slowModeEnabled {
+                            text = strongSelf.presentationData.strings.Chat_SlowmodeAttachmentLimitReached
+                        } else {
+                            text = strongSelf.presentationData.strings.Chat_AttachmentLimitReached
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak self] done in
                         guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                             return
