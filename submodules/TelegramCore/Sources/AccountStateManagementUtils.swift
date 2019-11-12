@@ -2278,18 +2278,26 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     }
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
+                var resourceIds: [WrappedMediaResourceId] = []
                 transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
-                    processRemovedMedia(mediaBox, media)
+                    addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
+                if !resourceIds.isEmpty {
+                    let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+                }
             case let .DeleteMessages(ids):
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
                 }
+                var resourceIds: [WrappedMediaResourceId] = []
                 transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id, forEachMedia: { media in
-                    processRemovedMedia(mediaBox, media)
+                    addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
+                if !resourceIds.isEmpty {
+                    let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+                }
             case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 let currentInclusion = transaction.getPeerChatListInclusion(peerId)
                 var currentPinningIndex: UInt16?
