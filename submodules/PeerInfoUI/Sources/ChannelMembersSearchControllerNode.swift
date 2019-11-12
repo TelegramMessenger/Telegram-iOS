@@ -173,6 +173,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     guard let peer = peerView.peers[participant.peerId] else {
                         continue
                     }
+                    if peer.isDeleted {
+                        continue
+                    }
                     var label: String?
                     var enabled = true
                     switch mode {
@@ -241,6 +244,10 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 
                 var index = 0
                 for participant in state.list {
+                    if participant.peer.isDeleted {
+                        continue
+                    }
+                    
                     var label: String?
                     var enabled = true
                     switch mode {
