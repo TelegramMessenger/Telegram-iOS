@@ -258,7 +258,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
                 if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
                     transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -278,7 +278,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 

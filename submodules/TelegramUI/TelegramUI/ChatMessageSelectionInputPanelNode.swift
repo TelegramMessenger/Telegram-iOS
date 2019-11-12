@@ -15,8 +15,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let reportButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
     private let shareButton: HighlightableButtonNode
+    private let separatorNode: ASDisplayNode
     
-    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, metrics: LayoutMetrics)?
+    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var actions: ChatAvailableMessageActions?
     
@@ -31,8 +32,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
-                    if let (width, leftInset, rightInset, maxHeight, metrics) = self.validLayout, let interfaceState = self.presentationInterfaceState {
-                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                    if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = self.validLayout, let interfaceState = self.presentationInterfaceState {
+                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
@@ -40,8 +41,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     |> deliverOnMainQueue).start(next: { [weak self] actions in
                         if let strongSelf = self {
                             strongSelf.actions = actions
-                            if let (width, leftInset, rightInset, maxHeight, metrics) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
-                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                            if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
+                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                             }
                         }
                     }))
@@ -81,12 +82,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
+        
         super.init()
         
         self.addSubnode(self.deleteButton)
         self.addSubnode(self.reportButton)
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.shareButton)
+        self.addSubnode(self.separatorNode)
         
         self.forwardButton.isEnabled = false
         
@@ -110,6 +115,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            
+            self.separatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         }
     }
     
@@ -129,8 +136,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.shareSelectedMessages()
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
         
         let panelHeight = defaultHeight(metrics: metrics)
         
@@ -195,6 +202,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
             self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         }
+        
+        transition.updateAlpha(node: self.separatorNode, alpha: isSecondary ? 1.0 : 0.0)
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: panelHeight), size: CGSize(width: width, height: UIScreenPixel))
         
         return panelHeight
     }

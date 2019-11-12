@@ -225,7 +225,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics, Bool)?
     
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
@@ -396,8 +396,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.addSubnode(self.actionButtons)
         
-        self.actionButtons.sendButtonLongPressed = { [weak self] in
-            self?.interfaceInteraction?.displaySendMessageOptions()
+        self.actionButtons.sendButtonLongPressed = { [weak self] node, gesture in
+            self?.interfaceInteraction?.displaySendMessageOptions(node, gesture)
         }
         
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
@@ -431,8 +431,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.actionButtons.micButton.offsetRecordingControls = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                if let (width, leftInset, rightInset, maxHeight, metrics) = strongSelf.validLayout {
-                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+                if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
                 }
             }
         }
@@ -452,7 +452,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        self.actionButtons.sendButton.addTarget(self, action: #selector(self.sendButtonPressed), for: .touchUpInside)
+        self.actionButtons.sendButton.addTarget(self, action: #selector(self.sendButtonPressed), forControlEvents: .touchUpInside)
         self.actionButtons.sendButton.alpha = 0.0
         self.actionButtons.updateAccessibility()
         
@@ -633,8 +633,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return minimalHeight
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, maxHeight, metrics, isSecondary)
         let baseWidth = width - leftInset - rightInset
         
         var wasEditingMedia = false
@@ -785,17 +785,19 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if updateSendButtonIcon {
                 if !self.actionButtons.animatingSendButton {
-                    if transition.isAnimated && !self.actionButtons.sendButton.alpha.isZero && self.actionButtons.sendButton.layer.animation(forKey: "opacity") == nil, let imageView = self.actionButtons.sendButton.imageView, let previousImage = imageView.image {
+                    let imageNode = self.actionButtons.sendButton.imageNode
+                    
+                    if transition.isAnimated && !self.actionButtons.sendButton.alpha.isZero && self.actionButtons.sendButton.layer.animation(forKey: "opacity") == nil, let previousImage = imageNode.image {
                         let tempView = UIImageView(image: previousImage)
-                        self.actionButtons.sendButton.addSubview(tempView)
-                        tempView.frame = imageView.frame
+                        self.actionButtons.sendButton.view.addSubview(tempView)
+                        tempView.frame = imageNode.frame
                         tempView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak tempView] _ in
                             tempView?.removeFromSuperview()
                         })
                         tempView.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2, removeOnCompletion: false)
                         
-                        imageView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        imageView.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
+                        imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        imageNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
                     }
                     self.actionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                     if self.actionButtons.sendButtonHasApplyIcon {
@@ -1395,7 +1397,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func updateTextHeight(animated: Bool) {
-        if let (width, leftInset, rightInset, maxHeight, metrics) = self.validLayout {
+        if let (width, leftInset, rightInset, maxHeight, metrics, _) = self.validLayout {
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
@@ -1405,7 +1407,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeShouldReturn(_ editableTextNode: ASEditableTextNode) -> Bool {
-        if self.actionButtons.sendButton.superview != nil && !self.actionButtons.sendButton.isHidden && !self.actionButtons.sendButton.alpha.isZero {
+        if self.actionButtons.sendButton.supernode != nil && !self.actionButtons.sendButton.isHidden && !self.actionButtons.sendButton.alpha.isZero {
             self.sendButtonPressed()
         }
         return false
