@@ -219,5 +219,5 @@
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
 "Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";
 "Wallet.AccessDenied.Title" = "Please Allow Access";
-"Wallet.AccessDenied.Camera" = "TON Wallet needs access to camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
+"Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
 "Wallet.AccessDenied.Settings" = "Settings";

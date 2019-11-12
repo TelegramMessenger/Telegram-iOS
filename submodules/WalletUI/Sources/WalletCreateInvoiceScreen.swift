@@ -216,7 +216,7 @@ func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewC
             }
             return state
         }
-        ensureItemVisibleImpl?(tag, false)
+        ensureItemVisibleImpl?(tag, true)
     }, dismissInput: {
         dismissInputImpl?()
     }, scrollToBottom: {

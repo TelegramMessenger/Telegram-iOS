@@ -790,7 +790,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
         }
         
-        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, appConfiguration)
+        self.presentationDataDisposable = (
+            combineLatest(queue: .mainQueue(),
+                context.sharedContext.presentationData,
+                appConfiguration)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData, appConfiguration in
             if let strongSelf = self {
                 let previousTheme = strongSelf.currentPresentationData.theme

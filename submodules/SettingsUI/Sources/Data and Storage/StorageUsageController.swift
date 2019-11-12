@@ -288,12 +288,12 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         let totalSpaceValue = CGFloat(totalSpace)
         
         if telegramCacheSize > 0 {
-            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageCache, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemAccentColor))
+            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageCache, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
         } else {
-            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageServiceFiles, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemAccentColor))
+            categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageServiceFiles, size: totalTelegramSize, fraction: CGFloat(totalTelegramSize) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color1))
         }
-        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBlocksSeparatorColor))
-        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: UIColor(rgb: 0xf2f1f7)))
+        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageOtherApps, size: otherAppsSpace, fraction: CGFloat(otherAppsSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color2))
+        categories.append(StorageUsageCategory(title: presentationData.strings.ClearCache_StorageFree, size: freeSpace, fraction: CGFloat(freeSpace) / totalSpaceValue, color: presentationData.theme.list.itemBarChart.color3))
         
         entries.append(.storageUsage(presentationData.theme, presentationData.dateTimeFormat, categories))
         
@@ -433,11 +433,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
                         let title: String
                         var filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
-                        selectedSize = filteredSize
-                        
                         if otherSize.0 {
                             filteredSize += otherSize.1
                         }
+                        selectedSize = filteredSize
                         
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
@@ -934,6 +933,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         }
     
     let controller = ItemListController(context: context, state: signal)
+    if isModal {
+        controller.navigationPresentation = .modal
+        controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    }
     presentControllerImpl = { [weak controller] c, contextType, a in
         controller?.present(c, in: contextType, with: a)
     }

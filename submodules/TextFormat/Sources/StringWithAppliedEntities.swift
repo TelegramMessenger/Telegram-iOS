@@ -51,7 +51,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedString.Key.font: baseFont, NSAttributedString.Key.foregroundColor: baseColor])
     var skipEntity = false
     var underlineAllLinks = false
-    if linkColor.isEqual(baseColor) {
+    if linkColor.argb == baseColor.argb {
         underlineAllLinks = true
     }
     var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]

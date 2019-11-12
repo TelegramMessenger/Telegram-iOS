@@ -21,6 +21,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private var actions: ChatAvailableMessageActions?
     
     private var theme: PresentationTheme
+    private let peerMedia: Bool
     
     private let canDeleteMessagesDisposable = MetaDisposable()
     
@@ -50,8 +51,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(theme: PresentationTheme, strings: PresentationStrings, peerMedia: Bool = false) {
         self.theme = theme
+        self.peerMedia = peerMedia
         
         self.deleteButton = HighlightableButtonNode()
         self.deleteButton.isEnabled = false
@@ -143,24 +145,34 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.forwardButton.isEnabled = actions.options.contains(.forward)
             self.shareButton.isEnabled = false
             
-            self.deleteButton.isEnabled = true
+            if self.peerMedia {
+                self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
+            } else {
+                self.deleteButton.isEnabled = true
+            }
             self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
             self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty
             
-            self.deleteButton.isHidden = false
+            if self.peerMedia {
+                self.deleteButton.isHidden = !self.deleteButton.isEnabled
+            } else {
+                self.deleteButton.isHidden = false
+            }
             self.reportButton.isHidden = !self.reportButton.isEnabled
         } else {
             self.deleteButton.isEnabled = false
-            self.deleteButton.isHidden = false
+            self.deleteButton.isHidden = self.peerMedia
             self.reportButton.isEnabled = false
             self.reportButton.isHidden = true
             self.forwardButton.isEnabled = false
             self.shareButton.isEnabled = false
         }
         
-        if self.reportButton.isHidden {
+        if self.reportButton.isHidden || (self.peerMedia && self.deleteButton.isHidden && self.reportButton.isHidden) {
             if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
                 self.reportButton.isHidden = false
+            } else if self.peerMedia {
+                self.deleteButton.isHidden = false
             }
         }
         

@@ -700,7 +700,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.interaction.present(SecureIdPlaintextFormController(context: strongSelf.context, secureIdContext: secureIdContext, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { valueWithContext in
+            strongSelf.interaction.push(SecureIdPlaintextFormController(context: strongSelf.context, secureIdContext: secureIdContext, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { valueWithContext in
                 if let strongSelf = self {
                     strongSelf.interaction.updateState { state in
                         if case let .form(form) = state, let formData = form.formData {
@@ -723,7 +723,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         return state
                     }
                 }
-            }), nil)
+            }))
         }
         
         if let currentValue = currentValue {
@@ -941,9 +941,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if let peer = list.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
                         immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
                     }
-                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                    self.interaction.push(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
                         updatedValues(.phone)(value.flatMap({ [$0] }) ?? [])
-                    }), nil)
+                    }))
                 }
             case .email:
                 if findValue(values, key: .email) != nil {
@@ -953,9 +953,9 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if let email = list.twoStepEmail {
                         immediatelyAvailableValue = .email(SecureIdEmailValue(email: email))
                     }
-                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .email, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                    self.interaction.push(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .email, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
                         updatedValues(.email)(value.flatMap({ [$0] }) ?? [])
-                    }), nil)
+                    }))
                 }
         }
     }

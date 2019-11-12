@@ -757,7 +757,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         if self.iconNode != nil {
             statusForegroundColor = presentationData.theme.chat.message.mediaOverlayControlColors.foregroundColor
         } else {
-            statusForegroundColor = bubbleColorComponents(theme: presentationData.theme, incoming: incoming, wallpaper: !presentationData.wallpaper.isEmpty).fill
+            statusForegroundColor = incoming ? presentationData.theme.chat.message.incoming.mediaControlInnerBackgroundColor : presentationData.theme.chat.message.outgoing.mediaControlInnerBackgroundColor
         }
         switch resourceStatus.mediaStatus {
             case var .fetchStatus(fetchStatus):

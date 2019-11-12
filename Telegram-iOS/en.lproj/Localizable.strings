@@ -599,6 +599,8 @@
 "UserInfo.AddContact" = "Add Contact";
 "UserInfo.ShareContact" = "Share Contact";
 "UserInfo.StartSecretChat" = "Start Secret Chat";
+"UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with %@?";
+"UserInfo.StartSecretChatStart" = "Start";
 "UserInfo.DeleteContact" = "Delete Contact";
 "UserInfo.CreateNewContact" = "Create New Contact";
 "UserInfo.AddToExisting" = "Add to Existing";
@@ -5082,6 +5084,23 @@ Any member of this group will be able to see messages in the channel.";
 "ClearCache.StorageFree" = "Free";
 "ClearCache.ClearCache" = "Clear Telegram Cache";
 "ClearCache.Clear" = "Clear";
+"ClearCache.Forever" = "Forever";
 
 "ChatList.DeletedChats_1" = "Deleted 1 chat";
 "ChatList.DeletedChats_any" = "Deleted %@ chats";
+
+"Appearance.ColorThemeNight" = "COLOR THEME — AUTO-NIGHT MODE";
+
+"UserInfo.StartSecretChatConfirmation" = "Are you sure you want to start a secret chat with\n%@?";
+"UserInfo.StartSecretChatStart" = "Start";
+
+"Wallet.AccessDenied.Title" = "Please Allow Access";
+"Wallet.AccessDenied.Camera" = "TON Wallet needs access to your camera to take photos and videos.\n\nPlease go to Settings > Privacy > Camera and set TON Wallet to ON.";
+"Wallet.AccessDenied.Settings" = "Settings";
+
+"GroupInfo.ShowMoreMembers_0" = "%@ more";
+"GroupInfo.ShowMoreMembers_1" = "%@ more";
+"GroupInfo.ShowMoreMembers_2" = "%@ more";
+"GroupInfo.ShowMoreMembers_3_10" = "%@ more";
+"GroupInfo.ShowMoreMembers_many" = "%@ more";
+"GroupInfo.ShowMoreMembers_any" = "%@ more";

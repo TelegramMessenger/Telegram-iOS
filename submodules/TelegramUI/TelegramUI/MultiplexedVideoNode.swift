@@ -61,7 +61,9 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     
     var files: [FileMediaReference] = [] {
         didSet {
+            let startTime = CFAbsoluteTimeGetCurrent()
             self.updateVisibleItems()
+            print("MultiplexedVideoNode files updateVisibleItems: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
     }
     private var displayItems: [VisibleVideoItem] = []
@@ -219,7 +221,9 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             self.validSize = size
             self.contextContainerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
+            let startTime = CFAbsoluteTimeGetCurrent()
             self.updateVisibleItems(transition: transition)
+            print("MultiplexedVideoNode layout updateVisibleItems: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
     }
     
@@ -465,7 +469,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
-            if let (file, rect) = self.offsetFileAt(point: point) {
+            if let (file, rect) = self.fileAt(point: point) {
                 self.fileSelected?(file, self, rect)
             }
         }

@@ -1221,7 +1221,7 @@
 {
     [super scrollViewDidScroll:scrollView];
     
-    _mapView.compassInsets = UIEdgeInsetsMake(TGLocationMapInset + 108.0f + (scrollView.contentOffset.y + scrollView.contentInset.top) / 2.0f, 0.0f, 0.0f, 10.0f + TGScreenPixel);
+    _mapView.compassInsets = UIEdgeInsetsMake(TGLocationMapInset + 120.0f + (scrollView.contentOffset.y + scrollView.contentInset.top) / 2.0f, 0.0f, 0.0f, 10.0f + TGScreenPixel);
 }
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView

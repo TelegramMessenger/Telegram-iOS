@@ -432,6 +432,14 @@ apple_resource(
     visibility = ["PUBLIC"],
 )
 
+apple_resource(
+    name = "WatchAppExtensionResources",
+    files = glob([
+        "Watch/Extension/Resources/**/*",
+    ], exclude = ["Watch/Extension/Resources/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
 apple_binary(
     name = "WatchAppExtensionBinary",
     srcs = glob([
@@ -467,6 +475,7 @@ apple_binary(
     ],
     deps = [
         ":WatchAppStringResources",
+        ":WatchAppExtensionResources",
     ],
 )
 

@@ -5,7 +5,12 @@ import TelegramCore
 import SyncCore
 import TelegramUIPreferences
 
-private func decodeColor<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key) throws -> UIColor {
+private func decodeColor<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key, decoder: Decoder? = nil, fallbackKey: String? = nil) throws -> UIColor {
+    if let decoder = decoder as? PresentationThemeDecoding, let fallbackKey = fallbackKey {
+        let key = (decoder.codingPath.map { $0.stringValue } + [key.stringValue]).joined(separator: ".")
+        decoder.fallbackKeys[key] = fallbackKey
+    }
+    
     let value = try values.decode(String.self, forKey: key)
     if value.lowercased() == "clear" {
         return UIColor.clear
@@ -347,6 +352,7 @@ extension PresentationThemeRootNavigationBar: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+
         self.init(buttonColor: try decodeColor(values, .button),
                   disabledButtonColor: try decodeColor(values, .disabledButton),
                   primaryTextColor: try decodeColor(values, .primaryText),
@@ -358,10 +364,10 @@ extension PresentationThemeRootNavigationBar: Codable {
                   badgeBackgroundColor: try decodeColor(values, .badgeFill),
                   badgeStrokeColor: try decodeColor(values, .badgeStroke),
                   badgeTextColor: try decodeColor(values, .badgeText),
-                  segmentedBackgroundColor: try decodeColor(values, .segmentedBg),
-                  segmentedForegroundColor: try decodeColor(values, .segmentedFg),
-                  segmentedTextColor: try decodeColor(values, .segmentedText),
-                  segmentedDividerColor: try decodeColor(values, .segmentedDivider))
+                  segmentedBackgroundColor: try decodeColor(values, .segmentedBg, decoder: decoder, fallbackKey: "root.searchBar.inputFill"),
+                  segmentedForegroundColor: try decodeColor(values, .segmentedFg, decoder: decoder, fallbackKey: "root.navBar.background"),
+                  segmentedTextColor: try decodeColor(values, .segmentedText, decoder: decoder, fallbackKey: "root.navBar.primaryText"),
+                  segmentedDividerColor: try decodeColor(values, .segmentedDivider, decoder: decoder, fallbackKey: "root.list.freeInputField.stroke"))
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -603,6 +609,29 @@ extension PresentationThemeItemDisclosureActions: Codable {
     }
 }
 
+
+extension PresentationThemeItemBarChart: Codable {
+    enum CodingKeys: String, CodingKey {
+        case color1
+        case color2
+        case color3
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(color1: try decodeColor(values, .color1),
+                  color2: try decodeColor(values, .color2),
+                  color3: try decodeColor(values, .color3))
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+         try encodeColor(&values, self.color1, .color1)
+         try encodeColor(&values, self.color2, .color2)
+         try encodeColor(&values, self.color3, .color3)
+    }
+}
+
 extension PresentationThemeFillStrokeForeground: Codable {
     enum CodingKeys: String, CodingKey {
         case bg
@@ -683,6 +712,7 @@ extension PresentationThemeList: Codable {
         case scrollIndicator
         case pageIndicatorInactive
         case inputClearButton
+        case itemBarChart
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -714,7 +744,8 @@ extension PresentationThemeList: Codable {
                   mediaPlaceholderColor: try decodeColor(values, .mediaPlaceholder),
                   scrollIndicatorColor: try decodeColor(values, .scrollIndicator),
                   pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
-                  inputClearButtonColor: try decodeColor(values, .inputClearButton))
+                  inputClearButtonColor: try decodeColor(values, .inputClearButton),
+                  itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart))
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -747,6 +778,7 @@ extension PresentationThemeList: Codable {
         try encodeColor(&values, self.scrollIndicatorColor, .scrollIndicator)
         try encodeColor(&values, self.pageIndicatorInactiveColor, .pageIndicatorInactive)
         try encodeColor(&values, self.inputClearButtonColor, .inputClearButton)
+        try values.encode(self.itemBarChart, forKey: .itemBarChart)
     }
 }
 
@@ -982,6 +1014,7 @@ extension PresentationThemePartedColors: Codable {
         case accentControl
         case mediaActiveControl
         case mediaInactiveControl
+        case mediaControlInnerBg
         case pendingActivity
         case fileTitle
         case fileDescription
@@ -997,6 +1030,7 @@ extension PresentationThemePartedColors: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(
             bubble: try values.decode(PresentationThemeBubbleColor.self, forKey: .bubble),
             primaryTextColor: try decodeColor(values, .primaryText),
@@ -1009,6 +1043,7 @@ extension PresentationThemePartedColors: Codable {
             accentControlColor: try decodeColor(values, .accentControl),
             mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
             mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
+            mediaControlInnerBackgroundColor: try decodeColor(values, .mediaControlInnerBg, decoder: decoder, fallbackKey: codingPath + ".bubble.withWp.bg"),
             pendingActivityColor: try decodeColor(values, .pendingActivity),
             fileTitleColor: try decodeColor(values, .fileTitle),
             fileDescriptionColor: try decodeColor(values, .fileDescription),
@@ -1036,6 +1071,7 @@ extension PresentationThemePartedColors: Codable {
         try encodeColor(&values, self.accentControlColor, .accentControl)
         try encodeColor(&values, self.mediaActiveControlColor, .mediaActiveControl)
         try encodeColor(&values, self.mediaInactiveControlColor, .mediaInactiveControl)
+        try encodeColor(&values, self.mediaControlInnerBackgroundColor, .mediaControlInnerBg)
         try encodeColor(&values, self.pendingActivityColor, .pendingActivity)
         try encodeColor(&values, self.fileTitleColor, .fileTitle)
         try encodeColor(&values, self.fileDescriptionColor, .fileDescription)

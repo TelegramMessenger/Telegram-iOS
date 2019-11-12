@@ -291,7 +291,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         }
         
         let makeColorLayout = self.customColorItemNode.asyncLayout()
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right)
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right, availableHeight: layout.size.height)
         let (colorLayout, colorApply) = makeColorLayout(self.customColorItem, params, ItemListNeighbors(top: .none, bottom: .none))
         colorApply()
     

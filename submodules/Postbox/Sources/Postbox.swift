@@ -3102,7 +3102,9 @@ public final class Postbox {
             return nil
         }
         if let messages = self.messageHistoryTable.getMessageFailedGroup(at: index, limit: 100) {
-            return messages.map(self.renderIntermediateMessage)
+            return messages.sorted(by: { lhs, rhs in
+                return lhs.index < rhs.index
+            }).map(self.renderIntermediateMessage)
         } else {
             return nil
         }

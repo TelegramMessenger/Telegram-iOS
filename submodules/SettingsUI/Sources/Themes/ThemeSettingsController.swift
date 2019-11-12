@@ -360,7 +360,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
 private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], availableThemes: [PresentationThemeReference], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
-    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
+    let title = presentationData.autoNightModeTriggered ? strings.Appearance_ColorThemeNight.uppercased() : strings.Appearance_ColorTheme.uppercased()
+    entries.append(.themeListHeader(presentationData.theme, title))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
     entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
@@ -371,22 +372,22 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
-    let title: String
+    let autoNightMode: String
     switch autoNightSettings.trigger {
         case .system:
             if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                title = strings.AutoNightTheme_System
+                autoNightMode = strings.AutoNightTheme_System
             } else {
-                title = strings.AutoNightTheme_Disabled
+                autoNightMode = strings.AutoNightTheme_Disabled
             }
         case .explicitNone:
-            title = strings.AutoNightTheme_Disabled
+            autoNightMode = strings.AutoNightTheme_Disabled
         case .timeBased:
-            title = strings.AutoNightTheme_Scheduled
+            autoNightMode = strings.AutoNightTheme_Scheduled
         case .brightness:
-            title = strings.AutoNightTheme_Automatic
+            autoNightMode = strings.AutoNightTheme_Automatic
     }
-    entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
+    entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, autoNightMode))
     
     entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
     entries.append(.fontSize(presentationData.theme, fontSize))
@@ -573,32 +574,39 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let dateTimeFormat = presentationData.dateTimeFormat
         let largeEmoji = presentationData.largeEmoji
         let disableAnimations = presentationData.disableAnimations
-        
-        let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color
-        let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: settings.themeSpecificAccentColors[settings.theme.index]?.baseColor ?? .blue, preview: true) ?? defaultPresentationTheme
-
-        let wallpaper: TelegramWallpaper
-        if let themeSpecificWallpaper = settings.themeSpecificChatWallpapers[settings.theme.index] {
-            wallpaper = themeSpecificWallpaper
+    
+        let themeReference: PresentationThemeReference
+        if presentationData.autoNightModeTriggered {
+            themeReference = settings.automaticThemeSwitchSetting.theme
         } else {
-            wallpaper = settings.chatWallpaper
+            themeReference = settings.theme
         }
+        
+        let theme = presentationData.theme
+        let accentColor = settings.themeSpecificAccentColors[themeReference.index]?.color
+        let wallpaper = settings.themeSpecificChatWallpapers[themeReference.index] ?? settings.chatWallpaper
         
         let rightNavigationButton = ItemListNavigationButton(content: .icon(.action), style: .regular, enabled: true, action: {
             moreImpl?()
         })
         
-        let defaultThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
+        var defaultThemes: [PresentationThemeReference] = []
+        if presentationData.autoNightModeTriggered {
+        } else {
+            defaultThemes.append(contentsOf: [.builtin(.dayClassic), .builtin(.day)])
+        }
+        defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
+        
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
         
         var availableThemes = defaultThemes
-        if defaultThemes.first(where: { $0.index == settings.theme.index }) == nil && cloudThemes.first(where: { $0.index == settings.theme.index }) == nil {
-            availableThemes.append(settings.theme)
+        if defaultThemes.first(where: { $0.index == themeReference.index }) == nil && cloudThemes.first(where: { $0.index == themeReference.index }) == nil {
+            availableThemes.append(themeReference)
         }
         availableThemes.append(contentsOf: cloudThemes)
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme,  themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: themeReference, themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
                 
         return (controllerState, (listState, arguments))
     }
@@ -621,6 +629,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil) else {
             return
         }
+        
+        let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
         
         let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
         if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
@@ -653,6 +663,14 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         current = PresentationThemeSettings.defaultSettings
                     }
                     
+                    var theme = current.theme
+                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                    if autoNightModeTriggered {
+                        automaticThemeSwitchSetting.theme = updatedTheme
+                    } else {
+                        theme = updatedTheme
+                    }
+                    
                     let chatWallpaper: TelegramWallpaper
                     if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
                         chatWallpaper = themeSpecificWallpaper
@@ -660,8 +678,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: updatedTheme, accentColor: current.themeSpecificAccentColors[updatedTheme.index]?.color, serviceBackgroundColor: .black, baseColor: nil) ?? defaultPresentationTheme
                         chatWallpaper = resolvedWallpaper ?? presentationTheme.chat.defaultWallpaper
                     }
-                    
-                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        
+                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 })
             })
         }).start()
