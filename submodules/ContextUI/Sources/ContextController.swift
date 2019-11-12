@@ -520,7 +520,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.effectView.effect = makeCustomZoomBlurEffect()
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: { [weak self] in
-                //self?.effectView.effect = makeCustomZoomBlurEffect()
             })
         }
         
