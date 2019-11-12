@@ -362,8 +362,8 @@ public final class PrincipalThemeEssentialGraphics {
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
             
-            self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: incoming.fill)!
-            self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: outgoing.fill)!
+            self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: theme.message.incoming.mediaControlInnerBackgroundColor)!
+            self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: theme.message.outgoing.mediaControlInnerBackgroundColor)!
         }
     }
 }
