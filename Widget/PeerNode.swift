@@ -130,11 +130,17 @@ final class PeerView: UIView {
         self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
         
         self.titleLabel = UILabel()
-        let title = peer.name
+        var title = peer.name
+        if let lastName = peer.lastName, !lastName.isEmpty {
+            title.append("\n")
+            title.append(lastName)
+        }
         self.titleLabel.text = title
         self.titleLabel.textColor = primaryColor
         self.titleLabel.font = UIFont.systemFont(ofSize: 11.0)
         self.titleLabel.lineBreakMode = .byTruncatingTail
+        self.titleLabel.numberOfLines = 2
+        self.titleLabel.textAlignment = .center
         
         super.init(frame: CGRect())
         
