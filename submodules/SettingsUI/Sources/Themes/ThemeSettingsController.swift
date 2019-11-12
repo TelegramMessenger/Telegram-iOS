@@ -442,18 +442,24 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         pushControllerImpl?(ThemeGridController(context: context))
     }, selectAccentColor: { color in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: current.theme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) else {
+            let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+            var currentTheme = current.theme
+            if autoNightModeTriggered {
+                currentTheme = current.automaticThemeSwitchSetting.theme
+            }
+            
+            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) else {
                 return current
             }
             
             var themeSpecificAccentColors = current.themeSpecificAccentColors
-            themeSpecificAccentColors[current.theme.index] = color
+            themeSpecificAccentColors[currentTheme.index] = color
             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
             var chatWallpaper = current.chatWallpaper
-            if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
+            if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
             } else {
                 chatWallpaper = theme.chat.defaultWallpaper
-                themeSpecificChatWallpapers[current.theme.index] = chatWallpaper
+                themeSpecificChatWallpapers[currentTheme.index] = chatWallpaper
             }
             
             return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)

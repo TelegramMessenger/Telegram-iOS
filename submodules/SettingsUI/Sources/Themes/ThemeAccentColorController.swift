@@ -65,18 +65,26 @@ final class ThemeAccentColorController: ViewController {
             if let strongSelf = self {
                 let context = strongSelf.context
                 let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                    var themeSpecificAccentColors = current.themeSpecificAccentColors
                     let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: strongSelf.controllerNode.color))
-                    themeSpecificAccentColors[current.theme.index] = color
+                    
+                    let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+                    
+                    var currentTheme = current.theme
+                    if autoNightModeTriggered {
+                        currentTheme = current.automaticThemeSwitchSetting.theme
+                    }
+                    
+                    var themeSpecificAccentColors = current.themeSpecificAccentColors
+                    themeSpecificAccentColors[currentTheme.index] = color
                     
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                     
-                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: strongSelf.currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) ?? defaultPresentationTheme
+                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) ?? defaultPresentationTheme
                     var chatWallpaper = current.chatWallpaper
-                    if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
+                    if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
                     } else {
                         chatWallpaper = theme.chat.defaultWallpaper
-                        themeSpecificChatWallpapers[current.theme.index] = chatWallpaper
+                        themeSpecificChatWallpapers[currentTheme.index] = chatWallpaper
                     }
                     
                     return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: strongSelf.currentTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
