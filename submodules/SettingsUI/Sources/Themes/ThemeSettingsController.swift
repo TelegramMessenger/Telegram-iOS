@@ -447,7 +447,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if autoNightModeTriggered {
                 currentTheme = current.automaticThemeSwitchSetting.theme
             }
-            
+
             guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) else {
                 return current
             }

@@ -21,6 +21,7 @@ public final class UndoOverlayController: ViewController {
     private var action: (Bool) -> Void
     
     private var didPlayPresentationAnimation = false
+    private var dismissed = false
     
     public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
         self.presentationData = presentationData
@@ -75,6 +76,10 @@ public final class UndoOverlayController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        guard !self.dismissed else {
+            return
+        }
+        self.dismissed = true
         (self.displayNode as! UndoOverlayControllerNode).animateOut(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             completion?()

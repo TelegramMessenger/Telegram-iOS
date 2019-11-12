@@ -65,16 +65,14 @@ final class ThemeAccentColorController: ViewController {
             if let strongSelf = self {
                 let context = strongSelf.context
                 let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                    let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: strongSelf.controllerNode.color))
-                    
                     let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                    
                     var currentTheme = current.theme
                     if autoNightModeTriggered {
                         currentTheme = current.automaticThemeSwitchSetting.theme
                     }
-                    
+
                     var themeSpecificAccentColors = current.themeSpecificAccentColors
+                    let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: strongSelf.controllerNode.color))
                     themeSpecificAccentColors[currentTheme.index] = color
                     
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
