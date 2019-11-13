@@ -15,7 +15,7 @@ func openAddContactImpl(context: AccountContext, firstName: String = "", lastNam
     |> deliverOnMainQueue).start(next: { value in
         switch value {
             case .allowed:
-                let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: label, value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: label, value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                 present(deviceContactInfoController(context: context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     if let peer = peer {
                         if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {

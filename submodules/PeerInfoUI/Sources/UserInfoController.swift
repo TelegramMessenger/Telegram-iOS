@@ -1281,7 +1281,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
                                     if let contactDataManager = context.sharedContext.contactDataManager {
                                         for (id, basicData) in records {
-                                            signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
+                                            signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: ""), to: id))
                                         }
                                     }
                                     return combineLatest(signals)

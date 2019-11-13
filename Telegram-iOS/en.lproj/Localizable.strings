@@ -5104,3 +5104,5 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.ShowMoreMembers_3_10" = "%@ more";
 "GroupInfo.ShowMoreMembers_many" = "%@ more";
 "GroupInfo.ShowMoreMembers_any" = "%@ more";
+
+"ContactInfo.Note" = "note";

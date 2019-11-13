@@ -75,6 +75,7 @@ private enum DeviceContactInfoEntryTag: Equatable, ItemListItemTag {
     case info(Int)
     case birthday
     case editingPhone(Int64)
+    case note
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         return self == (other as? DeviceContactInfoEntryTag)
@@ -90,6 +91,7 @@ private enum DeviceContactInfoDataId: Hashable {
     case birthday
     case socialProfile(DeviceContactSocialProfileData)
     case instantMessenger(DeviceContactInstantMessagingProfileData)
+    case note
 }
 
 private enum DeviceContactInfoConstantEntryId: Hashable {
@@ -104,6 +106,7 @@ private enum DeviceContactInfoConstantEntryId: Hashable {
     case phoneNumberSharingInfo
     case phoneNumberShareViaException
     case phoneNumberShareViaExceptionInfo
+    case note
 }
 
 private enum DeviceContactInfoEntryId: Hashable {
@@ -138,6 +141,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     case birthday(Int, PresentationTheme, String, Date, String, Bool?)
     case socialProfile(Int, Int, PresentationTheme, String, DeviceContactSocialProfileData, String, Bool?)
     case instantMessenger(Int, Int, PresentationTheme, String, DeviceContactInstantMessagingProfileData, String, Bool?)
+    case note(Int, PresentationTheme, String, String, Bool?)
     
     var section: ItemListSectionId {
         switch self {
@@ -192,6 +196,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return .socialProfile(catIndex)
             case let .instantMessenger(_, catIndex, _, _, _, _, _):
                 return .instantMessenger(catIndex)
+            case .note:
+                return .constant(.note)
         }
     }
     
@@ -329,6 +335,12 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .note(lhsIndex, lhsTheme, lhsTitle, lhsText, lhsSelected):
+                if case let .note(rhsIndex, rhsTheme, rhsTitle, rhsText, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText, lhsSelected == rhsSelected {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -369,6 +381,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .socialProfile(index, _, _, _, _, _, _):
                 return index
             case let .instantMessenger(index, _, _, _, _, _, _):
+                return index
+            case let .note(index, _, _, _, _):
                 return index
         }
     }
@@ -540,6 +554,16 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), text)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
+            case let .note(_, theme, title, text, selected):
+                return ItemListTextWithLabelItem(theme: theme, label: title, text: text, style: arguments.isPlain ? .plain : .blocks, enabledEntityTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                    if selected != nil {
+                        arguments.toggleSelection(.note)
+                    }
+                }, longTapAction: {
+                    if selected == nil {
+                        arguments.displayCopyContextMenu(.note, text)
+                    }
+                }, tag: DeviceContactInfoEntryTag.note)
         }
     }
 }
@@ -585,8 +609,8 @@ private func filteredContactData(contactData: DeviceContactExtendedData, exclude
     })
     let includeJob = !excludedComponents.contains(.job)
     let includeBirthday = !excludedComponents.contains(.birthday)
-    
-    return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles)
+    let includeNote = !excludedComponents.contains(.note)
+    return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: includeNote ? contactData.note : "")
 }
 
 private func deviceContactInfoEntries(account: Account, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
@@ -714,14 +738,13 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     if let birthday = contactData.birthdayDate {
         let dateText: String
         let calendar = Calendar(identifier: .gregorian)
-        var components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: birthday)
-        components.hour = 12
+        let components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: birthday)
         if let year = components.year, year > 1 {
-            dateText = stringForDate(timestamp: Int32(birthday.timeIntervalSince1970), strings: presentationData.strings)
+            dateText = stringForDate(date: birthday, timeZone: TimeZone.current, strings: presentationData.strings)
         } else {
-            dateText = stringForDateWithoutYear(date: birthday, strings: presentationData.strings)
+            dateText = stringForDateWithoutYear(date: birthday, timeZone: TimeZone.current, strings: presentationData.strings)
         }
-        entries.append(.birthday(entries.count, presentationData.theme, "birthday", birthday, dateText, selecting ? !state.excludedComponents.contains(.birthday) : nil))
+        entries.append(.birthday(entries.count, presentationData.theme, presentationData.strings.ContactInfo_BirthdayLabel, birthday, dateText, selecting ? !state.excludedComponents.contains(.birthday) : nil))
     }
     
     var socialProfileIndex = 0
@@ -751,6 +774,10 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
         }
         entries.append(.instantMessenger(entries.count, instantMessagingProfileIndex, presentationData.theme, label, profile, profile.username, selecting ? !state.excludedComponents.contains(.instantMessenger(profile)) : nil))
         instantMessagingProfileIndex += 1
+    }
+    
+    if !contactData.note.isEmpty {
+        entries.append(.note(entries.count, presentationData.theme, presentationData.strings.ContactInfo_Note, contactData.note, selecting ? !state.excludedComponents.contains(.note) : nil))
     }
     
     return entries
@@ -1071,7 +1098,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         urls.append(appProfile)
                     }
                 }
-                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
+                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles, note: filteredData.note)
             }
             rightNavigationButton = ItemListNavigationButton(content: .text(isShare ? presentationData.strings.Common_Done : presentationData.strings.Compose_Create), style: .bold, enabled: (isShare || !filteredPhoneNumbers.isEmpty) && composedContactData != nil, action: {
                 if let composedContactData = composedContactData {
