@@ -61,11 +61,13 @@ private enum CallFeedbackReason: Int32, CaseIterable {
 
 private final class CallFeedbackControllerArguments {
     let updateComment: (String) -> Void
+    let scrollToComment: () -> Void
     let toggleReason: (CallFeedbackReason, Bool) -> Void
     let toggleIncludeLogs: (Bool) -> Void
     
-    init(updateComment: @escaping (String) -> Void, toggleReason: @escaping (CallFeedbackReason, Bool) -> Void, toggleIncludeLogs: @escaping (Bool) -> Void) {
+    init(updateComment: @escaping (String) -> Void, scrollToComment: @escaping () -> Void, toggleReason: @escaping (CallFeedbackReason, Bool) -> Void, toggleIncludeLogs: @escaping (Bool) -> Void) {
         self.updateComment = updateComment
+        self.scrollToComment = scrollToComment
         self.toggleReason = toggleReason
         self.toggleIncludeLogs = toggleIncludeLogs
     }
@@ -75,6 +77,18 @@ private enum CallFeedbackControllerSection: Int32 {
     case reasons
     case comment
     case logs
+}
+
+private enum CallFeedbackControllerEntryTag: ItemListItemTag {
+    case comment
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? CallFeedbackControllerEntryTagv {
+            return self == other
+        } else {
+            return false
+        }
+    }
 }
 
 private enum CallFeedbackControllerEntry: ItemListNodeEntry {
@@ -161,7 +175,11 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         case let .comment(theme, text, placeholder):
             return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                 arguments.updateComment(updatedText)
-            })
+            }, updatedFocus: { focused in
+                if focused {
+                    arguments.scrollToComment()
+                }
+            }, tag: CallFeedbackControllerEntryTag.comment)
         case let .includeLogs(theme, title, value):
             return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleIncludeLogs(value)
@@ -222,9 +240,13 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
 
     var presentControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
+    var ensureItemVisibleImpl: ((CallFeedbackControllerEntryTag, Bool) -> Void)?
     
     let arguments = CallFeedbackControllerArguments(updateComment: { value in
         updateState { $0.withUpdatedComment(value) }
+        ensureItemVisibleImpl?(.comment, false)
+    }, scrollToComment: {
+        ensureItemVisibleImpl?(.comment, true)
     }, toggleReason: { reason, value in
         updateState { current in
             var reasons = current.reasons
@@ -240,37 +262,37 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     })
     
     let signal = combineLatest(sharedContext.presentationData, statePromise.get())
-        |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.CallFeedback_Send), style: .bold, enabled: true, action: {
-                var comment = state.comment
-                var hashtags = ""
-                for reason in CallFeedbackReason.allCases {
-                    if state.reasons.contains(reason) {
-                        if !hashtags.isEmpty {
-                            hashtags.append(" ")
-                        }
-                        hashtags.append("#\(reason.hashtag)")
+    |> deliverOnMainQueue
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.CallFeedback_Send), style: .bold, enabled: true, action: {
+            var comment = state.comment
+            var hashtags = ""
+            for reason in CallFeedbackReason.allCases {
+                if state.reasons.contains(reason) {
+                    if !hashtags.isEmpty {
+                        hashtags.append(" ")
                     }
+                    hashtags.append("#\(reason.hashtag)")
                 }
-                if !comment.isEmpty && !state.reasons.isEmpty {
-                    comment.append("\n")
-                }
-                comment.append(hashtags)
-                
-                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, userInitiated: userInitiated, includeLogs: state.includeLogs).start()
-                dismissImpl?()
-                
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
-            })
+            }
+            if !comment.isEmpty && !state.reasons.isEmpty {
+                comment.append("\n")
+            }
+            comment.append(hashtags)
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state), style: .blocks, animateChanges: false)
+            let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, userInitiated: userInitiated, includeLogs: state.includeLogs).start()
+            dismissImpl?()
             
-            return (controllerState, (listState, arguments))
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
+        })
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state), style: .blocks, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
     }
     
     
@@ -282,6 +304,29 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    ensureItemVisibleImpl = { [weak controller] targetTag, animated in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let state = stateValue.with({ $0 })
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                        resultItemNode = itemNode as? ListViewItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+    
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode, animated: animated)
+            }
+        })
     }
     return controller
 }
