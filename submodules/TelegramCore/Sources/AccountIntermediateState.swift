@@ -502,9 +502,10 @@ struct AccountMutableState {
 }
 
 struct AccountFinalState {
-    let state: AccountMutableState
-    let shouldPoll: Bool
-    let incomplete: Bool
+    var state: AccountMutableState
+    var shouldPoll: Bool
+    var incomplete: Bool
+    var discard: Bool
 }
 
 struct AccountReplayedFinalState {

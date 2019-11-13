@@ -171,7 +171,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         offset = floor(spacing / 2.0)
         for i in 0 ..< peerFrames.count {
             let peerView = self.peerViews[i]
-            peerView.frame = CGRect(origin: CGPoint(x: offset, y: 20.0), size: peerFrames[i].size)
+            peerView.frame = CGRect(origin: CGPoint(x: offset, y: 16.0), size: peerFrames[i].size)
             peerView.updateLayout(size: peerFrames[i].size)
             offset += peerFrames[i].width + spacing
         }

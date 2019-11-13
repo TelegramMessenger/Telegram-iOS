@@ -446,7 +446,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, updatingMedia: Signal<[MessageId: ChatUpdatingMessageMedia], NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
         self.subject = subject
@@ -575,10 +575,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
             selectedMessages,
+            updatingMedia,
             automaticDownloadNetworkType,
             self.historyAppearsClearedPromise.get(),
             animatedEmojiStickers
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, animatedEmojiStickers in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {

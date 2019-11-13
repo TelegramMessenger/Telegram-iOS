@@ -929,6 +929,32 @@ public final class MediaBox {
                     unlink(paths.partial + ".meta")
                     self.fileContexts.removeValue(forKey: id)
                 }
+                
+                let uniqueIds = Set(ids.map { $0.id.uniqueId })
+                
+                var pathsToDelete: [String] = []
+                
+                for cacheType in ["cache", "short-cache"] {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: "\(self.basePath)/\(cacheType)"), includingPropertiesForKeys: [], options: [.skipsSubdirectoryDescendants], errorHandler: nil) {
+                        while let item = enumerator.nextObject() {
+                            guard let url = item as? NSURL, let path = url.path, let fileName = url.lastPathComponent else {
+                                continue
+                            }
+                            
+                            if let range = fileName.range(of: ":") {
+                                let resourceId = String(fileName[fileName.startIndex ..< range.lowerBound])
+                                if uniqueIds.contains(resourceId) {
+                                    pathsToDelete.append(path)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                for path in pathsToDelete {
+                    unlink(path)
+                }
+                
                 subscriber.putCompletion()
             }
             return EmptyDisposable

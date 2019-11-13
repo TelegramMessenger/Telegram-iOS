@@ -7,12 +7,14 @@ public enum WidgetCodingError: Error {
 public struct WidgetDataPeer: Codable, Equatable {
     public var id: Int64
     public var name: String
+    public var lastName: String?
     public var letters: [String]
     public var avatarPath: String?
     
-    public init(id: Int64, name: String, letters: [String], avatarPath: String?) {
+    public init(id: Int64, name: String, lastName: String?, letters: [String], avatarPath: String?) {
         self.id = id
         self.name = name
+        self.lastName = lastName
         self.letters = letters
         self.avatarPath = avatarPath
     }

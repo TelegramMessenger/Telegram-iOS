@@ -148,9 +148,31 @@ final class AuthorizedApplicationContext {
                         }
                         if let tabController = strongSelf.rootController.rootTabController {
                             let selectedController = tabController.controllers[tabController.selectedIndex]
-                            if !f(selectedController) {
-                                return
+                            
+                            if let index = strongSelf.rootController.viewControllers.lastIndex(where: { controller in
+                                guard let controller = controller as? ViewController else {
+                                    return false
+                                }
+                                if controller === tabController {
+                                    return false
+                                }
+                                switch controller.navigationPresentation {
+                                case .master:
+                                    return true
+                                default:
+                                    break
+                                }
+                                return false
+                            }), let controller = strongSelf.rootController.viewControllers[index] as? ViewController {
+                                if !f(controller) {
+                                    return
+                                }
+                            } else {
+                                if !f(selectedController) {
+                                    return
+                                }
                             }
+                            
                             if let controller = strongSelf.rootController.topViewController as? ViewController, controller !== selectedController {
                                 if !f(controller) {
                                     return

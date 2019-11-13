@@ -526,7 +526,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, openLinkEditing: {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
-        }, displaySendMessageOptions: {
+        }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
         }, displaySearchResultsTooltip: { _, _ in
         }, statuses: nil)

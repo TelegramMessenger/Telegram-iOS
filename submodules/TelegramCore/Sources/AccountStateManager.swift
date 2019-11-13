@@ -533,20 +533,24 @@ public final class AccountStateManager {
                 |> mapToSignal { state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
                     return finalStateWithUpdateGroups(postbox: postbox, network: network, state: state, groups: groups)
                     |> mapToSignal { finalState in
-                        if !finalState.state.preCachedResources.isEmpty {
+                        if !finalState.discard && !finalState.state.preCachedResources.isEmpty {
                             for (resource, data) in finalState.state.preCachedResources {
                                 postbox.mediaBox.storeResourceData(resource.id, data: data)
                             }
                         }
                         
                         return postbox.transaction { transaction -> AccountReplayedFinalState? in
-                            let startTime = CFAbsoluteTimeGetCurrent()
-                            let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
-                            let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
-                            if deltaTime > 1.0 {
-                                Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                            if finalState.discard {
+                                return nil
+                            } else {
+                                let startTime = CFAbsoluteTimeGetCurrent()
+                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                                if deltaTime > 1.0 {
+                                    Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                                }
+                                return result
                             }
-                            return result
                         }
                         |> map({ ($0, finalState) })
                         |> deliverOn(queue)

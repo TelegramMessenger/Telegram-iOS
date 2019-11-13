@@ -248,7 +248,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(
         buttonColor: accentColor,
         micLevelColor: accentColor.withAlphaComponent(0.2),
-        activeIconColor: .white
+        activeIconColor: secondaryBadgeTextColor
     )
 
     let inputPanel = PresentationThemeChatInputPanel(

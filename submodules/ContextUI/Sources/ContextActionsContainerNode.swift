@@ -39,6 +39,7 @@ private enum ContextItemNode {
 }
 
 final class ContextActionsContainerNode: ASDisplayNode {
+    private let theme: PresentationTheme
     private var effectView: UIVisualEffectView?
     private var itemNodes: [ContextItemNode]
     private let feedbackTap: () -> Void
@@ -47,6 +48,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
     private var currentHighlightedActionNode: ContextActionNode?
     
     init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
+        self.theme = theme
         self.feedbackTap = feedbackTap
         
         var itemNodes: [ContextItemNode] = []
@@ -130,7 +132,13 @@ final class ContextActionsContainerNode: ASDisplayNode {
         case .regular:
             if self.effectView == nil {
                 let effectView: UIVisualEffectView
-                if #available(iOS 10.0, *) {
+                if #available(iOS 13.0, *) {
+                    if self.theme.overallDarkAppearance {
+                        effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+                    } else {
+                        effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
+                    }
+                } else if #available(iOS 10.0, *) {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
                 } else {
                     effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))

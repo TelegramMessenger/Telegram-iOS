@@ -641,14 +641,14 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             case .set:
                 break
             case let .notSet(pendingEmail):
-                break
                 //intro = pendingEmail == nil
-                /*if pendingEmail == nil {
+                if pendingEmail == nil {
                     let controller = TwoFactorAuthSplashScreen(context: context, mode: .intro)
                     pushControllerImpl?(controller, true)
+                    return
                 } else {
                     
-                }*/
+                }
             }
         }
         if intro {

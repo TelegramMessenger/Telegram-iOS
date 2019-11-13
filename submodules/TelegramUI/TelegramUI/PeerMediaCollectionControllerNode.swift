@@ -29,7 +29,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             }
             return node
         case .file:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, updatingMedia: .single([:]), mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -40,7 +40,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .music:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, updatingMedia: .single([:]), mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -51,7 +51,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .webpage:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, updatingMedia: .single([:]), mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -258,7 +258,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
                 if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
                     transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -273,12 +273,12 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 self.addSubnode(selectionPanelBackgroundNode)
                 self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
                 
-                let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings)
+                let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, peerMedia: true)
                 selectionPanel.context = self.context
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessages = selectionState.selectedIds
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: .immediate, interfaceState: interfaceState, metrics: layout.metrics)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 

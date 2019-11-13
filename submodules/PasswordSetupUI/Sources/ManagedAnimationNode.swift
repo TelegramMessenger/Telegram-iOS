@@ -14,7 +14,7 @@ private final class ManagedAnimationState {
     let frameCount: Int
     let fps: Double
     
-    var startTime: Double?
+    var relativeTime: Double = 0.0
     var frameIndex: Int?
     
     private let renderContext: DrawingContext
@@ -73,7 +73,8 @@ class ManagedAnimationNode: ASDisplayNode {
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
     
-    private var state: ManagedAnimationState?
+    fileprivate var state: ManagedAnimationState?
+    fileprivate var trackStack: [ManagedAnimationItem] = []
     
     init(size: CGSize) {
         self.intrinsicSize = size
@@ -110,30 +111,40 @@ class ManagedAnimationNode: ASDisplayNode {
         }
     }
     
-    private func updateAnimation() {
+    private func advanceState() {
+        guard !self.trackStack.isEmpty else {
+            return
+        }
+        
+        let item = self.trackStack.removeFirst()
+        
+        if let state = self.state, state.item.name == item.name {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+        } else {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
+        }
+    }
+    
+    fileprivate func updateAnimation() {
+        if self.state == nil {
+            self.advanceState()
+        }
+        
         guard let state = self.state else {
             return
         }
         let timestamp = CACurrentMediaTime()
         
-        var startTime: Double
-        if let current = state.startTime {
-            startTime = current
-        } else {
-            startTime = timestamp
-            state.startTime = startTime
-        }
-        
         let fps = state.fps
         let frameRange = state.item.frames
         
         let duration: Double = 0.3
-        var t = (timestamp - startTime) / duration
+        var t = state.relativeTime / duration
         t = max(0.0, t)
         t = min(1.0, t)
-        let frameOffset = Int(Double(frameRange.startFrame) * (1.0 - t) + Double(frameRange.startFrame) * t)
-        let lowerBound = min(frameRange.startFrame, state.frameCount - 1)
-        let upperBound = min(frameRange.endFrame, state.frameCount - 1)
+        let frameOffset = Int(Double(frameRange.startFrame) * (1.0 - t) + Double(frameRange.endFrame) * t)
+        let lowerBound: Int = 0
+        let upperBound = state.frameCount - 1
         let frameIndex = max(lowerBound, min(upperBound, frameOffset))
         
         if state.frameIndex != frameIndex {
@@ -142,14 +153,19 @@ class ManagedAnimationNode: ASDisplayNode {
                 self.imageNode.image = image
             }
         }
+        
+        var animationAdvancement: Double = 1.0 / 60.0
+        animationAdvancement *= Double(self.trackStack.count + 1)
+        
+        state.relativeTime += animationAdvancement
+        
+        if state.relativeTime >= duration {
+            self.advanceState()
+        }
     }
     
-    func trackTo(item: ManagedAnimationItem, frameIndex: Int) {
-        if let state = self.state, state.item.name == item.name {
-            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
-        } else {
-            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
-        }
+    func trackTo(item: ManagedAnimationItem) {
+        self.trackStack.append(item)
         self.updateAnimation()
     }
 }
@@ -222,62 +238,93 @@ enum ManagedMonkeyAnimationState: Equatable {
  )*/
 
 final class ManagedMonkeyAnimationNode: ManagedAnimationNode {
-    private var state: ManagedMonkeyAnimationState = .idle
+    private var monkeyState: ManagedMonkeyAnimationState = .idle
     
     init() {
         super.init(size: CGSize(width: 136.0, height: 136.0))
         
-        self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0)), frameIndex: 0)
+        self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0)))
     }
     
-    func setState(_ state: ManagedMonkeyAnimationState) {
-        let previousState = self.state
-        self.state = state
+    func setState(_ monkeyState: ManagedMonkeyAnimationState) {
+        let previousState = self.monkeyState
+        self.monkeyState = monkeyState
+        
+        func enqueueTracking(_ value: CGFloat) {
+            let lowerBound = 18
+            let upperBound = 160
+            let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
+            if let state = self.state, state.item.name == "TwoFactorSetupMonkeyTracking" {
+                let item = ManagedAnimationItem(name: "TwoFactorSetupMonkeyTracking", frames: ManagedAnimationFrameRange(startFrame: state.frameIndex ?? 0, endFrame: frameIndex))
+                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+                self.updateAnimation()
+            } else {
+                self.trackStack = self.trackStack.filter {
+                    $0.name != "TwoFactorSetupMonkeyTracking"
+                }
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyTracking", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: frameIndex)))
+            }
+        }
+        
+        func enqueueClearTracking() {
+            if let state = self.state, state.item.name == "TwoFactorSetupMonkeyTracking" {
+                let item = ManagedAnimationItem(name: "TwoFactorSetupMonkeyTracking", frames: ManagedAnimationFrameRange(startFrame: state.frameIndex ?? 0, endFrame: 0))
+                self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+                self.updateAnimation()
+            }
+        }
         
         switch previousState {
         case .idle:
-            switch state {
+            switch monkeyState {
             case .idle:
                 break
             case .eyesClosed:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41)))
             case .peeking:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyCloseAndPeek", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41)))
             case let .tracking(value):
-                break
+                enqueueTracking(value)
             }
         case .eyesClosed:
-            switch state {
+            switch monkeyState {
             case .idle:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose", frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0)))
             case .eyesClosed:
                 break
             case .peeking:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyPeek", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 14)))
             case let .tracking(value):
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose", frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0)))
+                enqueueTracking(value)
             }
         case .peeking:
-            switch state {
+            switch monkeyState {
             case .idle:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyCloseAndPeek", frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0)))
             case .eyesClosed:
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyPeek", frames: ManagedAnimationFrameRange(startFrame: 14, endFrame: 0)))
             case .peeking:
                 break
             case let .tracking(value):
-                break
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyCloseAndPeek", frames: ManagedAnimationFrameRange(startFrame: 41, endFrame: 0)))
+                enqueueTracking(value)
             }
-        case let .tracking(previousValue):
-            switch state {
+        case let .tracking(currentValue):
+            switch monkeyState {
             case .idle:
-                break
+                enqueueClearTracking()
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyIdle", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 0)))
             case .eyesClosed:
-                break
+                enqueueClearTracking()
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyClose", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41)))
             case .peeking:
-                break
+                enqueueClearTracking()
+                self.trackTo(item: ManagedAnimationItem(name: "TwoFactorSetupMonkeyCloseAndPeek", frames: ManagedAnimationFrameRange(startFrame: 0, endFrame: 41)))
             case let .tracking(value):
-                break
+                if abs(currentValue - value) > CGFloat.ulpOfOne {
+                    enqueueTracking(value)
+                }
             }
         }
     }

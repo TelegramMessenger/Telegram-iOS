@@ -640,6 +640,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     var index = 0
                     
                     for participant in foundGroupMembers {
+                        if participant.peer.isDeleted {
+                            continue
+                        }
+                        
                         if !existingPeerIds.contains(participant.peer.id) {
                             existingPeerIds.insert(participant.peer.id)
                             let section: ChannelMembersSearchSection

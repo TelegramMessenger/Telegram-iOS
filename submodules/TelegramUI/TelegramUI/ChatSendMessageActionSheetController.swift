@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import ContextUI
 
 final class ChatSendMessageActionSheetController: ViewController {
     var controllerNode: ChatSendMessageActionSheetControllerNode {
@@ -14,6 +15,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction?
     private let interfaceState: ChatPresentationInterfaceState
+    private let gesture: ContextGesture
     private let sendButtonFrame: CGRect
     private let textInputNode: EditableTextNode
     private let completion: () -> Void
@@ -26,10 +28,11 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction?, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sendButtonFrame: CGRect, textInputNode: EditableTextNode, completion: @escaping () -> Void) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.interfaceState = interfaceState
+        self.gesture = gesture
         self.sendButtonFrame = sendButtonFrame
         self.textInputNode = textInputNode
         self.completion = completion
@@ -68,7 +71,7 @@ final class ChatSendMessageActionSheetController: ViewController {
             reminders = true
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
@@ -107,6 +110,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     }
     
     private func dismiss(cancel: Bool) {
+        self.statusBar.statusBarStyle = .Ignore
         self.controllerNode.animateOut(cancel: cancel, completion: { [weak self] in
             self?.completion()
             self?.didPlayPresentationAnimation = false

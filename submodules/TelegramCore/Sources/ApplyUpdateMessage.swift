@@ -140,7 +140,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             if forwardInfo == nil {
-                inner: for media in message.media {
+                inner: for media in media {
                     if let file = media as? TelegramMediaFile {
                         for attribute in file.attributes {
                             switch attribute {

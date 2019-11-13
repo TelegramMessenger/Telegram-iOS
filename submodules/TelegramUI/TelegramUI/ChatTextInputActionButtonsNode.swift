@@ -3,20 +3,21 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ContextUI
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     private let strings: PresentationStrings
     
     let micButton: ChatTextInputMediaRecordingButton
-    let sendButton: HighlightTrackingButton
+    let sendButton: HighlightTrackingButtonNode
     var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
     let expandMediaInputButton: HighlightableButtonNode
     
-    var sendButtonLongPressed: (() -> Void)?
+    var sendButtonLongPressed: ((ASDisplayNode, ContextGesture) -> Void)?
     
-    private var gestureRecognizer: UILongPressGestureRecognizer?
+    private var gestureRecognizer: ContextGesture?
     var sendButtonLongPressEnabled = false {
         didSet {
             self.gestureRecognizer?.isEnabled = self.sendButtonLongPressEnabled
@@ -27,9 +28,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.strings = strings
         
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
-        self.sendButton = HighlightTrackingButton()
-        self.sendButton.adjustsImageWhenHighlighted = false
-        self.sendButton.adjustsImageWhenDisabled = false
+        self.sendButton = HighlightTrackingButtonNode()
+        //self.sendButton.adjustsImageWhenHighlighted = false
+        //self.sendButton.adjustsImageWhenDisabled = false
         
         self.expandMediaInputButton = HighlightableButtonNode()
         
@@ -59,22 +60,29 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
         
         self.view.addSubview(self.micButton)
-        self.view.addSubview(self.sendButton)
+        self.addSubnode(self.sendButton)
         self.addSubnode(self.expandMediaInputButton)
     }
     
     override func didLoad() {
         super.didLoad()
         
-        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
-        gestureRecognizer.minimumPressDuration = 0.4
+        let gestureRecognizer = ContextGesture(target: nil, action: nil)
         self.gestureRecognizer = gestureRecognizer
-        self.sendButton.addGestureRecognizer(gestureRecognizer)
+        self.sendButton.view.addGestureRecognizer(gestureRecognizer)
+        gestureRecognizer.activated = { [weak self] recognizer in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.sendButtonHasApplyIcon {
+                strongSelf.sendButtonLongPressed?(strongSelf.sendButton, recognizer)
+            }
+        }
     }
     
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
         if !self.sendButtonHasApplyIcon && gestureRecognizer.state == .began {
-            self.sendButtonLongPressed?()
+            //self.sendButtonLongPressed?()
         }
     }
     
