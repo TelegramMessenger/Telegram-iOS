@@ -37,6 +37,8 @@ swift_library(
     deps = [
         "//submodules/GZip:GZip",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
 )
 

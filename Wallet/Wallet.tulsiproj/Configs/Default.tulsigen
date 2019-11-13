@@ -9,7 +9,7 @@
   ],
   "optionSet" : {
     "BazelBuildOptionsDebug" : {
-      "p" : "$(inherited) -j 1"
+      "p" : "$(inherited) -k --features=swift.use_global_module_cache --spawn_strategy=standalone  --strategy=SwiftCompile=standalone"
     },
     "BazelBuildOptionsRelease" : {
       "p" : "$(inherited)"
