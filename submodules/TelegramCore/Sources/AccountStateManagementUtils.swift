@@ -1364,7 +1364,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
         |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
             return resolveMissingPeerChatInfos(network: network, state: resultingState)
             |> map { resultingState, resolveError -> AccountFinalState in
-                return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates)
+                return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates, discard: resolveError)
             }
         }
     }
@@ -1590,7 +1590,7 @@ func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stat
                 |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                     return resolveMissingPeerChatInfos(network: network, state: resultingState)
                     |> map { resultingState, _ -> AccountFinalState in
-                        return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false)
+                        return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false, discard: false)
                     }
                 }
                 |> mapToSignal { finalState -> Signal<Void, NoError> in
