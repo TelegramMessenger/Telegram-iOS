@@ -1,5 +1,5 @@
 function initialize() {
-    var controls = document.getElementsByClassName("player-controls-bottom")[0];
+    var controls = document.getElementsByClassName("pl-controls-bottom")[0];
     if (controls == null) {
         controls = document.getElementsByClassName("player-overlay-container")[0];
     }
@@ -7,9 +7,14 @@ function initialize() {
         controls.style.display = "none";
     }
     
+    var root = document.getElementsByClassName("player-root")[0];
+    if (root != null) {
+        root.style.display = "none";
+    }
+    
     var topBar = document.getElementById("top-bar");
     if (topBar == null) {
-        topBar = document.getElementsByClassName("player-controls-top")[0];
+        topBar = document.getElementsByClassName("pl-controls-top")[0];
     }
     if (topBar != null) {
         topBar.style.display = "none";
@@ -17,7 +22,7 @@ function initialize() {
     
     var pauseOverlay = document.getElementsByClassName("player-play-overlay")[0];
     if (pauseOverlay == null) {
-        pauseOverlay = document.getElementsByClassName("player-controls-bottom")[0];
+        pauseOverlay = document.getElementsByClassName("pl-controls-bottom")[0];
     }
     if (pauseOverlay != null) {
         pauseOverlay.style.display = "none";
@@ -85,13 +90,15 @@ function eventFire(el, etype){
     }
 }
 
-function play() {
+function togglePlayPause() {
     var playButton = document.getElementsByClassName("js-control-playpause-button")[0];
     if (playButton == null) {
-        playButton = document.getElementsByClassName("player-button--playpause")[0];
+        playButton = document.getElementsByClassName("player-button")[0];
     }
     
-    eventFire(playButton, "click");
+    if (playButton != null) {
+        eventFire(playButton, "click");
+    }
 }
 
 function receiveMessage(evt) {
@@ -105,8 +112,8 @@ function receiveMessage(evt) {
         
         if (obj.command == "initialize")
             initialize();
-        else if (obj.command == "play")
-            play();
+        else if (obj.command == "playPause")
+            togglePlayPause();
     } catch (ex) { }
 }
 

@@ -134,7 +134,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     }
     
     func play() {
-        if let eval = evalImpl {
+        if let eval = self.evalImpl {
             eval("play();")
         }
         
@@ -142,7 +142,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     }
     
     func pause() {
-        if let eval = evalImpl {
+        if let eval = self.evalImpl {
             eval("pause();")
         }
     }
@@ -156,7 +156,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     }
     
     func seek(timestamp: Double) {
-        if let eval = evalImpl {
+        if let eval = self.evalImpl {
             eval("seek(\(timestamp));")
         }
         
@@ -165,7 +165,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
             updateStatus(self.status)
         }
         
-        ignorePosition = 2
+        self.ignorePosition = 2
     }
     
     func pageReady() {
