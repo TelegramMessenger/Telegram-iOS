@@ -113,17 +113,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                     if let image = content.image, let instantPage = content.instantPage {
-                        var isGallery = false
-                        switch instantPageType(of: content) {
-                            case .album:
-                                let count = instantPageGalleryMedia(webpageId: webPage.webpageId, page: instantPage, galleryMedia: image).count
-                                if count > 1 {
-                                    isGallery = true
-                                }
-                            default:
-                                break
-                        }
-                        if !isGallery {
+                        if instantPageType(of: content) != .album {
                             item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                             return
                         }
