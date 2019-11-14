@@ -12,13 +12,13 @@ static_library(
     name = "OverlayStatusController",
     srcs = glob([
         "Sources/**/*.swift",
-	"Sources/**/*.m",
+    	"Impl/**/*.m",
     ]),
     headers = glob([
-        "Sources/**/*.h",
+        "Impl/**/*.h",
     ]),
     exported_headers = glob([
-        "Sources/**/*.h",
+        "Impl/**/*.h",
     ]),
     deps = [
     	"//submodules/Display:Display#shared",

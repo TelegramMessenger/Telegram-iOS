@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AppBundle
+import OverlayStatusControllerImpl
 
 public enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)

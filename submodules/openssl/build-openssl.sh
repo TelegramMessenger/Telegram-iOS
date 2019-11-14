@@ -161,7 +161,7 @@ function build_for ()
 
   ADDITIONAL_FLAGS=$DEFAULT_FLAGS
 
-  ./Configure $PLATFORM "-arch $ARCH" ${ADDITIONAL_FLAGS[@]} --prefix=${TMP_DIR}/${ARCH} || exit 1
+  ./Configure $PLATFORM "-arch $ARCH" ${ADDITIONAL_FLAGS[@]} --prefix="$(pwd)/${TMP_DIR}/${ARCH}" || exit 1
   
   make && make install_sw || exit 2
   unset CROSS_TOP
@@ -170,7 +170,7 @@ function build_for ()
   cd "$DIR"
 }
 
-patch "$SOURCE_DIR/Configurations/10-main.conf" < patch-conf.patch || exit 1
+patch "$SOURCE_DIR/Configurations/10-main.conf" < "$SRC_DIR/patch-conf.patch" || exit 1
 
 if [ "$ARCH" == "x86_64" ]; then
   build_for ios64sim-cross x86_64 SIM || exit 2
@@ -184,7 +184,7 @@ else
 fi
 
 cp -r "${TMP_DIR}/$ARCH/include" "${TMP_DIR}/"
-patch -p3 "${TMP_DIR}/include/openssl/opensslconf.h" < patch-include.patch
+patch -p3 "${TMP_DIR}/include/openssl/opensslconf.h" < "$SRC_DIR/patch-include.patch" || exit 1
 
 DFT_DIST_DIR="$OUT_DIR/out"
 rm -rf "$DFT_DIST_DIR"

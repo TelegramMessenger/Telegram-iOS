@@ -108,24 +108,26 @@ openssl_headers = [
 
 openssl_header_paths = ["openssl/" + header for header in openssl_headers]
 
-archs = ["arm64", "armv7", "x86_64"]
+archs = ["arm64"]#, "armv7", "x86_64"]
 
 rules = [
     genrule(
         name = "openssl_build_" + arch,
-        srcs = glob([
+        srcs = [
             "build-openssl.sh",
-            "*.tar.gz",
-            "*.patch",
-        ]),
-        bash = "sh $SRCDIR/build-openssl.sh $OUT $SRCDIR " + arch,
-        out = "openssl_" + arch,
+            "openssl-1.1.1d.tar.gz",
+            "patch-conf.patch",
+            "patch-include.patch",
+        ],
+        cmd_bash = "cp $(SRCS) $(RULEDIR)/ && sh $(RULEDIR)/build-openssl.sh $(RULEDIR) $(RULEDIR) " + arch,
+        outs = openssl_headers,
         visibility = [
-            "//submodules/openssl:...",
+            "//visibility:public",
         ]
     ) for arch in archs
 ]
 
+'''
 genrule(
     name = "openssl_build_merged",
     srcs = [
@@ -137,23 +139,17 @@ genrule(
         "PUBLIC",
     ]
 )
+'''
 
-openssl_header_targets = gen_header_targets(openssl_header_paths, "openssl_header_", "", "openssl_build_arm64", "out/include")
+#openssl_header_targets = gen_header_targets(openssl_header_paths, "openssl_header_", "", "openssl_build_arm64", "out/include")
 
-apple_library(
+objc_library(
     name = "openssl",
+    module_name = "openssl",
+    enable_modules = True,
+    hdrs = [":" + x for x in openssl_headers],
+    deps = [],
     visibility = [
-        "PUBLIC",
-    ],
-    header_namespace = "openssl",
-    exported_headers = openssl_header_targets,
-    linker_flags = [
-        "-L$(location :openssl_build_merged)/lib",
-        "-lcrypto",
-    ],
-    exported_linker_flags = [
-        "-L$(location :openssl_build_merged)/lib",
-        "-lcrypto",
-    ],
-    deps = [":openssl_build_" + arch for arch in ["arm64"]],
+        "//visibility:public",
+    ]
 )

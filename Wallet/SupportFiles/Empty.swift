@@ -4,6 +4,8 @@ import GZip
 import AsyncDisplayKit
 import SSignalKit
 import SwiftSignalKit
+import ObjCRuntimeUtils
+import UIKitRuntimeUtils
 
 @objc(Application)
 final class Application: UIApplication {

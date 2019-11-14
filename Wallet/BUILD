@@ -39,6 +39,13 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+        "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
+        "//submodules/Display:Display",
+        "//submodules/AlertUI:AlertUI",
+        "//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/openssl:openssl",
     ],
 )
 
