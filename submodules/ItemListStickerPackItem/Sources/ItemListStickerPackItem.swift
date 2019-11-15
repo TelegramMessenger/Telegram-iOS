@@ -741,4 +741,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         }
         return false
     }
+    
+    override func snapshotForReordering() -> UIView? {
+        self.backgroundNode.alpha = 0.9
+        let result = self.view.snapshotContentTree()
+        self.backgroundNode.alpha = 1.0
+        return result
+    }
 }
