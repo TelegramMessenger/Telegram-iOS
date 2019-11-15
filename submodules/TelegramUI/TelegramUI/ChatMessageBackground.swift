@@ -57,18 +57,26 @@ enum ChatMessageBackgroundType: Equatable {
     }
 }
 
-class ChatMessageBackground: ASImageNode {
+class ChatMessageBackground: ASDisplayNode {
     private(set) var type: ChatMessageBackgroundType?
     private var currentHighlighted: Bool?
     private var graphics: PrincipalThemeEssentialGraphics?
     private var maskMode: Bool?
+    private let imageNode: ASImageNode
     
     override init() {
+        self.imageNode = ASImageNode()
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        
         super.init()
         
         self.isUserInteractionEnabled = false
-        self.displaysAsynchronously = false
-        self.displayWithoutProcessing = true
+        self.addSubnode(self.imageNode)
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
     }
     
     func setMaskMode(_ maskMode: Bool) {
@@ -151,6 +159,6 @@ class ChatMessageBackground: ASImageNode {
             }
         }
         
-        self.image = image
+        self.imageNode.image = image
     }
 }

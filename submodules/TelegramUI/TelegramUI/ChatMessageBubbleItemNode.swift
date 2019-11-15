@@ -1902,11 +1902,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             
             if case .System = animation, strongSelf.contextSourceNode.isExtractedToContextPreview {
                 transition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
-                //let backgroundWallpaperDelta = CGPoint(x: backgroundFrame.minX - strongSelf.backgroundWallpaperNode.frame.minX, y: backgroundFrame.minY - strongSelf.backgroundWallpaperNode.frame.minY)
+                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition)
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
             } else {
                 strongSelf.backgroundNode.frame = backgroundFrame
-                strongSelf.backgroundWallpaperNode.frame = backgroundFrame//.insetBy(dx: 1.0, dy: 1.0)
+                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
+                strongSelf.backgroundWallpaperNode.frame = backgroundFrame
             }
             if let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
@@ -2097,7 +2098,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
-            self.backgroundWallpaperNode.frame = backgroundFrame//.insetBy(dx: 1.0, dy: 1.0)
+            self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
+            self.backgroundWallpaperNode.frame = backgroundFrame
             
             if let type = self.backgroundNode.type {
                 var incomingOffset: CGFloat = 0.0

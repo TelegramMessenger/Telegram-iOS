@@ -4,6 +4,8 @@ import Display
 import Postbox
 import TelegramPresentationData
 
+private let maskInset: CGFloat = 1.0
+
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private let backgroundContent: ASDisplayNode
     
