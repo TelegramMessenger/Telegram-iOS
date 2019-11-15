@@ -143,6 +143,9 @@
     NSMutableDictionary *_datacenterTempAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
     
+    NSMutableDictionary<NSNumber *, NSNumber *> *_datacenterCheckKeyRemovedActionTimestamps;
+    NSMutableDictionary<NSNumber *, id<MTDisposable> > *_datacenterCheckKeyRemovedActions;
+    
     NSMutableDictionary *_cleanupSessionIdsByAuthKeyId;
     NSMutableArray *_currentSessionInfos;
     
@@ -218,6 +221,8 @@ static int32_t fixedTimeDifferenceValue = 0;
         _datacenterAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTempAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTransferAuthActions = [[NSMutableDictionary alloc] init];
+        _datacenterCheckKeyRemovedActionTimestamps = [[NSMutableDictionary alloc] init];
+        _datacenterCheckKeyRemovedActions = [[NSMutableDictionary alloc] init];
         
         _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] init];
         _currentSessionInfos = [[NSMutableArray alloc] init];
@@ -263,6 +268,9 @@ static int32_t fixedTimeDifferenceValue = 0;
     NSDictionary *datacenterTransferAuthActions = _datacenterTransferAuthActions;
     _datacenterTransferAuthActions = nil;
     
+    NSDictionary *datacenterCheckKeyRemovedActions = _datacenterCheckKeyRemovedActions;
+    _datacenterCheckKeyRemovedActions = nil;
+    
     NSDictionary *fetchPublicKeysActions = _fetchPublicKeysActions;
     _fetchPublicKeysActions = nil;
     
@@ -302,6 +310,10 @@ static int32_t fixedTimeDifferenceValue = 0;
         {
             id<MTDisposable> disposable = fetchPublicKeysActions[nDatacenterId];
             [disposable dispose];
+        }
+        
+        for (NSNumber *nDatacenterId in datacenterCheckKeyRemovedActions) {
+            [datacenterCheckKeyRemovedActions[nDatacenterId] dispose];
         }
         
         [cleanupSessionInfoDisposables dispose];
@@ -1245,7 +1257,7 @@ static int32_t fixedTimeDifferenceValue = 0;
     {
         if (_datacenterAuthActions[@(datacenterId)] == nil)
         {
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:false tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain];
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:false tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain bindKey:nil];
             authAction.delegate = self;
             _datacenterAuthActions[@(datacenterId)] = authAction;
             [authAction execute:self datacenterId:datacenterId isCdn:isCdn];
@@ -1256,7 +1268,7 @@ static int32_t fixedTimeDifferenceValue = 0;
 - (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId keyType:(MTDatacenterAuthTempKeyType)keyType {
     [[MTContext contextQueue] dispatchOnQueue:^{
         if (_datacenterTempAuthActions[@(datacenterId)] == nil) {
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:keyType];
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:keyType bindKey:nil];
             authAction.delegate = self;
             _datacenterTempAuthActions[@(datacenterId)] = authAction;
             [authAction execute:self datacenterId:datacenterId isCdn:false];
@@ -1354,6 +1366,39 @@ static int32_t fixedTimeDifferenceValue = 0;
             if ([authInfo authSaltForMessageId:saltsRequiredAtLeastUntilMessageId == 0]) {
             }
         }];
+    }];
+}
+
+- (void)checkIfLoggedOut:(NSInteger)datacenterId {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        MTDatacenterAuthInfo *authInfo = [self authInfoForDatacenterWithId:datacenterId];
+        if (authInfo == nil || authInfo.authKey == nil) {
+            return;
+        }
+        
+        int32_t timestamp = (int32_t)CFAbsoluteTimeGetCurrent();
+        NSNumber *currentTimestamp = _datacenterCheckKeyRemovedActionTimestamps[@(datacenterId)];
+        if (currentTimestamp == nil || [currentTimestamp intValue] + 60 < timestamp) {
+            _datacenterCheckKeyRemovedActionTimestamps[@(datacenterId)] = currentTimestamp;
+            [_datacenterCheckKeyRemovedActions[@(datacenterId)] dispose];
+            __weak MTContext *weakSelf = self;
+            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:authInfo.authKey] startWithNext:^(NSNumber *isRemoved) {
+                [[MTContext contextQueue] dispatchOnQueue:^{
+                    __strong MTContext *strongSelf = weakSelf;
+                    if (strongSelf == nil) {
+                        return;
+                    }
+                    
+                    if ([isRemoved boolValue]) {
+                        NSArray *currentListeners = [[NSArray alloc] initWithArray:strongSelf->_changeListeners];
+                        for (id<MTContextChangeListener> listener in currentListeners) {
+                            if ([listener respondsToSelector:@selector(contextLoggedOut:)])
+                                [listener contextLoggedOut:self];
+                        }
+                    }
+                }];
+            }];
+        }
     }];
 }
 

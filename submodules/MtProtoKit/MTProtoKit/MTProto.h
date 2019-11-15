@@ -37,6 +37,9 @@
 @property (nonatomic, strong, readonly) MTContext *context;
 @property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
 @property (nonatomic) NSInteger datacenterId;
+@property (nonatomic, strong) MTDatacenterAuthKey *useExplicitAuthKey;
+
+@property (nonatomic, copy) void (^tempAuthKeyBindingResultUpdated)(bool);
 
 @property (nonatomic) bool shouldStayConnected;
 @property (nonatomic) bool useUnauthorizedMode;
