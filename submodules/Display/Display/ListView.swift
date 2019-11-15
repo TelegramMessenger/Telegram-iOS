@@ -426,10 +426,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         itemNode.isHidden = true
         
-        if strongSelf.reorderFeedback == nil {
-            strongSelf.reorderFeedback = HapticFeedback()
+        if self.reorderFeedback == nil {
+            self.reorderFeedback = HapticFeedback()
         }
-        strongSelf.reorderFeedback?.impact()
+        self.reorderFeedback?.impact()
     }
     
     private func endReordering() {
