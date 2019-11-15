@@ -5,7 +5,7 @@ import TelegramApi
 import SyncCore
 
 extension ReactionsMessageAttribute {
-    /*func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
+    func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results):
             let min = (flags & (1 << 0)) != 0
@@ -33,7 +33,7 @@ extension ReactionsMessageAttribute {
             }
             return ReactionsMessageAttribute(reactions: reactions)
         }
-    }*/
+    }
 }
 
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
@@ -86,7 +86,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
     }
 }
 
-/*extension ReactionsMessageAttribute {
+extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
         case let .messageReactions(_, results):
@@ -98,4 +98,4 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
             })
         }
     }
-}*/
+}
