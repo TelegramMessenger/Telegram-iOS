@@ -198,6 +198,7 @@ framework(
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
         "//submodules/UrlWhitelist:UrlWhitelist",
         "//submodules/AppIntents:AppIntents",
+        "//submodules/SemanticStatusNode:SemanticStatusNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

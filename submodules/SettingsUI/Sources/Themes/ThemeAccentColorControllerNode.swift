@@ -144,7 +144,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true) ?? defaultPresentationTheme
             
             let wallpaper = context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
-            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
+            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper)
             
             return theme
         }

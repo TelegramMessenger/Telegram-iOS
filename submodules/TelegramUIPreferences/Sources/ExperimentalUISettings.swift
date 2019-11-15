@@ -8,20 +8,18 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var crashOnLongQueries: Bool
     public var chatListPhotos: Bool
     public var knockoutWallpaper: Bool
-    public var gradientBubbles: Bool
     public var wallets: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
-        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, knockoutWallpaper: false, gradientBubbles: false, wallets: false)
+        return ExperimentalUISettings(keepChatNavigationStack: false, skipReadHistory: false, crashOnLongQueries: false, chatListPhotos: false, knockoutWallpaper: false, wallets: false)
     }
     
-    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, knockoutWallpaper: Bool, gradientBubbles: Bool, wallets: Bool) {
+    public init(keepChatNavigationStack: Bool, skipReadHistory: Bool, crashOnLongQueries: Bool, chatListPhotos: Bool, knockoutWallpaper: Bool, wallets: Bool) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
         self.crashOnLongQueries = crashOnLongQueries
         self.chatListPhotos = chatListPhotos
         self.knockoutWallpaper = knockoutWallpaper
-        self.gradientBubbles = gradientBubbles
         self.wallets = wallets
     }
     
@@ -31,7 +29,6 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.crashOnLongQueries = decoder.decodeInt32ForKey("crashOnLongQueries", orElse: 0) != 0
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
         self.knockoutWallpaper = decoder.decodeInt32ForKey("knockoutWallpaper", orElse: 0) != 0
-        self.gradientBubbles = decoder.decodeInt32ForKey("gradientBubbles", orElse: 0) != 0
         self.wallets = decoder.decodeInt32ForKey("wallets", orElse: 0) != 0
     }
     
@@ -41,7 +38,6 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.crashOnLongQueries ? 1 : 0, forKey: "crashOnLongQueries")
         encoder.encodeInt32(self.chatListPhotos ? 1 : 0, forKey: "chatListPhotos")
         encoder.encodeInt32(self.knockoutWallpaper ? 1 : 0, forKey: "knockoutWallpaper")
-        encoder.encodeInt32(self.gradientBubbles ? 1 : 0, forKey: "gradientBubbles")
         encoder.encodeInt32(self.wallets ? 1 : 0, forKey: "wallets")
     }
     
