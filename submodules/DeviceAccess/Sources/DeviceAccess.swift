@@ -282,24 +282,26 @@ public final class DeviceAccess {
                         completion(true)
                     } else {
                         AVAudioSession.sharedInstance().requestRecordPermission({ granted in
-                            if granted {
-                                completion(true)
-                            } else if let presentationData = presentationData {
-                                completion(false)
-                                let text: String
-                                switch microphoneSubject {
-                                    case .audio:
-                                        text = presentationData.strings.AccessDenied_VoiceMicrophone
-                                    case .video:
-                                        text = presentationData.strings.AccessDenied_VideoMicrophone
-                                    case .voiceCall:
-                                        text = presentationData.strings.AccessDenied_CallMicrophone
-                                }
-                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                                    openSettings()
-                                })]), nil)
-                                if case .voiceCall = microphoneSubject {
-                                    displayNotificationFromBackground(text)
+                            Queue.mainQueue().async {
+                                if granted {
+                                    completion(true)
+                                } else if let presentationData = presentationData {
+                                    completion(false)
+                                    let text: String
+                                    switch microphoneSubject {
+                                        case .audio:
+                                            text = presentationData.strings.AccessDenied_VoiceMicrophone
+                                        case .video:
+                                            text = presentationData.strings.AccessDenied_VideoMicrophone
+                                        case .voiceCall:
+                                            text = presentationData.strings.AccessDenied_CallMicrophone
+                                    }
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                                    if case .voiceCall = microphoneSubject {
+                                        displayNotificationFromBackground(text)
+                                    }
                                 }
                             }
                         })
