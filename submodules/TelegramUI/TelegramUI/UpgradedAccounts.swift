@@ -158,7 +158,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                                 
                                 if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key] as? PresentationThemeSettings {
                                     let mediaBox = MediaBox(basePath: path + "/postbox/media")
-                                    let wallpapers = [value.chatWallpaper] + Array(value.themeSpecificChatWallpapers.values)
+                                    let wallpapers = Array(value.themeSpecificChatWallpapers.values)
                                     for wallpaper in wallpapers {
                                         switch wallpaper {
                                             case let .file(file):

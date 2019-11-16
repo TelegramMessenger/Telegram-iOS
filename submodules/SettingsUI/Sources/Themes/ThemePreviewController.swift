@@ -289,17 +289,28 @@ public final class ThemePreviewController: ViewController {
                     return .single(theme)
             }
         }
-        |> mapToSignal { theme -> Signal<Void, NoError> in
-            if case let .cloud(info) = theme {
+        |> mapToSignal { updatedTheme -> Signal<Void, NoError> in
+            if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
             return context.sharedContext.accountManager.transaction { transaction -> Void in
+                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+                
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                    themeSpecificChatWallpapers[theme.index] = nil
-                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    themeSpecificChatWallpapers[updatedTheme.index] = nil
+                    
+                    var theme = current.theme
+                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                    if autoNightModeTriggered {
+                        automaticThemeSwitchSetting.theme = updatedTheme
+                    } else {
+                        theme = updatedTheme
+                    }
+                    
+                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 })
             }
         }

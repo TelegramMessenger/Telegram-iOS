@@ -464,11 +464,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                     context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                                 }
                                                 let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
-                                                var chatWallpaper = current.chatWallpaper
-                                                if let theme = theme {
-                                                    chatWallpaper = resolvedWallpaper ?? theme.chat.defaultWallpaper
-                                                }
-                                                return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                                
+                                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                                themeSpecificChatWallpapers[themeReference.index] = nil
+
+                                                return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                             })
                                         } |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
@@ -505,11 +505,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                 context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                             }
                                             let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
-                                            var chatWallpaper = current.chatWallpaper
-                                            if let theme = theme {
-                                                chatWallpaper = resolvedWallpaper ?? theme.chat.defaultWallpaper
-                                            }
-                                            return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                            
+                                            var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                            themeSpecificChatWallpapers[themeReference.index] = nil
+                                            
+                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         })
                                     } |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {

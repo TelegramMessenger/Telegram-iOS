@@ -181,13 +181,9 @@ final class ThemeGridController: ViewController {
                         if wallpaper == strongSelf.presentationData.chatWallpaper {
                             let presentationData = strongSelf.presentationData
                             let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                var fallbackWallpaper = presentationData.theme.chat.defaultWallpaper
-                                if case let .cloud(info) = current.theme, let resolvedWallpaper = info.resolvedWallpaper {
-                                    fallbackWallpaper = resolvedWallpaper
-                                }
                                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                 themeSpecificChatWallpapers[current.theme.index] = nil
-                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                             })).start()
                             break
                         }
@@ -245,13 +241,9 @@ final class ThemeGridController: ViewController {
                                         } else {
                                             current = PresentationThemeSettings.defaultSettings
                                         }
-                                        var fallbackWallpaper = presentationData.theme.chat.defaultWallpaper
-                                        if case let .cloud(info) = current.theme, let resolvedWallpaper = info.resolvedWallpaper {
-                                            fallbackWallpaper = resolvedWallpaper
-                                        }
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[current.theme.index] = nil
-                                        return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })
                                 }).start()
                                 

@@ -144,6 +144,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
     }
     
     public var selectedIndexChanged: (Int) -> Void = { _ in }
+    public var selectedIndexShouldChange: (Int) -> Bool = { _ in return true }
     
     public init(theme: SegmentedControlTheme, items: [SegmentedControlItem], selectedIndex: Int) {
         self.theme = theme
@@ -347,6 +348,10 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             return
         }
         
+        guard self.selectedIndexShouldChange(index) else {
+            return
+        }
+        
         self._selectedIndex = index
         self.selectedIndexChanged(index)
         if let layout = self.validLayout {
@@ -355,8 +360,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let location = gestureRecognizer.location(in: self.view)
-        return self.selectionNode.frame.contains(location)
+        return self.selectionNode.frame.contains(gestureRecognizer.location(in: self.view))
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -382,8 +386,14 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             case .ended:
                 if let gestureSelectedIndex = self.gestureSelectedIndex {
                     if gestureSelectedIndex != self.selectedIndex  {
-                        self._selectedIndex = gestureSelectedIndex
-                        self.selectedIndexChanged(self._selectedIndex)
+                        if self.selectedIndexShouldChange(gestureSelectedIndex) {
+                            self._selectedIndex = gestureSelectedIndex
+                            self.selectedIndexChanged(self._selectedIndex)
+                        } else {
+                            if let layout = self.validLayout {
+                                let _ = self.updateLayout(layout, transition: .animated(duration: 0.35, curve: .slide))
+                            }
+                        }
                     }
                     self.gestureSelectedIndex = nil
                 }

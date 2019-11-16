@@ -228,11 +228,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         
         let contactSettings: ContactSynchronizationSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings) ?? ContactSynchronizationSettings.defaultSettings
         
-        let themeValue: PresentationTheme
-        
         let effectiveTheme: PresentationThemeReference
-        var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
-        
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         let autoNightModeTriggered: Bool
         if automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle) {
@@ -244,16 +240,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-        themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue) ?? defaultPresentationTheme
-        
-        if effectiveTheme != themeSettings.theme {
-            switch effectiveChatWallpaper {
-                case .builtin, .color:
-                    effectiveChatWallpaper = themeValue.chat.defaultWallpaper
-                default:
-                    break
-            }
-        }
+        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue) ?? defaultPresentationTheme
+        let effectiveChatWallpaper: TelegramWallpaper = themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] ?? theme.chat.defaultWallpaper
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
@@ -264,7 +252,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -371,17 +359,21 @@ private func serviceColor(for data: Signal<MediaResourceData, NoError>) -> Signa
     }
 }
 
+public func averageColor(from image: UIImage) -> UIColor {
+    let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)
+    context.withFlippedContext({ context in
+        if let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+        }
+    })
+    return context.colorAt(CGPoint())
+}
+
 public func serviceColor(from image: Signal<UIImage?, NoError>) -> Signal<UIColor, NoError> {
     return image
     |> mapToSignal { image -> Signal<UIColor, NoError> in
         if let image = image {
-            let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)
-            context.withFlippedContext({ context in
-                if let cgImage = image.cgImage {
-                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
-                }
-            })
-            return .single(serviceColor(with: context.colorAt(CGPoint())))
+            return .single(serviceColor(with: averageColor(from: image)))
         }
         return .complete()
     }
@@ -414,6 +406,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             return .single(UIColor(rgb: 0x748391, alpha: 0.45))
         case let .color(color):
             return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
+        case let .gradient(topColor, bottomColor):
+            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            return .single(serviceColor(with: mixedColor))
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
                 return Signal<UIColor, NoError> { subscriber in
@@ -476,10 +471,11 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index] {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            currentWallpaper = themeSettings.chatWallpaper
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil) ?? defaultPresentationTheme
+            currentWallpaper = theme.chat.defaultWallpaper
         }
         
-        return (.single(UIColor(rgb: 0x000000, alpha: 0.3))
+        return (.single(defaultServiceBackgroundColor)
         |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)))
         |> mapToSignal { serviceBackgroundColor in
             return applicationInForeground

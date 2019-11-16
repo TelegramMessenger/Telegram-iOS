@@ -99,7 +99,12 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         self.backgroundNode.isHidden = false
                         self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                     }
-                
+                case let .gradient(topColor, bottomColor):
+                    self.imageNode.isHidden = false
+                    self.backgroundNode.isHidden = true
+                    self.imageNode.setSignal(gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))]))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    apply()
                 case let .image(representations, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
@@ -144,7 +149,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
             }
         } else if let wallpaper = self.wallpaper {
             switch wallpaper {
-                case .builtin, .color:
+                case .builtin, .color, .gradient:
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .image(representations, _):

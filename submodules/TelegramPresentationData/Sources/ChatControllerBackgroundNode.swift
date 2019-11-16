@@ -41,6 +41,16 @@ public func chatControllerBackgroundImage(theme: PresentationTheme, wallpaper in
                     context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
+            case let .gradient(topColor, bottomColor):
+                backgroundImage = generateImage(CGSize(width: 1.0, height: 1280.0), rotatedContext: { size, context in
+                    let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)).cgColor, UIColor(rgb: UInt32(bitPattern: bottomColor)).cgColor] as CFArray
+                       
+                    var locations: [CGFloat] = [0.0, 1.0]
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                })
             case let .image(representations, settings):
                 if let largest = largestImageRepresentation(representations) {
                     if settings.blur && composed {

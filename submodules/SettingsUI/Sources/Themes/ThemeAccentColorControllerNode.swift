@@ -25,12 +25,41 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 80.0), options: CGGradientDrawingOptions())
     })
 }
+ 
+enum ThemeColorSection: Int {
+    case accent
+    case background
+    case messages
+}
+
+struct ThemeColorState {
+    fileprivate var section: ThemeColorSection?
+    var accentColor: UIColor
+    var backgroundColors: (UIColor, UIColor?)?
+    var messagesColors: (UIColor, UIColor?)?
+    
+    init() {
+        self.section = nil
+        self.accentColor = .clear
+        self.backgroundColors = nil
+        self.messagesColors = nil
+    }
+    
+    init(section: ThemeColorSection, accentColor: UIColor, backgroundColors: (UIColor, UIColor?)?, messagesColors: (UIColor, UIColor?)?) {
+        self.section = section
+        self.accentColor = accentColor
+        self.backgroundColors = backgroundColors
+        self.messagesColors = messagesColors
+    }
+}
 
 final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
     private let currentTheme: PresentationThemeReference
     private var presentationData: PresentationData
+    
+    private var state: ThemeColorState
     
     private let referenceTimestamp: Int32
     
@@ -51,20 +80,20 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
     private var serviceColorDisposable: Disposable?
-    private var colorDisposable: Disposable?
-    private let colorValue = ValuePromise<UIColor>(ignoreRepeated: true)
+    private var colorsDisposable: Disposable?
+    private let colors = Promise<(UIColor, (UIColor, UIColor?)?, (UIColor, UIColor?)?)>()
+    
+    private let themePromise = Promise<PresentationTheme>()
     
     var themeUpdated: ((PresentationTheme) -> Void)?
-    var color: UInt32 {
-        return self.colorPanelNode.color.rgb
-    }
     
-    init(context: AccountContext, currentTheme: PresentationThemeReference, color: UIColor, theme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    init(context: AccountContext, currentTheme: PresentationThemeReference, theme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState) -> Void) {
         self.context = context
         self.currentTheme = currentTheme
+        self.state = ThemeColorState()
+        
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme
-        self.colorValue.set(color)
         
         let calendar = Calendar(identifier: .gregorian)
         var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: Date())
@@ -76,21 +105,20 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode = ASScrollNode()
         self.pageControlBackgroundNode = ASDisplayNode()
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.pageControlBackgroundNode.cornerRadius = 8.0
+        self.pageControlBackgroundNode.cornerRadius = 10.5
         
-        self.pageControlNode = PageControlNode(dotColor: self.theme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: self.presentationData.theme.list.pageIndicatorInactiveColor)
+        self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
         
         self.chatListBackgroundNode = ASDisplayNode()
         self.chatBackgroundNode = WallpaperBackgroundNode()
         self.chatBackgroundNode.displaysAsynchronously = false
         if case .color = self.presentationData.chatWallpaper {
         } else {
-            self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+            self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
             self.chatBackgroundNode.motionEnabled = self.presentationData.chatWallpaper.settings?.motion ?? false
         }
         
         self.colorPanelNode = WallpaperColorPanelNode(theme: self.theme, strings: self.presentationData.strings)
-        self.colorPanelNode.color = color
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings)
         
         self.maskNode = ASImageNode()
@@ -105,12 +133,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         })
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-        
         self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        
-        if case let .color(value) = self.presentationData.theme.chat.defaultWallpaper {
-            self.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-        }
         
         self.pageControlNode.isUserInteractionEnabled = false
         self.pageControlNode.pagesCount = 2
@@ -125,67 +148,100 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
         self.scrollNode.addSubnode(self.chatBackgroundNode)
         
-        self.colorPanelNode.colorChanged = { [weak self] color, ended in
-            if let strongSelf = self {
-                strongSelf.colorValue.set(color)
+        self.colorPanelNode.colorsChanged = { [weak self] firstColor, secondColor, _ in
+            if let strongSelf = self, let section = strongSelf.state.section {
+                switch section {
+                    case .accent:
+                        strongSelf.updateState({ current in
+                            var updated = current
+                            updated.accentColor = firstColor
+                            return updated
+                        })
+                    case .background:
+                        strongSelf.updateState({ current in
+                            var updated = current
+                            updated.backgroundColors = (firstColor, secondColor)
+                            return updated
+                        })
+                    case .messages:
+                        strongSelf.updateState({ current in
+                            var updated = current
+                            updated.messagesColors = (firstColor, secondColor)
+                            return updated
+                        })
+                }
             }
         }
         
         self.toolbarNode.cancel = {
             dismiss()
         }
-        self.toolbarNode.done = {
-            apply()
+        self.toolbarNode.done = { [weak self] in
+            if let strongSelf = self {
+                apply(strongSelf.state)
+            }
         }
         
-        self.colorDisposable = (self.colorValue.get()
+        self.colorsDisposable = (self.colors.get()
         |> deliverOn(Queue.concurrentDefaultQueue())
-        |> map { color -> PresentationTheme in
-            let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true) ?? defaultPresentationTheme
+        |> map { accentColor, backgroundColors, messagesColors -> (PresentationTheme, TelegramWallpaper?) in
+            let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true) ?? defaultPresentationTheme
             
-            let wallpaper = context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
+            var wallpaper = context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
+            if let backgroundColors = backgroundColors {
+                if let bottomColor = backgroundColors.1 {
+                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb))
+                } else {
+                    wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+                }
+            }
             let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
             
-            return theme
+            return (theme, wallpaper)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] theme in
-            if let strongSelf = self {
-                strongSelf.theme = theme
-                strongSelf.themeUpdated?(theme)
-                
-                strongSelf.colorPanelNode.updateTheme(theme)
-                strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
-                strongSelf.maskNode.image = generateMaskImage(color: theme.chatList.backgroundColor)
-                
-                if case let .color(value) = theme.chat.defaultWallpaper {
-                    strongSelf.backgroundColor  = UIColor(rgb: UInt32(bitPattern: value))
-                    strongSelf.chatListBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-                    strongSelf.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-                }
-        
-                if let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
-                    strongSelf.pageControlNode.dotColor = theme.chatList.unreadBadgeActiveBackgroundColor
-                    strongSelf.pageControlNode.inactiveDotColor = theme.list.pageIndicatorInactiveColor
-                    strongSelf.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: .immediate)
-                    strongSelf.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: .immediate)
-                }
+        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaper in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.theme = theme
+            strongSelf.themeUpdated?(theme)
+            strongSelf.themePromise.set(.single(theme))
+            
+            strongSelf.colorPanelNode.updateTheme(theme)
+            strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
+            strongSelf.maskNode.image = generateMaskImage(color: theme.chatList.backgroundColor)
+            
+            if case let .color(value) = theme.chat.defaultWallpaper {
+                strongSelf.backgroundColor  = UIColor(rgb: UInt32(bitPattern: value))
+                strongSelf.chatListBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+                strongSelf.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+            }
+    
+            if let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
+                strongSelf.pageControlNode.dotColor = UIColor.white
+                strongSelf.pageControlNode.inactiveDotColor = UIColor.white.withAlphaComponent(0.4)
+                strongSelf.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: .immediate)
+                strongSelf.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: .immediate)
             }
         })
         
-        self.serviceColorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+        self.serviceColorDisposable = (self.themePromise.get()
+        |> mapToSignal { theme -> Signal<UIColor, NoError> in
+            return chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+        }
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
-                if strongSelf.presentationData.chatWallpaper.hasWallpaper {
+                //if strongSelf.presentationData.chatWallpaper.hasWallpaper {
                     strongSelf.pageControlBackgroundNode.backgroundColor = color
-                } else {
-                    strongSelf.pageControlBackgroundNode.backgroundColor = .clear
-                }
+                //} else {
+                //    strongSelf.pageControlBackgroundNode.backgroundColor = .clear
+                //}
             }
         })
     }
     
     deinit {
-        self.colorDisposable?.dispose()
+        self.colorsDisposable?.dispose()
         self.serviceColorDisposable?.dispose()
     }
     
@@ -205,6 +261,48 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if !bounds.width.isZero {
             self.pageControlNode.setPage(scrollView.contentOffset.x / bounds.width)
         }
+    }
+    
+    func updateState(_ f: (ThemeColorState) -> ThemeColorState, animated: Bool = false) {
+        let previousState = self.state
+        self.state = f(self.state)
+    
+        let colorsChanged = previousState.accentColor != self.state.accentColor
+        if colorsChanged {
+            self.colors.set(.single((self.state.accentColor, self.state.backgroundColors, self.state.messagesColors)))
+        }
+        
+        let sectionChanged = previousState.section != self.state.section
+        if sectionChanged, let section = self.state.section {
+            let firstColor: UIColor
+            let secondColor: UIColor?
+            switch section {
+                case .accent:
+                    firstColor = self.state.accentColor ?? .white
+                    secondColor = nil
+                case .background:
+                    firstColor = self.state.backgroundColors?.0 ?? .white
+                    secondColor = self.state.backgroundColors?.1 ?? .white
+                case .messages:
+                    firstColor = self.state.messagesColors?.0 ?? .blue
+                    secondColor = self.state.messagesColors?.1 ?? .blue
+            }
+            let colorPanelState = WallpaperColorPanelNodeState(selection: .first, firstColor: firstColor, firstColorRemovable: self.state.section == .messages, secondColor: secondColor, secondColorAvailable: self.state.section != .accent)
+            self.colorPanelNode.updateState({ _ in
+                return colorPanelState
+            }, animated: animated)
+            if let (layout, navigationBarHeight, _) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+            }
+        }
+    }
+    
+    func updateSection(_ section: ThemeColorSection) {
+        self.updateState({ current in
+            var updated = current
+            updated.section = section
+            return updated
+        }, animated: true)
     }
     
     private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -361,6 +459,21 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         
+        var pageControlAlpha: CGFloat = 1.0
+        if self.state.section != .accent {
+            pageControlAlpha = 0.0
+        }
+        self.scrollNode.view.isScrollEnabled = pageControlAlpha > 0.0
+        
+        var messagesTransition = transition
+        if !self.scrollNode.view.isScrollEnabled && self.scrollNode.view.contentOffset.x > 0.0 {
+            var bounds = self.scrollNode.bounds
+            bounds.origin.x = 0.0
+            transition.updateBounds(node: scrollNode, bounds: bounds)
+            messagesTransition = .immediate
+            self.pageControlNode.setPage(0.0)
+        }
+        
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
@@ -373,17 +486,22 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
         self.colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
         
-        let messagesBottomInset = bottomInset + 36.0
+        var messagesBottomInset = bottomInset
+        if pageControlAlpha > 0.0 {
+            messagesBottomInset += 37.0
+        }
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
-        self.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: transition)
+        self.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: messagesTransition)
         
         self.validLayout = (layout, navigationBarHeight, messagesBottomInset)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - bottomInset - 27.0), size: pageControlSize)
+        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - bottomInset - 28.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
-        self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 11.0, y: pageControlFrame.minY - 12.0, width: pageControlFrame.width + 22.0, height: 30.0)
+        self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         
+        transition.updateAlpha(node: self.pageControlNode, alpha: pageControlAlpha)
+        transition.updateAlpha(node: self.pageControlBackgroundNode, alpha: pageControlAlpha)
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - bottomInset - 80.0, width: bounds.width, height: 80.0))
     }
 }

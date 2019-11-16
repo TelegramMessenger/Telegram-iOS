@@ -18,7 +18,7 @@ private let shadowImage: UIImage = {
 }()
 
 private let pointerImage: UIImage = {
-    return generateImage(CGSize(width: 12.0, height: 42.0), opaque: false, scale: nil, rotatedContext: { size, context in
+    return generateImage(CGSize(width: 12.0, height: 55.0), opaque: false, scale: nil, rotatedContext: { size, context in
         context.setBlendMode(.clear)
         context.setFillColor(UIColor.clear.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
@@ -29,8 +29,9 @@ private let pointerImage: UIImage = {
         context.setStrokeColor(UIColor.white.cgColor)
         context.setLineWidth(lineWidth)
         context.setLineCap(.round)
+        context.setLineJoin(.round)
         
-        let pointerHeight: CGFloat = 6.0
+        let pointerHeight: CGFloat = 7.0
         context.move(to: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width - lineWidth / 2.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width / 2.0, y: lineWidth / 2.0 + pointerHeight))
@@ -100,7 +101,7 @@ private final class WallpaperColorKnobNode: ASDisplayNode {
         let color = UIColor(hue: parameters.hue, saturation: parameters.saturation, brightness: parameters.value, alpha: 1.0)
         context.setFillColor(color.cgColor)
         
-        let borderWidth: CGFloat = bounds.width > 30.0 ? 5.0 : 5.0
+        let borderWidth: CGFloat = 7.0
         context.fillEllipse(in: bounds.insetBy(dx: borderWidth - UIScreenPixel, dy: borderWidth - UIScreenPixel))
     }
 }
@@ -265,11 +266,11 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.colorKnobNode.hsv = self.colorHSV
     }
     
-    func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
+    private func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
         let knobSize = CGSize(width: 45.0, height: 45.0)
         
         let colorHeight = size.height - 66.0
-        var colorKnobFrame = CGRect(x: -knobSize.width / 2.0 + size.width * self.colorHSV.0, y: -knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHSV.1)), width: knobSize.width, height: knobSize.height)
+        var colorKnobFrame = CGRect(x: floorToScreenPixels(-knobSize.width / 2.0 + size.width * self.colorHSV.0), y: floorToScreenPixels(-knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHSV.1))), width: knobSize.width, height: knobSize.height)
         var origin = colorKnobFrame.origin
         if !panningColor {
             origin = CGPoint(x: max(0.0, min(origin.x, size.width - knobSize.width)), y: max(0.0, min(origin.y, colorHeight - knobSize.height)))
@@ -280,8 +281,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         transition.updateFrame(node: self.colorKnobNode, frame: colorKnobFrame)
         
         let inset: CGFloat = 42.0
-        let brightnessKnobSize = CGSize(width: 12.0, height: 42.0)
-        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHSV.2), y: size.height - 61.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
+        let brightnessKnobSize = CGSize(width: 12.0, height: 55.0)
+        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHSV.2), y: size.height - 65.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
         transition.updateFrame(node: self.brightnessKnobNode, frame: brightnessKnobFrame)
     }
     
@@ -291,8 +292,8 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         let colorHeight = size.height - 66.0
         transition.updateFrame(node: self.colorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: colorHeight))
         
-        let inset: CGFloat = 42.0
-        transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 29.0))
+        let inset: CGFloat = 15.0
+        transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 35.0))
         
         self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
     }

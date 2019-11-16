@@ -131,25 +131,15 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         current = PresentationThemeSettings.defaultSettings
                                     }
                                     
-                                    var chatWallpaper = current.chatWallpaper
+                                    var theme = current.theme
                                     var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                                     if isAutoNight {
                                         automaticThemeSwitchSetting.theme = updatedTheme
                                     } else {
-                                        if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
-                                            chatWallpaper = themeSpecificWallpaper
-                                        } else if let presentationTheme = presentationTheme {
-                                            if case let .cloud(info) = updatedTheme, let resolvedWallpaper = info.resolvedWallpaper {
-                                                chatWallpaper = resolvedWallpaper
-                                            } else {
-                                                chatWallpaper = presentationTheme.chat.defaultWallpaper
-                                            }
-                                        } else {
-                                            chatWallpaper = current.chatWallpaper
-                                        }
+                                        theme = updatedTheme
                                     }
                                     
-                                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 })
                             }).start()
                         }

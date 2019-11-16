@@ -475,13 +475,47 @@ public func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool
     return .black
 }
 
-public func solidColor(_ color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func solidColorImage(_ color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         
         context.withFlippedContext { c in
             c.setFillColor(color.cgColor)
             c.fill(arguments.drawingRect)
+        }
+        
+        addCorners(context, arguments: arguments)
+        
+        return context
+    })
+}
+
+public func gradientImage(_ colors: [UIColor]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    guard !colors.isEmpty else {
+        return .complete()
+    }
+    guard colors.count > 1 else {
+        if let color = colors.first {
+            return solidColorImage(color)
+        } else {
+            return .complete()
+        }
+    }
+    return .single({ arguments in
+        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        
+        context.withFlippedContext { c in
+            let gradientColors = colors as CFArray
+            let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
+            
+            var locations: [CGFloat] = []
+            for i in 0 ..< colors.count {
+                locations.append(delta * CGFloat(i))
+            }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
         }
         
         addCorners(context, arguments: arguments)
@@ -961,6 +995,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             backgroundColor = UIColor(rgb: 0xd6e2ee)
                         case let .color(color):
                             backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        case let .gradient(topColor, bottomColor):
+                            backgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
                         case .image:
                             backgroundColor = .black
                         case let .file(file):

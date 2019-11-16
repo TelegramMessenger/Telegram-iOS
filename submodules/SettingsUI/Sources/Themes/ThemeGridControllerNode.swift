@@ -30,6 +30,12 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
             } else {
                 return false
             }
+        case let .gradient(topColor, bottomColor):
+            if case .gradient(topColor, bottomColor) = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .image(representations, _):
             if case .image(representations, _) = rhs {
                 return true
@@ -103,14 +109,18 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
                 return 0
             case let .color(color):
                 return (Int64(1) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+            case let .gradient(topColor, bottomColor):
+                var hash: UInt32 = UInt32(bitPattern: topColor)
+                hash = hash &* 31 &+ UInt32(bitPattern: bottomColor)
+                return (Int64(2) << 32) | Int64(hash)
             case let .file(id, _, _, _, _, _, _, _, settings):
                 var hash: Int = id.hashValue
                 hash = hash &* 31 &+ (settings.color?.hashValue ?? 0)
                 hash = hash &* 31 &+ (settings.intensity?.hashValue ?? 0)
-                return (Int64(2) << 32) | Int64(hash)
+                return (Int64(3) << 32) | Int64(hash)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
-                    return (Int64(3) << 32) | Int64(largest.resource.id.hashValue)
+                    return (Int64(4) << 32) | Int64(largest.resource.id.hashValue)
                 } else {
                     return 0
                 }

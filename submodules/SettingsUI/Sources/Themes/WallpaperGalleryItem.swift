@@ -226,14 +226,23 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            signal = solidColor(UIColor(rgb: UInt32(bitPattern: color)))
+                            signal = solidColorImage(UIColor(rgb: UInt32(bitPattern: color)))
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                            //self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        case let .gradient(topColor, bottomColor):
+                            displaySize = CGSize(width: 1.0, height: 1.0)
+                            contentSize = displaySize
+                            signal = gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))])
+                            fetchSignal = .complete()
+                            statusSignal = .single(.Local)
+                            subtitleSignal = .single(nil)
+                            actionSignal = .single(defaultAction)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
+                            isBlurrable = false
                         case let .file(file):
                             let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                             contentSize = dimensions.cgSize
@@ -715,6 +724,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
+                        case .gradient:
+                            blurAlpha = 0.0
+                            patternAlpha = 0.0
+                            motionAlpha = 0.0
                         case let .file(file):
                             if file.isPattern {
                                 motionAlpha = 1.0

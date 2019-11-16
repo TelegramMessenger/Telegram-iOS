@@ -119,7 +119,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                 if strongSelf.currentPresentationData?.theme.name == presentationData.theme.name {
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
                                         let updatedWallpaper: TelegramWallpaper
-                                        if let currentSettings = current.chatWallpaper.settings {
+                                        if let currentSettings = currentWallpaper.settings {
                                             updatedWallpaper = wallpaper.withUpdatedSettings(currentSettings)
                                         } else {
                                             updatedWallpaper = wallpaper
@@ -127,7 +127,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                         
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[current.theme.index] = updatedWallpaper
-                                        return PresentationThemeSettings(chatWallpaper: updatedWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })).start()
                                 }
                             }

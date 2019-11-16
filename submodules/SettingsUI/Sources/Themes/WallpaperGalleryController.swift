@@ -341,13 +341,13 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.addSubnode(overlayNode)
         
         let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
-        colorPanelNode.colorChanged = { [weak self] color, ended in
+        colorPanelNode.colorsChanged = { [weak self] color, _, ended in
             if let strongSelf = self {
                 strongSelf.updateEntries(color: color, preview: !ended)
             }
         }
         if case let .customColor(colorValue) = self.source, let color = colorValue {
-            colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
+            //colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
         }
         self.colorPanelNode = colorPanelNode
         overlayNode.addSubnode(colorPanelNode)
@@ -387,15 +387,12 @@ public class WallpaperGalleryController: ViewController {
                                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        var chatWallpaper = current.chatWallpaper
                                         if autoNightModeTriggered {
                                             themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
                                         } else {
                                             themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                                            chatWallpaper = wallpaper
                                         }
-                                        
-                                        return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
                                     })

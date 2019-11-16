@@ -580,7 +580,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             }
                                         }
                                     case let .color(color):
-                                        return solidColor(color)
+                                        return solidColorImage(color)
                                 }
                             }
                             
