@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import Postbox
 import TelegramCore
 import SyncCore
@@ -138,3 +139,75 @@ public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Sign
     }
 }
 
+public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
+    return Signal<Data?, NoError> { subscriber in
+        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: MapSnapshotMediaResourceRepresentation(), complete: true).start(next: { next in
+            if next.size != 0 {
+                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            }
+        }, error: subscriber.putError, completed: subscriber.putCompletion)
+        
+        return ActionDisposable {
+            dataDisposable.dispose()
+        }
+    }
+}
+
+public func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMapSnapshotData(account: account, resource: resource)
+    
+    return signal |> map { fullSizeData in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            var fullSizeImage: CGImage?
+            var imageOrientation: UIImage.Orientation = .up
+            if let fullSizeData = fullSizeData {
+                let options = NSMutableDictionary()
+                options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                    fullSizeImage = image
+                }
+                
+                if let fullSizeImage = fullSizeImage {
+                    let drawingRect = arguments.drawingRect
+                    var fittedSize = CGSize(width: CGFloat(fullSizeImage.width), height: CGFloat(fullSizeImage.height)).aspectFilled(drawingRect.size)
+                    if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                        fittedSize.width = arguments.boundingSize.width
+                    }
+                    if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                        fittedSize.height = arguments.boundingSize.height
+                    }
+                    
+                    let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                    
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
+                            c.fill(arguments.drawingRect)
+                        }
+                        
+                        c.setBlendMode(.copy)
+                        
+                        c.interpolationQuality = .medium
+                        c.draw(fullSizeImage, in: fittedRect)
+                        
+                        c.setBlendMode(.normal)
+                    }
+                } else {
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
+                        c.fill(arguments.drawingRect)
+                        
+                        c.setBlendMode(.normal)
+                    }
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}

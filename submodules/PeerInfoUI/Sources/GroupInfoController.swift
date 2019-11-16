@@ -21,6 +21,7 @@ import AlertUI
 import PresentationDataUtils
 import MediaResources
 import PhotoResources
+import LocationResources
 import GalleryUI
 import LegacyUI
 import LocationUI

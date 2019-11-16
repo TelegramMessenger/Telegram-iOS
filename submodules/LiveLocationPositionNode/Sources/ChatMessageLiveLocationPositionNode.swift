@@ -7,6 +7,7 @@ import SyncCore
 import Postbox
 import TelegramPresentationData
 import AvatarNode
+import LocationResources
 import AppBundle
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
@@ -36,12 +37,31 @@ private func removePulseAnimations(layer: CALayer) {
     layer.removeAnimation(forKey: "pulse-opacity")
 }
 
+private func chatBubbleMapPinImage(_ theme: PresentationTheme, color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 62.0, height: 74.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let shadowImage = UIImage(bundleImageName: "Chat/Message/LocationPinShadow"), let cgImage = shadowImage.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(), size: shadowImage.size))
+        }
+        if let backgroundImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinBackground"), color: color), let cgImage = backgroundImage.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(), size: backgroundImage.size))
+        }
+    })
+}
+
 public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
+    public enum Mode {
+        case liveLocation(Peer, Bool)
+        case location(TelegramMediaMap?)
+    }
+    
     private let backgroundNode: ASImageNode
+    private let iconNode: TransformImageNode
     private let avatarNode: AvatarNode
     private let pulseNode: ASImageNode
     
     private var pulseImage: UIImage?
+    private var venueType: String?
     
     override public init() {
         let isLayerBacked = !smartInvertColorsEnabled()
@@ -50,6 +70,9 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
+        
+        self.iconNode = TransformImageNode()
+        self.iconNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = isLayerBacked
@@ -66,23 +89,32 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         
         self.addSubnode(self.pulseNode)
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.avatarNode)
     }
     
-    public func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ peer: Peer?, _ liveActive: Bool?) -> (CGSize, () -> Void) {
-        let currentPulseImage = self.pulseImage
+    public func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ mode: Mode) -> (CGSize, () -> Void) {
+        let iconLayout = self.iconNode.asyncLayout()
         
-        return { [weak self] account, theme, peer, liveActive in
+        let currentPulseImage = self.pulseImage
+        let currentVenueType = self.venueType
+        
+        return { [weak self] account, theme, mode in
+            var updatedVenueType: String?
+            
             let backgroundImage: UIImage?
             var hasPulse = false
-            if let _ = peer {
-                backgroundImage = avatarBackgroundImage
-                
-                if let liveActive = liveActive {
-                    hasPulse = liveActive
-                }
-            } else {
-                backgroundImage = PresentationResourcesChat.chatBubbleMapPinImage(theme)
+            switch mode {
+                case let .liveLocation(_, active):
+                    backgroundImage = avatarBackgroundImage
+                    hasPulse = active
+                case let .location(location):
+                    let venueType = location?.venue?.type ?? ""
+                    let color = venueType.isEmpty ? theme.list.itemAccentColor : venueIconColor(type: venueType)
+                    backgroundImage = chatBubbleMapPinImage(theme, color: color)
+                    if currentVenueType != venueType {
+                        updatedVenueType = venueType
+                    }
             }
             
             let pulseImage: UIImage?
@@ -99,18 +131,27 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 74.0))
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
-                    if let peer = peer {
-                        strongSelf.avatarNode.setPeer(account: account, theme: theme, peer: peer)
-                        strongSelf.avatarNode.isHidden = false
-                        
-                        if let liveActive = liveActive {
-                            strongSelf.avatarNode.alpha = liveActive ? 1.0 : 0.6
-                        } else {
-                            strongSelf.avatarNode.alpha = 1.0
-                        }
-                    } else {
-                        strongSelf.avatarNode.isHidden = true
+                    switch mode {
+                        case let .liveLocation(peer, active):
+                            strongSelf.avatarNode.setPeer(account: account, theme: theme, peer: peer)
+                            strongSelf.avatarNode.isHidden = false
+                            strongSelf.iconNode.isHidden = true
+                            strongSelf.avatarNode.alpha = active ? 1.0 : 0.6
+                        case let .location(location):
+                            strongSelf.iconNode.isHidden = false
+                            strongSelf.avatarNode.isHidden = true
                     }
+                    
+                    if let updatedVenueType = updatedVenueType {
+                        strongSelf.venueType = updatedVenueType
+                        strongSelf.iconNode.setSignal(venueIcon(postbox: account.postbox, type: updatedVenueType, background: false))
+                    }
+
+                    let iconSize = CGSize(width: 44.0, height: 44.0)
+                    let apply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets()))
+                    apply()
+                    
+                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: iconSize)
                     
                     strongSelf.pulseImage = pulseImage
                     strongSelf.pulseNode.image = pulseImage

@@ -1,7 +1,7 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
 static_library(
-    name = "InstantPageUI",
+    name = "ItemListVenueItem",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -12,14 +12,10 @@ static_library(
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
-    	"//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ItemListUI:ItemListUI",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/GalleryUI:GalleryUI",
-        "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
-        "//submodules/LiveLocationPositionNode:LiveLocationPositionNode",
-        "//submodules/MosaicLayout:MosaicLayout",
-        "//submodules/LocationUI:LocationUI",
-        "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/LocationResources:LocationResources",
     ],
     frameworks = [

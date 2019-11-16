@@ -15,6 +15,7 @@ import AlertUI
 import PresentationDataUtils
 import MediaResources
 import PhotoResources
+import LocationResources
 import LegacyUI
 import LocationUI
 import ItemListPeerItem
@@ -24,6 +25,7 @@ import Geocoding
 import PeerInfoUI
 import MapResourceToAvatarSizes
 import ItemListAddressItem
+import ItemListVenueItem
 
 private struct CreateGroupArguments {
     let account: Account
@@ -32,12 +34,14 @@ private struct CreateGroupArguments {
     let done: () -> Void
     let changeProfilePhoto: () -> Void
     let changeLocation: () -> Void
+    let updateWithVenue: (TelegramMediaMap) -> Void
 }
 
 private enum CreateGroupSection: Int32 {
     case info
     case members
     case location
+    case venues
 }
 
 private enum CreateGroupEntryTag: ItemListItemTag {
@@ -67,6 +71,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     case location(PresentationTheme, PeerGeoLocation)
     case changeLocation(PresentationTheme, String)
     case locationInfo(PresentationTheme, String)
+    case venueHeader(PresentationTheme, String)
+    case venue(Int32, PresentationTheme, TelegramMediaMap)
     
     var section: ItemListSectionId {
         switch self {
@@ -76,6 +82,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return CreateGroupSection.members.rawValue
             case .locationHeader, .location, .changeLocation, .locationInfo:
                 return CreateGroupSection.location.rawValue
+            case .venueHeader, .venue:
+                return CreateGroupSection.venues.rawValue
         }
     }
     
@@ -95,6 +103,10 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return 10002
             case .locationInfo:
                 return 10003
+            case .venueHeader:
+                return 10004
+            case let .venue(index, _, _):
+                return 10005 + index
         }
     }
     
@@ -189,6 +201,27 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .venueHeader(lhsTheme, lhsTitle):
+                if case let .venueHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
+                    return true
+                } else {
+                    return false
+                }
+            case let .venue(lhsIndex, lhsTheme, lhsVenue):
+                if case let .venue(rhsIndex, rhsTheme, rhsVenue) = rhs {
+                    if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if !lhsVenue.isEqual(to: rhsVenue) {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -200,9 +233,10 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
+                    arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -221,6 +255,12 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 }, clearHighlightAutomatically: false)
             case let .locationInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .venueHeader(theme, title):
+                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
+            case let .venue(_, theme, venue):
+                return ItemListVenueItem(theme: theme, account: arguments.account, venue: venue, sectionId: self.section, action: {
+                    arguments.updateWithVenue(venue)
+                })
         }
     }
 }
@@ -228,6 +268,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
 private struct CreateGroupState: Equatable {
     var creating: Bool
     var editingName: ItemListAvatarAndNameInfoItemName
+    var nameSetFromVenue: Bool
     var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     var location: PeerGeoLocation?
     
@@ -236,6 +277,9 @@ private struct CreateGroupState: Equatable {
             return false
         }
         if lhs.editingName != rhs.editingName {
+            return false
+        }
+        if lhs.nameSetFromVenue != rhs.nameSetFromVenue {
             return false
         }
         if lhs.avatar != rhs.avatar {
@@ -248,7 +292,7 @@ private struct CreateGroupState: Equatable {
     }
 }
 
-private func createGroupEntries(presentationData: PresentationData, state: CreateGroupState, peerIds: [PeerId], view: MultiplePeersView) -> [CreateGroupEntry] {
+private func createGroupEntries(presentationData: PresentationData, state: CreateGroupState, peerIds: [PeerId], view: MultiplePeersView, venues: [TelegramMediaMap]?) -> [CreateGroupEntry] {
     var entries: [CreateGroupEntry] = []
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
@@ -256,7 +300,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
-    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
+    //entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
     
     var peers: [Peer] = []
     for peerId in peerIds {
@@ -294,6 +338,21 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
         entries.append(.location(presentationData.theme, location))
         entries.append(.changeLocation(presentationData.theme, presentationData.strings.Group_Location_ChangeLocation))
         entries.append(.locationInfo(presentationData.theme, presentationData.strings.Group_Location_Info))
+        
+        entries.append(.venueHeader(presentationData.theme, presentationData.strings.Group_Location_CreateInThisPlace.uppercased()))
+        if let venues = venues {
+            if !venues.isEmpty {
+                var index: Int32 = 0
+                for venue in venues {
+                    entries.append(.venue(index, presentationData.theme, venue))
+                    index += 1
+                }
+            } else {
+                
+            }
+        } else {
+            
+        }
     }
     
     return entries
@@ -305,7 +364,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")
     }
     
-    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), avatar: nil, location: location)
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), nameSetFromVenue: false, avatar: nil, location: location)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -318,6 +377,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var pushImpl: ((ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
     var clearHighlightImpl: (() -> Void)?
+    var ensureItemVisibleImpl: ((CreateGroupEntryTag, Bool) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -326,6 +386,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
     let addressPromise = Promise<String?>(nil)
+    let venuesPromise = Promise<[TelegramMediaMap]?>(nil)
     if case let .locatedGroup(latitude, longitude, address) = mode {
         if let address = address {
             addressPromise.set(.single(address))
@@ -335,12 +396,42 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 return placemark?.fullAddress ?? "\(latitude), \(longitude)"
             })
         }
+        
+        venuesPromise.set(resolvePeerByName(account: context.account, name: "foursquare")
+        |> take(1)
+        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
+            guard let peerId = peerId else {
+                return .single(nil)
+            }
+            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((latitude, longitude)), offset: "")
+            |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+                return .single(nil)
+            }
+        }
+        |> map { contextResult -> [TelegramMediaMap] in
+            guard let contextResult = contextResult else {
+                return []
+            }
+            var list: [TelegramMediaMap] = []
+            for result in contextResult.results {
+                switch result.message {
+                    case let .mapLocation(mapMedia, _):
+                        if let _ = mapMedia.venue {
+                            list.append(mapMedia)
+                        }
+                    default:
+                        break
+                }
+            }
+            return list
+        } |> map(Optional.init))
     }
     
     let arguments = CreateGroupArguments(account: context.account, updateEditingName: { editingName in
         updateState { current in
             var current = current
             current.editingName = editingName
+            current.nameSetFromVenue = false
             return current
         }
     }, done: {
@@ -586,10 +677,24 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             clearHighlightImpl?()
         })
         pushImpl?(controller)
+    }, updateWithVenue: { venue in
+        guard let venueData = venue.venue else {
+            return
+        }
+        updateState { current in
+            var current = current
+            if current.editingName.isEmpty || current.nameSetFromVenue {
+                current.editingName = .title(title: venueData.title ?? "", type: .group)
+                current.nameSetFromVenue = true
+            }
+            current.location = PeerGeoLocation(latitude: venue.latitude, longitude: venue.longitude, address: venueData.address ?? "")
+            return current
+        }
+        ensureItemVisibleImpl?(.info, true)
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()))
-    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()), .single(nil) |> then(venuesPromise.get()))
+    |> map { presentationData, state, view, address, venues -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let rightNavigationButton: ItemListNavigationButton
         if state.creating {
@@ -601,7 +706,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
+        let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view, venues: venues), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
         
         return (controllerState, (listState, arguments))
     }
@@ -633,6 +738,29 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     }
     clearHighlightImpl = { [weak controller] in
         controller?.clearItemNodesHighlight(animated: true)
+    }
+    ensureItemVisibleImpl = { [weak controller] targetTag, animated in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let state = stateValue.with({ $0 })
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                        resultItemNode = itemNode as? ListViewItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode, animated: animated)
+            }
+        })
     }
     return controller
 }

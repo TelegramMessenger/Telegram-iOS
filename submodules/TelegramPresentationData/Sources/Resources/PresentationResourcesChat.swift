@@ -644,23 +644,6 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatBubbleMapPinImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleMapPinImage.rawValue, { theme in
-            return generateImage(CGSize(width: 62.0, height: 74.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                if let shadowImage = UIImage(bundleImageName: "Chat/Message/LocationPinShadow"), let cgImage = shadowImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(), size: shadowImage.size))
-                }
-                if let backgroundImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinBackground"), color: theme.list.itemAccentColor), let cgImage = backgroundImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(), size: backgroundImage.size))
-                }
-                if let foregroundImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinForeground"), color: theme.list.plainBackgroundColor), let cgImage = foregroundImage.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: 15.0, y: 26.0), size: foregroundImage.size))
-                }
-            })
-        })
-    }
-    
     public static func chatInputSearchPanelUpImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputSearchPanelUpImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/UpButton"), color: theme.chat.inputPanel.panelControlAccentColor)

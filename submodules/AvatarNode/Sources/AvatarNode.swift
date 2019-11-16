@@ -486,7 +486,7 @@ public final class AvatarNode: ASDisplayNode {
                 context.scaleBy(x: 1.0, y: -1.0)
                 context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                 
-                if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: theme.list.freeMonoIconColor) {
+                if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: theme.list.itemAccentColor) {
                     context.draw(editAvatarIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - editAvatarIcon.size.width) / 2.0), y: floor((bounds.size.height - editAvatarIcon.size.height) / 2.0)), size: editAvatarIcon.size))
                 }
             } else if case .archivedChatsIcon = parameters.icon {

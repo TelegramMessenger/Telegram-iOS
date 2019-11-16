@@ -83,7 +83,7 @@ private enum CallFeedbackControllerEntryTag: ItemListItemTag {
     case comment
     
     func isEqual(to other: ItemListItemTag) -> Bool {
-        if let other = other as? CallFeedbackControllerEntryTagv {
+        if let other = other as? CallFeedbackControllerEntryTag {
             return self == other
         } else {
             return false
@@ -322,7 +322,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
                 }
                 return false
             })
-    
+            
             if let resultItemNode = resultItemNode {
                 controller.ensureItemNodeVisible(resultItemNode, animated: animated)
             }

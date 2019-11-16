@@ -15,6 +15,7 @@ import AlertUI
 import PresentationDataUtils
 import PhotoResources
 import MediaResources
+import LocationResources
 import ItemListAvatarAndNameInfoItem
 import Geocoding
 import ItemListAddressItem

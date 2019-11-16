@@ -807,12 +807,12 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.addSubnode(inputSeparator)
                                     strongSelf.inputSeparator = inputSeparator
                                 }
-                                strongSelf.inputSeparator?.backgroundColor = itemSeparatorColor
+                                strongSelf.inputSeparator?.backgroundColor = .clear
                                 
                                 if strongSelf.inputFirstField == nil {
                                     let inputFirstField = TextFieldNodeView()
                                     inputFirstField.delegate = self
-                                    inputFirstField.font = Font.regular(17.0)
+                                    inputFirstField.font = Font.regular(19.0)
                                     inputFirstField.autocorrectionType = .no
                                     inputFirstField.attributedText = NSAttributedString(string: title, font: Font.regular(19.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputFirstField = inputFirstField
@@ -845,8 +845,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
                                 }
                                 
-                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 62.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
-                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 26.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 35.0))
+                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 64.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
+                                strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 28.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 35.0))
                                 
                                 if let image = strongSelf.inputFirstClearButton?.image(for: []), let inputFieldFrame = strongSelf.inputFirstField?.frame {
                                     strongSelf.inputFirstClearButton?.frame = CGRect(origin: CGPoint(x: inputFieldFrame.maxX, y: inputFieldFrame.minY + floor((inputFieldFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)

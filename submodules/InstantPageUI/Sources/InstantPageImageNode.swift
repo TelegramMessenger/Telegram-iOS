@@ -11,6 +11,7 @@ import AccountContext
 import RadialStatusNode
 import PhotoResources
 import MediaResources
+import LocationResources
 import LiveLocationPositionNode
 import AppBundle
 
@@ -230,7 +231,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 
                 let makePinLayout = self.pinNode.asyncLayout()
                 let theme = self.context.sharedContext.currentPresentationData.with { $0 }.theme
-                let (pinSize, pinApply) = makePinLayout(self.context.account, theme, nil, false)
+                let (pinSize, pinApply) = makePinLayout(self.context.account, theme, .location(nil))
                 self.pinNode.frame = CGRect(origin: CGPoint(x: floor((size.width - pinSize.width) / 2.0), y: floor(size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                 pinApply()
             } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let largest = largestImageRepresentation(image.representations) {

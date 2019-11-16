@@ -5106,3 +5106,11 @@ Any member of this group will be able to see messages in the channel.";
 "GroupInfo.ShowMoreMembers_any" = "%@ more";
 
 "ContactInfo.Note" = "note";
+
+"Group.Location.CreateInThisPlace" = "Create a group in this place";
+
+"Theme.Colors.Accent" = "Accent";
+"Theme.Colors.Background" = "Background";
+"Theme.Colors.Messages" = "Messages";
+
+"Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";

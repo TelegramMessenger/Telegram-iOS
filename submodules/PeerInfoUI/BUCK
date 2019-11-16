@@ -41,6 +41,7 @@ static_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/LocationResources:LocationResources",
         "//submodules/Geocoding:Geocoding",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LocationUI:LocationUI",

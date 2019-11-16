@@ -16,6 +16,7 @@ import WebP
 import Lottie
 import MediaResources
 import PhotoResources
+import LocationResources
 import ImageBlur
 import TelegramAnimatedStickerNode
 import WallpaperResources

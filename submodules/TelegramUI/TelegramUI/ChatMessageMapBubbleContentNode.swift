@@ -9,6 +9,7 @@ import SyncCore
 import LiveLocationTimerNode
 import PhotoResources
 import MediaResources
+import LocationResources
 import LiveLocationPositionNode
 
 private let titleFont = Font.medium(14.0)
@@ -141,15 +142,13 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 5.0, hidesBackground: (activeLiveBroadcastingTimeout == nil && selectedMedia?.venue == nil) ? .emptyWallpaper : .never, forceFullCorners: false, forceAlignment: .none)
             
-            var pinPeer: Peer?
-            var pinLiveLocationActive: Bool?
-            if let selectedMedia = selectedMedia {
+            var mode: ChatMessageLiveLocationPositionNode.Mode = .location(selectedMedia)
+            if let selectedMedia = selectedMedia, let peer = item.message.author {
                 if selectedMedia.liveBroadcastingTimeout != nil {
-                    pinPeer = item.message.author
-                    pinLiveLocationActive = activeLiveBroadcastingTimeout != nil
+                    mode = .liveLocation(peer, activeLiveBroadcastingTimeout != nil)
                 }
             }
-            let (pinSize, pinApply) = makePinLayout(item.context.account, item.presentationData.theme.theme, pinPeer, pinLiveLocationActive)
+            let (pinSize, pinApply) = makePinLayout(item.context.account, item.presentationData.theme.theme, mode)
             
             return (contentProperties, nil, maximumWidth, { constrainedSize, position in
                 let imageCorners: ImageCorners

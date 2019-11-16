@@ -198,6 +198,8 @@ framework(
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
         "//submodules/UrlWhitelist:UrlWhitelist",
         "//submodules/AppIntents:AppIntents",
+        "//submodules/LocationResources:LocationResources",
+        "//submodules/ItemListVenueItem:ItemListVenueItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
