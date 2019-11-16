@@ -418,6 +418,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
+                    let copyTextWithEntities = {
+                        var messageEntities: [MessageTextEntity]?
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                messageEntities = attribute.entities
+                                break
+                            }
+                        }
+                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                    }
                     if resourceAvailable {
                         for media in message.media {
                             if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
@@ -427,32 +437,21 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                                         if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                             if let image = UIImage(data: imageData) {
                                                 if !message.text.isEmpty {
-                                                    UIPasteboard.general.string = message.text
-                                                    /*UIPasteboard.general.items = [
-                                                     [kUTTypeUTF8PlainText as String: message.text],
-                                                     [kUTTypePNG as String: image]
-                                                     ]*/
+                                                    copyTextWithEntities()
                                                 } else {
                                                     UIPasteboard.general.image = image
                                                 }
                                             } else {
-                                                UIPasteboard.general.string = message.text
+                                                copyTextWithEntities()
                                             }
                                         } else {
-                                            UIPasteboard.general.string = message.text
+                                            copyTextWithEntities()
                                         }
                                     })
                             }
                         }
                     } else {
-                        var messageEntities: [MessageTextEntity]?
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                messageEntities = attribute.entities
-                                break
-                            }
-                        }
-                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                        copyTextWithEntities()
                     }
                     f(.default)
                 })))
