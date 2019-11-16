@@ -562,4 +562,8 @@ open class ListViewItemNode: ASDisplayNode {
     
     open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
     }
+    
+    open func snapshotForReordering() -> UIView? {
+        return self.view.snapshotContentTree()
+    }
 }

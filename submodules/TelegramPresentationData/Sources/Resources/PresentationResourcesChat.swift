@@ -69,11 +69,11 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, gradientBubbles: Bool) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, gradientBubbles: gradientBubbles)
+            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper)
         }) as! PrincipalThemeEssentialGraphics
     }
     

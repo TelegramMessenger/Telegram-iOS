@@ -51,6 +51,41 @@ struct ThemeColorState {
         self.backgroundColors = backgroundColors
         self.messagesColors = messagesColors
     }
+    
+    func areColorsEqual(to otherState: ThemeColorState) -> Bool {
+        if self.accentColor != otherState.accentColor {
+            return false
+        }
+        if let lhsBackgroundColors = self.backgroundColors, let rhsBackgroundColors = otherState.backgroundColors {
+            if lhsBackgroundColors.0 != rhsBackgroundColors.0 {
+                return false
+            }
+            if let lhsSecondColor = lhsBackgroundColors.1, let rhsSecondColor = rhsBackgroundColors.1 {
+                if lhsSecondColor != rhsSecondColor {
+                    return false
+                }
+            } else if (lhsBackgroundColors.1 == nil) != (rhsBackgroundColors.1 == nil) {
+                return false
+            }
+        } else if (self.backgroundColors == nil) != (otherState.backgroundColors == nil) {
+            return false
+        }
+        if let lhsMessagesColors = self.messagesColors, let rhsMessagesColors = otherState.messagesColors {
+            if lhsMessagesColors.0 != lhsMessagesColors.0 {
+                return false
+            }
+            if let lhsSecondColor = lhsMessagesColors.1, let rhsSecondColor = lhsMessagesColors.1 {
+                if lhsSecondColor != rhsSecondColor {
+                    return false
+                }
+            } else if (lhsMessagesColors.1 == nil) != (lhsMessagesColors.1 == nil) {
+                return false
+            }
+        } else if (self.messagesColors == nil) != (otherState.messagesColors == nil) {
+            return false
+        }
+        return true
+    }
 }
 
 final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
@@ -195,7 +230,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
                 }
             }
-            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
+            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper)
             
             return (theme, wallpaper)
         }
@@ -209,12 +244,18 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             strongSelf.colorPanelNode.updateTheme(theme)
             strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
+            
+            strongSelf.chatListBackgroundNode.backgroundColor = theme.chatList.backgroundColor
             strongSelf.maskNode.image = generateMaskImage(color: theme.chatList.backgroundColor)
             
-            if case let .color(value) = theme.chat.defaultWallpaper {
-                strongSelf.backgroundColor  = UIColor(rgb: UInt32(bitPattern: value))
-                strongSelf.chatListBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-                strongSelf.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+            if let wallpaper = wallpaper {
+                if case let .color(value) = wallpaper {
+                    strongSelf.backgroundColor  = UIColor(rgb: UInt32(bitPattern: value))
+                    strongSelf.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+                    strongSelf.chatBackgroundNode.image = nil
+                } else {
+                    strongSelf.chatBackgroundNode.image = chatControllerBackgroundImage(theme: theme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+                }
             }
     
             if let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
@@ -231,11 +272,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
-                //if strongSelf.presentationData.chatWallpaper.hasWallpaper {
-                    strongSelf.pageControlBackgroundNode.backgroundColor = color
-                //} else {
-                //    strongSelf.pageControlBackgroundNode.backgroundColor = .clear
-                //}
+                strongSelf.pageControlBackgroundNode.backgroundColor = color
             }
         })
     }
@@ -267,7 +304,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let previousState = self.state
         self.state = f(self.state)
     
-        let colorsChanged = previousState.accentColor != self.state.accentColor
+        let colorsChanged = !previousState.areColorsEqual(to: self.state)
         if colorsChanged {
             self.colors.set(.single((self.state.accentColor, self.state.backgroundColors, self.state.messagesColors)))
         }

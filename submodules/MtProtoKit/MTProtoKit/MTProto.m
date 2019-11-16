@@ -174,6 +174,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (void)setUseExplicitAuthKey:(MTDatacenterAuthKey *)useExplicitAuthKey {
+    _useExplicitAuthKey = useExplicitAuthKey;
+    if (_useExplicitAuthKey != nil) {
+        _authInfo = [_authInfo withUpdatedTempAuthKeyWithType:MTDatacenterAuthTempKeyTypeMain key:useExplicitAuthKey];
+        [self setMtState:_mtState | MTProtoStateBindingTempAuthKey];
+        [self requestTransportTransaction];
+    }
+}
+
 - (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
     [[MTProto managerQueue] dispatchOnQueue:^{
         _usageCalculationInfo = usageCalculationInfo;
@@ -282,18 +291,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         [previousTransport stop];
         
         if (_transport != nil && _useTempAuthKeys) {
-            assert(false);
-            /*MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
-            if (_transport.scheme.address.preferForMedia) {
+            MTDatacenterAuthTempKeyType tempAuthKeyType = MTDatacenterAuthTempKeyTypeMain;
+            /*if (_transport.scheme.address.preferForMedia) {
                 tempAuthKeyType = MTDatacenterAuthTempKeyTypeMedia;
-            }
+            }*/
             
             MTDatacenterAuthKey *effectiveAuthKey = [_authInfo tempAuthKeyWithType:tempAuthKeyType];
             if (effectiveAuthKey == nil) {
                 if (MTLogEnabled()) {
                     MTLog(@"[MTProto#%p setTransport temp auth key missing]", self);
                 }
-            }*/
+            }
         }
         
         if (_transport != nil)
@@ -2033,7 +2041,17 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 }
 
 - (void)transportHasIncomingData:(MTTransport *)transport scheme:(MTTransportScheme *)scheme data:(NSData *)data transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
-{   
+{
+    /*__block bool simulateError = false;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        simulateError = true;
+    });
+    if (simulateError) {
+        int32_t protocolErrorCode = -404;
+        data = [NSData dataWithBytes:&protocolErrorCode length:4];
+    }*/
+    
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if (_transport != transport || [self isStopped])
@@ -2151,7 +2169,8 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 - (void)handleMissingKey:(MTDatacenterAddress *)address {
     NSAssert([[MTProto managerQueue] isCurrentQueue], @"invalid queue");
     
-    if (_cdn) {
+    if (_useExplicitAuthKey != nil) {
+    } else if (_cdn) {
         _authInfo = nil;
         [_context performBatchUpdates:^{
             [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
@@ -2193,6 +2212,8 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false];
             }];
             _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+        } else {
+            [_context checkIfLoggedOut:_datacenterId];
         }
     }
 }
@@ -2666,7 +2687,12 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                     NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:_authInfo.authKeyAttributes];
                     [authKeyAttributes removeObjectForKey:@"apiInitializationHash"];
                     _authInfo = [_authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
-                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:_authInfo];
+                    if (_useExplicitAuthKey == nil) {
+                        [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:_authInfo];
+                    }
+                    if (_tempAuthKeyBindingResultUpdated) {
+                        _tempAuthKeyBindingResultUpdated(true);
+                    }
                 }
                 _bindingTempAuthKeyId = 0;
                 if ((_mtState & MTProtoStateBindingTempAuthKey) != 0) {
@@ -2680,6 +2706,10 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 MTShortLog(@"[MTProto#%p@%p bindTempAuthKey error %@]", self, _context, rpcError);
                 
                 [self requestTransportTransaction];
+                
+                if (_tempAuthKeyBindingResultUpdated) {
+                    _tempAuthKeyBindingResultUpdated(false);
+                }
             }
         }
     }
@@ -2705,6 +2735,9 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         if (!_useUnauthorizedMode && context == _context && datacenterId == _datacenterId)
         {
             _authInfo = authInfo;
+            if (_useExplicitAuthKey != nil) {
+                _authInfo = [_authInfo withUpdatedTempAuthKeyWithType:MTDatacenterAuthTempKeyTypeMain key:_useExplicitAuthKey];
+            }
             
             bool wasSuspended = _mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey);
             

@@ -9,9 +9,10 @@ import SyncCore
 import UniversalMediaPlayer
 import TelegramPresentationData
 import AccountContext
-import RadialStatusNode
 import PhotoResources
 import TelegramStringFormatting
+import RadialStatusNode
+import SemanticStatusNode
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -35,7 +36,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
-    private var statusNode: RadialStatusNode?
+    private var statusNode: SemanticStatusNode?
     private var streamingStatusNode: RadialStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -435,7 +436,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if hasThumbnail {
                     fileIconImage = nil
                 } else {
-                    let principalGraphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
+                    let principalGraphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     
                     fileIconImage = incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
                 }
@@ -609,9 +610,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
+                                            let firstTime = strongSelf.resourceStatus == nil
                                             strongSelf.resourceStatus = status
                                             strongSelf.actualFetchStatus = actualFetchStatus
-                                            strongSelf.updateStatus(animated: !synchronousLoads)
+                                            strongSelf.updateStatus(animated: !synchronousLoads || !firstTime)
                                         }
                                     }
                                 }))
@@ -687,7 +689,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        let state: RadialStatusNodeState
+        let state: SemanticStatusNodeState
         var streamingState: RadialStatusNodeState = .none
         
         let isSending = message.flags.isSending
@@ -768,10 +770,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 switch fetchStatus {
                     case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
-                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                        state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true)
                     case .Local:
                         if isAudio {
-                            state = .play(statusForegroundColor)
+                            state = .play
                         } else if let fileIconImage = self.fileIconImage {
                             state = .customIcon(fileIconImage)
                         } else {
@@ -779,18 +781,18 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     case .Remote:
                         if isAudio && !isVoice {
-                            state = .play(statusForegroundColor)
+                            state = .play
                         } else {
-                            state = .download(statusForegroundColor)
+                            state = .download
                         }
                 }
             case let .playbackStatus(playbackStatus):
                 self.waveformScrubbingNode?.enableScrubbing = true
                 switch playbackStatus {
                     case .playing:
-                        state = .pause(statusForegroundColor)
+                        state = .pause
                     case .paused:
-                        state = .play(statusForegroundColor)
+                        state = .play
                 }
         }
         
@@ -802,7 +804,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
 
         if state != .none && self.statusNode == nil {
-            let statusNode = RadialStatusNode(backgroundNodeColor: backgroundNodeColor)
+            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor)
             self.statusNode = statusNode
             statusNode.frame = progressFrame
             self.addSubnode(statusNode)

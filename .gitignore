@@ -48,3 +48,14 @@ submodules/MtProtoKit/TON/macOS/lib/fift/Lisp.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/Lists.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/Stack.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/TonUtil.fif
+bazel-bin
+bazel-bin/*
+bazel-genfiles
+bazel-genfiles/*
+bazel-out
+bazel-out/*
+bazel-telegram-ios
+bazel-telegram-ios/*
+bazel-testlogs
+bazel-testlogs/*
+

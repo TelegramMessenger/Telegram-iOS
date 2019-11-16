@@ -1820,6 +1820,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.revealOptionSelected(ItemListRevealOption(key: action.key, title: "", icon: .none, color: .black, textColor: .white), animated: false)
         }
     }
+    
+    override func snapshotForReordering() -> UIView? {
+        self.backgroundNode.alpha = 0.9
+        let result = self.view.snapshotContentTree()
+        self.backgroundNode.alpha = 1.0
+        return result
+    }
 }
 
 private func foldLineBreaks(_ text: String) -> String {

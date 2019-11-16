@@ -967,14 +967,14 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 } else if strongSelf.inputNodes[0].isFocused {
                     let hasText = !strongSelf.inputNodes[0].text.isEmpty
                     if !hasText {
-                        strongSelf.monkeyNode?.setState(.idle)
+                        strongSelf.monkeyNode?.setState(.idle(.still))
                     } else if textHidden {
                         strongSelf.monkeyNode?.setState(.eyesClosed)
                     } else {
                         strongSelf.monkeyNode?.setState(.peeking)
                     }
                 } else {
-                    strongSelf.monkeyNode?.setState(.idle)
+                    strongSelf.monkeyNode?.setState(.idle(.still))
                 }
             case .emailAddress:
                 if strongSelf.inputNodes[0].isFocused {
@@ -990,7 +990,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                     trackingOffset = max(0.0, min(1.0, trackingOffset))
                     strongSelf.monkeyNode?.setState(.tracking(trackingOffset))
                 } else {
-                    strongSelf.monkeyNode?.setState(.idle)
+                    strongSelf.monkeyNode?.setState(.idle(.still))
                 }
             default:
                 break

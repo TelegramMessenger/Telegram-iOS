@@ -26,21 +26,26 @@ public func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColo
     })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false) -> UIImage {
+public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false) -> UIImage {
     let diameter: CGFloat = 36.0
     let corner: CGFloat = 7.0
     let knockout = knockoutValue && !mask
     
-    return generateImage(CGSize(width: 42.0, height: diameter), contextGenerator: { size, context in
+    let inset: CGFloat = extendedEdges ? 0.0 : 1.0
+    
+    return generateImage(CGSize(width: 42.0 + inset * 2.0, height: diameter + inset * 2.0), contextGenerator: { rawSize, context in
         var drawWithClearColor = false
         
         if knockout, case let .color(color) = wallpaper {
             drawWithClearColor = !mask
             context.setFillColor(UIColor(rgb: UInt32(color)).cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: size))
+            context.fill(CGRect(origin: CGPoint(), size: rawSize))
         } else {
-            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.clear(CGRect(origin: CGPoint(), size: rawSize))
         }
+        
+        let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
+        context.translateBy(x: inset, y: inset)
         
         let additionalOffset: CGFloat
         switch neighbors {
@@ -110,7 +115,7 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
                 let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L5.99681848,0 C2.68486709,0 0,2.6882755 0,5.99681848 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
                 context.fillPath()
         }
-    })!.stretchableImage(withLeftCapWidth: incoming ? Int(corner + diameter / 2.0) : Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+    })!.stretchableImage(withLeftCapWidth: incoming ? Int(inset + corner + diameter / 2.0) : Int(inset + diameter / 2.0), topCapHeight: Int(inset + diameter / 2.0))
 }
 
 public enum MessageBubbleActionButtonPosition {

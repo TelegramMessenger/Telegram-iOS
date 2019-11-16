@@ -586,13 +586,14 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
 private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let requestPublicKeys: (Int) -> Signal<NSArray, NoError>
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
-    
     private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
+    private let contextLoggedOutUpdated: () -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
         self.contextProxyIdUpdated = contextProxyIdUpdated
+        self.contextLoggedOutUpdated = contextLoggedOutUpdated
     }
     
     func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
@@ -624,6 +625,10 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
         let settings: MTSocksProxySettings? = apiEnvironment.socksProxySettings
         self.contextProxyIdUpdated(settings.flatMap(NetworkContextProxyId.init(settings:)))
+    }
+    
+    func contextLoggedOut(_ context: MTContext!) {
+        self.contextLoggedOutUpdated()
     }
 }
 
@@ -772,6 +777,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             }
         }, contextProxyIdUpdated: { value in
             _contextProxyId.set(value)
+        }, contextLoggedOutUpdated: { [weak self] in
+            Logger.shared.log("Network", "contextLoggedOut")
+            self?.loggedOut?()
         }))
         requestService.delegate = self
         
