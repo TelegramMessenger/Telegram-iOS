@@ -651,7 +651,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("Starting with \(documentsPath)")
         #endif
         
-        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/configuration")
+        let storage = WalletStorageInterfaceImpl(path: documentsPath + "/data", configurationPath: documentsPath + "/configuration_v2")
         
         let initialConfigValue = storage.mergedLocalWalletConfiguration()
         |> take(1)
@@ -828,6 +828,6 @@ struct MergedLocalWalletConfiguration: Codable, Equatable {
 
 private extension MergedLocalWalletConfiguration {
     static var `default`: MergedLocalWalletConfiguration {
-        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet"), resolved: nil)
+        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet2"), resolved: nil)
     }
 }

@@ -772,9 +772,22 @@ public final class AccountViewTracker {
                 self.cachedDataContexts[peerId] = context
             }
             context.timestamp = CFAbsoluteTimeGetCurrent()
-            if let account = self.account {
-                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
+            guard let account = self.account else {
+                return
             }
+            let queue = self.queue
+            context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !supplementalStatus || !cachedStatus {
+                        if let existingContext = strongSelf.cachedDataContexts[peerId] {
+                            existingContext.timestamp = nil
+                        }
+                    }
+                }
+            }))
         }
     }
     
@@ -801,9 +814,22 @@ public final class AccountViewTracker {
             context.viewIds.insert(viewId)
             
             if dataUpdated {
-                if let account = self.account {
-                    context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
+                guard let account = self.account else {
+                    return
                 }
+                let queue = self.queue
+                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start(next: { [weak self] supplementalStatus, cachedStatus in
+                    queue.async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if !supplementalStatus || !cachedStatus {
+                            if let existingContext = strongSelf.cachedDataContexts[peerId] {
+                                existingContext.timestamp = nil
+                            }
+                        }
+                    }
+                }))
             }
         }
     }
