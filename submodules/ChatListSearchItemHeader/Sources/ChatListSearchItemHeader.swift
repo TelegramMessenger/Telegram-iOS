@@ -42,6 +42,10 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     public func node() -> ListViewItemHeaderNode {
         return ChatListSearchItemHeaderNode(type: self.type, theme: self.theme, strings: self.strings, actionTitle: self.actionTitle, action: self.action)
     }
+    
+    public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        
+    }
 }
 
 public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {

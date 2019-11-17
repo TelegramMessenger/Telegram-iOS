@@ -4,7 +4,7 @@ import Display
 import Postbox
 import TelegramPresentationData
 
-private let maskInset: CGFloat = 1.0
+private let maskInset: CGFloat = UIScreenPixel
 
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private let backgroundContent: ASDisplayNode
@@ -19,7 +19,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     override var frame: CGRect {
         didSet {
             if let maskView = self.maskView {
-                let maskFrame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
+                let maskFrame = self.bounds.insetBy(dx: -maskInset, dy: -maskInset)
                 if maskView.frame != maskFrame {
                     maskView.frame = maskFrame
                 }
@@ -101,7 +101,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                         maskView = current
                     } else {
                         maskView = UIImageView()
-                        maskView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
+                        maskView.frame = self.bounds.insetBy(dx: -maskInset, dy: -maskInset)
                         self.maskView = maskView
                         self.view.mask = maskView
                     }
@@ -143,7 +143,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition) {
         if let maskView = self.maskView {
-            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width + 2.0, height: value.size.height + 2.0)))
+            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width + maskInset * 2.0, height: value.size.height + maskInset * 2.0)))
         }
         transition.updateFrame(node: self, frame: value)
     }

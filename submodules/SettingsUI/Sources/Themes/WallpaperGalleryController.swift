@@ -715,7 +715,7 @@ public class WallpaperGalleryController: ViewController {
             }
             
             transition.updateFrame(node: colorPanelNode, frame: colorPanelFrame)
-            colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
+            colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
         }
         
         let currentPatternPanelNode: WallpaperPatternPanelNode

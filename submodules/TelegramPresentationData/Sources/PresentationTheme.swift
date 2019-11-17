@@ -477,11 +477,13 @@ public final class PresentationThemeChatList {
 
 public final class PresentationThemeBubbleColorComponents {
     public let fill: UIColor
+    public let gradientFill: UIColor
     public let highlightedFill: UIColor
     public let stroke: UIColor
     
-    public init(fill: UIColor, highlightedFill: UIColor, stroke: UIColor) {
+    public init(fill: UIColor, gradientFill: UIColor? = nil, highlightedFill: UIColor, stroke: UIColor) {
         self.fill = fill
+        self.gradientFill = gradientFill ?? fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
     }
@@ -971,7 +973,6 @@ public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
-    public let baseColor: PresentationThemeBaseColor?
     public let intro: PresentationThemeIntro
     public let passcode: PresentationThemePasscode
     public let rootController: PresentationThemeRootController
@@ -985,11 +986,10 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
         self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
-        self.baseColor = baseColor
         self.intro = intro
         self.passcode = passcode
         self.rootController = rootController
@@ -1024,6 +1024,6 @@ public final class PresentationTheme: Equatable {
                     break
             }
         }
-        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, baseColor: nil, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdatedDefaultWallpaper(defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdatedDefaultWallpaper(defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
     }
 }

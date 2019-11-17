@@ -38,6 +38,12 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
     
+    public var imageContentMode: UIView.ContentMode {
+        didSet {
+            self.contentNode.contentMode = self.imageContentMode
+        }
+    }
+    
     func updateScale() {
         if self.motionEnabled {
             let scale = (self.frame.width + motionAmount * 2.0) / self.frame.width
@@ -48,8 +54,10 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
     
     public override init() {
+        self.imageContentMode = .scaleAspectFill
+        
         self.contentNode = ASDisplayNode()
-        self.contentNode.contentMode = .scaleAspectFill
+        self.contentNode.contentMode = self.imageContentMode
         
         super.init()
         

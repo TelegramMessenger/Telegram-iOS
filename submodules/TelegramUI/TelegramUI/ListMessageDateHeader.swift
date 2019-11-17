@@ -46,6 +46,10 @@ final class ListMessageDateHeader: ListViewItemHeader {
     func node() -> ListViewItemHeaderNode {
         return ListMessageDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
     }
+    
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        
+    }
 }
 
 private let sectionTitleFont = Font.regular(14.0)

@@ -345,35 +345,6 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
         }
         return UIColor(rgb: value)
     }
-    
-    public var outgoingGradientColors: (UIColor, UIColor) {
-        switch self {
-            case .blue:
-                return (UIColor(rgb: 0x63BFFB), UIColor(rgb: 0x007AFF))
-            case .cyan:
-                return (UIColor(rgb: 0x5CE0E9), UIColor(rgb: 0x00C2ED))
-            case .green:
-                return (UIColor(rgb: 0x93D374), UIColor(rgb: 0x29B327))
-            case .pink:
-                return (UIColor(rgb: 0xE296C1), UIColor(rgb: 0xEB6CA4))
-            case .orange:
-                return (UIColor(rgb: 0xF2A451), UIColor(rgb: 0xF08200))
-            case .purple:
-                return (UIColor(rgb: 0xAC98E6), UIColor(rgb: 0x9472EE))
-            case .red:
-                return (UIColor(rgb: 0xE06D54), UIColor(rgb: 0xD33213))
-            case .yellow:
-                return (UIColor(rgb: 0xF7DA6B), UIColor(rgb: 0xEDB400))
-            case .gray:
-                return (UIColor(rgb: 0x7D8E9A), UIColor(rgb: 0x6D839E))
-            case .black:
-                return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
-            case .white:
-                return (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
-            case .custom:
-                return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
-        }
-    }
 }
 
 public struct PresentationThemeColorPair: PostboxCoding, Equatable {
@@ -399,13 +370,21 @@ public struct PresentationThemeColorPair: PostboxCoding, Equatable {
         }
      }
      
-     public var colors: [UIColor] {
+     public var colors: (UIColor, UIColor?) {
         if let bottomColor = self.optionalColor {
-            return [UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: bottomColor))]
+            return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
         } else {
-            return [UIColor(rgb: UInt32(bitPattern: self.color))]
+            return (UIColor(rgb: UInt32(bitPattern: self.color)), nil)
         }
      }
+    
+    public var plainColors: (UIColor, UIColor) {
+       if let bottomColor = self.optionalColor {
+           return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+       } else {
+           return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: self.color)))
+       }
+    }
 }
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
@@ -520,32 +499,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
         }, valueDecoder: { decoder in
             return PresentationThemeColorPair(decoder: decoder)
         })
-        
-        if self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] == nil, let themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor") {
-            let baseColor: PresentationThemeBaseColor
-            switch themeAccentColor {
-                case 0xf83b4c:
-                    baseColor = .red
-                case 0xff7519:
-                    baseColor = .orange
-                case 0xeba239:
-                    baseColor = .yellow
-                case 0x29b327:
-                    baseColor = .green
-                case 0x00c2ed:
-                    baseColor = .cyan
-                case 0x007ee5:
-                    baseColor = .blue
-                case 0x7748ff:
-                    baseColor = .purple
-                case 0xff5da2:
-                    baseColor = .pink
-                default:
-                    baseColor = .blue
-            }
-            self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] = PresentationThemeAccentColor(baseColor: baseColor)
-        }
-        
+                
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night))
         self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)

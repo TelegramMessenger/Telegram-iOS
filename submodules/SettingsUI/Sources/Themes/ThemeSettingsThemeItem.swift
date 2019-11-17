@@ -89,18 +89,20 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let themes: [PresentationThemeReference]
     let displayUnsupported: Bool
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
+    let themeSpecificBubbleColors: [Int64: PresentationThemeColorPair]
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificBubbleColors: [Int64: PresentationThemeColorPair], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
         self.displayUnsupported = displayUnsupported
         self.themeSpecificAccentColors = themeSpecificAccentColors
+        self.themeSpecificBubbleColors = themeSpecificBubbleColors
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
         self.contextAction = contextAction
@@ -153,6 +155,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private var theme: PresentationThemeReference?
     private var currentTheme: PresentationTheme?
     private var accentColor: UIColor?
+    private var bubbleColors: (UIColor, UIColor)?
     private var bordered: Bool?
     private var selected: Bool?
     
@@ -187,7 +190,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         }
     }
     
-    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
+    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, bubbleColors: (UIColor, UIColor)?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         let updatedTheme = self.currentTheme == nil || currentTheme !== self.currentTheme!
         var contextActionEnabled = true
         if case let .cloud(theme) = theme, theme.theme.file == nil {
@@ -199,7 +202,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
             }
         } else {
             if theme != self.theme || accentColor != self.accentColor {
-                self.imageNode.setSignal(themeIconImage(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, accentColor: accentColor))
+                self.imageNode.setSignal(themeIconImage(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, accentColor: accentColor, bubbleColors: bubbleColors))
                 self.theme = theme
                 self.accentColor = accentColor
             }
@@ -411,7 +414,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         
                         let name = themeDisplayName(strings: item.strings, reference: theme)
-                        imageNode.setup(context: item.context, theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color, currentTheme: item.theme, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
+                        imageNode.setup(context: item.context, theme: theme, accentColor: item.themeSpecificAccentColors[theme.index]?.color, bubbleColors: item.themeSpecificBubbleColors[theme.index]?.plainColors, currentTheme: item.theme, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: true, selected: selected, action: { [weak self, weak imageNode] in
                             item.updatedTheme(theme)
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)

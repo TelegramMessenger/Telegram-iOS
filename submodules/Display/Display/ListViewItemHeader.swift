@@ -15,6 +15,7 @@ public protocol ListViewItemHeader: class {
     var height: CGFloat { get }
     
     func node() -> ListViewItemHeaderNode
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?)
 }
 
 open class ListViewItemHeaderNode: ASDisplayNode {
@@ -55,7 +56,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
             } else {
                 super.init()
         
-        self.setViewBlock({
+                self.setViewBlock({
                     return CASeeThroughTracingView()
                 })
             }

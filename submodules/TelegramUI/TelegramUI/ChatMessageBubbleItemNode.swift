@@ -234,7 +234,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            strongSelf.backgroundWallpaperNode.setMaskMode(isExtractedToContextPreview, mediaBox: item.context.account.postbox.mediaBox)
+            strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode, mediaBox: item.context.account.postbox.mediaBox)
             strongSelf.backgroundNode.setMaskMode(isExtractedToContextPreview)
             if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
@@ -1631,7 +1631,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             backgroundType = .incoming(mergeType)
         }
         strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.contextSourceNode.isExtractedToContextPreview, transition: transition)
-        strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.contextSourceNode.isExtractedToContextPreview)
+        strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
         
         strongSelf.backgroundType = backgroundType
         
@@ -2846,5 +2846,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         return nil
+    }
+    
+    private var backgroundMaskMode: Bool {
+        return self.contextSourceNode.isExtractedToContextPreview || (self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false)
     }
 }

@@ -505,7 +505,7 @@ public func gradientImage(_ colors: [UIColor]) -> Signal<(TransformImageArgument
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         
         context.withFlippedContext { c in
-            let gradientColors = colors as CFArray
+            let gradientColors = colors.map { $0.cgColor } as CFArray
             let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
             
             var locations: [CGFloat] = []
@@ -690,9 +690,15 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 let size = image.size.aspectFilled(drawingRect.size)
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
             }
-        case let .color(value):
-            c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
+        case let .color(color):
+            c.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
             c.fill(drawingRect)
+        case let .gradient(topColor, bottomColor):
+            let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))].map { $0.cgColor } as CFArray
+            var locations: [CGFloat] = [0.0, 1.0]
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
         case .file:
             c.setFillColor(theme.chatList.backgroundColor.cgColor)
             c.fill(drawingRect)
@@ -739,30 +745,58 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         c.draw(image, in: CGRect(origin: CGPoint(x: drawingRect.width - 3.0 - 29.0, y: 7.0 + UIScreenPixel), size: microphone.size.fitted(CGSize(width: 30.0, height: 30.0))))
     }
     
+    let incoming = theme.chat.message.incoming.bubble.withoutWallpaper
+    let outgoing = theme.chat.message.outgoing.bubble.withoutWallpaper
+    
     c.saveGState()
-    c.setFillColor(theme.chat.message.incoming.bubble.withoutWallpaper.fill.cgColor)
-    c.setStrokeColor(theme.chat.message.incoming.bubble.withoutWallpaper.stroke.cgColor)
+
     c.translateBy(x: 5.0, y: 65.0)
     c.translateBy(x: 114.0, y: 32.0)
     c.scaleBy(x: 1.0, y: -1.0)
     c.translateBy(x: -114.0, y: -32.0)
+    
     let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
-    c.strokePath()
-    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
-    c.fillPath()
+    if incoming.fill.rgb != incoming.gradientFill.rgb {
+        let gradientColors = [incoming.fill, incoming.gradientFill].map { $0.cgColor } as CFArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+    } else {
+        c.setFillColor(incoming.fill.cgColor)
+        c.setStrokeColor(incoming.stroke.cgColor)
+    
+        c.strokePath()
+        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+        c.fillPath()
+    }
     c.restoreGState()
     
     c.saveGState()
-    c.setFillColor(theme.chat.message.outgoing.bubble.withoutWallpaper.fill.cgColor)
-    c.setStrokeColor(theme.chat.message.outgoing.bubble.withoutWallpaper.stroke.cgColor)
+
     c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 25.0)
     c.translateBy(x: 114.0, y: 32.0)
     c.scaleBy(x: -1.0, y: -1.0)
     c.translateBy(x: 0, y: -32.0)
+    
     let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
-    c.strokePath()
-    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
-    c.fillPath()
+    if outgoing.fill.rgb != outgoing.gradientFill.rgb {
+        c.clip()
+        
+        let gradientColors = [outgoing.fill, outgoing.gradientFill].map { $0.cgColor } as CFArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+    } else {
+        c.setFillColor(outgoing.fill.cgColor)
+        c.setStrokeColor(outgoing.stroke.cgColor)
+
+        c.strokePath()
+        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+        c.fillPath()
+    }
+    
     c.restoreGState()
 }
 
@@ -961,20 +995,33 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
     }
 }
 
-public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, accentColor: UIColor?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal: Signal<(UIColor, UIColor, UIColor, UIImage?), NoError>
+public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, accentColor: UIColor?, bubbleColors: (UIColor, UIColor)?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let colorsSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError>
     if case let .builtin(theme) = theme {
+        let backgroundColor: UIColor
+        let incomingColor: UIColor
+        let outgoingColor: (UIColor, UIColor)
         switch theme {
             case .dayClassic:
-                signal = .single((UIColor(rgb: 0xd6e2ee), UIColor(rgb: 0xffffff), UIColor(rgb: 0xe1ffc7), nil))
+                backgroundColor = UIColor(rgb: 0xd6e2ee)
+                incomingColor = UIColor(rgb: 0xffffff)
+                outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
             case .day:
-                signal = .single((.white, UIColor(rgb: 0xd5dde6), accentColor ?? UIColor(rgb: 0x007aff), nil))
+                backgroundColor = UIColor(rgb: 0xffffff)
+                incomingColor = UIColor(rgb: 0xd5dde6)
+                outgoingColor = bubbleColors ?? (UIColor(rgb: 0x007aff), UIColor(rgb: 0x007aff))
             case .night:
-                signal = .single((.black, UIColor(rgb: 0x1f1f1f), accentColor ?? UIColor(rgb: 0x313131), nil))
+                backgroundColor = UIColor(rgb: 0x000000)
+                incomingColor = UIColor(rgb: 0x1f1f1f)
+                outgoingColor = bubbleColors ?? (UIColor(rgb: 0x313131), UIColor(rgb: 0x313131))
             case .nightAccent:
                 let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
-                signal = .single((accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18), accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25), accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59), nil))
+                backgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                incomingColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+                let accentBubbleColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                outgoingColor = bubbleColors ?? (accentBubbleColor, accentBubbleColor)
         }
+        colorsSignal = .single(((backgroundColor, nil), (incomingColor, incomingColor), outgoingColor, nil))
     } else {
         var resource: MediaResource?
         if case let .local(theme) = theme {
@@ -983,27 +1030,27 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             resource = theme.theme.file?.resource
         }
         if let resource = resource {
-            signal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
-            |> mapToSignal { data -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
+            colorsSignal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
+            |> mapToSignal { data -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> in
                 if let data = data, let theme = makePresentationTheme(data: data) {
-                    var wallpaperSignal: Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> = .complete()
-                    let backgroundColor: UIColor
-                    let incomingColor = theme.chat.message.incoming.bubble.withoutWallpaper.fill
-                    let outgoingColor = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                    var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> = .complete()
+                    let backgroundColor: (UIColor, UIColor?)
+                    let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
+                    let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
                     switch theme.chat.defaultWallpaper {
                         case .builtin:
-                            backgroundColor = UIColor(rgb: 0xd6e2ee)
+                            backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                         case let .color(color):
-                            backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
                         case let .gradient(topColor, bottomColor):
-                            backgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
+                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
                         case .image:
-                            backgroundColor = .black
+                            backgroundColor = (.black, nil)
                         case let .file(file):
                             if file.isPattern, let color = file.settings.color {
-                                backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                                backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
                             } else {
-                                backgroundColor = theme.chatList.backgroundColor
+                                backgroundColor = (theme.chatList.backgroundColor, nil)
                             }
                             wallpaperSignal = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                             |> mapToSignal { wallpaper in
@@ -1011,7 +1058,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                                     convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                                     return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                                    |> mapToSignal { _, fullSizeData, complete -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
+                                    |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {
                                             return .complete()
                                         }
@@ -1050,55 +1097,66 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 }
             }
         } else {
-            signal = .never()
+            colorsSignal = .never()
         }
     }
-    return signal
-        |> map { colors in
-            return { arguments in
-                let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
-                let drawingRect = arguments.drawingRect
-                
-                context.withContext { c in
-                    c.setFillColor(colors.0.cgColor)
+    return colorsSignal
+    |> map { colors in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            let drawingRect = arguments.drawingRect
+            
+            context.withContext { c in
+                if let secondBackgroundColor = colors.0.1 {
+                    let gradientColors = [colors.0.0, secondBackgroundColor].map { $0.cgColor } as CFArray
+                    var locations: [CGFloat] = [0.0, 1.0]
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                    c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: drawingRect.height), options: CGGradientDrawingOptions())
+                } else {
+                    c.setFillColor(colors.0.0.cgColor)
                     c.fill(drawingRect)
-                    
-                    if let image = colors.3 {
-                        let initialThumbnailContextFittingSize = arguments.imageSize.fitted(CGSize(width: 90.0, height: 90.0))
-                        let thumbnailContextSize = image.size.aspectFilled(initialThumbnailContextFittingSize)
-                        let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                        thumbnailContext.withFlippedContext { c in
-                            c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                        }
-                        telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                    
-                        if let blurredThumbnailImage = thumbnailContext.generateImage(), let cgImage = blurredThumbnailImage.cgImage {
-                            let fittedSize = thumbnailContext.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
-                            c.saveGState()
-                            c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                            c.scaleBy(x: 1.0, y: -1.0)
-                            c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize))
-                            c.restoreGState()
-                        }
-                    }
-                    
-                    let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.1)
-                    let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.2)
-                    
-                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                    c.scaleBy(x: 1.0, y: -1.0)
-                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                    
-                    c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
-                    
-                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                    c.scaleBy(x: -1.0, y: 1.0)
-                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                    c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
                 }
                 
-                return context
+                if let image = colors.3 {
+                    let initialThumbnailContextFittingSize = arguments.imageSize.fitted(CGSize(width: 90.0, height: 90.0))
+                    let thumbnailContextSize = image.size.aspectFilled(initialThumbnailContextFittingSize)
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                
+                    if let blurredThumbnailImage = thumbnailContext.generateImage(), let cgImage = blurredThumbnailImage.cgImage {
+                        let fittedSize = thumbnailContext.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
+                        c.saveGState()
+                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize))
+                        c.restoreGState()
+                    }
+                }
+                
+                let incomingColors = [colors.1.0, colors.1.1]
+                let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
+                
+                let outgoingColors = [colors.2.0, colors.2.1]
+                let outgoing = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: outgoingColors)
+                
+                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                c.scaleBy(x: 1.0, y: -1.0)
+                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                
+                c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+                
+                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                c.scaleBy(x: -1.0, y: 1.0)
+                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
             }
+            
+            return context
+        }
     }
 }

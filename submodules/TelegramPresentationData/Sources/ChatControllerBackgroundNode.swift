@@ -11,9 +11,9 @@ import AppBundle
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
-public func chatControllerBackgroundImage(theme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true, knockoutMode: Bool) -> UIImage? {
+public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper initialWallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = true, knockoutMode: Bool) -> UIImage? {
     var wallpaper = initialWallpaper
-    if knockoutMode {
+    if knockoutMode, let theme = theme {
         switch theme.name {
         case let .builtin(name):
             switch name {

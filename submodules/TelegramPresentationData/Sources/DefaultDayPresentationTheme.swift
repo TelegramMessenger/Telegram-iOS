@@ -4,7 +4,7 @@ import TelegramCore
 import SyncCore
 import TelegramUIPreferences
 
-private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, day: Bool, preview: Bool) -> PresentationTheme {
+private func makeDefaultDayPresentationTheme(accentColor: UIColor, bubbleColors: (UIColor, UIColor?)?, serviceBackgroundColor: UIColor, day: Bool, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff3b30)
     let constructiveColor: UIColor = UIColor(rgb: 0x00c900)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
@@ -16,24 +16,35 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     let outgoingLinkTextColor: UIColor
     let outgoingCheckColor: UIColor
     let outgoingControlColor: UIColor
-    let outgoingBubbleFillColor: UIColor
+    var outgoingBubbleFillColor: UIColor
+    var outgoingBubbleFillGradientColor: UIColor
     let outgoingBubbleStrokeColor: UIColor
     let outgoingSelectionBaseColor: UIColor
+    outgoingBubbleFillColor = accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
+    outgoingBubbleFillGradientColor = accentColor
+    
+    if let bubbleColors = bubbleColors {
+        outgoingBubbleFillColor = bubbleColors.0
+        outgoingBubbleFillGradientColor = bubbleColors.1 ?? bubbleColors.0
+    }
+    
     if accentColor.lightness > 0.705 {
+        let accentColorHsv = accentColor.hsv
+        accentColor = UIColor(hue: accentColorHsv.0, saturation: min(1.0, accentColorHsv.1 * 1.1), brightness: min(accentColorHsv.2, 0.6), alpha: 1.0)
+    }
+    
+    let outgoingBubbleLightnessColor = outgoingBubbleFillColor.mixedWith(outgoingBubbleFillGradientColor, alpha: 0.5)
+    if outgoingBubbleLightnessColor.lightness > 0.705 {
         outgoingPrimaryTextColor = .black
         outgoingSecondaryTextColor = UIColor(rgb: 0x000000, alpha: 0.55)
         outgoingLinkTextColor = .black
         outgoingCheckColor = .black
         outgoingControlColor = outgoingPrimaryTextColor
-        outgoingBubbleFillColor = accentColor
         if outgoingBubbleFillColor.distance(to: UIColor.white) < 200 {
             outgoingBubbleStrokeColor = UIColor(rgb: 0xc8c7cc)
         } else {
             outgoingBubbleStrokeColor = outgoingBubbleFillColor
         }
-        
-        let hsv = accentColor.hsv
-        accentColor = UIColor(hue: hsv.0, saturation: min(1.0, hsv.1 * 1.1), brightness: min(hsv.2, 0.6), alpha: 1.0)
         outgoingSelectionBaseColor = accentColor
     } else {
         outgoingPrimaryTextColor = .white
@@ -41,11 +52,10 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         outgoingLinkTextColor = .white
         outgoingCheckColor = .white
         outgoingControlColor = outgoingPrimaryTextColor
-        outgoingBubbleFillColor = accentColor
         outgoingBubbleStrokeColor = outgoingBubbleFillColor
         outgoingSelectionBaseColor = .white
     }
-    
+     
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: UIColor(rgb: 0xf7f7f7),
         separatorColor: UIColor(rgb: 0xa3a3a3),
@@ -223,7 +233,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     
     let messageDay = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xffffff)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xf1f1f4), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xf1f1f4))), primaryTextColor: .black, secondaryTextColor: UIColor(rgb: 0x525252, alpha: 0.6), linkTextColor: UIColor(rgb: 0x004bad), linkHighlightColor: accentColor.withAlphaComponent(0.3), scamColor: destructiveColor, textHighlightColor: UIColor(rgb: 0xffc738), accentTextColor: accentColor, accentControlColor: accentColor, mediaActiveControlColor: accentColor, mediaInactiveControlColor: UIColor(rgb: 0xcacaca), mediaControlInnerBackgroundColor: UIColor(rgb: 0xffffff), pendingActivityColor: UIColor(rgb: 0x525252, alpha: 0.6), fileTitleColor: accentColor, fileDescriptionColor: UIColor(rgb: 0x999999), fileDurationColor: UIColor(rgb: 0x525252, alpha: 0.6), mediaPlaceholderColor: UIColor(rgb: 0xffffff).withMultipliedBrightnessBy(0.95), polls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: accentColor, highlight: accentColor.withAlphaComponent(0.12), separator: UIColor(rgb: 0xc8c7cc), bar: accentColor), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)), actionButtonsStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: accentColor), actionButtonsTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor), textSelectionColor: accentColor.withAlphaComponent(0.3), textSelectionKnobColor: accentColor),
-        outgoing: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, highlightedFill: outgoingBubbleFillColor.withMultipliedBrightnessBy(0.7), stroke: outgoingBubbleFillColor), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, highlightedFill: outgoingBubbleFillColor.withMultipliedBrightnessBy(0.7), stroke: outgoingBubbleStrokeColor)), primaryTextColor: outgoingPrimaryTextColor, secondaryTextColor: outgoingSecondaryTextColor, linkTextColor: outgoingLinkTextColor, linkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.3), scamColor: outgoingPrimaryTextColor, textHighlightColor: UIColor(rgb: 0xffc738), accentTextColor: outgoingPrimaryTextColor, accentControlColor: outgoingPrimaryTextColor, mediaActiveControlColor: outgoingPrimaryTextColor, mediaInactiveControlColor: outgoingSecondaryTextColor, mediaControlInnerBackgroundColor: outgoingBubbleFillColor, pendingActivityColor: outgoingSecondaryTextColor, fileTitleColor: outgoingPrimaryTextColor, fileDescriptionColor: outgoingSecondaryTextColor, fileDurationColor: outgoingSecondaryTextColor, mediaPlaceholderColor: accentColor.withMultipliedBrightnessBy(0.95), polls: PresentationThemeChatBubblePolls(radioButton: outgoingSecondaryTextColor, radioProgress: outgoingPrimaryTextColor, highlight: outgoingPrimaryTextColor.withAlphaComponent(0.12), separator: outgoingSecondaryTextColor, bar: outgoingPrimaryTextColor), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)), actionButtonsStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: accentColor), actionButtonsTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor), textSelectionColor: outgoingSelectionBaseColor.withAlphaComponent(0.2), textSelectionKnobColor: outgoingSelectionBaseColor),
+        outgoing: PresentationThemePartedColors(bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, gradientFill: outgoingBubbleFillGradientColor, highlightedFill: outgoingBubbleFillColor.withMultipliedBrightnessBy(0.7), stroke: outgoingBubbleFillColor), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: outgoingBubbleFillColor, gradientFill: outgoingBubbleFillGradientColor, highlightedFill: outgoingBubbleFillColor.withMultipliedBrightnessBy(0.7), stroke: outgoingBubbleStrokeColor)), primaryTextColor: outgoingPrimaryTextColor, secondaryTextColor: outgoingSecondaryTextColor, linkTextColor: outgoingLinkTextColor, linkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.3), scamColor: outgoingPrimaryTextColor, textHighlightColor: UIColor(rgb: 0xffc738), accentTextColor: outgoingPrimaryTextColor, accentControlColor: outgoingPrimaryTextColor, mediaActiveControlColor: outgoingPrimaryTextColor, mediaInactiveControlColor: outgoingSecondaryTextColor, mediaControlInnerBackgroundColor: .clear, pendingActivityColor: outgoingSecondaryTextColor, fileTitleColor: outgoingPrimaryTextColor, fileDescriptionColor: outgoingSecondaryTextColor, fileDurationColor: outgoingSecondaryTextColor, mediaPlaceholderColor: accentColor.withMultipliedBrightnessBy(0.95), polls: PresentationThemeChatBubblePolls(radioButton: outgoingSecondaryTextColor, radioProgress: outgoingPrimaryTextColor, highlight: outgoingPrimaryTextColor.withAlphaComponent(0.12), separator: outgoingSecondaryTextColor, bar: outgoingPrimaryTextColor), actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)), actionButtonsStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: accentColor), actionButtonsTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor), textSelectionColor: outgoingSelectionBaseColor.withAlphaComponent(0.2), textSelectionKnobColor: outgoingSelectionBaseColor),
         freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xE5E5EA), highlightedFill: UIColor(rgb: 0xDADADE), stroke: UIColor(rgb: 0xE5E5EA)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xE5E5EA), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xE5E5EA))),
         infoPrimaryTextColor: UIColor(rgb: 0x000000),
         infoLinkTextColor: UIColor(rgb: 0x004bad),
@@ -376,7 +386,6 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         name: .builtin(day ? .day : .dayClassic),
         referenceTheme: day ? .day : .dayClassic,
         overallDarkAppearance: false,
-        baseColor: baseColor,
         intro: intro,
         passcode: passcode,
         rootController: rootController,
@@ -390,12 +399,12 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     )
 }
 
-public let defaultPresentationTheme = makeDefaultDayPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, day: false, preview: false)
+public let defaultPresentationTheme = makeDefaultDayPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), bubbleColors: nil, serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 
-public func makeDefaultDayPresentationTheme(accentColor: UIColor? = nil, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, day: Bool, preview: Bool) -> PresentationTheme {
+public func makeDefaultDayPresentationTheme(accentColor: UIColor? = nil, bubbleColors: (UIColor, UIColor?)?, serviceBackgroundColor: UIColor, day: Bool, preview: Bool) -> PresentationTheme {
     let accentColor = accentColor ?? defaultDayAccentColor
-    return makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, day: day, preview: preview)
+    return makeDefaultDayPresentationTheme(accentColor: accentColor, bubbleColors: bubbleColors, serviceBackgroundColor: serviceBackgroundColor, day: day, preview: preview)
 }

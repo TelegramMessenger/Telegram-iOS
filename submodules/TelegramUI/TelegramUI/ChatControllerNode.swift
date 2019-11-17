@@ -271,6 +271,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        if case .gradient = chatPresentationInterfaceState.chatWallpaper {
+            self.backgroundNode.imageContentMode = .scaleToFill
+        } else {
+            self.backgroundNode.imageContentMode = .scaleAspectFill
+        }
         self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
 
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
@@ -1427,6 +1432,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
                 self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+                if case .gradient = chatPresentationInterfaceState.chatWallpaper {
+                    self.backgroundNode.imageContentMode = .scaleToFill
+                } else {
+                    self.backgroundNode.imageContentMode = .scaleAspectFill
+                }
                 self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
             }
             

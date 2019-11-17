@@ -240,7 +240,9 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue) ?? defaultPresentationTheme
+        let effectiveBubbleColors = themeSettings.themeSpecificBubbleColors[effectiveTheme.index]?.colors
+        
+        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
         let effectiveChatWallpaper: TelegramWallpaper = themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] ?? theme.chat.defaultWallpaper
         
         let dateTimeFormat = currentDateTimeFormat()
@@ -379,6 +381,30 @@ public func serviceColor(from image: Signal<UIImage?, NoError>) -> Signal<UIColo
     }
 }
 
+public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColor {
+    switch wallpaper.0 {
+        case .builtin:
+            return UIColor(rgb: 0x748391, alpha: 0.45)
+        case let .color(color):
+            return serviceColor(with: UIColor(rgb: UInt32(bitPattern: color)))
+        case let .gradient(topColor, bottomColor):
+            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            return serviceColor(with: mixedColor)
+        case .image:
+            if let image = wallpaper.1 {
+                return serviceColor(with: averageColor(from: image))
+            } else {
+                return UIColor(rgb: 0x000000, alpha: 0.3)
+            }
+        case .file:
+            if let image = wallpaper.1 {
+                return serviceColor(with: averageColor(from: image))
+            } else {
+                return UIColor(rgb: 0x000000, alpha: 0.3)
+            }
+    }
+}
+
 public func serviceColor(with color: UIColor) -> UIColor {
     var hue:  CGFloat = 0.0
     var saturation: CGFloat = 0.0
@@ -471,7 +497,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index] {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil) ?? defaultPresentationTheme
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
@@ -498,7 +524,9 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         }
                         
                         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue) ?? defaultPresentationTheme
+                        let effectiveBubbleColors = themeSettings.themeSpecificBubbleColors[effectiveTheme.index]?.colors
+                        
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
                         if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
                             switch effectiveChatWallpaper {

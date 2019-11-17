@@ -144,7 +144,9 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
     }
     
     public var selectedIndexChanged: (Int) -> Void = { _ in }
-    public var selectedIndexShouldChange: (Int) -> Bool = { _ in return true }
+    public var selectedIndexShouldChange: (Int, @escaping (Bool) -> Void) -> Void = { _, f in
+        f(true)
+    }
     
     public init(theme: SegmentedControlTheme, items: [SegmentedControlItem], selectedIndex: Int) {
         self.theme = theme
@@ -348,15 +350,15 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             return
         }
         
-        guard self.selectedIndexShouldChange(index) else {
-            return
-        }
-        
-        self._selectedIndex = index
-        self.selectedIndexChanged(index)
-        if let layout = self.validLayout {
-            let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
-        }
+        self.selectedIndexShouldChange(index, { [weak self] commit in
+            if let strongSelf = self, commit {
+                strongSelf._selectedIndex = index
+                strongSelf.selectedIndexChanged(index)
+                if let layout = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
+                }
+            }
+        })
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -386,14 +388,18 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             case .ended:
                 if let gestureSelectedIndex = self.gestureSelectedIndex {
                     if gestureSelectedIndex != self.selectedIndex  {
-                        if self.selectedIndexShouldChange(gestureSelectedIndex) {
-                            self._selectedIndex = gestureSelectedIndex
-                            self.selectedIndexChanged(self._selectedIndex)
-                        } else {
-                            if let layout = self.validLayout {
-                                let _ = self.updateLayout(layout, transition: .animated(duration: 0.35, curve: .slide))
+                        self.selectedIndexShouldChange(gestureSelectedIndex, { [weak self] commit in
+                            if let strongSelf = self {
+                                if commit {
+                                    strongSelf._selectedIndex = gestureSelectedIndex
+                                    strongSelf.selectedIndexChanged(gestureSelectedIndex)
+                                } else {
+                                    if let layout = strongSelf.validLayout {
+                                        let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
+                                    }
+                                }
                             }
-                        }
+                        })
                     }
                     self.gestureSelectedIndex = nil
                 }

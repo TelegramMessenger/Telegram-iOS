@@ -97,6 +97,7 @@ public final class ThemePreviewController: ViewController {
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
         titleView.title = CounterContollerTitle(title: themeName, counter: isPreview ? "" : " ")
         self.navigationItem.titleView = titleView
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

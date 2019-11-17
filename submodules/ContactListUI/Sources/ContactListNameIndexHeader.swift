@@ -22,6 +22,10 @@ final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
         return ContactListNameIndexHeaderNode(theme: self.theme, letter: self.letter)
     }
     
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        
+    }
+    
     static func ==(lhs: ContactListNameIndexHeader, rhs: ContactListNameIndexHeader) -> Bool {
         return lhs.id == rhs.id
     }

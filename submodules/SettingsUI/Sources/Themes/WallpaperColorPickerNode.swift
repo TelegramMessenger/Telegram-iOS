@@ -280,7 +280,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         colorKnobFrame.origin = origin
         transition.updateFrame(node: self.colorKnobNode, frame: colorKnobFrame)
         
-        let inset: CGFloat = 42.0
+        let inset: CGFloat = 15.0
         let brightnessKnobSize = CGSize(width: 12.0, height: 55.0)
         let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHSV.2), y: size.height - 65.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
         transition.updateFrame(node: self.brightnessKnobNode, frame: brightnessKnobFrame)

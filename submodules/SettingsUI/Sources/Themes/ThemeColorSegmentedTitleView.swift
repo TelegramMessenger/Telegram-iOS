@@ -22,7 +22,7 @@ final class ThemeColorSegmentedTitleView: UIView {
     }
     
     var sectionUpdated: ((ThemeColorSection) -> Void)?
-    var shouldUpdateSection: ((ThemeColorSection) -> Void)?
+    var shouldUpdateSection: ((ThemeColorSection, @escaping (Bool) -> Void) -> Void)?
     
     init(theme: PresentationTheme, strings: PresentationStrings, selectedSection: ThemeColorSection) {
         self.theme = theme
@@ -35,6 +35,14 @@ final class ThemeColorSegmentedTitleView: UIView {
         self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
             if let section = ThemeColorSection(rawValue: index) {
                 self?.sectionUpdated?(section)
+            }
+        }
+        
+        self.segmentedControlNode.selectedIndexShouldChange = { [weak self] index, f in
+            if let section = ThemeColorSection(rawValue: index) {
+                self?.shouldUpdateSection?(section, f)
+            } else {
+                f(false)
             }
         }
         

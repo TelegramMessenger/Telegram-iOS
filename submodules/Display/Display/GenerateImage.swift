@@ -297,6 +297,43 @@ public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor
     return tintedImage
 }
 
+public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> UIImage? {
+    guard let image = image else {
+        return nil
+    }
+    
+    let imageSize = image.size
+
+    UIGraphicsBeginImageContextWithOptions(imageSize, false, image.scale)
+    if let context = UIGraphicsGetCurrentContext() {
+        let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+        context.saveGState()
+        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+        context.clip(to: imageRect, mask: image.cgImage!)
+        
+        let gradientColors = colors.map { $0.cgColor } as CFArray
+        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
+        
+        var locations: [CGFloat] = []
+        for i in 0 ..< colors.count {
+            locations.append(delta * CGFloat(i))
+        }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+        
+        context.restoreGState()
+    }
+    
+    let tintedImage = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return tintedImage
+}
+
 public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = true, scale: CGFloat? = nil) -> UIImage? {
     guard let image = image else {
         return nil

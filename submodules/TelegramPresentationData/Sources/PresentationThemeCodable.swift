@@ -43,34 +43,38 @@ extension TelegramWallpaper: Codable {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
                         let components = value.components(separatedBy: " ")
-                        var slug: String?
-                        var color: Int32?
-                        var intensity: Int32?
-                        var blur = false
-                        var motion = false
-                        if !components.isEmpty {
-                            slug = components[0]
-                        }
-                        if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
-                            color = Int32(bitPattern: value.rgb)
-                        }
-                        if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
-                            if value >= 0 && value <= 100 {
-                                intensity = value
-                            } else {
-                                intensity = 50
-                            }
-                        }
-                        if components.contains("motion") {
-                            motion = true
-                        }
-                        if components.contains("blur") {
-                            blur = true
-                        }
-                        if let slug = slug {
-                            self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                        if components.count == 2 && [6,7].contains(components[0].count) && [6,7].contains(components[1].count), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb))
                         } else {
-                            throw PresentationThemeDecodingError.generic
+                            var slug: String?
+                            var color: Int32?
+                            var intensity: Int32?
+                            var blur = false
+                            var motion = false
+                            if !components.isEmpty {
+                                slug = components[0]
+                            }
+                            if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
+                                color = Int32(bitPattern: value.rgb)
+                            }
+                            if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
+                                if value >= 0 && value <= 100 {
+                                    intensity = value
+                                } else {
+                                    intensity = 50
+                                }
+                            }
+                            if components.contains("motion") {
+                                motion = true
+                            }
+                            if components.contains("blur") {
+                                blur = true
+                            }
+                            if let slug = slug {
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                            } else {
+                                throw PresentationThemeDecodingError.generic
+                            }
                         }
                     }
             }
@@ -84,8 +88,10 @@ extension TelegramWallpaper: Codable {
         switch self {
             case .builtin:
                 try container.encode("builtin")
-            case let .color(value):
-                try container.encode(String(format: "%06x", value))
+            case let .color(color):
+                try container.encode(String(format: "%06x", color))
+            case let .gradient(topColor, bottomColor):
+                try container.encode(String(format: "%06x", topColor) + " " + String(format: "%06x", bottomColor))
             case let .file(file):
                 var components: [String] = []
                 components.append(file.slug)
@@ -916,13 +922,16 @@ extension PresentationThemeChatList: Codable {
 extension PresentationThemeBubbleColorComponents: Codable {
     enum CodingKeys: String, CodingKey {
         case bg
+        case gradientBg
         case highlightedBg
         case stroke
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(fill: try decodeColor(values, .bg),
+                  gradientFill: try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: codingPath + ".bg"),
                   highlightedFill: try decodeColor(values, .highlightedBg),
                   stroke: try decodeColor(values, .stroke))
     }
@@ -930,6 +939,7 @@ extension PresentationThemeBubbleColorComponents: Codable {
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try encodeColor(&values, self.fill, .bg)
+        try encodeColor(&values, self.gradientFill, .gradientBg)
         try encodeColor(&values, self.highlightedFill, .highlightedBg)
         try encodeColor(&values, self.stroke, .stroke)
     }
@@ -1654,13 +1664,12 @@ extension PresentationTheme: Codable {
         
         if let decoder = decoder as? PresentationThemeDecoding {
             let serviceBackgroundColor = decoder.serviceBackgroundColor ?? .black
-            decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: nil)
+            decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: serviceBackgroundColor)
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),
                   referenceTheme: referenceTheme,
                   overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
-                  baseColor: nil,
                   intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),
                   passcode: try values.decode(PresentationThemePasscode.self, forKey: .passcode),
                   rootController: try values.decode(PresentationThemeRootController.self, forKey: .root),

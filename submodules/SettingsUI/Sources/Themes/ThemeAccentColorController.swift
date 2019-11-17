@@ -9,43 +9,43 @@ import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import PresentationDataUtils
 
 private let colors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 
 final class ThemeAccentColorController: ViewController {
     private let context: AccountContext
-    private let currentTheme: PresentationThemeReference
+    private let themeReference: PresentationThemeReference
     private let section: ThemeColorSection
-    
-    let segmentedTitleView: ThemeColorSegmentedTitleView
+    private let initialBackgroundColor: UIColor?
+    private var presentationData: PresentationData
     
     private var controllerNode: ThemeAccentColorControllerNode {
         return self.displayNode as! ThemeAccentColorControllerNode
     }
-    
-    private var presentationData: PresentationData
+
+    let segmentedTitleView: ThemeColorSegmentedTitleView
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(context: AccountContext, currentTheme: PresentationThemeReference, section: ThemeColorSection) {
+    var completion: (() -> Void)?
+    
+    init(context: AccountContext, themeReference: PresentationThemeReference, section: ThemeColorSection) {
         self.context = context
-        self.currentTheme = currentTheme
+        self.themeReference = themeReference
         self.section = section
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-//        var color: UIColor
-//        if let currentColor = currentColor {
-//            color = currentColor
-//        } else if let randomColor = colors.randomElement() {
-//            color = UIColor(rgb: UInt32(bitPattern: randomColor))
-//        } else {
-//            color = defaultDayAccentColor
-//        }
+        self.segmentedTitleView = ThemeColorSegmentedTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings, selectedSection: section)
         
-        self.segmentedTitleView = ThemeColorSegmentedTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings, selectedSection: .accent)
+        if section == .background {
+            self.initialBackgroundColor = colors.randomElement().flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+        } else {
+            self.initialBackgroundColor = nil
+        }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
                 
@@ -58,8 +58,30 @@ final class ThemeAccentColorController: ViewController {
             }
         }
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        self.segmentedTitleView.shouldUpdateSection = { [weak self] section, f in
+            guard let strongSelf = self else {
+                f(false)
+                return
+            }
+            guard section == .background else {
+                f(true)
+                return
+            }
+                        
+            if strongSelf.controllerNode.requiresWallpaperChange {
+                let controller = textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Theme_Colors_ColorWallpaperWarning, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                    f(false)
+                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Theme_Colors_ColorWallpaperWarningProceed, action: {
+                    f(true)
+                })])
+                strongSelf.present(controller, in: .window(.root))
+            } else {
+                f(true)
+            }
+        }
+        
         self.navigationItem.titleView = self.segmentedTitleView
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -69,7 +91,7 @@ final class ThemeAccentColorController: ViewController {
     override func loadDisplayNode() {
         super.loadDisplayNode()
         
-        self.displayNode = ThemeAccentColorControllerNode(context: self.context, currentTheme: self.currentTheme, theme: self.presentationData.theme, dismiss: { [weak self] in
+        self.displayNode = ThemeAccentColorControllerNode(context: self.context, themeReference: self.themeReference, theme: self.presentationData.theme, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -85,18 +107,34 @@ final class ThemeAccentColorController: ViewController {
                     
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                     var themeSpecificAccentColors = current.themeSpecificAccentColors
-                    //let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: strongSelf.controllerNode.color))
-                    //themeSpecificAccentColors[currentTheme.index] = color
+                    var themeSpecificBubbleColors = current.themeSpecificBubbleColors
+                    let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: state.accentColor.rgb))
+                    themeSpecificAccentColors[currentTheme.index] = color
                     
-                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil) ?? defaultPresentationTheme
-                    if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
-                    } else {
-                        themeSpecificChatWallpapers[currentTheme.index] = theme.chat.defaultWallpaper
+                    var wallpaper = themeSpecificChatWallpapers[currentTheme.index]
+                    if let backgroundColors = state.backgroundColors {
+                        if let bottomColor = backgroundColors.1 {
+                            wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb))
+                        } else {
+                            wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+                        }
                     }
+                    themeSpecificChatWallpapers[currentTheme.index] = wallpaper
                     
-                    return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    var bubbleColors: PresentationThemeColorPair?
+                    if let messagesColors = state.messagesColors {
+                        if let secondColor = messagesColors.1 {
+                            bubbleColors = PresentationThemeColorPair(color: Int32(bitPattern: messagesColors.0.rgb), optionalColor: Int32(bitPattern: secondColor.rgb))
+                        } else {
+                            bubbleColors = PresentationThemeColorPair(color: Int32(bitPattern: messagesColors.0.rgb), optionalColor: nil)
+                        }
+                    }
+                    themeSpecificBubbleColors[currentTheme.index] = bubbleColors
+                    
+                    return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 }) |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
+                        strongSelf.completion?()
                         strongSelf.dismiss()
                     }
                 })
@@ -128,17 +166,21 @@ final class ThemeAccentColorController: ViewController {
             if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                 wallpaper = customWallpaper
             } else {
-                let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil) ?? defaultPresentationTheme
+                let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
                 wallpaper = theme.chat.defaultWallpaper
             }
             
             let backgroundColors: (UIColor, UIColor?)?
-            if case let .color(color) = wallpaper {
-                backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-            } else if case let .gradient(topColor, bottomColor) = wallpaper {
-                backgroundColors = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+            if let initialBackgroundColor = strongSelf.initialBackgroundColor {
+                backgroundColors = (initialBackgroundColor, nil)
             } else {
-                backgroundColors = nil
+                if case let .color(color) = wallpaper {
+                    backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
+                } else if case let .gradient(topColor, bottomColor) = wallpaper {
+                    backgroundColors = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                } else {
+                    backgroundColors = nil
+                }
             }
             
             let messageColors: (UIColor, UIColor?)?

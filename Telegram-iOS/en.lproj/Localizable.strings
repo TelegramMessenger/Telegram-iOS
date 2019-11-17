@@ -5114,3 +5114,4 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.Colors.Messages" = "Messages";
 
 "Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
+"Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";

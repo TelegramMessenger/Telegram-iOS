@@ -36,10 +36,14 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
     return generateImage(CGSize(width: 42.0 + inset * 2.0, height: diameter + inset * 2.0), contextGenerator: { rawSize, context in
         var drawWithClearColor = false
         
-        if knockout, case let .color(color) = wallpaper {
+        if knockout {
             drawWithClearColor = !mask
-            context.setFillColor(UIColor(rgb: UInt32(color)).cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: rawSize))
+            if case let .color(color) = wallpaper {
+                context.setFillColor(UIColor(rgb: UInt32(color)).cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: rawSize))
+            } else {
+                context.clear(CGRect(origin: CGPoint(), size: rawSize))
+            }
         } else {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
         }

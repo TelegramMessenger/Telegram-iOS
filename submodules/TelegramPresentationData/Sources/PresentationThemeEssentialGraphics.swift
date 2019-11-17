@@ -149,73 +149,56 @@ public final class PrincipalThemeEssentialGraphics {
         let theme = presentationTheme.chat
         var wallpaper = initialWallpaper
         
+        let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
+        let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper
+        
         if knockoutMode {
             let wallpaperImage = chatControllerBackgroundImage(theme: presentationTheme, wallpaper: wallpaper, mediaBox: mediaBox, knockoutMode: false)
             self.incomingBubbleGradientImage = wallpaperImage
             self.outgoingBubbleGradientImage = wallpaperImage
             wallpaper = presentationTheme.chat.defaultWallpaper
-        } else if case .color = wallpaper {
-            switch presentationTheme.name {
-            case let .builtin(name):
-                switch name {
-                case .day, .night, .nightAccent:
-                    var incomingGradientColors: (UIColor, UIColor)?
-                    if let incomingGradientColors = incomingGradientColors {
-                        self.incomingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
-                            var locations: [CGFloat] = [0.0, 1.0]
-                            let colors = [incomingGradientColors.0.cgColor, incomingGradientColors.1.cgColor] as NSArray
-                            
-                            let colorSpace = deviceColorSpace
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-                            
-                            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                        })
-                    } else {
-                        self.incomingBubbleGradientImage = nil
-                    }
+        } else {
+            var incomingGradientColors: (UIColor, UIColor)?
+            if incoming.fill.rgb != incoming.gradientFill.rgb {
+                incomingGradientColors = (incoming.fill, incoming.gradientFill)
+            }
+            if let incomingGradientColors = incomingGradientColors {
+                self.incomingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                    var locations: [CGFloat] = [0.0, 1.0]
+                    let colors = [incomingGradientColors.0.cgColor, incomingGradientColors.1.cgColor] as NSArray
                     
-                    var outgoingGradientColors: (UIColor, UIColor)?
-                    if let baseColor = presentationTheme.baseColor {
-                        if presentationTheme.baseColor == .custom {
-                            
-                        } else {
-                            let colors = baseColor.outgoingGradientColors
-                            if !colors.0.isEqual(colors.1) {
-                                outgoingGradientColors = colors
-                            }
-                        }
-                    }
-                    if let outgoingGradientColors = outgoingGradientColors {
-                        self.outgoingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
-                            var locations: [CGFloat] = [0.0, 1.0]
-                            let colors = [outgoingGradientColors.0.cgColor, outgoingGradientColors.1.cgColor] as NSArray
-                            
-                            let colorSpace = deviceColorSpace
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-                            
-                            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                        })
-                    } else {
-                        self.outgoingBubbleGradientImage = nil
-                    }
-                case .dayClassic:
-                    self.incomingBubbleGradientImage = nil
-                    self.outgoingBubbleGradientImage = nil
-                }
-            case .custom:
+                    let colorSpace = deviceColorSpace
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+                    
+                    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                })
+            } else {
                 self.incomingBubbleGradientImage = nil
+            }
+            
+            var outgoingGradientColors: (UIColor, UIColor)?
+            if outgoing.fill.rgb != outgoing.gradientFill.rgb {
+                outgoingGradientColors = (outgoing.fill, outgoing.gradientFill)
+            }
+            if let outgoingGradientColors = outgoingGradientColors {
+                self.outgoingBubbleGradientImage = generateImage(CGSize(width: 1.0, height: 512.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                    var locations: [CGFloat] = [0.0, 1.0]
+                    let colors = [outgoingGradientColors.0.cgColor, outgoingGradientColors.1.cgColor] as NSArray
+                    
+                    let colorSpace = deviceColorSpace
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+                    
+                    context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                })
+            } else {
                 self.outgoingBubbleGradientImage = nil
             }
-        } else {
-            self.incomingBubbleGradientImage = nil
-            self.outgoingBubbleGradientImage = nil
         }
-        
-        let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
-        let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper
         
         let incomingKnockout = self.incomingBubbleGradientImage != nil
         let outgoingKnockout = self.outgoingBubbleGradientImage != nil
+        
+        let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
         
         let emptyImage = UIImage()
         if preview {
@@ -275,8 +258,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.outgoingDateAndStatusImpressionIcon = emptyImage
             self.mediaImpressionIcon = emptyImage
             self.freeImpressionIcon = emptyImage
-            self.dateStaticBackground = emptyImage
-            self.dateFloatingBackground = emptyImage
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
@@ -325,7 +306,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.checkMediaFullImage = generateCheckImage(partial: false, color: .white)!
             self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white)!
             
-            let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
             self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText)!
             self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText)!
             
@@ -349,22 +329,22 @@ public final class PrincipalThemeEssentialGraphics {
             self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
             self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
             
-            let chatDateSize: CGFloat = 20.0
-            self.dateStaticBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(serviceColor.dateFillStatic.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
-            
-            self.dateFloatingBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(serviceColor.dateFillFloating.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
-            
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: theme.message.incoming.mediaControlInnerBackgroundColor)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: theme.message.outgoing.mediaControlInnerBackgroundColor)!
         }
+        
+        let chatDateSize: CGFloat = 20.0
+        self.dateStaticBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(serviceColor.dateFillStatic.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
+        
+        self.dateFloatingBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(serviceColor.dateFillFloating.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
     }
 }
 

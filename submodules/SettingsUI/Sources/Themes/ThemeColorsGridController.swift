@@ -8,6 +8,7 @@ import SyncCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 
 private func availableColors() -> [Int32] {
@@ -127,13 +128,29 @@ final class ThemeColorsGridController: ViewController {
             }
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
-                let controller = WallpaperGalleryController(context: strongSelf.context, source: .customColor(randomColor()))
-                controller.apply = { _, _, _ in
-                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                        let _ = navigationController.popViewController(animated: true)
+                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                    guard let strongSelf = self else {
+                        return
                     }
-                }
-                self?.present(controller, in: .window(.root), blockInteraction: true)
+                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+                    
+                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
+                    let themeReference: PresentationThemeReference
+                    if autoNightModeTriggered {
+                        themeReference = settings.automaticThemeSwitchSetting.theme
+                    } else {
+                        themeReference = settings.theme
+                    }
+                    
+                    let controller = ThemeAccentColorController(context: strongSelf.context, themeReference: themeReference, section: .background)
+                    controller.completion = { [weak self] in
+                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                            let _ = navigationController.popViewController(animated: true)
+                        }
+                    }
+                    strongSelf.push(controller)
+                })
             }
         })
     

@@ -49,9 +49,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let separatorNode: ASDisplayNode
     
     private let chatContainerNode: ASDisplayNode
+    private let messagesContainerNode: ASDisplayNode
     private let instantChatBackgroundNode: WallpaperBackgroundNode
     private let remoteChatBackgroundNode: TransformImageNode
     private let blurredNode: BlurredImageNode
+    private var dateHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
 
     private let toolbarNode: WallpaperGalleryToolbarNode
@@ -81,17 +83,25 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.pageControlBackgroundNode = ASDisplayNode()
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.pageControlBackgroundNode.cornerRadius = 8.0
+        self.pageControlBackgroundNode.cornerRadius = 10.5
         
-        self.pageControlNode = PageControlNode(dotColor: previewTheme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: previewTheme.list.pageIndicatorInactiveColor)
+        self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
     
         self.chatListBackgroundNode = ASDisplayNode()
         
         self.chatContainerNode = ASDisplayNode()
         self.chatContainerNode.clipsToBounds = true
+        
+        self.messagesContainerNode = ASDisplayNode()
+        self.messagesContainerNode.clipsToBounds = true
+        self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        
         self.instantChatBackgroundNode = WallpaperBackgroundNode()
         self.instantChatBackgroundNode.displaysAsynchronously = false
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        if case .gradient = previewTheme.chat.defaultWallpaper {
+            self.instantChatBackgroundNode.imageContentMode = .scaleToFill
+        }
         self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
@@ -150,6 +160,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.chatContainerNode.addSubnode(self.instantChatBackgroundNode)
         self.chatContainerNode.addSubnode(self.remoteChatBackgroundNode)
+        self.chatContainerNode.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.separatorNode)
         
@@ -190,11 +201,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
-                if strongSelf.previewTheme.chat.defaultWallpaper.hasWallpaper {
-                    strongSelf.pageControlBackgroundNode.backgroundColor = color
-                } else {
-                    strongSelf.pageControlBackgroundNode.backgroundColor = .clear
-                }
+                strongSelf.pageControlBackgroundNode.backgroundColor = color
             }
         })
         
@@ -283,9 +290,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.previewTheme = theme
     
         self.backgroundColor = self.previewTheme.list.plainBackgroundColor
-        
-        self.pageControlNode.dotColor = self.previewTheme.chatList.unreadBadgeActiveBackgroundColor
-        self.pageControlNode.inactiveDotColor = self.previewTheme.list.pageIndicatorInactiveColor
         
         self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
@@ -418,6 +422,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp:  self.referenceTimestamp, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
+        
         var items: [ListViewItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
         let otherPeerId = self.context.account.peerId
@@ -477,22 +483,36 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     itemNode = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
-                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
-                self.chatContainerNode.addSubnode(itemNode!)
+                self.messagesContainerNode.addSubnode(itemNode!)
             }
             self.messageNodes = messageNodes
         }
         
+        var bottomOffset: CGFloat = 9.0 + bottomInset
         if let messageNodes = self.messageNodes {
-            var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
             for itemNode in messageNodes {
-                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
-                bottomOffset -= itemNode.frame.height
+                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
+                bottomOffset += itemNode.frame.height
                 itemNode.updateFrame(itemNode.frame, within: layout.size)
             }
         }
+        
+        let dateHeaderNode: ListViewItemHeaderNode
+        if let currentDateHeaderNode = self.dateHeaderNode {
+            dateHeaderNode = currentDateHeaderNode
+            headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
+        } else {
+            dateHeaderNode = headerItem.node()
+            dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+            //self.messagesContainerNode.addSubnode(dateHeaderNode)
+            self.dateHeaderNode = dateHeaderNode
+        }
+        
+        transition.updateFrame(node: dateHeaderNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: CGSize(width: layout.size.width, height: headerItem.height)))
+        dateHeaderNode.updateLayout(size: self.messagesContainerNode.frame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -530,6 +550,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             bottomInset = 66.0
         }
         
+        self.messagesContainerNode.frame = self.chatContainerNode.bounds
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
@@ -543,7 +564,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
         let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
-        self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 11.0, y: pageControlFrame.minY - 12.0, width: pageControlFrame.width + 22.0, height: 30.0)
+        self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))
     }
 }

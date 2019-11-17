@@ -68,7 +68,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     case settingInfo(PresentationTheme, String)
     
     case themeHeader(PresentationTheme, String)
-    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor])
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], [Int64: PresentationThemeColorPair])
     
     var section: ItemListSectionId {
         switch self {
@@ -186,8 +186,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors):
-                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors, lhsThemeBubbleColors):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors, rhsThemeBubbleColors) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors, lhsThemeBubbleColors == rhsThemeBubbleColors {
                     return true
                 } else {
                     return false
@@ -244,8 +244,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .themeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
+            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, themeSpecificBubbleColors):
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: themeSpecificBubbleColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
                 }, contextAction: nil)
         }
@@ -313,7 +313,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             break
         case .system, .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
-            entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors))
+            entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors, settings.themeSpecificBubbleColors))
     }
     
     return entries
@@ -523,7 +523,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
             }
         }))
     }, updateTheme: { theme in
-        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil) else {
+        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: .black) else {
             return
         }
         
