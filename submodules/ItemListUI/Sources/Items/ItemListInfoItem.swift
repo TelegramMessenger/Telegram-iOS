@@ -19,15 +19,15 @@ public enum InfoListItemLinkAction {
 public class InfoListItem: ListViewItem {
     public let selectable: Bool = false
     
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let text: InfoListItemText
     let style: ItemListStyle
     let linkAction: ((InfoListItemLinkAction) -> Void)?
     let closeAction: (() -> Void)?
     
-    public init(theme: PresentationTheme, title: String, text: InfoListItemText, style: ItemListStyle, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
+        self.presentationData = presentationData
         self.title = title
         self.text = text
         self.style = style
@@ -72,9 +72,9 @@ public class InfoListItem: ListViewItem {
 public class ItemListInfoItem: InfoListItem, ItemListItem {
     public let sectionId: ItemListSectionId
     
-    public init(theme: PresentationTheme, title: String, text: InfoListItemText, style: ItemListStyle, sectionId: ItemListSectionId, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, sectionId: ItemListSectionId, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.sectionId = sectionId
-        super.init(theme: theme, title: title, text: text, style: style, linkAction: linkAction, closeAction: closeAction)
+        super.init(presentationData: presentationData, title: title, text: text, style: style, linkAction: linkAction, closeAction: closeAction)
     }
     
     override public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -110,11 +110,6 @@ public class ItemListInfoItem: InfoListItem, ItemListItem {
         }
     }
 }
-
-private let titleFont = Font.semibold(17.0)
-private let textFont = Font.regular(16.0)
-private let textBoldFont = Font.semibold(16.0)
-private let badgeFont = Font.regular(15.0)
 
 class InfoItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -211,6 +206,11 @@ class InfoItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
             let rightInset: CGFloat = 15.0 + params.rightInset
+            
+            let titleFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)
+            let textFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            let textBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            let badgeFont = Font.regular(15.0)
     
             var updatedTheme: PresentationTheme?
             var updatedBadgeImage: UIImage?
@@ -218,10 +218,10 @@ class InfoItemNode: ListViewItemNode {
             var updatedCloseIcon: UIImage?
             
             let badgeDiameter: CGFloat = 20.0
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
-                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.theme.list.itemDestructiveColor)
-                updatedCloseIcon = PresentationResourcesItemList.itemListCloseIconImage(item.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.presentationData.theme.list.itemDestructiveColor)
+                updatedCloseIcon = PresentationResourcesItemList.itemListCloseIconImage(item.presentationData.theme)
             }
             
             let insets: UIEdgeInsets
@@ -236,26 +236,26 @@ class InfoItemNode: ListViewItemNode {
             let itemSeparatorColor: UIColor
             
             switch item.style {
-                case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
             }
             
             let attributedText: NSAttributedString
             switch item.text {
-                case let .plain(text):
-                    attributedText = NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
-                case let .markdown(text):
-                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
-                        return (TelegramTextAttributes.URL, contents)
-                    }))
+            case let .plain(text):
+                attributedText = NSAttributedString(string: text, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            case let .markdown(text):
+                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }))
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 36.0)
@@ -320,7 +320,7 @@ class InfoItemNode: ListViewItemNode {
                     
                     strongSelf.closeButton.isHidden = item.closeAction == nil
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -338,7 +338,7 @@ class InfoItemNode: ListViewItemNode {
                         strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
                     }
                     
-                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0 + floor((titleLayout.size.height - badgeDiameter) / 2.0)), size: CGSize(width: badgeDiameter, height: badgeDiameter))
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 1.0), size: labelLayout.size)
                     
@@ -420,7 +420,7 @@ class InfoItemNode: ListViewItemNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.list.itemAccentColor.withAlphaComponent(0.5))
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5))
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

@@ -163,11 +163,6 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     }
 }
 
-private let titleFont = Font.medium(16.0)
-private let textFont = Font.regular(15.0)
-private let dateFont = Font.regular(14.0)
-private let badgeFont = Font.regular(14.0)
-
 private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
 private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", scale: 0.33333, offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"], flip: false)
 private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", scale: 0.33333, offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"], flip: false)
@@ -196,8 +191,6 @@ private enum RevealOptionKey: Int32 {
     case hide
     case unhide
 }
-
-private let itemHeight: CGFloat = 76.0
 
 private func canArchivePeer(id: PeerId, accountPeerId: PeerId) -> Bool {
     if id.namespace == Namespaces.Peer.CloudUser && id.id == 777000 {
@@ -653,6 +646,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let currentChatListSearchResult = self.cachedChatListSearchResult
         
         return { item, params, first, last, firstWithHeader, nextIsPinned in
+            let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
+            let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            let badgeFont = Font.regular(14.0)
+            
             let account = item.context.account
             var message: Message?
             enum ContentPeer {
@@ -749,7 +747,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
@@ -761,9 +759,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = sizeAndApply.0
                 
                 if item.index.pinningIndex != nil && !isAd && !isPeerGroup {
-                    let sizeAndApply = reorderControlLayout(itemHeight, item.presentationData.theme)
+                    let sizeAndApply = reorderControlLayout(item.presentationData.theme)
                     reorderControlSizeAndApply = sizeAndApply
-                    reorderInset = sizeAndApply.0.width
+                    reorderInset = sizeAndApply.0
                 }
             } else {
                 editingOffset = 0.0
@@ -1076,13 +1074,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let layoutOffset: CGFloat = 0.0
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
+            let rawContentOriginX = 2.0
+            let rawContentWidth = params.width - leftInset - params.rightInset - 10.0
             
-            let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (badgeLayout, badgeApply) = badgeLayout(CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), currentBadgeBackgroundImage, badgeContent)
+            let (badgeLayout, badgeApply) = badgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), currentBadgeBackgroundImage, badgeContent)
             
-            let (mentionBadgeLayout, mentionBadgeApply) = mentionBadgeLayout(CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), currentMentionBadgeImage, mentionBadgeContent)
+            let (mentionBadgeLayout, mentionBadgeApply) = mentionBadgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), currentMentionBadgeImage, mentionBadgeContent)
             
             var badgeSize: CGFloat = 0.0
             if !badgeLayout.width.isZero {
@@ -1106,21 +1105,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             badgeSize = max(badgeSize, reorderInset)
             
-            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, minimumNumberOfLines: 1, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             var textCutout: TextNodeCutout?
             if !textLeftCutout.isZero {
                 textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 4.0), topRight: nil, bottomRight: nil)
             }
-            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, minimumNumberOfLines: authorAttributedString == nil ? 2 : 1,  maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
-            let titleRect = CGRect(origin: rawContentRect.origin, size: CGSize(width: rawContentRect.width - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth, height: rawContentRect.height))
-            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
+            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, minimumNumberOfLines: 1, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
             if let inputActivities = inputActivities, !inputActivities.isEmpty {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentRect.width - badgeSize, height: 40.0), item.presentationData.strings, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
+                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData.strings, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             }
@@ -1177,6 +1176,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if let currentItem = currentItem, currentItem.content.chatLocation == item.content.chatLocation {
                 animateContent = true
             }
+            
+            let titleSpacing: CGFloat = -1.0
+            let authorSpacing: CGFloat = -3.0
+            var itemHeight: CGFloat = 8.0 * 2.0 + titleLayout.size.height + titleSpacing
+            if authorLayout.size.height.isZero {
+                itemHeight += textLayout.size.height
+            } else {
+                itemHeight += authorLayout.size.height
+                itemHeight += authorSpacing + textLayout.size.height
+            }
+            
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = 0.0
@@ -1282,9 +1293,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     var animateBadges = animateContent
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: layoutOffset), size: reorderControlSizeAndApply.0)
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: layoutOffset), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(false)
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.frame = reorderControlFrame
@@ -1297,7 +1308,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: strongSelf.pinnedIconNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
                         } else if let reorderControlNode = strongSelf.reorderControlNode {
-                            let _ = reorderControlSizeAndApply.1(false)
+                            let _ = reorderControlSizeAndApply.1(layout.contentSize.height, false)
                             transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
                         }
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
@@ -1313,7 +1324,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: strongSelf.statusNode, alpha: 1.0)
                     }
                     
-                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: layoutOffset + 7.0), size: CGSize(width: 60.0, height: 60.0))
+                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: floor((layout.contentSize.height - 60.0) / 2.0)), size: CGSize(width: 60.0, height: 60.0))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     let onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
@@ -1611,7 +1622,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = params.leftInset + 78.0
             
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: itemHeight - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: self.bounds.size.height - 12.0 - 9.0))
             
             let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + offset, dy: 0.0)
             
@@ -1806,7 +1817,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let item = self.item {
             if case .groupReference = item.content {
-                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - itemHeight, 0.0)
+                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - self.bounds.size.height, 0.0)
             } else {
                 var separatorFrame = self.separatorNode.frame
                 separatorFrame.origin.y = currentValue - UIScreenPixel

@@ -6,27 +6,6 @@ import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 
-extension PresentationFontSize {
-    var baseDisplaySize: CGFloat {
-        switch self {
-            case .extraSmall:
-                return 14.0
-            case .small:
-                return 15.0
-            case .medium:
-                return 16.0
-            case .regular:
-                return 17.0
-            case .large:
-                return 19.0
-            case .extraLarge:
-                return 23.0
-            case .extraLargeX2:
-                return 26.0
-        }
-    }
-}
-
 public final class ChatPresentationThemeData: Equatable {
     public let theme: PresentationTheme
     public let wallpaper: TelegramWallpaper

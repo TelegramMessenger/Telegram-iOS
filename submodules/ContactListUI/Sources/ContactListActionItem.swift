@@ -15,7 +15,7 @@ public enum ContactListActionItemHighlight {
 }
 
 class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let icon: ContactListActionItemIcon
     let highlight: ContactListActionItemHighlight
@@ -23,8 +23,8 @@ class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let action: () -> Void
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
-        self.theme = theme
+    init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.title = title
         self.icon = icon
         self.highlight = highlight
@@ -110,8 +110,6 @@ class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     }
 }
 
-private let titleFont = Font.regular(17.0)
-
 class ContactListActionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -122,8 +120,6 @@ class ContactListActionItemNode: ListViewItemNode {
     private let titleNode: TextNode
     
     private let activateArea: AccessibilityAreaNode
-    
-    private var theme: PresentationTheme?
     
     private var item: ContactListActionItem?
     
@@ -167,23 +163,25 @@ class ContactListActionItemNode: ListViewItemNode {
     
     func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let currentTheme = self.theme
+        let currentItem = self.item
         
         return { item, params, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             
-            if currentTheme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
+            
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             var leftInset: CGFloat = 16.0 + params.leftInset
             if case .generic = item.icon {
                 leftInset += 49.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: 50.0)
+            let contentSize = CGSize(width: params.width, height: 12.0 * 2.0 + titleLayout.size.height)
             let insets = UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             let separatorHeight = UIScreenPixel
             
@@ -192,18 +190,17 @@ class ContactListActionItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    strongSelf.theme = item.theme
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.theme.list.itemAccentColor)
+                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
                     }
                     
                     let _ = titleApply()
@@ -218,12 +215,12 @@ class ContactListActionItemNode: ListViewItemNode {
                                 let iconSpacing: CGFloat = 4.0
                                 let totalWidth: CGFloat = titleLayout.size.width + image.size.width + iconSpacing
                                 switch position {
-                                    case .left:
-                                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
-                                        titleOffset = iconFrame.minX + iconSpacing
-                                    case .right:
-                                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0) + totalWidth - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
-                                        titleOffset = iconFrame.maxX - totalWidth
+                                case .left:
+                                    iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                                    titleOffset = iconFrame.minX + iconSpacing
+                                case .right:
+                                    iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0) + totalWidth - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                                    titleOffset = iconFrame.maxX - totalWidth
                                 }
                             default:
                                 iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)

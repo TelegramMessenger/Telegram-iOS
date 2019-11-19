@@ -9,8 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 
-private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
-private let reactionCountFont = Font.semiboldItalic(11.0)
+private let reactionCountFont = Font.semibold(11.0)
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -32,29 +31,6 @@ enum ChatMessageDateAndStatusOutgoingType: Equatable {
     case Sent(read: Bool)
     case Sending
     case Failed
-    
-    static func ==(lhs: ChatMessageDateAndStatusOutgoingType, rhs: ChatMessageDateAndStatusOutgoingType) -> Bool {
-        switch lhs {
-            case let .Sent(read):
-                if case .Sent(read) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .Sending:
-                if case .Sending = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .Failed:
-                if case .Failed = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 enum ChatMessageDateAndStatusType: Equatable {
@@ -149,12 +125,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             let offset: CGFloat = -UIScreenPixel
             
+            let checkSize: CGFloat = floor(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
+            
             switch type {
                 case .BubbleIncoming:
                     dateColor = presentationData.theme.theme.chat.message.incoming.secondaryTextColor
                     leftInset = 10.0
-                    loadedCheckFullImage = graphics.checkBubbleFullImage
-                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockBubbleIncomingFrameImage
                     clockMinImage = graphics.clockBubbleIncomingMinImage
                     if impressionCount != nil {
@@ -164,8 +142,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
-                    loadedCheckFullImage = graphics.checkBubbleFullImage
-                    loadedCheckPartialImage = graphics.checkBubblePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatOutgoingFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatOutgoingPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockBubbleOutgoingFrameImage
                     clockMinImage = graphics.clockBubbleOutgoingMinImage
                     if impressionCount != nil {
@@ -175,8 +153,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatMediaFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatMediaPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockMediaFrameImage
                     clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
@@ -187,8 +165,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkMediaFullImage
-                    loadedCheckPartialImage = graphics.checkMediaPartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatMediaFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatMediaPartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockMediaFrameImage
                     clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
@@ -199,8 +177,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = serviceColor.primaryText
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkFreeFullImage
-                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
@@ -212,8 +190,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = graphics.checkFreeFullImage
-                    loadedCheckPartialImage = graphics.checkFreePartialImage
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
@@ -229,7 +207,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 updatedDateText = compactNumericCountString(impressionCount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " " + updatedDateText
             }
             
+            let dateFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
             let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let checkOffset = floor(presentationData.fontSize.baseDisplaySize * 6.0 / 17.0)
             
             let statusWidth: CGFloat
             
@@ -306,7 +287,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             clockFrameNode = nil
                             clockMinNode = nil
                         } else {
-                            statusWidth = 13.0
+                            statusWidth = floor(floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
                             
                             if checkReadNode == nil {
                                 checkReadNode = ASImageNode()
@@ -330,7 +311,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             if read {
                                 checkReadFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0 + offset), size: checkSize)
                             }
-                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0 + offset), size: checkSize)
+                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - checkOffset, y: 3.0 + offset), size: checkSize)
                         }
                     case .Failed:
                         statusWidth = 0.0

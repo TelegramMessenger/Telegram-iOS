@@ -60,8 +60,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
         return self.displayNode as! TermsOfServiceControllerNode
     }
 
-    private let theme: TermsOfServiceControllerTheme
-    private let strings: PresentationStrings
+    private let presentationData: PresentationData
     private let text: String
     private let entities: [MessageTextEntity]
     private let ageConfirmation: Int32?
@@ -76,7 +75,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
     public var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accent))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.list.itemAccentColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = nil
@@ -85,9 +84,8 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
         }
     }
     
-    public init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping (String?) -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    public init(presentationData: PresentationData, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, signingUp: Bool, accept: @escaping (String?) -> Void, decline: @escaping () -> Void, openUrl: @escaping (String) -> Void) {
+        self.presentationData = presentationData
         self.text = text
         self.entities = entities
         self.ageConfirmation = ageConfirmation
@@ -96,13 +94,13 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
         self.decline = decline
         self.openUrl = openUrl
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.theme.accent, disabledButtonColor: self.theme.disabled, primaryTextColor: self.theme.primary, backgroundColor: self.theme.navigationBackground, separatorColor: self.theme.navigationSeparator, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(back: strings.Common_Back, close: strings.Common_Close)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: presentationData.strings.Common_Back, close: presentationData.strings.Common_Close)))
         
-        self.statusBar.statusBarStyle = self.theme.statusBarStyle
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.title = self.strings.Login_TermsOfServiceHeader
+        self.title = self.presentationData.strings.Login_TermsOfServiceHeader
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             self?.controllerNode.scrollToTop()
@@ -117,7 +115,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TermsOfServiceControllerNode(theme: self.theme, strings: self.strings, text: self.text, entities: self.entities, ageConfirmation: self.ageConfirmation, leftAction: { [weak self] in
+        self.displayNode = TermsOfServiceControllerNode(presentationData: self.presentationData, text: self.text, entities: self.entities, ageConfirmation: self.ageConfirmation, leftAction: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -125,16 +123,16 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
             let text: String
             let declineTitle: String
             if strongSelf.signingUp {
-                text = strongSelf.strings.Login_TermsOfServiceSignupDecline
-                declineTitle = strongSelf.strings.Login_TermsOfServiceDecline
+                text = strongSelf.presentationData.strings.Login_TermsOfServiceSignupDecline
+                declineTitle = strongSelf.presentationData.strings.Login_TermsOfServiceDecline
             } else {
-                text = strongSelf.strings.PrivacyPolicy_DeclineMessage
-                declineTitle = strongSelf.strings.PrivacyPolicy_DeclineDeclineAndDelete
+                text = strongSelf.presentationData.strings.PrivacyPolicy_DeclineMessage
+                declineTitle = strongSelf.presentationData.strings.PrivacyPolicy_DeclineDeclineAndDelete
             }
-            let theme: PresentationTheme = strongSelf.theme.presentationTheme
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
+            let theme: PresentationTheme = strongSelf.presentationData.theme
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
                 self?.decline()
-            }), TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
+            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
             })], actionLayout: .vertical), in: .window(.root))
         }, rightAction: { [weak self] in
             guard let strongSelf = self else {
@@ -142,8 +140,8 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
             }
             
             if let ageConfirmation = strongSelf.ageConfirmation {
-                let theme: PresentationTheme = strongSelf.theme.presentationTheme
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: strongSelf.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.strings.PrivacyPolicy_AgeVerificationAgree, action: {
+                let theme: PresentationTheme = strongSelf.presentationData.theme
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationAgree, action: {
                     self?.accept(self?.proccessBotNameAfterAccept)
                 })]), in: .window(.root))
             } else {

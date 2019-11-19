@@ -10,8 +10,7 @@ import TelegramPresentationData
 import TextFormat
 
 final class TermsOfServiceControllerNode: ViewControllerTracingNode {
-    private let theme: TermsOfServiceControllerTheme
-    private let strings: PresentationStrings
+    private let presentationData: PresentationData
     private let text: String
     private let entities: [MessageTextEntity]
     private let ageConfirmation: Int32?
@@ -43,9 +42,8 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(theme: TermsOfServiceControllerTheme, strings: PresentationStrings, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void, setToProcceedBot:@escaping(String)->Void) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: PresentationData, text: String, entities: [MessageTextEntity], ageConfirmation: Int32?, leftAction: @escaping () -> Void, rightAction: @escaping () -> Void, openUrl: @escaping (String) -> Void, present: @escaping (ViewController, Any?) -> Void, setToProcceedBot:@escaping(String)->Void) {
+        self.presentationData = presentationData
         self.text = text
         self.entities = entities
         self.ageConfirmation = ageConfirmation
@@ -59,7 +57,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.contentTextNode = ImmediateTextNode()
         self.contentTextNode.displaysAsynchronously = false
         self.contentTextNode.maximumNumberOfLines = 0
-        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: theme.primary, linkColor: theme.accent, baseFont: Font.regular(15.0), linkFont: Font.regular(15.0), boldFont: Font.semibold(15.0), italicFont: Font.italic(15.0), boldItalicFont: Font.semiboldItalic(15.0), fixedFont: Font.monospace(15.0), blockQuoteFont: Font.regular(15.0))
+        
+        let fontSize = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+        
+        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(fontSize), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize))
         
         self.toolbarNode = ASDisplayNode()
         self.toolbarSeparatorNode = ASDisplayNode()
@@ -67,20 +68,20 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionTextNode = ImmediateTextNode()
         self.leftActionTextNode.displaysAsynchronously = false
         self.leftActionTextNode.isUserInteractionEnabled = false
-        self.leftActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Decline, font: Font.regular(17.0), textColor: self.theme.accent)
+        self.leftActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Decline, font: Font.regular(presentationData.fontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
         self.rightActionNode = HighlightableButtonNode()
         self.rightActionTextNode = ImmediateTextNode()
         self.rightActionTextNode.displaysAsynchronously = false
         self.rightActionTextNode.isUserInteractionEnabled = false
-        self.rightActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Accept, font: Font.semibold(17.0), textColor: self.theme.accent)
+        self.rightActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Accept, font: Font.semibold(presentationData.fontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
         
         super.init()
         
-        self.backgroundColor = self.theme.listBackground
-        self.toolbarNode.backgroundColor = self.theme.navigationBackground
-        self.toolbarSeparatorNode.backgroundColor = self.theme.navigationSeparator
+        self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.toolbarNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.toolbarSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.contentBackgroundNode.backgroundColor = self.theme.itemBackground
+        self.contentBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
         
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.contentBackgroundNode)
@@ -119,7 +120,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionNode.addTarget(self, action: #selector(self.leftActionPressed), forControlEvents: .touchUpInside)
         self.rightActionNode.addTarget(self, action: #selector(self.rightActionPressed), forControlEvents: .touchUpInside)
         
-        self.contentTextNode.linkHighlightColor = self.theme.accent.withAlphaComponent(0.5)
+        self.contentTextNode.linkHighlightColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5)
         self.contentTextNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -136,16 +137,16 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            let theme: PresentationTheme = strongSelf.theme.presentationTheme
+            let theme: PresentationTheme = strongSelf.presentationData.theme
             let actionSheet = ActionSheetController(presentationTheme: theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: strongSelf.strings.Login_TermsOfService_ProceedBot(mention).0),
-                ActionSheetButtonItem(title: strongSelf.strings.PrivacyPolicy_Accept, color: .accent, action: { [weak actionSheet] in
+                ActionSheetTextItem(title: strongSelf.presentationData.strings.Login_TermsOfService_ProceedBot(mention).0),
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.PrivacyPolicy_Accept, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     setToProcceedBot(mention)
                     rightAction()
                 })
-                ]), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, action: { [weak actionSheet] in
+            ]), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })])])
             strongSelf.present(actionSheet, nil)
@@ -168,20 +169,20 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 return
             }
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                let theme: PresentationTheme = strongSelf.theme.presentationTheme
+                let theme: PresentationTheme = strongSelf.presentationData.theme
                 let actionSheet = ActionSheetController(presentationTheme: theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         self?.openUrl(url)
                     }),
-                    ActionSheetButtonItem(title: strongSelf.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         UIPasteboard.general.string = url
                     })
                 ]), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
                 ])])

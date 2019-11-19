@@ -510,7 +510,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     case addException(PresentationTheme, PresentationStrings, NotificationExceptionMode.Mode, Bool)
     case removeAll(PresentationTheme, PresentationStrings)
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationExceptionArguments
         switch self {
             case let .search(theme, strings):
@@ -527,11 +527,11 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     case .channels:
                         icon = PresentationResourcesItemList.addChannelIcon(theme)
                 }
-                return ItemListPeerActionItem(theme: theme, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -539,12 +539,12 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.deletePeer(peer)
                 }, hasTopStripe: false, hasTopGroupInset: false, noInsets: isSearching)
             case let .addPeer(_, peer, theme, strings, _, nameDisplayOrder):
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, account: arguments.account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(presentationData: presentationData, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, account: arguments.account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 })
             case let .removeAll(theme, strings):
-                return ItemListActionItem(theme: theme, title: strings.Notification_Exceptions_DeleteAll, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: strings.Notification_Exceptions_DeleteAll, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.removeAll()
                 })
         }
@@ -651,12 +651,12 @@ private struct NotificationExceptionNodeTransition {
     let animated: Bool
 }
 
-private func preparedExceptionsListNodeTransition(theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [NotificationExceptionEntry], to toEntries: [NotificationExceptionEntry], arguments: NotificationExceptionArguments, firstTime: Bool, forceUpdate: Bool, animated: Bool) -> NotificationExceptionNodeTransition {
+private func preparedExceptionsListNodeTransition(presentationData: ItemListPresentationData, from fromEntries: [NotificationExceptionEntry], to toEntries: [NotificationExceptionEntry], arguments: NotificationExceptionArguments, firstTime: Bool, forceUpdate: Bool, animated: Bool) -> NotificationExceptionNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
     
     return NotificationExceptionNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, animated: animated)
 }
@@ -995,7 +995,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 animated = false
             }
             
-            let transition = preparedExceptionsListNodeTransition(theme: presentationData.theme, strings: presentationData.strings, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, arguments: arguments, firstTime: previousEntriesAndPresentationData == nil, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: animated)
+            let transition = preparedExceptionsListNodeTransition(presentationData: ItemListPresentationData(presentationData), from: previousEntriesAndPresentationData?.0 ?? [], to: entries, arguments: arguments, firstTime: previousEntriesAndPresentationData == nil, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: animated)
             
             self?.listNode.keepTopItemOverscrollBackground = entries.count <= 1 ? nil : ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
             
@@ -1152,12 +1152,12 @@ private struct NotificationExceptionsSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func preparedNotificationExceptionsSearchContainerTransition(theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [NotificationExceptionEntry], to toEntries: [NotificationExceptionEntry], arguments: NotificationExceptionArguments, isSearching: Bool, forceUpdate: Bool) -> NotificationExceptionsSearchContainerTransition {
+private func preparedNotificationExceptionsSearchContainerTransition(presentationData: ItemListPresentationData, from fromEntries: [NotificationExceptionEntry], to toEntries: [NotificationExceptionEntry], arguments: NotificationExceptionArguments, isSearching: Bool, forceUpdate: Bool) -> NotificationExceptionsSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
     
     return NotificationExceptionsSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -1266,7 +1266,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             let entries = notificationsExceptionEntries(presentationData: presentationData, state: state.0, query: state.1, foundPeers: foundPeers)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
             
-            let transition = preparedNotificationExceptionsSearchContainerTransition(theme: presentationData.theme, strings: presentationData.strings, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, arguments: arguments, isSearching: state.1 != nil && !state.1!.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings)
+            let transition = preparedNotificationExceptionsSearchContainerTransition(presentationData: ItemListPresentationData(presentationData), from: previousEntriesAndPresentationData?.0 ?? [], to: entries, arguments: arguments, isSearching: state.1 != nil && !state.1!.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings)
             
             self?.enqueueTransition(transition)
         }))

@@ -388,7 +388,7 @@ public class ShareRootControllerImpl {
                     return
                 }
                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                 })])
                 strongSelf.mainWindow?.present(controller, on: .root)

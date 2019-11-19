@@ -3063,7 +3063,6 @@ Unused sets are archived when you add more.";
 
 "Settings.Appearance" = "Appearance";
 "Appearance.Title" = "Appearance";
-"Appearance.TextSize" = "TEXT SIZE";
 "Appearance.Preview" = "CHAT PREVIEW";
 "Appearance.ColorTheme" = "COLOR THEME";
 "Appearance.ThemeDayClassic" = "Day Classic";
@@ -5115,3 +5114,9 @@ Any member of this group will be able to see messages in the channel.";
 
 "Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
 "Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";
+
+"Appearance.TextSizeSetting" = "Text Size";
+"Appearance.TextSize.Automatic" = "System";
+"Appearance.TextSize.Title" = "Text Size";
+"Appearance.TextSize.UseSystem" = "User System Text Size";
+"Appearance.TextSize.Apply" = "Set";

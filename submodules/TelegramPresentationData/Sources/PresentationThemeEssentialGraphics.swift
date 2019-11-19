@@ -7,9 +7,12 @@ import SyncCore
 import TelegramUIPreferences
 import AppBundle
 
-private func generateCheckImage(partial: Bool, color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 11.0, height: 9.0), rotatedContext: { size, context in
+func generateCheckImage(partial: Bool, color: UIColor, width: CGFloat) -> UIImage? {
+    return generateImage(CGSize(width: width, height: floor(width * 9.0 / 11.0)), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.scaleBy(x: width / 11.0, y: width / 11.0)
+        
         context.translateBy(x: 1.0, y: 1.0)
         context.setStrokeColor(color.cgColor)
         context.setLineWidth(0.99)
@@ -206,8 +209,8 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
-            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
-            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
+            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor, width: 11.0)!
+            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor, width: 11.0)!
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
@@ -300,14 +303,14 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedSideHighlightedImage = messageBubbleImage(incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .side, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             
-            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
-            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
+            self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor, width: 11.0)!
+            self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor, width: 11.0)!
             
-            self.checkMediaFullImage = generateCheckImage(partial: false, color: .white)!
-            self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white)!
+            self.checkMediaFullImage = generateCheckImage(partial: false, color: .white, width: 11.0)!
+            self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white, width: 11.0)!
             
-            self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText)!
-            self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText)!
+            self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText, width: 11.0)!
+            self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText, width: 11.0)!
             
             self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.message.incoming.pendingActivityColor)!
             self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.message.incoming.pendingActivityColor)!

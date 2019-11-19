@@ -1,6 +1,41 @@
 import Foundation
 import UIKit
 import Display
+import TelegramUIPreferences
+
+public extension PresentationFontSize {
+    init(systemFontSize: CGFloat) {
+        var closestIndex = 0
+        let allSizes = PresentationFontSize.allCases
+        for i in 0 ..< allSizes.count {
+            if abs(allSizes[i].baseDisplaySize - systemFontSize) < abs(allSizes[closestIndex].baseDisplaySize - systemFontSize) {
+                closestIndex = i
+            }
+        }
+        self = allSizes[closestIndex]
+    }
+}
+
+public extension PresentationFontSize {
+    var baseDisplaySize: CGFloat {
+        switch self {
+        case .extraSmall:
+            return 14.0
+        case .small:
+            return 15.0
+        case .medium:
+            return 16.0
+        case .regular:
+            return 17.0
+        case .large:
+            return 19.0
+        case .extraLarge:
+            return 23.0
+        case .extraLargeX2:
+            return 26.0
+        }
+    }
+}
 
 public extension TabBarControllerTheme {
     convenience init(rootControllerTheme: PresentationTheme) {
@@ -46,9 +81,15 @@ public extension ActionSheetController {
 }
 
 public extension AlertControllerTheme {
-    convenience init(presentationTheme: PresentationTheme) {
+    convenience init(presentationTheme: PresentationTheme, fontSize: PresentationFontSize) {
         let actionSheet = presentationTheme.actionSheet
-        self.init(backgroundType: actionSheet.backgroundType == .light ? .light : .dark, backgroundColor: actionSheet.itemBackgroundColor, separatorColor: actionSheet.itemHighlightedBackgroundColor, highlightedItemColor: actionSheet.itemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor)
+        self.init(backgroundType: actionSheet.backgroundType == .light ? .light : .dark, backgroundColor: actionSheet.itemBackgroundColor, separatorColor: actionSheet.itemHighlightedBackgroundColor, highlightedItemColor: actionSheet.itemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor, baseFontSize: fontSize.baseDisplaySize)
+    }
+    
+    convenience init(presentationData: PresentationData) {
+        let presentationTheme = presentationData.theme
+        let actionSheet = presentationTheme.actionSheet
+        self.init(backgroundType: actionSheet.backgroundType == .light ? .light : .dark, backgroundColor: actionSheet.itemBackgroundColor, separatorColor: actionSheet.itemHighlightedBackgroundColor, highlightedItemColor: actionSheet.itemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor, disabledColor: actionSheet.disabledActionTextColor, baseFontSize: presentationData.fontSize.baseDisplaySize)
     }
 }
 

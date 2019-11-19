@@ -39,7 +39,7 @@ public final class HashtagSearchController: TelegramBaseController {
         self.title = query
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
-        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
+        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         let location: SearchMessagesLocation = .general
         let search = searchMessages(account: context.account, location: location, query: query, state: nil)
@@ -79,7 +79,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

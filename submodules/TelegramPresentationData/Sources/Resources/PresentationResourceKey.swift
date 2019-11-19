@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public struct PresentationResources {
 }
@@ -218,4 +219,13 @@ public enum PresentationResourceKey: Int32 {
     case groupInfoMembersIcon
     
     case emptyChatListCheckIcon
+}
+
+public enum PresentationResourceParameterKey: Hashable {
+    case chatOutgoingFullCheck(CGFloat)
+    case chatOutgoingPartialCheck(CGFloat)
+    case chatMediaFullCheck(CGFloat)
+    case chatMediaPartialCheck(CGFloat)
+    case chatFreeFullCheck(CGFloat)
+    case chatFreePartialCheck(CGFloat)
 }

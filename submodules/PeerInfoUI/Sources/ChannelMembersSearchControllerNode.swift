@@ -14,6 +14,7 @@ import TemporaryCachedPeerDataManager
 import SearchBarNode
 import ContactsPeerItem
 import SearchUI
+import ItemListUI
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
@@ -59,7 +60,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
+    func item(account: Account, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
         switch self {
             case let .peer(_, participant, editing, label, enabled):
                 let status: ContactsPeerItemStatus
@@ -68,7 +69,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: nil, action: { _ in
                     interaction.openPeer(participant.peer, participant)
                 })
         }
@@ -82,12 +83,12 @@ private struct ChannelMembersSearchTransition {
     let initial: Bool
 }
 
-private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, to toEntries: [ChannelMembersSearchEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ChannelMembersSearchTransition {
+private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, to toEntries: [ChannelMembersSearchEntry], account: Account, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ChannelMembersSearchTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries ?? [], rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction), directionHint: nil) }
     
     return ChannelMembersSearchTransition(deletions: deletions, insertions: insertions, updates: updates, initial: fromEntries == nil)
 }
@@ -232,7 +233,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
             disposableAndLoadMoreControl = (disposable, nil)
         } else {
@@ -290,7 +291,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
         }
         self.disposable = disposableAndLoadMoreControl.0

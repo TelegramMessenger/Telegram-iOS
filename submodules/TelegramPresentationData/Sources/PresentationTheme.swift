@@ -1006,6 +1006,10 @@ public final class PresentationTheme: Equatable {
         return self.resourceCache.image(key, self, generate)
     }
     
+    public func image(_ key: PresentationResourceParameterKey, _ generate: (PresentationTheme) -> UIImage?) -> UIImage? {
+        return self.resourceCache.parameterImage(key, self, generate)
+    }
+    
     public func object(_ key: Int32, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
         return self.resourceCache.object(key, self, generate)
     }

@@ -14,13 +14,6 @@ import AccountContext
 import UrlEscaping
 import PhotoResources
 
-private let titleFont = Font.semibold(15.0)
-private let textFont = Font.regular(15.0)
-private let textBoldFont = Font.semibold(15.0)
-private let textItalicFont = Font.italic(15.0)
-private let textBoldItalicFont = Font.semiboldItalic(15.0)
-private let textFixedFont = Font.regular(15.0)
-private let textBlockQuoteFont = Font.regular(15.0)
 private let buttonFont = Font.semibold(13.0)
 
 enum ChatMessageAttachedContentActionIcon {
@@ -289,6 +282,16 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         let currentAdditionalImageBadgeNode = self.additionalImageBadgeNode
         
         return { presentationData, automaticDownloadSettings, associatedData, context, controllerInteraction, message, messageRead, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, constrainedSize in
+            let fontSize: CGFloat = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+            
+            let titleFont = Font.semibold(fontSize)
+            let textFont = Font.regular(fontSize)
+            let textBoldFont = Font.semibold(fontSize)
+            let textItalicFont = Font.italic(fontSize)
+            let textBoldItalicFont = Font.semiboldItalic(fontSize)
+            let textFixedFont = Font.regular(fontSize)
+            let textBlockQuoteFont = Font.regular(fontSize)
+            
             let incoming = message.effectivelyIncoming(context.account.peerId)
             
             var horizontalInsets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 12.0)
@@ -375,6 +378,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let updatedSubtitle = NSMutableAttributedString()
                 updatedSubtitle.append(subtitle)
                 updatedSubtitle.addAttribute(.foregroundColor, value: messageTheme.primaryTextColor, range: NSMakeRange(0, subtitle.length))
+                updatedSubtitle.addAttribute(.font, value: titleFont, range: NSMakeRange(0, subtitle.length))
                 string.append(updatedSubtitle)
                 notEmpty = true
             }

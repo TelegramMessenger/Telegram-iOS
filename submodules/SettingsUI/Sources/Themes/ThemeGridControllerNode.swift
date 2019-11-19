@@ -276,21 +276,21 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.colorItemNode = ItemListActionItemNode()
-        self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.colorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             presentColors()
         })
         self.galleryItemNode = ItemListActionItemNode()
-        self.galleryItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.galleryItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             presentGallery()
         })
         self.descriptionItemNode = ItemListTextItemNode()
-        self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.descriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
         self.resetItemNode = ItemListActionItemNode()
-        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+        self.resetItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
             resetWallpapers()
         })
         self.resetDescriptionItemNode = ItemListTextItemNode()
-        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
+        self.resetDescriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
@@ -541,17 +541,17 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
-        self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.colorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColors()
         })
-        self.galleryItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.galleryItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_SetCustomBackground, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentGallery()
         })
-        self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
-        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+        self.descriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.resetItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.resetWallpapers()
         })
-        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
+        self.resetDescriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)

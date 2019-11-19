@@ -15,7 +15,7 @@ public protocol ItemListNodeAnyEntry {
     var tag: ItemListItemTag? { get }
     func isLessThan(_ rhs: ItemListNodeAnyEntry) -> Bool
     func isEqual(_ rhs: ItemListNodeAnyEntry) -> Bool
-    func item(_ arguments: Any) -> ListViewItem
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem
 }
 
 public protocol ItemListNodeEntry: Comparable, Identifiable, ItemListNodeAnyEntry {
@@ -46,18 +46,18 @@ private struct ItemListNodeEntryTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedItemListNodeEntryTransition(from fromEntries: [ItemListNodeAnyEntry], to toEntries: [ItemListNodeAnyEntry], arguments: Any) -> ItemListNodeEntryTransition {
+private func preparedItemListNodeEntryTransition(from fromEntries: [ItemListNodeAnyEntry], to toEntries: [ItemListNodeAnyEntry], presentationData: ItemListPresentationData, arguments: Any, presentationDataUpdated: Bool) -> ItemListNodeEntryTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, isLess: { lhs, rhs in
         return lhs.isLessThan(rhs)
     }, isEqual: { lhs, rhs in
         return lhs.isEqual(rhs)
     }, getId: { value in
         return value.anyId
-    })
+    }, allUpdated: presentationDataUpdated)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, arguments: arguments), directionHint: nil) }
     
     return ItemListNodeEntryTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -85,6 +85,7 @@ private struct ItemListNodeTransition {
 }
 
 public final class ItemListNodeState {
+    let presentationData: ItemListPresentationData
     let entries: [ItemListNodeAnyEntry]
     let style: ItemListStyle
     let emptyStateItem: ItemListControllerEmptyStateItem?
@@ -96,7 +97,8 @@ public final class ItemListNodeState {
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    public init<T: ItemListNodeEntry>(entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+        self.presentationData = presentationData
         self.entries = entries.map { $0 }
         self.style = style
         self.emptyStateItem = emptyStateItem
@@ -226,7 +228,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     var alwaysSynchronous = false
     
-    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState, Any)), NoError>) {
+    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
         
@@ -298,7 +300,8 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let previousState = Atomic<ItemListNodeState?>(value: nil)
-        self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition in
+        self.transitionDisposable.set(((state
+        |> map { presentationData, stateAndArguments -> ItemListNodeTransition in
             let (state, arguments) = stateAndArguments
             if state.entries.count > 1 {
                 for i in 1 ..< state.entries.count {
@@ -306,7 +309,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             let previous = previousState.swap(state)
-            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, arguments: arguments)
+            let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, presentationData: presentationData, arguments: arguments, presentationDataUpdated: previous?.presentationData != presentationData)
             var updatedStyle: ItemListStyle?
             if previous?.style != state.style {
                 updatedStyle = state.style
@@ -317,8 +320,9 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 scrollToItem = state.initialScrollToItem
             }
             
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
-        }) |> deliverOnMainQueue).start(next: { [weak self] transition in
+            return ItemListNodeTransition(theme: presentationData.theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
+        })
+        |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
             }

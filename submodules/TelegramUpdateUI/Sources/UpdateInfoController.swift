@@ -68,7 +68,7 @@ private enum UpdateInfoControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! UpdateInfoControllerArguments
         switch self {
             case let .info(theme, icon, title, text, entities):
@@ -76,7 +76,7 @@ private enum UpdateInfoControllerEntry: ItemListNodeEntry {
                     arguments.linkAction(action, itemLink)
                 })
             case let .update(theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.openAppStorePage()
                 })
         }
@@ -121,8 +121,8 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
         let leftNavigationButton = appUpdateInfo.blocking ? nil : ItemListNavigationButton(content: .text(presentationData.strings.Update_Skip), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Update_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: updateInfoControllerEntries(theme: presentationData.theme, strings: presentationData.strings, appIcon: appIcon, appUpdateInfo: appUpdateInfo), style: .blocks, animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Update_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: updateInfoControllerEntries(theme: presentationData.theme, strings: presentationData.strings, appIcon: appIcon, appUpdateInfo: appUpdateInfo), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

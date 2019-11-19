@@ -493,27 +493,27 @@ private enum GroupInfoEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupInfoArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .setGroupPhoto(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
             case let .about(theme, text):
-                return ItemListMultilineTextItem(theme: theme, text: foldMultipleLineBreaks(text), enabledEntityTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
+                return ItemListMultilineTextItem(presentationData: presentationData, text: foldMultipleLineBreaks(text), enabledEntityTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
                     arguments.displayAboutContextMenu(text)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: GroupInfoEntryTag.about)
             case let .locationHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .location(theme, location):
                 let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: {
@@ -522,53 +522,53 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.displayLocationContextMenu(location.address.replacingOccurrences(of: "\n", with: ", "))
                 }, tag: GroupInfoEntryTag.location)
             case let .changeLocation(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.changeLocation()
                 }, clearHighlightAutomatically: false)
             case let .link(theme, url):
-                return ItemListActionItem(theme: theme, title: url, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: url, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.displayUsernameShareMenu(url)
                 }, longTapAction: {
                     arguments.displayUsernameContextMenu(url)
                 }, tag: GroupInfoEntryTag.link)
             case let .notifications(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
                 })
             case let .stickerPack(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openStickerPackSetup()
                 })
             case let .preHistory(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPreHistory()
                 })
             case let .sharedMedia(theme, title):
-                return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openSharedMedia()
                 })
             case let .addMember(theme, title, editing):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: title, sectionId: self.section, editing: editing, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: title, sectionId: self.section, editing: editing, action: {
                     arguments.addMember()
                 })
             case let .groupTypeSetup(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupTypeSetup()
                 })
             case let .linkedChannelSetup(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openLinkedChannelSetup()
                 })
             case let .groupDescriptionSetup(theme, placeholder, text):
-                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 })
             case let .permissions(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openPermissions()
                 })
             case let .administrators(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openAdministrators()
                 })
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
@@ -598,7 +598,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         }
                     }))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
                     if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer, mode: .generic), selectable {
                         arguments.pushController(infoController)
                     }
@@ -608,11 +608,11 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.removePeer(peerId)
                 })
             case let .expand(theme, title):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandParticipants()
                 })
             case let .leave(theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: title, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.leave()
                 })
             default:
@@ -2322,7 +2322,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             })
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         
         let entries = groupInfoEntries(account: context.account, presentationData: presentationData, view: view, channelMembers: channelMembers, globalNotificationSettings: globalNotificationSettings, state: state)
         var memberIds: [PeerId] = []
@@ -2344,7 +2344,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             }
         }
         
-        let listState = ItemListNodeState(entries: entries, style: .blocks, searchItem: searchItem, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, searchItem: searchItem, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

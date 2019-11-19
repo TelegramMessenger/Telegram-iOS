@@ -10,8 +10,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         return self.displayNode as! AuthorizationSequencePasswordEntryControllerNode
     }
     
-    private let strings: PresentationStrings
-    private let theme: PresentationTheme
+    private let presentationData: PresentationData
     
     var loginWithPassword: ((String) -> Void)?
     var forgot: (() -> Void)?
@@ -35,26 +34,25 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
             }
             self.controllerNode.inProgress = self.inProgress
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void) {
-        self.strings = strings
-        self.theme = theme
+    init(presentationData: PresentationData, back: @escaping () -> Void) {
+        self.presentationData = presentationData
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
+        self.statusBar.statusBarStyle = presentationData.theme.intro.statusBarStyle.style
         
         self.attemptNavigation = { _ in
             return false
@@ -63,7 +61,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
             back()
         }
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -71,7 +69,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequencePasswordEntryControllerNode(strings: self.strings, theme: self.theme)
+        self.displayNode = AuthorizationSequencePasswordEntryControllerNode(strings: self.presentationData.strings, theme: self.presentationData.theme)
         self.displayNodeDidLoad()
         
         self.controllerNode.view.disableAutomaticKeyboardHandling = [.forward, .backward]
@@ -132,9 +130,9 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     func forgotPressed() {
         if self.suggestReset {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         } else if self.didForgotWithNoRecovery {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         } else {
             self.forgot?()
         }

@@ -8,9 +8,6 @@ import SyncCore
 import TelegramPresentationData
 import LocalizedPeerData
 
-private let prefixFont = Font.regular(13.0)
-private let peerFont = Font.medium(13.0)
-
 enum ChatMessageForwardInfoType {
     case bubble(incoming: Bool)
     case standalone
@@ -28,6 +25,10 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
         return { presentationData, strings, type, peer, authorName, constrainedSize in
+            let fontSize = floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)
+            let prefixFont = Font.regular(fontSize)
+            let peerFont = Font.medium(fontSize)
+            
             let peerString: String
             if let peer = peer {
                 if let authorName = authorName {

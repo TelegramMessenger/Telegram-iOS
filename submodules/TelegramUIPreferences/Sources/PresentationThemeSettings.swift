@@ -196,7 +196,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     }
 }
 
-public enum PresentationFontSize: Int32 {
+public enum PresentationFontSize: Int32, CaseIterable {
     case extraSmall = 0
     case small = 1
     case regular = 2
@@ -424,6 +424,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public var themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     public var themeSpecificBubbleColors: [Int64: PresentationThemeColorPair]
     public var themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
+    public var useSystemFont: Bool
     public var fontSize: PresentationFontSize
     public var automaticThemeSwitchSetting: AutomaticThemeSwitchSetting
     public var largeEmoji: Bool
@@ -465,14 +466,15 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificBubbleColors: [:], themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, disableAnimations: true)
+        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificBubbleColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, disableAnimations: true)
     }
     
-    public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificBubbleColors: [Int64: PresentationThemeColorPair], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
+    public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificBubbleColors: [Int64: PresentationThemeColorPair], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
         self.theme = theme
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificBubbleColors = themeSpecificBubbleColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+        self.useSystemFont = useSystemFont
         self.fontSize = fontSize
         self.automaticThemeSwitchSetting = automaticThemeSwitchSetting
         self.largeEmoji = largeEmoji
@@ -500,6 +502,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
             return PresentationThemeColorPair(decoder: decoder)
         })
                 
+        self.useSystemFont = decoder.decodeInt32ForKey("useSystemFont", orElse: 1) != 0
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night))
         self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)
@@ -517,6 +520,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
         encoder.encodeObjectDictionary(self.themeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers", keyEncoder: { key, encoder in
             encoder.encodeInt64(key, forKey: "k")
         })
+        encoder.encodeInt32(self.useSystemFont ? 1 : 0, forKey: "useSystemFont")
         encoder.encodeInt32(self.fontSize.rawValue, forKey: "f")
         encoder.encodeObject(self.automaticThemeSwitchSetting, forKey: "automaticThemeSwitchSetting")
         encoder.encodeBool(self.largeEmoji, forKey: "largeEmoji")
@@ -532,7 +536,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificBubbleColors == rhs.themeSpecificBubbleColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificBubbleColors == rhs.themeSpecificBubbleColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

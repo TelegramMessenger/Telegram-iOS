@@ -226,13 +226,13 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = 15.0 + params.leftInset
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             
             let editingOffset: CGFloat
             if item.editing {
-                let sizeAndApply = editableControlLayout(75.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
             } else {
                 editingOffset = 0.0
             }
@@ -300,9 +300,9 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1()
+                            let editableControlNode = editableControlSizeAndApply.1(layout.contentSize.height)
                             editableControlNode.tapped = {
                                 if let strongSelf = self {
                                     strongSelf.setRevealOptionsOpened(true, animated: true)

@@ -203,7 +203,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                 updatedTheme = item.theme
             }
             
-            let controlSizeAndApply = editableControlLayout(44.0, item.theme, false)
+            let controlSizeAndApply = editableControlLayout(item.theme, false)
             
             let textColor = item.theme.list.itemAccentColor
             
@@ -261,8 +261,8 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
-                    let _ = controlSizeAndApply.1()
-                    let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + 4.0 + revealOffset, y: 0.0), size: controlSizeAndApply.0)
+                    let _ = controlSizeAndApply.1(layout.contentSize.height)
+                    let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + 4.0 + revealOffset, y: 0.0), size: CGSize(width: controlSizeAndApply.0, height: layout.contentSize.height))
                     strongSelf.editableControlNode.frame = editableControlFrame
                     
                     let labelFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset + 30.0, y: 12.0), size: labelLayout.size)

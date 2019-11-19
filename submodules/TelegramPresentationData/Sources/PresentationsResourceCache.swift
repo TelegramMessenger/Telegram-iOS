@@ -4,6 +4,7 @@ import SwiftSignalKit
 
 private final class PresentationsResourceCacheHolder {
     var images: [Int32: UIImage] = [:]
+    var parameterImages: [PresentationResourceParameterKey: UIImage] = [:]
 }
 
 private final class PresentationsResourceAnyCacheHolder {
@@ -24,6 +25,24 @@ public final class PresentationsResourceCache {
             if let image = generate(theme) {
                 self.imageCache.with { holder -> Void in
                     holder.images[key] = image
+                }
+                return image
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public func parameterImage(_ key: PresentationResourceParameterKey, _ theme: PresentationTheme, _ generate: (PresentationTheme) -> UIImage?) -> UIImage? {
+        let result = self.imageCache.with { holder -> UIImage? in
+            return holder.parameterImages[key]
+        }
+        if let result = result {
+            return result
+        } else {
+            if let image = generate(theme) {
+                self.imageCache.with { holder -> Void in
+                    holder.parameterImages[key] = image
                 }
                 return image
             } else {

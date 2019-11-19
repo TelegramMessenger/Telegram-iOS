@@ -199,41 +199,41 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ThemeAutoNightSettingsControllerArguments
         switch self {
             case let .modeSystem(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateMode(.system)
                 })
             case let .modeDisabled(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateMode(.none)
                 })
             case let .modeTimeBased(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateMode(.timeBased)
                 })
             case let .modeBrightness(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateMode(.brightness)
                 })
             case let .settingsHeader(theme, title):
-                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .timeBasedAutomaticLocation(theme, title, value):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateTimeBasedAutomatic(value)
                 })
             case let .timeBasedAutomaticLocationValue(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, titleColor: .accent, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: title, titleColor: .accent, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                     arguments.updateTimeBasedAutomaticLocation()
                 })
             case let .timeBasedManualFrom(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: title, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openTimeBasedManual(.from)
                 })
             case let .timeBasedManualTo(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: title, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openTimeBasedManual(.to)
                 })
             case let .brightnessValue(theme, value):
@@ -241,9 +241,9 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                     arguments.updateAutomaticBrightness(Double(value) / 100.0)
                 })
             case let .settingInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .themeHeader(theme, title):
-                return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, themeSpecificBubbleColors):
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: themeSpecificBubbleColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
@@ -568,8 +568,8 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         var availableThemes = defaultThemes
         availableThemes.append(contentsOf: cloudThemes)
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, settings: settings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, availableThemes: availableThemes, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, settings: settings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, availableThemes: availableThemes, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

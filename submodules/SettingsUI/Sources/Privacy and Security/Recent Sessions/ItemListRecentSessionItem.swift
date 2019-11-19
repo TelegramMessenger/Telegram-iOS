@@ -37,8 +37,7 @@ enum ItemListRecentSessionItemText {
 }
 
 final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let session: RecentAccountSession
     let enabled: Bool
@@ -49,9 +48,8 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editable: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+        self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.session = session
         self.enabled = enabled
@@ -101,9 +99,6 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
         }
     }
 }
-
-private let titleFont = Font.medium(15.0)
-private let textFont = Font.regular(13.0)
 
 class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -179,8 +174,15 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            
+            let verticalInset: CGFloat = 10.0
+            let titleSpacing: CGFloat = 1.0
+            let textSpacing: CGFloat = 3.0
+            
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             var titleAttributedString: NSAttributedString?
@@ -190,14 +192,14 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editable && item.enabled {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.AuthSessions_Terminate, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.AuthSessions_Terminate, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]
             } else {
                 peerRevealOptions = []
             }
             
             let rightInset: CGFloat = params.rightInset
             
-            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             var appString = ""
             if !item.session.deviceModel.isEmpty {
@@ -218,25 +220,25 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 appString += item.session.systemVersion
             }
             
-            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
-            locationAttributedString = NSAttributedString(string: "\(item.session.ip) — \(item.session.country)", font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
+            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            locationAttributedString = NSAttributedString(string: "\(item.session.ip) — \(item.session.country)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             if item.session.isCurrent {
-                labelAttributedString = NSAttributedString(string: item.strings.Presence_online, font: textFont, textColor: item.theme.list.itemAccentColor)
+                labelAttributedString = NSAttributedString(string: item.presentationData.strings.Presence_online, font: textFont, textColor: item.presentationData.theme.list.itemAccentColor)
             } else {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
-                labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.theme.list.itemSecondaryTextColor)
+                let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
+                labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             }
             
             let leftInset: CGFloat = 15.0 + params.leftInset
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             
             let editingOffset: CGFloat
             if item.editing {
-                let sizeAndApply = editableControlLayout(75.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
             } else {
                 editingOffset = 0.0
             }
@@ -247,7 +249,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             let (locationLayout, locationApply) = makeLocationLayout(TextNodeLayoutArguments(attributedString: locationAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 75.0)
+            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + appLayout.size.height + textSpacing + locationLayout.size.height)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -267,10 +269,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.layoutParams = (item, params, neighbors)
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let revealOffset = strongSelf.revealOffset
@@ -300,9 +302,9 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1()
+                            let editableControlNode = editableControlSizeAndApply.1(layout.contentSize.height)
                             editableControlNode.tapped = {
                                 if let strongSelf = self {
                                     strongSelf.setRevealOptionsOpened(true, animated: true)
@@ -370,17 +372,17 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - 15.0 - rightInset, y: 10.0), size: labelLayout.size))
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 10.0), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 30.0), size: appLayout.size))
-                    transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 50.0), size: locationLayout.size))
+                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - 15.0 - rightInset, y: verticalInset), size: labelLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: verticalInset), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: appLayout.size))
+                    transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.appNode.frame.maxY + textSpacing), size: locationLayout.size))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 75.0 + UIScreenPixel + UIScreenPixel))
                     
