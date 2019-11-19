@@ -212,7 +212,7 @@ public final class ThemePreviewController: ViewController {
         
         var resolvedWallpaper: TelegramWallpaper?
         
-        let signal = theme
+        let setup = theme
         |> mapToSignal { theme -> Signal<PresentationThemeReference, NoError> in
             guard let theme = theme else {
                 return .complete()
@@ -317,7 +317,7 @@ public final class ThemePreviewController: ViewController {
         }
         
         var cancelImpl: (() -> Void)?
-        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+        let progress = Signal<Never, NoError> { [weak self] subscriber in
             let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                 cancelImpl?()
             }))
@@ -331,11 +331,11 @@ public final class ThemePreviewController: ViewController {
         |> runOn(Queue.mainQueue())
         |> delay(0.35, queue: Queue.mainQueue())
         
-        let progressDisposable = progressSignal.start()
+        let progressDisposable = progress.start()
         cancelImpl = {
             disposable.set(nil)
         }
-        disposable.set((signal
+        disposable.set((setup
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
@@ -343,7 +343,9 @@ public final class ThemePreviewController: ViewController {
         }
         |> deliverOnMainQueue).start(completed: {[weak self] in
             if let strongSelf = self {
-                strongSelf.dismiss()
+                Queue.mainQueue().after(0.3) {
+                    strongSelf.dismiss()
+                }
             }
         }))
     }

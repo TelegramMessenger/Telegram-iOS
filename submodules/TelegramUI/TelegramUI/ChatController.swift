@@ -1610,25 +1610,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, scheduleCurrentMessage: { [weak self] in
-            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                let mode: ChatScheduleTimeControllerMode
-                if peer.id == strongSelf.context.account.peerId {
-                    mode = .reminders
-                } else {
-                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
-                }
-                
-                let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
+            if let strongSelf = self {
+                strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
-                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime, completion: { [weak self] in
+                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time, completion: { [weak self] in
                             if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
                                 strongSelf.openScheduledMessages()
                             }
                         })
                     }
                 })
-                strongSelf.chatDisplayNode.dismissInput()
-                strongSelf.present(controller, in: .window(.root))
             }
         }, sendScheduledMessagesNow: { [weak self] messageIds in
             if let strongSelf = self {
@@ -1642,21 +1633,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
-            if let strongSelf = self, let messageId = messageIds.first, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                let mode: ChatScheduleTimeControllerMode
-                if peer.id == strongSelf.context.account.peerId {
-                    mode = .reminders
-                } else {
-                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
-                }
-                
+            if let strongSelf = self, let messageId = messageIds.first {
                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
                     return transaction.getMessage(messageId)
                 } |> deliverOnMainQueue).start(next: { [weak self] message in
                     guard let strongSelf = self, let message = message else {
                         return
                     }
-                    let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, currentTime: message.timestamp, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
+                    strongSelf.presentScheduleTimePicker(selectedTime: message.timestamp, completion: { [weak self] time in
                         if let strongSelf = self {
                             var entities: TextEntitiesMessageAttribute?
                             for attribute in message.attributes {
@@ -1665,14 +1649,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                            let signal = requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: scheduleTime)
+                            let signal = requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: time)
                             strongSelf.editMessageDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
                             }, error: { error in
                             }))
                         }
                     })
-                    strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(controller, in: .window(.root))
                 })
             }
         }, performTextSelectionAction: { [weak self] _, text, action in
@@ -5511,24 +5493,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     }, presentSchedulePicker: { [weak self] done in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let mode: ChatScheduleTimeControllerMode
-                        if peer.id == strongSelf.context.account.peerId {
-                            mode = .reminders
-                        } else {
-                            mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
-                        }
-                        let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
-                            if let strongSelf = self {
-                                done(time)
-                                if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                                    strongSelf.openScheduledMessages()
+                        if let strongSelf = self {
+                            strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                                if let strongSelf = self {
+                                    done(time)
+                                    if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                        strongSelf.openScheduledMessages()
+                                    }
                                 }
-                            }
-                        })
-                        strongSelf.present(controller, in: .window(.root))
+                            })
+                        }
                     })
                 }
             }, openFileGallery: {
@@ -5558,24 +5532,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }, presentSchedulePicker: { [weak self] done in
-                guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                    return
+                if let strongSelf = self {
+                    strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                        if let strongSelf = self {
+                             done(time)
+                            if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                strongSelf.openScheduledMessages()
+                            }
+                         }
+                    })
                 }
-                let mode: ChatScheduleTimeControllerMode
-                if peer.id == strongSelf.context.account.peerId {
-                    mode = .reminders
-                } else {
-                    mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
-                }
-                let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
-                    if let strongSelf = self {
-                        done(time)
-                        if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                            strongSelf.openScheduledMessages()
-                        }
-                    }
-                })
-                strongSelf.present(controller, in: .window(.root))
             }, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                 if !inputText.string.isEmpty {
                     //strongSelf.clearInputText()
@@ -5758,24 +5724,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }, presentSchedulePicker: { [weak self] done in
-                        guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                            return
+                        if let strongSelf = self {
+                            strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
+                                if let strongSelf = self {
+                                     done(time)
+                                     if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                         strongSelf.openScheduledMessages()
+                                     }
+                                 }
+                            })
                         }
-                        let mode: ChatScheduleTimeControllerMode
-                        if peer.id == strongSelf.context.account.peerId {
-                            mode = .reminders
-                        } else {
-                            mode = .scheduledMessages(sendWhenOnlineAvailable: peer.id.namespace == Namespaces.Peer.CloudUser)
-                        }
-                        let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] time in
-                            if let strongSelf = self {
-                                done(time)
-                                if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                                    strongSelf.openScheduledMessages()
-                                }
-                            }
-                        })
-                        strongSelf.present(controller, in: .window(.root))
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
                     controller.completionBlock = { [weak legacyController] signals, silentPosting, scheduleTime in
@@ -6048,19 +6006,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, peerIds: [peerId])
         } else {
-            let mode: ChatScheduleTimeControllerMode
-            if peerId == self.context.account.peerId {
-                mode = .reminders
-            } else {
-                mode = .scheduledMessages(sendWhenOnlineAvailable: peerId.namespace == Namespaces.Peer.CloudUser)
-            }
-            let controller = ChatScheduleTimeController(context: self.context, mode: mode, minimalTime: self.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: false, completion: { [weak self] time in
+            self.presentScheduleTimePicker(dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {
                     strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
                 }
             })
-            self.chatDisplayNode.dismissInput()
-            self.present(controller, in: .window(.root))
         }
     }
     
@@ -8180,6 +8130,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
         self.effectiveNavigationController?.pushViewController(controller)
+    }
+    
+    private func presentScheduleTimePicker(selectedTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+        guard case let .peer(peerId) = self.chatLocation else {
+            return
+        }
+        let _ = (self.context.account.viewTracker.peerView(peerId)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] peerView in
+            guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+                return
+            }
+            var sendWhenOnlineAvailable = false
+            if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case .present = presence.status {
+                sendWhenOnlineAvailable = true
+            }
+            
+            let mode: ChatScheduleTimeControllerMode
+            if peerId == strongSelf.context.account.peerId {
+                mode = .reminders
+            } else {
+                mode = .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable)
+            }
+            let controller = ChatScheduleTimeController(context: strongSelf.context, peerId: peerId, mode: mode, currentTime: selectedTime, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, dismissByTapOutside: dismissByTapOutside, completion: { time in
+                completion(time)
+            })
+            strongSelf.chatDisplayNode.dismissInput()
+            strongSelf.present(controller, in: .window(.root))
+        })
     }
     
     private var effectiveNavigationController: NavigationController? {

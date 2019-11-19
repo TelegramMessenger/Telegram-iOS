@@ -103,7 +103,7 @@ private let colors: [UInt32: String] = [
     0x54a5f8: "Blue"
 ]
 
-private let adjectives = [
+private let adjectives: [String] = [
     "Ancient",
     "Antique",
     "Autumn",
@@ -213,7 +213,7 @@ private let adjectives = [
     "Winsome"
 ]
 
-private let subjectives = [
+private let subjectives: [String] = [
     "Ambrosia",
     "Attack",
     "Avalanche",
@@ -301,7 +301,7 @@ func generateThemeName(accentColor: UIColor) -> String {
     var nearest: (color: UInt32, distance: Int32)?
     for (color, _) in colors {
         let distance = accentColor.distance(to: UIColor(rgb: color))
-        if let currentNearest  = nearest {
+        if let currentNearest = nearest {
             if distance < currentNearest.distance {
                 nearest = (color, distance)
             }
@@ -312,7 +312,6 @@ func generateThemeName(accentColor: UIColor) -> String {
     
     if let color = nearest?.color, let colorName = colors[color]?.capitalized {
         if arc4random() % 2 == 0 {
-            
             return "\((adjectives.randomElement() ?? "").capitalized) \(colorName)"
         } else {
             return "\(colorName) \((subjectives.randomElement() ?? "").capitalized)"

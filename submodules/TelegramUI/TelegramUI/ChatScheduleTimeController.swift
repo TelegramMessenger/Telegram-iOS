@@ -21,7 +21,9 @@ final class ChatScheduleTimeController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
+    private let peerId: PeerId
     private let mode: ChatScheduleTimeControllerMode
+    private let editingTime: Bool
     private let currentTime: Int32?
     private let minimalTime: Int32?
     private let dismissByTapOutside: Bool
@@ -29,10 +31,12 @@ final class ChatScheduleTimeController: ViewController {
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, peerId: PeerId, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
+        self.peerId = peerId
         self.mode = mode
-        self.currentTime = currentTime
+        self.editingTime = currentTime != nil
+        self.currentTime = currentTime != scheduleWhenOnlineTimestamp ? currentTime : nil
         self.minimalTime = minimalTime
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
@@ -64,8 +68,27 @@ final class ChatScheduleTimeController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
-            self?.completion(time != scheduleWhenOnlineTimestamp ? time + 5 : time)
-            self?.dismiss()
+            guard let strongSelf = self else {
+                return
+            }
+            if time == scheduleWhenOnlineTimestamp {
+                let _ = (strongSelf.context.account.viewTracker.peerView(strongSelf.peerId)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                    guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+                        return
+                    }
+                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                    if !strongSelf.editingTime, let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
+                        strongSelf.completion(0)
+                    } else {
+                        strongSelf.completion(time)
+                    }
+                })
+            } else {
+                strongSelf.completion(time + 5)
+            }
+            strongSelf.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

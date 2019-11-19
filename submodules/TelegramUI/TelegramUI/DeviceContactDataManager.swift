@@ -106,7 +106,8 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
             CNContactUrlAddressesKey as CNKeyDescriptor,
             CNContactOrganizationNameKey as CNKeyDescriptor,
             CNContactJobTitleKey as CNKeyDescriptor,
-            CNContactDepartmentNameKey as CNKeyDescriptor
+            CNContactDepartmentNameKey as CNKeyDescriptor,
+            CNContactNoteKey as CNKeyDescriptor
         ]
         
         guard let contact = try? self.store.unifiedContact(withIdentifier: stableId, keysToFetch: keysToFetch) else {
@@ -128,7 +129,8 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
             CNContactUrlAddressesKey as CNKeyDescriptor,
             CNContactOrganizationNameKey as CNKeyDescriptor,
             CNContactJobTitleKey as CNKeyDescriptor,
-            CNContactDepartmentNameKey as CNKeyDescriptor
+            CNContactDepartmentNameKey as CNKeyDescriptor,
+            CNContactNoteKey as CNKeyDescriptor
         ]
         
         guard let current = try? self.store.unifiedContact(withIdentifier: stableId, keysToFetch: keysToFetch) else {
@@ -254,7 +256,8 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
             CNContactUrlAddressesKey as CNKeyDescriptor,
             CNContactOrganizationNameKey as CNKeyDescriptor,
             CNContactJobTitleKey as CNKeyDescriptor,
-            CNContactDepartmentNameKey as CNKeyDescriptor
+            CNContactDepartmentNameKey as CNKeyDescriptor,
+            CNContactNoteKey as CNKeyDescriptor
         ]
         
         guard let current = try? self.store.unifiedContact(withIdentifier: stableId, keysToFetch: keysToFetch) else {

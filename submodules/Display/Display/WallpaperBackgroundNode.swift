@@ -66,10 +66,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.addSubnode(self.contentNode)
     }
     
-    override public func layout() {
-        super.layout()
-        self.contentNode.bounds = self.bounds
-        self.contentNode.position = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
-        self.updateScale()
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updatePosition(node: self.contentNode, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+        transition.updateBounds(node: self.contentNode, bounds: CGRect(origin: CGPoint(), size: size))
     }
 }

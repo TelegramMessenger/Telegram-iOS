@@ -197,8 +197,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
-        self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
-        
+
         self.setNeedsLayout()
     }
     

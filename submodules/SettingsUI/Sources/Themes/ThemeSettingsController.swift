@@ -477,14 +477,16 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             
             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
             var themeSpecificAccentColors = current.themeSpecificAccentColors
+            var themeSpecificBubbleColors = current.themeSpecificBubbleColors
             themeSpecificAccentColors[currentTheme.index] = color
+            themeSpecificBubbleColors[currentTheme.index] = nil
 
             if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
             } else {
                 themeSpecificChatWallpapers[currentTheme.index] = theme.chat.defaultWallpaper
             }
             
-            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificBubbleColors: themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
         }).start()
     }, openAccentColorPicker: { themeReference in
         let controller = ThemeAccentColorController(context: context, themeReference: themeReference, section: .accent)
