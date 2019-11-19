@@ -31,10 +31,36 @@ private func textInputBackgroundImage(fieldColor: UIColor, strokeColor: UIColor,
     }
 }
 
+private func generateSwatchImage(theme: PresentationTheme, color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 21.0, height: 21.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let fillColor = color
+        var strokeColor: UIColor?
+        let inputBackgroundColor = theme.chat.inputPanel.inputBackgroundColor
+        if fillColor.distance(to: inputBackgroundColor) < 200 {
+            strokeColor = theme.chat.inputPanel.inputStrokeColor
+            if strokeColor!.distance(to: inputBackgroundColor) < 200 {
+                strokeColor = theme.chat.inputPanel.inputControlColor
+            }
+        }
+        
+        context.setFillColor(fillColor.cgColor)
+        context.setLineWidth(1.0)
+        
+        context.fillEllipse(in: bounds)
+        if let strokeColor = strokeColor {
+            context.setStrokeColor(strokeColor.cgColor)
+            context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+        }
+    })
+}
+
 private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     
-    private let swatchNode: ASDisplayNode
+    private let swatchNode: ASImageNode
     private let removeButton: HighlightableButtonNode
     private let textBackgroundNode: ASImageNode
     private let selectionNode: ASDisplayNode
@@ -48,15 +74,11 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     var colorRemoved: (() -> Void)?
     var colorSelected: (() -> Void)?
     
+    private var color: UIColor?
+    
     private var isDefault = false {
         didSet {
             self.updateSelectionVisibility()
-        }
-    }
-    
-    var color: UIColor = .white {
-        didSet {
-            self.setColor(self.color, update: false)
         }
     }
     
@@ -78,7 +100,9 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
    
     private var previousIsDefault: Bool?
     private var previousColor: UIColor?
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, Bool)?
+    
+    private var returned = false
     
     init(theme: PresentationTheme) {
         self.theme = theme
@@ -99,8 +123,9 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.prefixNode = ASTextNode()
         self.prefixNode.attributedText = NSAttributedString(string: "#", font: Font.regular(17.0), textColor: self.theme.chat.inputPanel.inputTextColor)
         
-        self.swatchNode = ASDisplayNode()
-        self.swatchNode.cornerRadius = 10.5
+        self.swatchNode = ASImageNode()
+        self.swatchNode.displaysAsynchronously = false
+        self.swatchNode.displayWithoutProcessing = true
         
         self.removeButton = HighlightableButtonNode()
         self.removeButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRemoveIcon"), color: theme.chat.inputPanel.inputControlColor), for: .normal)
@@ -150,21 +175,24 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func setColor(_ color: UIColor, isDefault: Bool = false, update: Bool = true, ended: Bool = true) {
+        self.color = color
         self.isDefault = isDefault
         let text = color.hexString.uppercased()
         self.textFieldNode.textField.text = text
         self.textFieldNode.textField.textColor = isDefault ? self.theme.chat.inputPanel.inputPlaceholderColor : self.theme.chat.inputPanel.inputTextColor
-        if let size = self.validLayout {
+        if let (size, _) = self.validLayout {
             self.updateSelectionLayout(size: size, transition: .immediate)
         }
         if update {
             self.colorChanged?(color, ended)
         }
-        self.swatchNode.backgroundColor = color
+        self.swatchNode.image = generateSwatchImage(theme: self.theme, color: color)
     }
     
     @objc private func removePressed() {
         self.colorRemoved?()
+        self.removeButton.layer.removeAnimation(forKey: "opacity")
+        self.removeButton.alpha = 1.0
     }
     
     @objc private func tapped() {
@@ -178,7 +206,11 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             textField.text = updated.uppercased()
             textField.textColor = self.theme.chat.inputPanel.inputTextColor
             
-            if let size = self.validLayout {
+            if updated.count == 6, let color = UIColor(hexString: updated) {
+                self.setColor(color)
+            }
+            
+            if let (size, _) = self.validLayout {
                 self.updateSelectionLayout(size: size, transition: .immediate)
             }
         }
@@ -190,18 +222,25 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             self.setColor(color)
         }
         
-        if let size = self.validLayout {
+        if let (size, _) = self.validLayout {
             self.updateSelectionLayout(size: size, transition: .immediate)
         }
     }
     
     @objc func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.returned = true
+        if let text = self.textFieldNode.textField.text, text.count == 6, let color = UIColor(hexString: text) {
+            self.setColor(color)
+        } else {
+            self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+        }
         self.textFieldNode.resignFirstResponder()
         return false
     }
     
     func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
         if self.isSelected {
+            self.returned = false
             self.previousColor = self.color
             self.previousIsDefault = self.isDefault
             
@@ -215,9 +254,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldDidEndEditing(_ textField: UITextField) {
-        if let text = self.textFieldNode.textField.text, text.count == 6, let color = UIColor(hexString: text) {
-            self.setColor(color)
-        } else {
+        if !self.returned {
             self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
         }
     }
@@ -225,28 +262,31 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private func updateSelectionLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.measureNode.attributedText = NSAttributedString(string: self.textFieldNode.textField.text ?? "", font: self.textFieldNode.textField.font)
         let size = self.measureNode.updateLayout(size)
-        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: 47.0, y: 6.0, width: max(45.0, size.width), height: 20.0))
+        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(45.0, size.width), height: 20.0))
     }
     
     private func updateSelectionVisibility() {
         self.selectionNode.isHidden = !self.isSelected || self.isDefault
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, condensed: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, condensed)
         
         transition.updateFrame(node: self.swatchNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 21.0, height: 21.0)))
         
+        let textPadding: CGFloat = condensed ? 31.0 : 37.0
+        
         transition.updateFrame(node: self.textBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-        transition.updateFrame(node: self.textFieldNode, frame: CGRect(x: 47.0, y: 1.0, width: size.width - 61.0, height: size.height - 2.0))
+        transition.updateFrame(node: self.textFieldNode, frame: CGRect(x: textPadding + 10.0, y: 1.0, width: size.width - (21.0 + textPadding), height: size.height - 2.0))
         
         self.updateSelectionLayout(size: size, transition: transition)
         
         let prefixSize = self.prefixNode.measure(size)
-        transition.updateFrame(node: self.prefixNode, frame: CGRect(origin: CGPoint(x: 37.0 - UIScreenPixel, y: 6.0), size: prefixSize))
+        transition.updateFrame(node: self.prefixNode, frame: CGRect(origin: CGPoint(x: textPadding - UIScreenPixel, y: 6.0), size: prefixSize))
         
         let removeSize = CGSize(width: 33.0, height: 33.0)
-        transition.updateFrame(node: self.removeButton, frame: CGRect(origin: CGPoint(x: size.width - removeSize.width, y: 0.0), size: removeSize))
+        let removeOffset: CGFloat = condensed ? 3.0 : 0.0
+        transition.updateFrame(node: self.removeButton, frame: CGRect(origin: CGPoint(x: size.width - removeSize.width + removeOffset, y: 0.0), size: removeSize))
         transition.updateAlpha(node: self.removeButton, alpha: self.isRemovable ? 1.0 : 0.0)
     }
 }
@@ -280,7 +320,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private let doneButton: HighlightableButtonNode
     private let colorPickerNode: WallpaperColorPickerNode
 
-    var colorsChanged: ((UIColor, UIColor?, Bool) -> Void)?
+    var colorsChanged: ((UIColor?, UIColor?, Bool) -> Void)?
     var colorSelected: (() -> Void)?
     
     private var validLayout: CGSize?
@@ -341,21 +381,23 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                 strongSelf.updateState({ current in
                     var updated = current
                     updated.selection = .first
-                    if let defaultColor = current.defaultColor {
+                    if let defaultColor = current.defaultColor, updated.secondColor == nil {
                         updated.firstColor = nil
                     } else {
                         updated.firstColor = updated.secondColor ?? updated.firstColor
                     }
                     updated.secondColor = nil
                     return updated
-                }, animated: strongSelf.state.defaultColor == nil)
+                }, animated: strongSelf.state.secondColor != nil)
             }
         }
         self.firstColorFieldNode.colorSelected = { [weak self] in
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
-                    updated.selection = .first
+                    if updated.selection != .none {
+                        updated.selection = .first
+                    }
                     return updated
                 })
                 
@@ -376,7 +418,9 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
-                    updated.selection = .first
+                    if updated.selection != .none {
+                        updated.selection = .first
+                    }
                     updated.secondColor = nil
                     return updated
                 })
@@ -423,7 +467,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                             break
                     }
                     return updated
-                }, updateLayout: true)
+                }, updateLayout: false)
             }
         }
     }
@@ -443,14 +487,20 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.state = f(self.state)
         
         let firstColor: UIColor
+        var firstColorIsDefault = false
         if let color = self.state.firstColor {
             firstColor = color
         } else if let defaultColor = self.state.defaultColor {
             firstColor = defaultColor
+            firstColorIsDefault = true
         } else {
             firstColor = .white
         }
         let secondColor = self.state.secondColor
+        
+        if secondColor == nil && previousSecondColor != nil && firstColor == previousSecondColor && animated {
+            self.animateLeftColorFieldOut()
+        }
         
         self.firstColorFieldNode.setColor(firstColor, isDefault: self.state.firstColor == nil, update: false)
         if let secondColor = secondColor {
@@ -473,13 +523,66 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         
         if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb {
-            self.colorsChanged?(firstColor, secondColor, updateLayout)
+            self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, updateLayout)
         }
+    }
+    
+    private func animateLeftColorFieldOut() {
+        guard let size = self.validLayout else {
+            return
+        }
+        
+        let condensedLayout = size.width < 375.0
+        let leftInset: CGFloat
+        let fieldSpacing: CGFloat
+        if condensedLayout {
+            leftInset = 6.0
+            fieldSpacing = 40.0
+        } else {
+            leftInset = 15.0
+            fieldSpacing = 45.0
+        }
+        let rightInsetWithButton: CGFloat = 42.0
+        
+        let offset: CGFloat = -(self.secondColorFieldNode.frame.minX - leftInset)
+        
+        if let fieldSnapshotView = self.firstColorFieldNode.view.snapshotView(afterScreenUpdates: false) {
+            fieldSnapshotView.frame = self.firstColorFieldNode.frame
+            self.view.addSubview(fieldSnapshotView)
+            
+            fieldSnapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.3, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, force: false) { _ in
+                fieldSnapshotView.removeFromSuperview()
+            }
+        }
+        
+        if let buttonSnapshotView = self.swapButton.view.snapshotContentTree() {
+            buttonSnapshotView.frame = self.swapButton.frame
+            self.view.addSubview(buttonSnapshotView)
+            
+            buttonSnapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.3, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, force: false) { _ in
+                buttonSnapshotView.removeFromSuperview()
+            }
+        }
+        
+        self.swapButton.alpha = 0.0
+        
+        let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
+        var buttonFrame = self.addButton.frame
+        buttonFrame.origin.x = size.width
+        self.addButton.frame = buttonFrame
+        self.addButton.alpha = 1.0
+        
+        self.firstColorFieldNode.frame = self.secondColorFieldNode.frame
+        
+        var fieldFrame = self.secondColorFieldNode.frame
+        fieldFrame.origin.x = fieldFrame.maxX + fieldSpacing
+        self.secondColorFieldNode.frame = fieldFrame
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
+        let condensedLayout = size.width < 375.0
         let separatorHeight = UIScreenPixel
         let topPanelHeight: CGFloat = 47.0
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: topPanelHeight))
@@ -487,11 +590,20 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(x: 0.0, y: topPanelHeight, width: size.width, height: separatorHeight))
         
         let fieldHeight: CGFloat = 33.0
-        let leftInset: CGFloat = 15.0
-        let rightInset: CGFloat = 15.0
+        let leftInset: CGFloat
+        let rightInset: CGFloat
+        let fieldSpacing: CGFloat
+        if condensedLayout {
+            leftInset = 6.0
+            rightInset = 6.0
+            fieldSpacing = 40.0
+        } else {
+            leftInset = 15.0
+            rightInset = 15.0
+            fieldSpacing = 45.0
+        }
         let rightInsetWithButton: CGFloat = 42.0
-        let fieldSpacing: CGFloat = 45.0
-                
+        
         let buttonSize = CGSize(width: 26.0, height: 26.0)
         let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
         let swapButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
@@ -523,11 +635,11 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         
         let firstFieldFrame = CGRect(x: leftInset, y: (topPanelHeight - fieldHeight) / 2.0, width: self.state.secondColor != nil ? floorToScreenPixels((size.width - fieldSpacing) / 2.0) - leftInset : size.width - leftInset - (self.state.secondColorAvailable ? rightInsetWithButton : rightInset), height: fieldHeight)
         transition.updateFrame(node: self.firstColorFieldNode, frame: firstFieldFrame)
-        self.firstColorFieldNode.updateLayout(size: firstFieldFrame.size, transition: transition)
+        self.firstColorFieldNode.updateLayout(size: firstFieldFrame.size, condensed: condensedLayout, transition: transition)
         
         let secondFieldFrame = CGRect(x: firstFieldFrame.maxX + fieldSpacing, y: (topPanelHeight - fieldHeight) / 2.0, width: firstFieldFrame.width, height: fieldHeight)
         transition.updateFrame(node: self.secondColorFieldNode, frame: secondFieldFrame)
-        self.secondColorFieldNode.updateLayout(size: secondFieldFrame.size, transition: transition)
+        self.secondColorFieldNode.updateLayout(size: secondFieldFrame.size, condensed: condensedLayout, transition: transition)
         
         let colorPickerSize = CGSize(width: size.width, height: size.height - topPanelHeight - separatorHeight)
         transition.updateFrame(node: self.colorPickerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + separatorHeight), size: colorPickerSize))
@@ -555,9 +667,9 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             let firstColor = current.firstColor ?? current.defaultColor
             if let color = firstColor {
                 updated.firstColor = color
-                
-                var hsv = color.hsv
-                updated.secondColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: hsv.2 < 0.4 ? hsv.2 + 0.4 : hsv.2 - 0.4 , alpha: 1.0)
+                updated.secondColor = generateGradientColors(color: color).1
+                //var hsv = color.hsv
+                //updated.secondColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: hsv.2 < 0.4 ? hsv.2 + 0.4 : hsv.2 - 0.4 , alpha: 1.0)
             }
 
             return updated

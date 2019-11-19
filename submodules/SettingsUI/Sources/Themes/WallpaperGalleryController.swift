@@ -342,7 +342,7 @@ public class WallpaperGalleryController: ViewController {
         
         let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
         colorPanelNode.colorsChanged = { [weak self] color, _, ended in
-            if let strongSelf = self {
+            if let strongSelf = self , let color = color {
                 strongSelf.updateEntries(color: color, preview: !ended)
             }
         }

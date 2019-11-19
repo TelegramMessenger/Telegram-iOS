@@ -125,8 +125,8 @@ private func encodeText(_ string: String, _ key: Int) -> String {
     return result
 }
 
-public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView) -> Bool {
-    if view.disablesInteractiveTransitionGestureRecognizer {
+public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView, keyboardOnly: Bool = false) -> Bool {
+    if view.disablesInteractiveTransitionGestureRecognizer && !keyboardOnly {
         return true
     }
     if view.disablesInteractiveKeyboardGestureRecognizer {
@@ -136,7 +136,7 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
         return true
     }
     if let superview = view.superview {
-        return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview)
+        return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview, keyboardOnly: keyboardOnly)
     }
     return false
 }
@@ -1065,7 +1065,7 @@ public class Window1 {
         if let inputHeight = self.windowLayout.inputHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < self.windowLayout.size.height - inputHeight - (accessoryHeight ?? 0.0) {
             var enableGesture = true
             if let view = self.hostView.containerView.hitTest(location, with: nil) {
-                if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {
+                if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view, keyboardOnly: true) {
                     enableGesture = false
                 }
             }

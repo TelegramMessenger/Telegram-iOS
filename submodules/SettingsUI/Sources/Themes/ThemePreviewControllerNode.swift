@@ -279,6 +279,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func didLoad() {
         super.didLoad()
         
+        self.scrollNode.view.bounces = false
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
@@ -552,6 +553,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.messagesContainerNode.frame = self.chatContainerNode.bounds
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
+        self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, transition: .immediate)
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
         

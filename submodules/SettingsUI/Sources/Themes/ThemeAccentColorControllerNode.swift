@@ -203,19 +203,25 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .accent:
                         strongSelf.updateState({ current in
                             var updated = current
-                            updated.accentColor = firstColor
+                            if let firstColor = firstColor {
+                                updated.accentColor = firstColor
+                            }
                             return updated
                         })
                     case .background:
                         strongSelf.updateState({ current in
                             var updated = current
-                            updated.backgroundColors = (firstColor, secondColor)
+                            if let firstColor = firstColor {
+                                updated.backgroundColors = (firstColor, secondColor)
+                            }
                             return updated
                         })
                     case .messages:
                         strongSelf.updateState({ current in
                             var updated = current
-                            updated.messagesColors = (firstColor, secondColor)
+                            if let firstColor = firstColor {
+                                updated.messagesColors = (firstColor, secondColor)
+                            }
                             return updated
                         })
                 }
@@ -313,6 +319,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     override func didLoad() {
         super.didLoad()
         
+        self.scrollNode.view.bounces = false
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
@@ -615,7 +622,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
         
         transition.updateFrame(node: self.messagesContainerNode, frame: CGRect(x: 0.0, y: navigationBarHeight, width: bounds.width, height: bounds.height - bottomInset - navigationBarHeight))
-        transition.updateFrame(node: self.chatBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height - (colorPanelHeight - colorPanelOffset)))
+        
+        let backgroundSize = CGSize(width: bounds.width, height: bounds.height - (colorPanelHeight - colorPanelOffset))
+        transition.updateFrame(node: self.chatBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundSize))
+        self.chatBackgroundNode.updateLayout(size: backgroundSize, transition: transition)
         
         var messagesBottomInset: CGFloat = 0.0
         if pageControlAlpha > 0.0 {

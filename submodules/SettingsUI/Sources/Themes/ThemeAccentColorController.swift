@@ -143,6 +143,7 @@ final class ThemeAccentColorController: ViewController {
         self.controllerNode.themeUpdated = { [weak self] theme in
             if let strongSelf = self {
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: theme, presentationStrings: strongSelf.presentationData.strings))
+                strongSelf.segmentedTitleView.theme = theme
             }
         }
         

@@ -32,7 +32,7 @@ final class ChatScheduleTimeController: ViewController {
     init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.mode = mode
-        self.currentTime = currentTime
+        self.currentTime = currentTime != scheduleWhenOnlineTimestamp ? currentTime : nil
         self.minimalTime = minimalTime
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
