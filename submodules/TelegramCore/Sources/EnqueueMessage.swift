@@ -267,6 +267,8 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
     }
     
     if let peer = transaction.getPeer(peerId), let accountPeer = transaction.getPeer(account.peerId) {
+        let peerPresence = transaction.getPeerPresence(peerId: peerId)
+        
         var storeMessages: [StoreMessage] = []
         var timestamp = Int32(account.network.context.globalTime())
         switch peerId.namespace {
@@ -377,12 +379,20 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     var effectiveTimestamp = timestamp
                     for attribute in attributes {
                         if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
-                            messageNamespace = Namespaces.Message.ScheduledLocal
-                            effectiveTimestamp = attribute.scheduleTime
+                            if attribute.scheduleTime == scheduleWhenOnlineTimestamp, let presence = peerPresence as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
+                                
+                            } else {
+                                messageNamespace = Namespaces.Message.ScheduledLocal
+                                effectiveTimestamp = attribute.scheduleTime
+                            }
                             break
                         }
                     }
                     
+                    if messageNamespace != Namespaces.Message.ScheduledLocal {
+                        attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                    }
+                                        
                     if let peer = peer as? TelegramChannel {
                         switch peer.info {
                             case let .broadcast(info):
@@ -515,9 +525,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 entitiesAttribute = attribute
                             }
                             if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
-                                messageNamespace = Namespaces.Message.ScheduledLocal
-                                effectiveTimestamp = attribute.scheduleTime
+                                if attribute.scheduleTime == scheduleWhenOnlineTimestamp, let presence = peerPresence as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
+                                    
+                                } else {
+                                    messageNamespace = Namespaces.Message.ScheduledLocal
+                                    effectiveTimestamp = attribute.scheduleTime
+                                }
                             }
+                        }
+                        
+                        if messageNamespace != Namespaces.Message.ScheduledLocal {
+                            attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
                         }
                         
                         let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)

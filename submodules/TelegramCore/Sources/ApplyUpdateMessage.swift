@@ -43,7 +43,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
-        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
             messageId = id.id
         } else {
             messageId = result.rawMessageIds.first
