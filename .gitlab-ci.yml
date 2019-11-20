@@ -1,6 +1,5 @@
 stages:
   - build
-  #- deploy
   - verifysanity
   - verify
 
