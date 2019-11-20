@@ -466,7 +466,7 @@ apple_binary(
     linker_flags = [
         "-e",
         "_WKExtensionMain",
-        "-l", "-force_load", "/usr/lib/libWKExtensionMainLegacy.a",
+        "-lWKExtensionMainLegacy",
     ],
     configs = watch_extension_binary_configs(),
     frameworks = [
