@@ -62,7 +62,6 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
 	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
-	export BUCK_HTTP_CACHE=""
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	CODESIGNING_SUBPATH="fake-codesigning"
 else
@@ -70,7 +69,14 @@ else
 	exit 1
 fi
 
-COMMIT_ID=$(git rev-parse HEAD)
+COMMIT_COMMENT="$(git log -1 --pretty=%B)"
+case "$COMMIT_COMMENT" in 
+  *"[nocache]"*)
+	export BUCK_HTTP_CACHE=""
+    ;;
+esac
+
+COMMIT_ID="$(git rev-parse HEAD)"
 COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
 if [ -z "$2" ]; then
 	COMMIT_COUNT=$(git rev-list --count HEAD)

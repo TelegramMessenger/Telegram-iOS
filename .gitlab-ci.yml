@@ -1,6 +1,6 @@
 stages:
   - build
-  #- deploy
+  - deploy
   - verifysanity
   - verify
 
@@ -53,18 +53,22 @@ beta_testflight:
 #  environment:
 #    name: testflight_llc
 
-#verifysanity_beta_testflight:
-#  tags:
-#    - ios_beta
-#  stage: verifysanity
-#  only:
-#    - beta
-#  except:
-#    - tags
-#  script:
-#    - bash buildbox/verify-telegram.sh appstore cached
-#  environment:
-#    name: testflight_llc
+verifysanity_beta_testflight:
+  tags:
+    - ios_beta
+  stage: verifysanity
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/verify-telegram.sh appstore cached
+  environment:
+    name: testflight_llc
+  artifacts:
+    paths:
+      - build/artifacts
+    expire_in: 1 week
 
 verify_beta_testflight:
   tags:
@@ -78,3 +82,7 @@ verify_beta_testflight:
     - bash buildbox/verify-telegram.sh appstore full
   environment:
     name: testflight_llc
+  artifacts:
+    paths:
+      - build/artifacts
+    expire_in: 1 week
