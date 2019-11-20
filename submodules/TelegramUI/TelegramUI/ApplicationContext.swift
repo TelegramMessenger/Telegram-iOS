@@ -40,7 +40,7 @@ final class UnauthorizedApplicationContext {
         
         var authorizationCompleted: (() -> Void)?
         
-        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, strings: presentationData.strings, theme: presentationData.theme, openUrl: sharedContext.applicationBindings.openUrl, apiId: apiId, apiHash: apiHash, authorizationCompleted: {
+        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, presentationData: presentationData, openUrl: sharedContext.applicationBindings.openUrl, apiId: apiId, apiHash: apiHash, authorizationCompleted: {
             authorizationCompleted?()
         })
         
@@ -70,6 +70,7 @@ final class AuthorizedApplicationContext {
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
     
+    private var scheduledOpenNotificationSettings: Bool = false
     private var scheduledOperChatWithPeerId: (PeerId, MessageId?, Bool)?
     private var scheduledOpenExternalUrl: URL?
         
@@ -357,7 +358,7 @@ final class AuthorizedApplicationContext {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 var acceptImpl: ((String?) -> Void)?
                 var declineImpl: (() -> Void)?
-                let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(presentationTheme: presentationData.theme), strings: presentationData.strings, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
+                let controller = TermsOfServiceController(presentationData: presentationData, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
                     acceptImpl?(proccedBot)
                 }, decline: {
                     declineImpl?()
@@ -705,6 +706,14 @@ final class AuthorizedApplicationContext {
         self.termsOfServiceProceedToBotDisposable.dispose()
         self.watchNavigateToMessageDisposable.dispose()
         self.permissionsDisposable.dispose()
+    }
+    
+    func openNotificationSettings() {
+        if self.rootController.rootTabController != nil {
+            self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
+        } else {
+            self.scheduledOpenNotificationSettings = true
+        }
     }
     
     func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {

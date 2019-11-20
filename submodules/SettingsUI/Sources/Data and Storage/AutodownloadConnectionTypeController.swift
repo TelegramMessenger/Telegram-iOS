@@ -142,35 +142,35 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! AutodownloadMediaConnectionTypeControllerArguments
         switch self {
             case let .master(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleMaster(value)
                 })
             case let .dataUsageHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .dataUsageItem(theme, strings, value, customPosition, enabled):
                 return AutodownloadDataUsagePickerItem(theme: theme, strings: strings, value: value, customPosition: customPosition, enabled: enabled, sectionId: self.section, updated: { preset in
                     arguments.changePreset(preset)
                 })
             case let .typesHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .photos(theme, text, value, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.photo)
                 })
             case let .videos(theme, text, value, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.video)
                 })
             case let .files(theme, text, value, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.file)
                 })
             case let .voiceMessagesInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -345,8 +345,8 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
                     title = presentationData.strings.AutoDownloadSettings_WifiTitle
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: autodownloadMediaConnectionTypeControllerEntries(presentationData: presentationData, connectionType: connectionType, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: autodownloadMediaConnectionTypeControllerEntries(presentationData: presentationData, connectionType: connectionType, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }

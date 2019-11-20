@@ -17,15 +17,15 @@ public enum ItemListTextItemLinkAction {
 }
 
 public class ItemListTextItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let text: ItemListTextItemText
     public let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
     public let isAlwaysPlain: Bool = true
     
-    public init(theme: PresentationTheme, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
+        self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
@@ -69,9 +69,6 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(14.0)
-private let titleBoldFont = Font.semibold(14.0)
-
 public class ItemListTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let activateArea: AccessibilityAreaNode
@@ -110,14 +107,17 @@ public class ItemListTextItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0 + params.leftInset
             let verticalInset: CGFloat = 7.0
             
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            
             let attributedText: NSAttributedString
             switch item.text {
-                case let .plain(text):
-                    attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.theme.list.freeTextColor)
-                case let .markdown(text):
-                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
-                        return (TelegramTextAttributes.URL, contents)
-                    }))
+            case let .plain(text):
+                attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.list.freeTextColor)
+            case let .markdown(text):
+                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }))
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

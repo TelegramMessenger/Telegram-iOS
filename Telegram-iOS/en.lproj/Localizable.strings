@@ -3063,7 +3063,6 @@ Unused sets are archived when you add more.";
 
 "Settings.Appearance" = "Appearance";
 "Appearance.Title" = "Appearance";
-"Appearance.TextSize" = "TEXT SIZE";
 "Appearance.Preview" = "CHAT PREVIEW";
 "Appearance.ColorTheme" = "COLOR THEME";
 "Appearance.ThemeDayClassic" = "Day Classic";
@@ -5112,27 +5111,28 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.Colors.Accent" = "Accent";
 "Theme.Colors.Background" = "Background";
 "Theme.Colors.Messages" = "Messages";
-
 "Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
 "Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";
 
 "IntentsSettings.Title" = "Share Sheet";
-
 "IntentsSettings.MainAccount" = "Main Account";
 "IntentsSettings.MainAccountInfo" = "Choose an account for Siri and share suggestions.";
-
 "IntentsSettings.SuggestedChats" = "Suggested Chats";
 "IntentsSettings.SuggestedChatsContacts" = "Contacts";
 "IntentsSettings.SuggestedChatsSavedMessages" = "Saved Messages";
 "IntentsSettings.SuggestedChatsPrivateChats" = "Private Chats";
 "IntentsSettings.SuggestedChatsGroups" = "Groups";
 "IntentsSettings.SuggestedChatsInfo" = "Archived chats will not be suggested.";
-
 "IntentsSettings.SuggestBy" = "Suggest By";
 "IntentsSettings.SuggestByAll" = "All Sent Messages";
 "IntentsSettings.SuggestByShare" = "Only Shared Messages";
-
 "IntentsSettings.ResetAll" = "Reset All Share Suggestions";
 "IntentsSettings.Reset" = "Reset";
 
 "Conversation.SendingOptionsTooltip" = "Hold this button to schedule your message\nor send it without sound.";
+
+"Appearance.TextSizeSetting" = "Text Size";
+"Appearance.TextSize.Automatic" = "System";
+"Appearance.TextSize.Title" = "Text Size";
+"Appearance.TextSize.UseSystem" = "User System Text Size";
+"Appearance.TextSize.Apply" = "Set";

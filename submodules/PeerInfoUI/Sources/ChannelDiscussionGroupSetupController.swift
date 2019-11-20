@@ -128,13 +128,13 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelDiscussionGroupSetupControllerArguments
         switch self {
             case let .header(theme, strings, title, isGroup, label):
                 return ChannelDiscussionGroupSetupHeaderItem(theme: theme, strings: strings, title: title, isGroup: isGroup, label: label, sectionId: self.section)
             case let .create(theme, text):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()
                 })
             case let .group(_, theme, strings, peer, nameOrder):
@@ -144,13 +144,13 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = strings.Channel_DiscussionGroup_PrivateGroup
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, account: arguments.account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, account: arguments.account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .groupsInfo(theme, title):
-                return ItemListTextItem(theme: theme, text: .plain(title), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(title), sectionId: self.section)
             case let .unlink(theme, title):
-                return ItemListActionItem(theme: theme, title: title, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: title, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.unlinkGroup()
                 })
         }
@@ -591,8 +591,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             }
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: channelDiscussionGroupSetupControllerEntries(presentationData: presentationData, view: view, groups: groups), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelDiscussionGroupSetupControllerEntries(presentationData: presentationData, view: view, groups: groups), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

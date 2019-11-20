@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 import Display
+import TelegramUIPreferences
+import TelegramPresentationData
 
 public protocol ItemListItemTag {
     func isEqual(to other: ItemListItemTag) -> Bool
@@ -147,4 +149,94 @@ public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UI
 
 public func itemListHasRoundedBlockLayout(_ params: ListViewItemLayoutParams) -> Bool {
     return params.width > 480.0
+}
+
+public final class ItemListPresentationData: Equatable {
+    public let theme: PresentationTheme
+    public let fontSize: PresentationFontSize
+    public let strings: PresentationStrings
+    
+    public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings) {
+        self.theme = theme
+        self.fontSize = fontSize
+        self.strings = strings
+    }
+    
+    public static func ==(lhs: ItemListPresentationData, rhs: ItemListPresentationData) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.fontSize != rhs.fontSize {
+            return false
+        }
+        return true
+    }
+}
+
+public extension PresentationFontSize {
+    var itemListBaseHeaderFontSize: CGFloat {
+        switch self {
+        case .extraSmall:
+            return 13.0
+        case .small:
+            return 14.0
+        case .medium:
+            return 15.0
+        case .regular:
+            return 16.0
+        case .large:
+            return 18.0
+        case .extraLarge:
+            return 22.0
+        case .extraLargeX2:
+            return 25.0
+        }
+    }
+    
+    var itemListBaseFontSize: CGFloat {
+        switch self {
+        case .extraSmall:
+            return 14.0
+        case .small:
+            return 15.0
+        case .medium:
+            return 16.0
+        case .regular:
+            return 17.0
+        case .large:
+            return 19.0
+        case .extraLarge:
+            return 23.0
+        case .extraLargeX2:
+            return 26.0
+        }
+    }
+    
+    var itemListBaseLabelFontSize: CGFloat {
+        switch self {
+        case .extraSmall:
+            return 11.0
+        case .small:
+            return 12.0
+        case .medium:
+            return 13.0
+        case .regular:
+            return 14.0
+        case .large:
+            return 16.0
+        case .extraLarge:
+            return 20.0
+        case .extraLargeX2:
+            return 23.0
+        }
+    }
+}
+
+public extension ItemListPresentationData {
+    convenience init(_ presentationData: PresentationData) {
+        self.init(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings)
+    }
 }

@@ -65,11 +65,11 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! WebBrowserSettingsControllerArguments
         switch self {
             case let .browserHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .browser(theme, title, application, identifier, selected, _):
                 return WebBrowserItem(account: arguments.context.account, theme: theme, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
@@ -109,8 +109,8 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.WebBrowser_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: webBrowserSettingsControllerEntries(context: context, presentationData: presentationData, selectedBrowser: settings.defaultWebBrowser), style: .blocks, animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.WebBrowser_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: webBrowserSettingsControllerEntries(context: context, presentationData: presentationData, selectedBrowser: settings.defaultWebBrowser), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

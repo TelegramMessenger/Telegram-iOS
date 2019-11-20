@@ -24,7 +24,7 @@ public enum ItemListDisclosureLabelStyle {
 }
 
 public class ItemListDisclosureItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let icon: UIImage?
     let title: String
     let titleColor: ItemListDisclosureItemTitleColor
@@ -38,8 +38,8 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let clearHighlightAutomatically: Bool
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
+        self.presentationData = presentationData
         self.icon = icon
         self.title = title
         self.titleColor = titleColor
@@ -99,9 +99,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(17.0)
 private let badgeFont = Font.regular(15.0)
-private let detailFont = Font.regular(13.0)
 
 public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -190,12 +188,12 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         let currentHasBadge = self.labelBadgeNode.image != nil
         
         return { item, params, neighbors in
-            let rightInset: CGFloat
+            var rightInset: CGFloat
             switch item.disclosureStyle {
-                case .none:
-                    rightInset = 16.0 + params.rightInset
-                case .arrow:
-                    rightInset = 34.0 + params.rightInset
+            case .none:
+                rightInset = 16.0 + params.rightInset
+            case .arrow:
+                rightInset = 34.0 + params.rightInset
             }
             
             var updateArrowImage: UIImage?
@@ -221,9 +219,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             }
             
             let badgeDiameter: CGFloat = 20.0
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
-                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
                 if let badgeColor = badgeColor {
                     updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
                 }
@@ -247,29 +245,41 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 leftInset += 43.0
             }
             
-            let titleColor: UIColor
-            if item.enabled {
-                titleColor = item.titleColor == .accent ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor
-            } else {
-                titleColor = item.theme.list.itemDisabledTextColor
+            var additionalTextRightInset: CGFloat = 0.0
+            switch item.labelStyle {
+            case .badge:
+                additionalTextRightInset += 44.0
+            default:
+                break
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleColor: UIColor
+            if item.enabled {
+                titleColor = item.titleColor == .accent ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemPrimaryTextColor
+            } else {
+                titleColor = item.presentationData.theme.list.itemDisabledTextColor
+            }
+            
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - additionalTextRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
             
             let labelFont: UIFont
             let labelBadgeColor: UIColor
             var labelConstrain: CGFloat = params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0
             switch item.labelStyle {
-                case .badge:
-                    labelBadgeColor = item.theme.list.itemCheckColors.foregroundColor
-                    labelFont = badgeFont
-                case .detailText, .multilineDetailText:
-                    labelBadgeColor = item.theme.list.itemSecondaryTextColor
-                    labelFont = detailFont
-                    labelConstrain = params.width - params.rightInset - 40.0 - leftInset
-                default:
-                    labelBadgeColor = item.theme.list.itemSecondaryTextColor
-                    labelFont = titleFont
+            case .badge:
+                labelBadgeColor = item.presentationData.theme.list.itemCheckColors.foregroundColor
+                labelFont = badgeFont
+            case .detailText, .multilineDetailText:
+                labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = detailFont
+                labelConstrain = params.width - params.rightInset - 40.0 - leftInset
+            default:
+                labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = titleFont
             }
             var multilineLabel = false
             if case .multilineDetailText = item.labelStyle {
@@ -278,27 +288,30 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor:labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let verticalInset: CGFloat = 11.0
+            let titleSpacing: CGFloat = 3.0
+            
             let height: CGFloat
             switch item.labelStyle {
-                    case .detailText:
-                        height = 64.0
-                    case .multilineDetailText:
-                        height = 44.0 + labelLayout.size.height
-                    default:
-                        height = 44.0
+            case .detailText:
+                height = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + labelLayout.size.height
+            case .multilineDetailText:
+                height = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + labelLayout.size.height
+            default:
+                height = verticalInset * 2.0 + titleLayout.size.height
             }
             
             switch item.style {
-                case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: height)
-                    insets = itemListNeighborsPlainInsets(neighbors)
-                case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: height)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                contentSize = CGSize(width: params.width, height: height)
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                contentSize = CGSize(width: params.width, height: height)
+                insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -343,70 +356,71 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
                     let _ = labelApply()
                     
                     switch item.style {
-                        case .plain:
-                            if strongSelf.backgroundNode.supernode != nil {
-                                strongSelf.backgroundNode.removeFromSupernode()
-                            }
-                            if strongSelf.topStripeNode.supernode != nil {
-                                strongSelf.topStripeNode.removeFromSupernode()
-                            }
-                            if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
-                            }
-                            if strongSelf.maskNode.supernode != nil {
-                                strongSelf.maskNode.removeFromSupernode()
-                            }
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
-                        case .blocks:
-                            if strongSelf.backgroundNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                            }
-                            if strongSelf.topStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
-                            }
-                            if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
-                            }
-                            if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
-                            }
-                            
-                            let hasCorners = itemListHasRoundedBlockLayout(params)
-                            var hasTopCorners = false
-                            var hasBottomCorners = false
-                            switch neighbors.top {
-                                case .sameSection(false):
-                                    strongSelf.topStripeNode.isHidden = true
-                                default:
-                                    hasTopCorners = true
-                                    strongSelf.topStripeNode.isHidden = hasCorners
-                            }
-                            let bottomStripeInset: CGFloat
-                            switch neighbors.bottom {
-                                case .sameSection(false):
-                                    bottomStripeInset = leftInset
-                                default:
-                                    bottomStripeInset = 0.0
-                                    hasBottomCorners = true
-                                    strongSelf.bottomStripeNode.isHidden = hasCorners
-                            }
-                            
-                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-                            
-                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
+                    case .plain:
+                        if strongSelf.backgroundNode.supernode != nil {
+                            strongSelf.backgroundNode.removeFromSupernode()
+                        }
+                        if strongSelf.topStripeNode.supernode != nil {
+                            strongSelf.topStripeNode.removeFromSupernode()
+                        }
+                        if strongSelf.bottomStripeNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                        }
+                        if strongSelf.maskNode.supernode != nil {
+                            strongSelf.maskNode.removeFromSupernode()
+                        }
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
+                    case .blocks:
+                        if strongSelf.backgroundNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                        }
+                        if strongSelf.topStripeNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                        }
+                        if strongSelf.bottomStripeNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                        }
+                        if strongSelf.maskNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        }
+                        
+                        let hasCorners = itemListHasRoundedBlockLayout(params)
+                        var hasTopCorners = false
+                        var hasBottomCorners = false
+                        switch neighbors.top {
+                            case .sameSection(false):
+                                strongSelf.topStripeNode.isHidden = true
+                            default:
+                                hasTopCorners = true
+                                strongSelf.topStripeNode.isHidden = hasCorners
+                        }
+                        let bottomStripeInset: CGFloat
+                        switch neighbors.bottom {
+                            case .sameSection(false):
+                                bottomStripeInset = leftInset
+                            default:
+                                bottomStripeInset = 0.0
+                                hasBottomCorners = true
+                                strongSelf.bottomStripeNode.isHidden = hasCorners
+                        }
+                        
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        
+                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = titleFrame
                     
                     if let updateBadgeImage = updatedLabelBadgeImage {
                         if strongSelf.labelBadgeNode.supernode == nil {
@@ -420,14 +434,15 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
-                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth, y: 12.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
+                    let badgeFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth, y: floor((contentSize.height - badgeDiameter) / 2.0)), size: CGSize(width: badgeWidth, height: badgeDiameter))
+                    strongSelf.labelBadgeNode.frame = badgeFrame
                     
                     let labelFrame: CGRect
                     switch item.labelStyle {
                         case .badge:
-                            labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: 13.0), size: labelLayout.size)
+                            labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: badgeFrame.minY + 1), size: labelLayout.size)
                         case .detailText, .multilineDetailText:
-                            labelFrame = CGRect(origin: CGPoint(x: leftInset, y: 36.0), size: labelLayout.size)
+                            labelFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
                         default:
                             labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
                     }

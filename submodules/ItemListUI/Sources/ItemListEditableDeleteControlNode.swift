@@ -23,8 +23,8 @@ public final class ItemListEditableControlNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    public static func asyncLayout(_ node: ItemListEditableControlNode?) -> (_ height: CGFloat, _ theme: PresentationTheme, _ hidden: Bool) -> (CGSize, () -> ItemListEditableControlNode) {
-        return { height, theme, hidden in
+    public static func asyncLayout(_ node: ItemListEditableControlNode?) -> (_ theme: PresentationTheme, _ hidden: Bool) -> (CGFloat, (CGFloat) -> ItemListEditableControlNode) {
+        return { theme, hidden in
             let image = PresentationResourcesItemList.itemListDeleteIndicatorIcon(theme)
             
             let resultNode: ItemListEditableControlNode
@@ -35,7 +35,7 @@ public final class ItemListEditableControlNode: ASDisplayNode {
             }
             resultNode.iconNode.image = image
             
-            return (CGSize(width: 38.0, height: height), {
+            return (38.0, { height in
                 if let image = image {
                     resultNode.iconNode.frame = CGRect(origin: CGPoint(x: 12.0, y: floor((height - image.size.height) / 2.0)), size: image.size)
                     resultNode.iconNode.isHidden = hidden

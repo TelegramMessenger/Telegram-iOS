@@ -12,16 +12,14 @@ import PresentationDataUtils
 import TelegramStringFormatting
 
 class ItemListCallListItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let messages: [Message]
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle) {
+        self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.messages = messages
         self.sectionId = sectionId
@@ -61,10 +59,6 @@ class ItemListCallListItem: ListViewItem, ItemListItem {
         }
     }
 }
-
-private let titleFont = Font.regular(15.0)
-private let font = Font.regular(14.0)
-private let typeFont = Font.medium(14.0)
 
 private func stringForCallType(message: Message, strings: PresentationStrings) -> String {
     var string = ""
@@ -181,9 +175,13 @@ class ItemListCallListItemNode: ListViewItemNode {
     
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
+            
+            let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            let font = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            let typeFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
             let contentSize: CGSize
             var contentHeight: CGFloat = 0.0
@@ -196,18 +194,18 @@ class ItemListCallListItemNode: ListViewItemNode {
             
             switch item.style {
                 case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
             let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
-            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.strings)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             contentHeight += titleLayout.size.height + 18.0
             
@@ -217,11 +215,11 @@ class ItemListCallListItemNode: ListViewItemNode {
             for message in item.messages {
                 let makeTimeLayout = makeNodesLayout[index].0
                 let time = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: item.dateTimeFormat)
-                let (timeLayout, timeApply) = makeTimeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: time, font: font, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let (timeLayout, timeApply) = makeTimeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: time, font: font, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let makeTypeLayout = makeNodesLayout[index].1
-                let type = stringForCallType(message: message, strings: item.strings)
-                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: type, font: typeFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let type = stringForCallType(message: message, strings: item.presentationData.strings)
+                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: type, font: typeFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 nodesLayout.append((timeLayout, typeLayout))
                 nodesApply.append((timeApply, typeApply))

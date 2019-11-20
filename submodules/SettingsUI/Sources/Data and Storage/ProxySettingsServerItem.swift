@@ -240,20 +240,20 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             titleAttributedString.append(NSAttributedString(string: ":\(item.server.port)", font: titleFont, textColor: item.theme.list.itemSecondaryTextColor))
             let statusAttributedString = NSAttributedString(string: item.label, font: statusFont, textColor: item.labelAccent ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
             
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(64.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
                 
-                let reorderSizeAndApply = reorderControlLayout(65.0, item.theme)
+                let reorderSizeAndApply = reorderControlLayout(item.theme)
                 reorderControlSizeAndApply = reorderSizeAndApply
-                reorderInset = reorderSizeAndApply.0.width
+                reorderInset = reorderSizeAndApply.0
             } else {
                 editingOffset = 0.0
             }
@@ -310,9 +310,9 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1()
+                            let editableControlNode = editableControlSizeAndApply.1(layout.contentSize.height)
                             editableControlNode.tapped = {
                                 if let strongSelf = self {
                                     strongSelf.setRevealOptionsOpened(true, animated: true)
@@ -341,13 +341,13 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(false)
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.alpha = 0.0
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
                         }
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
                         strongSelf.reorderControlNode?.frame = reorderControlFrame
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
                         strongSelf.reorderControlNode = nil

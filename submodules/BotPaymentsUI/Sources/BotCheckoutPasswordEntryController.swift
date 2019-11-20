@@ -303,7 +303,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
 func botCheckoutPasswordEntryController(context: AccountContext, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
         dismissImpl?()
     }, completion: { token in
         completion(token)

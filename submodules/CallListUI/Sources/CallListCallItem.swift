@@ -12,10 +12,6 @@ import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
 
-private let titleFont = Font.regular(17.0)
-private let statusFont = Font.regular(14.0)
-private let dateFont = Font.regular(15.0)
-
 private func callDurationString(strings: PresentationStrings, duration: Int32) -> String {
     if duration < 60 {
         return strings.Call_ShortSeconds(duration)
@@ -67,8 +63,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
 }
 
 class CallListCallItem: ListViewItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let account: Account
     let style: ItemListStyle
@@ -82,9 +77,8 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+        self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.account = account
         self.style = style
@@ -301,18 +295,22 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var updatedTheme: PresentationTheme?
             var updatedInfoIcon = false
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
                 
                 updatedInfoIcon = true
             }
             
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            
             let editingOffset: CGFloat
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             if item.editing {
-                let sizeAndApply = editableControlLayout(50.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
             } else {
                 editingOffset = 0.0
             }
@@ -328,12 +326,12 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             switch item.style {
                 case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
@@ -347,7 +345,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
-            var titleColor = item.theme.list.itemPrimaryTextColor
+            var titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             var hasMissed = false
             var hasIncoming = false
             var hasOutgoing = false
@@ -363,7 +361,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 hasIncoming = true
                                 
                                 if let discardReason = discardReason, case .missed = discardReason {
-                                    titleColor = item.theme.list.itemDestructiveColor
+                                    titleColor = item.presentationData.theme.list.itemDestructiveColor
                                     hasMissed = true
                                 }
                             } else {
@@ -397,7 +395,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     } else if let lastName = user.lastName, !lastName.isEmpty {
                         titleAttributedString = NSAttributedString(string: lastName, font: titleFont, textColor: titleColor)
                     } else {
-                        titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleFont, textColor: titleColor)
+                        titleAttributedString = NSAttributedString(string: item.presentationData.strings.User_DeletedAccount, font: titleFont, textColor: titleColor)
                     }
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: titleColor)
@@ -406,20 +404,20 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 }
                 
                 if hasMissed {
-                    statusAttributedString = NSAttributedString(string: item.strings.Notification_CallMissedShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                    statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallMissedShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                 } else if hasIncoming && hasOutgoing {
-                    statusAttributedString = NSAttributedString(string: item.strings.Notification_CallOutgoingShort + ", " + item.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                    statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort + ", " + item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                 } else if hasIncoming {
                     if let callDuration = callDuration, callDuration != 0 {
-                        statusAttributedString = NSAttributedString(string: item.strings.Notification_CallTimeFormat(item.strings.Notification_CallIncomingShort, callDurationString(strings: item.strings, duration: callDuration)).0, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallIncomingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     } else {
-                        statusAttributedString = NSAttributedString(string: item.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     }
                 } else {
                     if let callDuration = callDuration, callDuration != 0 {
-                        statusAttributedString = NSAttributedString(string: item.strings.Notification_CallTimeFormat(item.strings.Notification_CallOutgoingShort, callDurationString(strings: item.strings, duration: callDuration)).0, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallOutgoingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     } else {
-                        statusAttributedString = NSAttributedString(string: item.strings.Notification_CallOutgoingShort, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                     }
                 }
             }
@@ -429,18 +427,21 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             localtime_r(&t, &timeinfo)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let dateText = stringForRelativeTimestamp(strings: item.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
+            let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.topMessage.timestamp, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
             
-            let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - dateRightInset - dateLayout.size.width - (item.editing ? -30.0 : 10.0)), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 50.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let titleSpacing: CGFloat = -1.0
+            let verticalInset: CGFloat = 6.0
             
-            let outgoingIcon = PresentationResourcesCallList.outgoingIcon(item.theme)
-            let infoIcon = PresentationResourcesCallList.infoButton(item.theme)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: titleLayout.size.height + titleSpacing + statusLayout.size.height + verticalInset * 2.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            
+            let outgoingIcon = PresentationResourcesCallList.outgoingIcon(item.presentationData.theme)
+            let infoIcon = PresentationResourcesCallList.infoButton(item.presentationData.theme)
             
             let contentSize = nodeLayout.contentSize
             
@@ -451,7 +452,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                         if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
@@ -471,7 +472,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                                 strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                                 strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                                strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                                strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
                             
                             switch item.style {
@@ -519,9 +520,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             if let editableControlSizeAndApply = editableControlSizeAndApply {
-                                let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                                let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: nodeLayout.contentSize.height))
                                 if strongSelf.editableControlNode == nil {
-                                    let editableControlNode = editableControlSizeAndApply.1()
+                                    let editableControlNode = editableControlSizeAndApply.1(nodeLayout.contentSize.height)
                                     editableControlNode.tapped = {
                                         if let strongSelf = self {
                                             strongSelf.setRevealOptionsOpened(true, animated: true)
@@ -547,13 +548,13 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 })
                             }
                             
-                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
+                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0)))
                             
                             let _ = titleApply()
-                            transition.updateFrameAdditive(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 6.0), size: titleLayout.size))
+                            transition.updateFrameAdditive(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: verticalInset), size: titleLayout.size))
                             
                             let _ = statusApply()
-                            transition.updateFrameAdditive(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 27.0), size: statusLayout.size))
+                            transition.updateFrameAdditive(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                             
                             let _ = dateApply()
                             transition.updateFrameAdditive(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + params.width - dateRightInset - dateLayout.size.width, y: floor((nodeLayout.contentSize.height - dateLayout.size.height) / 2.0) + 2.0), size: dateLayout.size))
@@ -585,11 +586,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.accessibilityArea.accessibilityValue = statusAttributedString?.string
                             strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             
-                            strongSelf.infoButtonNode.accessibilityLabel = item.strings.Conversation_Info
+                            strongSelf.infoButtonNode.accessibilityLabel = item.presentationData.strings.Conversation_Info
                             
-                            strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
+                            strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.presentationData.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
                             
-                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                             strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
                         }
                     })
@@ -667,9 +668,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
             
-            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 6.0), size: self.titleNode.bounds.size))
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
             
-            transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 27.0), size: self.statusNode.bounds.size))
+            transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
             
             transition.updateFrameAdditive(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
             

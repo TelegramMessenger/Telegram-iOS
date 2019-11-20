@@ -912,4 +912,40 @@ public struct PresentationResourcesChat {
             return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
         })
     }
+    
+    public static func chatOutgoingFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatOutgoingFullCheck(size), { _ in
+            return generateCheckImage(partial: false, color: theme.chat.message.outgoingCheckColor, width: size)
+        })
+    }
+    
+    public static func chatOutgoingPartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatOutgoingPartialCheck(size), { _ in
+            return generateCheckImage(partial: true, color: theme.chat.message.outgoingCheckColor, width: size)
+        })
+    }
+    
+    public static func chatMediaFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMediaFullCheck(size), { _ in
+            return generateCheckImage(partial: false, color: .white, width: size)
+        })
+    }
+    
+    public static func chatMediaPartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMediaPartialCheck(size), { _ in
+            return generateCheckImage(partial: true, color: .white, width: size)
+        })
+    }
+    
+    public static func chatFreeFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreeFullCheck(size), { _ in
+            return generateCheckImage(partial: false, color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText, width: size)
+        })
+    }
+    
+    public static func chatFreePartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreePartialCheck(size), { _ in
+            return generateCheckImage(partial: true, color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText, width: size)
+        })
+    }
 }

@@ -34,8 +34,7 @@ public enum ItemListStickerPackItemControl: Equatable {
 }
 
 public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let account: Account
     let packInfo: StickerPackCollectionInfo
     let itemCount: String
@@ -51,9 +50,8 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let addPack: () -> Void
     let removePack: () -> Void
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
-        self.theme = theme
-        self.strings = strings
+    public init(presentationData: ItemListPresentationData, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.account = account
         self.packInfo = packInfo
         self.itemCount = itemCount
@@ -115,9 +113,6 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         self.action?()
     }
 }
-
-private let titleFont = Font.bold(15.0)
-private let statusFont = Font.regular(14.0)
 
 public enum StickerPackThumbnailItem: Equatable {
     case still(TelegramMediaImageRepresentation)
@@ -274,18 +269,21 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let currentItem = self.layoutParams?.0
         
         return { item, params, neighbors in
+            let titleFont = Font.bold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             let packRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled {
-                packRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]
+                packRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]
             } else {
                 packRevealOptions = []
             }
@@ -300,57 +298,60 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 case let .installation(installed):
                     rightInset += 50.0
                     if installed {
-                        installationActionImage = PresentationResourcesItemList.secondaryCheckIconImage(item.theme)
+                        installationActionImage = PresentationResourcesItemList.secondaryCheckIconImage(item.presentationData.theme)
                     } else {
-                        installationActionImage = PresentationResourcesItemList.plusIconImage(item.theme)
+                        installationActionImage = PresentationResourcesItemList.plusIconImage(item.presentationData.theme)
                     }
                 case .selection:
                     rightInset += 16.0
-                    checkImage = PresentationResourcesItemList.checkIconImage(item.theme)
+                    checkImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
             }
             
             var unreadImage: UIImage?
             if item.unread {
-                unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.theme)
+                unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.presentationData.theme)
             }
             
-            titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
-            statusAttributedString = NSAttributedString(string: item.itemCount, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+            titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            statusAttributedString = NSAttributedString(string: item.itemCount, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             
+            let verticalInset: CGFloat = 11.0
+            let titleSpacing: CGFloat = 2.0
+            
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 59.0)
             let separatorHeight = UIScreenPixel
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
-            
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode)?
             
             var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
             
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(59.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
                 
                 if item.editing.reorderable {
-                    let sizeAndApply = reorderControlLayout(contentSize.height, item.theme)
+                    let sizeAndApply = reorderControlLayout(item.presentationData.theme)
                     reorderControlSizeAndApply = sizeAndApply
-                    reorderInset = sizeAndApply.0.width
+                    reorderInset = sizeAndApply.0
                 }
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - 10.0 - reorderInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - reorderInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.size.height)
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            let layoutSize = layout.size
+            
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = item.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.5)
+                    currentDisabledOverlayNode?.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -420,10 +421,10 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let revealOffset = strongSelf.revealOffset
@@ -453,9 +454,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.size.height))
                         if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1()
+                            let editableControlNode = editableControlSizeAndApply.1(layout.size.height)
                             editableControlNode.tapped = {
                                 if let strongSelf = self {
                                     strongSelf.setRevealOptionsOpened(true, animated: true)
@@ -484,13 +485,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(false)
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.alpha = 0.0
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
                         }
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
                         strongSelf.reorderControlNode?.frame = reorderControlFrame
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
                         strongSelf.reorderControlNode = nil
@@ -568,7 +569,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -583,12 +584,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.unreadNode.isHidden = true
                     }
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: 11.0), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 32.0), size: statusLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: verticalInset), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                     
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
                     if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
-                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: 11.0 + floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.size.height - imageSize.height) / 2.0)), size: imageSize)
                         switch thumbnailItem {
                             case .still:
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)

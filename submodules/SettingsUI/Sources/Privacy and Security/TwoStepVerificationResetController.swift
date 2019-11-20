@@ -87,17 +87,17 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! TwoStepVerificationResetControllerArguments
         switch self {
             case let .codeEntry(theme, strings, placeholder, text):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
             case let .codeInfo(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         }
     }
 }
@@ -225,8 +225,8 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.TwoStepAuth_RecoveryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: twoStepVerificationResetControllerEntries(presentationData: presentationData, state: state, emailPattern: emailPattern), style: .blocks, focusItemTag: TwoStepVerificationResetTag.input, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.TwoStepAuth_RecoveryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: twoStepVerificationResetControllerEntries(presentationData: presentationData, state: state, emailPattern: emailPattern), style: .blocks, focusItemTag: TwoStepVerificationResetTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

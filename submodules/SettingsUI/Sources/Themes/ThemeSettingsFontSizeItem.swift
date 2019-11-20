@@ -15,13 +15,17 @@ import AppBundle
 class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let fontSize: PresentationFontSize
+    let disableLeadingInset: Bool
+    let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
+        self.enabled = enabled
+        self.disableLeadingInset = disableLeadingInset
         self.sectionId = sectionId
         self.updated = updated
         self.tag = tag
@@ -128,6 +132,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.positionsCount = 7
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
+            sliderView.isUserInteractionEnabled = item.enabled
+            
             let value: CGFloat
             switch item.fontSize {
                 case .extraSmall:
@@ -148,7 +154,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             sliderView.value = value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
             sliderView.backColor = item.theme.list.disclosureArrowColor
-            sliderView.trackColor = item.theme.list.itemAccentColor
+            sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
             sliderView.knobImage = generateKnobImage()
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
@@ -174,17 +180,23 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             }
             
             let contentSize: CGSize
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
             insets = itemListNeighborsGroupedInsets(neighbors)
+            
+            if item.disableLeadingInset {
+                insets.top = 0.0
+                insets.bottom = 0.0
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    let firstTime = strongSelf.item == nil
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
@@ -249,11 +261,34 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     if let sliderView = strongSelf.sliderView {
+                        sliderView.isUserInteractionEnabled = item.enabled
+                        sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
+                        
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                             sliderView.backColor = item.theme.list.disclosureArrowColor
-                            sliderView.trackColor = item.theme.list.itemAccentColor
                             sliderView.knobImage = generateKnobImage()
+                        }
+                        
+                        let value: CGFloat
+                        switch item.fontSize {
+                        case .extraSmall:
+                            value = 0.0
+                        case .small:
+                            value = 1.0
+                        case .medium:
+                            value = 2.0
+                        case .regular:
+                            value = 3.0
+                        case .large:
+                            value = 4.0
+                        case .extraLarge:
+                            value = 5.0
+                        case .extraLargeX2:
+                            value = 6.0
+                        }
+                        if firstTime {
+                            sliderView.value = value
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))

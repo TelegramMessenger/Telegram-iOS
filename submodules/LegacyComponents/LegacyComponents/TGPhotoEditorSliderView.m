@@ -279,8 +279,10 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
 - (void)setTrackColor:(UIColor *)trackColor
 {
-    _trackColor = trackColor;
-    [self setNeedsDisplay];
+    if (_trackColor == nil || ![_trackColor isEqual:trackColor]) {
+        _trackColor = trackColor;
+        [self setNeedsDisplay];
+    }
 }
 
 - (UIColor *)startColor

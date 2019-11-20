@@ -12,6 +12,7 @@ import MergeLists
 import AccountContext
 import SearchUI
 import ContactsPeerItem
+import ItemListUI
 
 private enum ChannelDiscussionGroupSearchContent: Equatable {
     case peer(Peer)
@@ -68,10 +69,10 @@ private final class ChannelDiscussionGroupSearchEntry: Comparable, Identifiable 
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
+    func item(account: Account, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: .firstLast, displayOrder: .firstLast, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                     interaction.peerSelected(peer)
                 })
         }
@@ -85,12 +86,12 @@ struct ChannelDiscussionGroupSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func channelDiscussionGroupSearchContainerPreparedRecentTransition(from fromEntries: [ChannelDiscussionGroupSearchEntry], to toEntries: [ChannelDiscussionGroupSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: ChannelDiscussionGroupSearchInteraction) -> ChannelDiscussionGroupSearchContainerTransition {
+private func channelDiscussionGroupSearchContainerPreparedRecentTransition(from fromEntries: [ChannelDiscussionGroupSearchEntry], to toEntries: [ChannelDiscussionGroupSearchEntry], isSearching: Bool, account: Account, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ChannelDiscussionGroupSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
     return ChannelDiscussionGroupSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -114,14 +115,14 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
+    private let presentationDataPromise: Promise<PresentationData>
     
     init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void) {
         self.context = context
         self.openPeer = openPeer
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.dateTimeFormat))
+        self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
         self.listNode = ListView()
@@ -186,12 +187,12 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         
         let previousSearchItems = Atomic<[ChannelDiscussionGroupSearchEntry]?>(value: nil)
         
-        self.searchDisposable.set((combineLatest(foundItems, self.themeAndStringsPromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] entries, themeAndStrings in
+        self.searchDisposable.set((combineLatest(foundItems, self.presentationDataPromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 let firstTime = previousEntries == nil
-                let transition = channelDiscussionGroupSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, theme: themeAndStrings.0, strings: themeAndStrings.1, interaction: interaction)
+                let transition = channelDiscussionGroupSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, presentationData: presentationData, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))

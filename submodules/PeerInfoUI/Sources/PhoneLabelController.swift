@@ -57,11 +57,11 @@ private enum PhoneLabelEntry: ItemListNodeEntry {
         return lhs.index < rhs.index
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PhoneLabelArguments
         switch self {
         case let .label(_, theme, value, text, selected):
-            return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectLabel(value)
             })
         }
@@ -120,8 +120,8 @@ public func phoneLabelController(context: AccountContext, currentLabel: String, 
                 arguments.complete()
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PhoneLabel_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: phoneLabelEntries(presentationData: presentationData, state: state), style: .blocks)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PhoneLabel_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: phoneLabelEntries(presentationData: presentationData, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

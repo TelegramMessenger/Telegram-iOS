@@ -73,15 +73,15 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DebugAccountsControllerArguments
         switch self {
             case let .record(theme, record, current):
-                return ItemListCheckboxItem(theme: theme, title: "\(UInt64(bitPattern: record.id.int64))", style: .left, checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                return ItemListCheckboxItem(presentationData: presentationData, title: "\(UInt64(bitPattern: record.id.int64))", style: .left, checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.switchAccount(record.id)
                 })
             case let .loginNewAccount(theme):
-                return ItemListActionItem(theme: theme, title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.loginNewAccount()
                 })
         }
@@ -135,8 +135,8 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
     
     let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords())
         |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }

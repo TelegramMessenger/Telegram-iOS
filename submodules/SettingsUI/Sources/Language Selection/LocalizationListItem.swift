@@ -17,8 +17,7 @@ struct LocalizationListItemEditing: Equatable {
 }
 
 class LocalizationListItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let id: String
     let title: String
     let subtitle: String
@@ -31,9 +30,8 @@ class LocalizationListItem: ListViewItem, ItemListItem {
     let setItemWithRevealedOptions: (String?, String?) -> Void
     let removeItem: (String) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, editing: LocalizationListItemEditing, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ItemListPresentationData, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, editing: LocalizationListItemEditing, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) {
+        self.presentationData = presentationData
         self.id = id
         self.title = title
         self.subtitle = subtitle
@@ -95,9 +93,6 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         self.action()
     }
 }
-
-private let titleFont = Font.regular(17.0)
-private let subtitleFont = Font.regular(13.0)
 
 class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -176,38 +171,38 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         return { item, params, neighbors in
             var leftInset: CGFloat = params.leftInset
             
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 58.0)
+            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 1.0 + subtitleLayout.size.height + 8.0 * 2.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             
             var editingOffset: CGFloat = 0.0
             
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(layout.contentSize.height, item.theme, false)
+                let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
             }
             
             leftInset += 16.0
-            
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
             var updateCheckImage: UIImage?
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
-            }
-            
-            if currentItem?.theme !== item.theme {
-                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
             }
             
             return (layout, { [weak self] animated in
@@ -226,16 +221,16 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     
                     if let updateCheckImage = updateCheckImage {
                         strongSelf.iconNode.image = updateCheckImage
-                        strongSelf.activityNode.type = ActivityIndicatorType.custom(item.theme.list.itemAccentColor, 22.0, 0.0, false)
+                        strongSelf.activityNode.type = ActivityIndicatorType.custom(item.presentationData.theme.list.itemAccentColor, 22.0, 0.0, false)
                     }
                     
                     strongSelf.activityNode.isHidden = !item.activity
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -275,12 +270,12 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: 8.0), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: 31.0), size: subtitleLayout.size))
+                    transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY + 1.0), size: subtitleLayout.size))
                     
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
+                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1()
+                            let editableControlNode = editableControlSizeAndApply.1(layout.contentSize.height)
                             editableControlNode.tapped = {
                                 if let strongSelf = self {
                                     strongSelf.setRevealOptionsOpened(true, animated: true)
@@ -312,7 +307,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing.editable {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
                     }

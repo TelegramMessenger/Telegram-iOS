@@ -35,8 +35,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let apiId: Int32
     private let apiHash: String
-    private var strings: PresentationStrings
-    public let theme: PresentationTheme
+    public var presentationData: PresentationData
     private let openUrl: (String) -> Void
     private let authorizationCompleted: () -> Void
     
@@ -51,26 +50,25 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     private var didSetReady = false
     
-    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), presentationData: PresentationData, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.apiId = apiId
         self.apiHash = apiHash
-        self.strings = strings
-        self.theme = theme
+        self.presentationData = presentationData
         self.openUrl = openUrl
         self.authorizationCompleted = authorizationCompleted
         
         let navigationStatusBar: NavigationStatusBarStyle
-        switch theme.rootController.statusBarStyle {
+        switch presentationData.theme.rootController.statusBarStyle {
         case .black:
             navigationStatusBar = .black
         case .white:
             navigationStatusBar = .white
         }
         
-        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black))
+        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black))
         
         self.stateDisposable = (account.postbox.stateView()
         |> map { view -> InnerState in
@@ -99,7 +97,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     
     override public func loadView() {
         super.loadView()
-        self.view.backgroundColor = self.theme.list.plainBackgroundColor
+        self.view.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
     }
     
     private func splashController() -> AuthorizationSequenceSplashController {
@@ -114,11 +112,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.theme)
+            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.presentationData.theme)
             controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
                     if let strings = strings {
-                        strongSelf.strings = strings
+                        strongSelf.presentationData = strongSelf.presentationData.withStrings(strings)
                     }
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
                     let isTestingEnvironment = strongSelf.account.testingEnvironment
@@ -146,7 +144,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController(sharedContext: self.sharedContext, isTestingEnvironment: self.account.testingEnvironment, otherAccountPhoneNumbers: self.otherAccountPhoneNumbers, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+            controller = AuthorizationSequencePhoneEntryController(sharedContext: self.sharedContext, isTestingEnvironment: self.account.testingEnvironment, otherAccountPhoneNumbers: self.otherAccountPhoneNumbers, network: self.account.network, presentationData: self.presentationData, openUrl: { [weak self] url in
                 self?.openUrl(url)
             }, back: { [weak self] in
                 guard let strongSelf = self else {
@@ -176,14 +174,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             
                             let text: String
                             var actions: [TextAlertAction] = [
-                                TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
                             ]
                             switch error {
                                 case .limitExceeded:
-                                    text = strongSelf.strings.Login_CodeFloodError
+                                    text = strongSelf.presentationData.strings.Login_CodeFloodError
                                 case .invalidPhoneNumber:
-                                    text = strongSelf.strings.Login_InvalidPhoneError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                    text = strongSelf.presentationData.strings.Login_InvalidPhoneError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
@@ -194,13 +192,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let carrier = CTCarrier()
                                         let mnc = carrier.mobileNetworkCode ?? "none"
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_InvalidPhoneEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
                                     }))
                                 case .phoneLimitExceeded:
-                                    text = strongSelf.strings.Login_PhoneFloodError
+                                    text = strongSelf.presentationData.strings.Login_PhoneFloodError
                                 case .phoneBanned:
-                                    text = strongSelf.strings.Login_PhoneBannedError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                    text = strongSelf.presentationData.strings.Login_PhoneBannedError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
@@ -211,11 +209,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let carrier = CTCarrier()
                                         let mnc = carrier.mobileNetworkCode ?? "none"
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
                                     }))
                                 case let .generic(info):
-                                    text = strongSelf.strings.Login_UnknownError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_PhoneNumberHelp, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
@@ -232,18 +230,18 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             errorString = "unknown"
                                         }
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_PhoneGenericEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).0, from: controller)
                                     }))
                                 case .timeout:
-                                    text = strongSelf.strings.Login_NetworkError
-                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
+                                    text = strongSelf.presentationData.strings.Login_NetworkError
+                                    actions.append(TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
-                                        controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, theme: defaultPresentationTheme, strings: strongSelf.strings, updatedPresentationData: .single((defaultPresentationTheme, strongSelf.strings))), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, presentationData: strongSelf.sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: strongSelf.sharedContext.presentationData), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: actions), in: .window(.root))
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), in: .window(.root))
                         }
                     }))
                 }
@@ -267,7 +265,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceCodeEntryController(strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+            controller = AuthorizationSequenceCodeEntryController(presentationData: self.presentationData, openUrl: { [weak self] url in
                 self?.openUrl(url)
             }, back: { [weak self] in
                 guard let strongSelf = self else {
@@ -298,23 +296,23 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             return
                                         }
                                         var dismissImpl: (() -> Void)?
-                                        let alertTheme = AlertControllerTheme(presentationTheme: strongSelf.theme)
+                                        let alertTheme = AlertControllerTheme(presentationData: strongSelf.presentationData)
                                         let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), boldItalicFont: Font.semiboldItalic(13.0), fixedFont: Font.regular(13.0), blockQuoteFont: Font.regular(13.0))
-                                        let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
-                                            TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_TermsOfServiceAgree, action: {
+                                        let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.presentationData.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
+                                            TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Login_TermsOfServiceAgree, action: {
                                                 dismissImpl?()
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
                                                 let _ = beginSignUp(account: strongSelf.account, data: data).start()
-                                            }), TextAlertAction(type: .genericAction, title: strongSelf.strings.Login_TermsOfServiceDecline, action: {
+                                            }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Login_TermsOfServiceDecline, action: {
                                                 dismissImpl?()
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.currentWindow?.present(standardTextAlertController(theme: alertTheme, title: strongSelf.strings.Login_TermsOfServiceDecline, text: strongSelf.strings.Login_TermsOfServiceSignupDecline, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
+                                                strongSelf.currentWindow?.present(standardTextAlertController(theme: alertTheme, title: strongSelf.presentationData.strings.Login_TermsOfServiceDecline, text: strongSelf.presentationData.strings.Login_TermsOfServiceSignupDecline, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                                                     presentAlertAgainImpl?()
-                                                }), TextAlertAction(type: .genericAction, title: strongSelf.strings.Login_TermsOfServiceDecline, action: {
+                                                }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Login_TermsOfServiceDecline, action: {
                                                     guard let strongSelf = self else {
                                                         return
                                                     }
@@ -355,20 +353,20 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = strongSelf.strings.Login_CodeFloodError
+                                        text = strongSelf.presentationData.strings.Login_CodeFloodError
                                     case .invalidCode:
-                                        text = strongSelf.strings.Login_InvalidCodeError
+                                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
                                     case .generic:
-                                        text = strongSelf.strings.Login_UnknownError
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
                                     case .codeExpired:
-                                        text = strongSelf.strings.Login_CodeExpired
+                                        text = strongSelf.presentationData.strings.Login_CodeExpired
                                         let account = strongSelf.account
                                         let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                                             transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
                                         }).start()
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -380,9 +378,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.strings.Login_EmailCodeSubject(formattedNumber).0, body: strongSelf.strings.Login_EmailCodeBody(formattedNumber).0, from: controller)
+                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).0, from: controller)
                     } else {
-                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 } else {
                     controller?.inProgress = true
@@ -396,20 +394,20 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             let text: String
                             switch error {
                                 case .limitExceeded:
-                                    text = strongSelf.strings.Login_CodeFloodError
+                                    text = strongSelf.presentationData.strings.Login_CodeFloodError
                                 case .invalidPhoneNumber:
-                                    text = strongSelf.strings.Login_InvalidPhoneError
+                                    text = strongSelf.presentationData.strings.Login_InvalidPhoneError
                                 case .phoneLimitExceeded:
-                                    text = strongSelf.strings.Login_PhoneFloodError
+                                    text = strongSelf.presentationData.strings.Login_PhoneFloodError
                                 case .phoneBanned:
-                                    text = strongSelf.strings.Login_PhoneBannedError
+                                    text = strongSelf.presentationData.strings.Login_PhoneBannedError
                                 case .generic:
-                                    text = strongSelf.strings.Login_UnknownError
+                                    text = strongSelf.presentationData.strings.Login_UnknownError
                                 case .timeout:
-                                    text = strongSelf.strings.Login_NetworkError
+                                    text = strongSelf.presentationData.strings.Login_NetworkError
                             }
                             
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }))
                 }
@@ -439,7 +437,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordEntryController(strings: self.strings, theme: self.theme, back: { [weak self] in
+            controller = AuthorizationSequencePasswordEntryController(presentationData: self.presentationData, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -461,14 +459,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = strongSelf.strings.LoginPassword_FloodError
+                                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
                                     case .invalidPassword:
-                                        text = strongSelf.strings.LoginPassword_InvalidPasswordError
+                                        text = strongSelf.presentationData.strings.LoginPassword_InvalidPasswordError
                                     case .generic:
-                                        text = strongSelf.strings.Login_UnknownError
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 controller.passwordIsInvalid()
                             }
                         }
@@ -491,7 +489,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     }
                                 }).start()
                             case .none:
-                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 strongController.didForgotWithNoRecovery = true
                         }
                     }
@@ -504,9 +502,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         }
         controller.reset = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
-                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: suggestReset ? strongSelf.strings.TwoStepAuth_RecoveryFailed : strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
-                    TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
+                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: suggestReset ? strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed : strongSelf.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Login_ResetAccountProtected_Reset, action: {
                         if let strongSelf = self, let strongController = controller {
                             strongController.inProgress = true
                             strongSelf.actionDisposable.set((performAccountReset(account: strongSelf.account)
@@ -520,11 +518,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     let text: String
                                     switch error {
                                         case .generic:
-                                            text = strongSelf.strings.Login_UnknownError
+                                            text = strongSelf.presentationData.strings.Login_UnknownError
                                         case .limitExceeded:
-                                            text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
+                                            text = strongSelf.presentationData.strings.Login_ResetAccountProtected_LimitExceeded
                                     }
-                                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             }))
                         }
@@ -547,7 +545,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordRecoveryController(strings: self.strings, theme: self.theme, back: { [weak self] in
+            controller = AuthorizationSequencePasswordRecoveryController(strings: self.presentationData.strings, theme: self.presentationData.theme, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -569,14 +567,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = strongSelf.strings.LoginPassword_FloodError
+                                        text = strongSelf.presentationData.strings.LoginPassword_FloodError
                                     case .invalidCode:
-                                        text = strongSelf.strings.Login_InvalidCodeError
+                                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
                                     case .expired:
-                                        text = strongSelf.strings.Login_CodeExpiredError
+                                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -584,7 +582,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             }
             controller.noAccess = { [weak self, weak controller] in
                 if let strongSelf = self, let controller = controller {
-                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     let account = strongSelf.account
                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                         if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
@@ -610,7 +608,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceAwaitingAccountResetController(strings: self.strings, theme: self.theme, back: { [weak self] in
+            controller = AuthorizationSequenceAwaitingAccountResetController(strings: self.presentationData.strings, theme: self.presentationData.theme, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -622,9 +620,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             })
             controller.reset = { [weak self, weak controller] in
                 if let strongSelf = self, let strongController = controller {
-                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
-                        TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
-                        TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
+                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Login_ResetAccountProtected_Reset, action: {
                             if let strongSelf = self, let strongController = controller {
                                 strongController.inProgress = true
                                 strongSelf.actionDisposable.set((performAccountReset(account: strongSelf.account)
@@ -638,11 +636,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             let text: String
                                             switch error {
                                                 case .generic:
-                                                    text = strongSelf.strings.Login_UnknownError
+                                                    text = strongSelf.presentationData.strings.Login_UnknownError
                                                 case .limitExceeded:
-                                                    text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
+                                                    text = strongSelf.presentationData.strings.Login_ResetAccountProtected_LimitExceeded
                                             }
-                                            strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                            strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }
                                     }))
                             }
@@ -674,7 +672,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSignUpController(strings: self.strings, theme: self.theme, back: { [weak self] in
+            controller = AuthorizationSequenceSignUpController(presentationData: self.presentationData, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -697,18 +695,18 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
-                                        text = strongSelf.strings.Login_CodeFloodError
+                                        text = strongSelf.presentationData.strings.Login_CodeFloodError
                                     case .codeExpired:
-                                        text = strongSelf.strings.Login_CodeExpiredError
+                                        text = strongSelf.presentationData.strings.Login_CodeExpiredError
                                     case .invalidFirstName:
-                                        text = strongSelf.strings.Login_InvalidFirstNameError
+                                        text = strongSelf.presentationData.strings.Login_InvalidFirstNameError
                                     case .invalidLastName:
-                                        text = strongSelf.strings.Login_InvalidLastNameError
+                                        text = strongSelf.presentationData.strings.Login_InvalidLastNameError
                                     case .generic:
-                                        text = strongSelf.strings.Login_UnknownError
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -814,7 +812,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             
             controller.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
         } else {
-            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }
     }
     

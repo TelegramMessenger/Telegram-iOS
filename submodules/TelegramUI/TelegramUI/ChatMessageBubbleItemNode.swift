@@ -123,11 +123,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     return result
 }
 
-private let nameFont = Font.medium(14.0)
-
-private let inlineBotPrefixFont = Font.regular(14.0)
-private let inlineBotNameFont = nameFont
-
 private let chatMessagePeerIdColors: [UIColor] = [
     UIColor(rgb: 0xfc5c51),
     UIColor(rgb: 0xfa790f),
@@ -623,6 +618,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         isSelected: Bool?
     ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
         let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
+        
+        let fontSize = floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
+        let nameFont = Font.medium(fontSize)
+
+        let inlineBotPrefixFont = Font.regular(fontSize)
+        let inlineBotNameFont = nameFont
         
         let baseWidth = params.width - params.leftInset - params.rightInset
         

@@ -12,9 +12,6 @@ import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
 
-private let titleFont = Font.medium(14.0)
-private let textFont = Font.regular(14.0)
-
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
@@ -54,6 +51,10 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let previousMediaReference = maybeNode?.previousMediaReference
         
         return { presentationData, strings, context, type, message, constrainedSize in
+            let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
+            let titleFont = Font.medium(fontSize)
+            let textFont = Font.regular(fontSize)
+            
             let titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
             

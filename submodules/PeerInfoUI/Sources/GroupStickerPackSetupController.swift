@@ -208,11 +208,11 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupStickerPackSetupControllerArguments
         switch self {
             case let .search(theme, strings, prefix, placeholder, value):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
                 }, processPaste: { text in
                     if let url = (URL(string: text) ?? URL(string: "http://" + text)), url.host == "t.me" || url.host == "telegram.me" {
@@ -224,11 +224,11 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                     return text
                 }, action: {})
             case let .searchInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section, linkAction: nil)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, linkAction: nil)
             case let .packsTitle(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, theme, strings, info, topItem, count, playAnimatedStickers, selected):
-                return ItemListStickerPackItem(theme: theme, strings: strings, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)
                     } else {
@@ -462,7 +462,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
             }
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
         let hasData = initialData != nil
         let hadData = previousHadData.swap(hasData)
@@ -472,7 +472,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let listState = ItemListNodeState(entries: groupStickerPackSetupControllerEntries(presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStickerPackSetupControllerEntries(presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()

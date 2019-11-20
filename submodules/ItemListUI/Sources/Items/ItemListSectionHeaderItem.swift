@@ -39,7 +39,7 @@ public enum ItemListSectionHeaderActivityIndicator {
 }
 
 public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let text: String
     let multiline: Bool
     let activityIndicator: ItemListSectionHeaderActivityIndicator
@@ -48,8 +48,8 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     
     public let isAlwaysPlain: Bool = true
     
-    public init(theme: PresentationTheme, text: String, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, text: String, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+        self.presentationData = presentationData
         self.text = text
         self.multiline = multiline
         self.activityIndicator = activityIndicator
@@ -93,8 +93,6 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.regular(14.0)
-
 public class ItemListSectionHeaderItemNode: ListViewItemNode {
     private var item: ItemListSectionHeaderItem?
     
@@ -135,16 +133,18 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             var accessoryTextString: NSAttributedString?
             var accessoryIcon: UIImage?
             if let accessoryText = item.accessoryText {
                 let color: UIColor
                 switch accessoryText.color {
-                    case .generic:
-                        color = item.theme.list.sectionHeaderTextColor
-                    case .destructive:
-                        color = item.theme.list.freeTextErrorColor
+                case .generic:
+                    color = item.presentationData.theme.list.sectionHeaderTextColor
+                case .destructive:
+                    color = item.presentationData.theme.list.freeTextErrorColor
                 }
                 accessoryTextString = NSAttributedString(string: accessoryText.value, font: titleFont, textColor: color)
                 accessoryIcon = accessoryText.icon
@@ -208,7 +208,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                             if let currentActivityIndicator = strongSelf.activityIndicator {
                                 activityIndicator = currentActivityIndicator
                             } else {
-                                activityIndicator = ActivityIndicator(type: .custom(item.theme.list.sectionHeaderTextColor, 18.0, 1.0, false))
+                                activityIndicator = ActivityIndicator(type: .custom(item.presentationData.theme.list.sectionHeaderTextColor, 18.0, 1.0, false))
                                 strongSelf.addSubnode(activityIndicator)
                                 strongSelf.activityIndicator = activityIndicator
                             }
@@ -227,12 +227,12 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                     
                     var activityIndicatorOrigin: CGPoint?
                     switch item.activityIndicator {
-                        case .left:
-                            activityIndicatorOrigin = CGPoint(x: strongSelf.titleNode.frame.maxX + 6.0, y: 7.0 - UIScreenPixel)
-                        case .right:
-                            activityIndicatorOrigin = CGPoint(x: params.width - leftInset - 18.0, y: 7.0 - UIScreenPixel)
-                        default:
-                            break
+                    case .left:
+                        activityIndicatorOrigin = CGPoint(x: strongSelf.titleNode.frame.maxX + 6.0, y: 7.0 - UIScreenPixel)
+                    case .right:
+                        activityIndicatorOrigin = CGPoint(x: params.width - leftInset - 18.0, y: 7.0 - UIScreenPixel)
+                    default:
+                        break
                     }
                     if let activityIndicatorOrigin = activityIndicatorOrigin {
                         strongSelf.activityIndicator?.frame = CGRect(origin: activityIndicatorOrigin, size: CGSize(width: 18.0, height: 18.0))

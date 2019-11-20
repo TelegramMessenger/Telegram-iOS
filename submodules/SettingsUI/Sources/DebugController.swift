@@ -147,11 +147,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DebugControllerArguments
         switch self {
         case let .sendLogs(theme):
-            return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -202,7 +202,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             })
         case let .sendOneLog(theme):
-            return ItemListDisclosureItem(theme: theme, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -257,7 +257,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
             })
         case let .sendNotificationLogs(theme):
-            return ItemListDisclosureItem(theme: theme, title: "Send Notification Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger(basePath: arguments.sharedContext.basePath + "/notificationServiceLogs").collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         guard let context = arguments.context else {
@@ -280,7 +280,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
             })
         case let .sendCriticalLogs(theme):
-            return ItemListDisclosureItem(theme: theme, title: "Send Critical Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Critical Logs", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectShortLogFiles()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -331,38 +331,38 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
             })
         case let .accounts(theme):
-            return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
                 arguments.pushController(debugAccountsController(context: context, accountManager: arguments.sharedContext.accountManager))
             })
         case let .logToFile(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                     $0.withUpdatedLogToFile(value)
                 }).start()
             })
         case let .logToConsole(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                     $0.withUpdatedLogToConsole(value)
                 }).start()
             })
         case let .redactSensitiveData(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Remove Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Remove Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                     $0.withUpdatedRedactSensitiveData(value)
                 }).start()
             })
         case let .enableRaiseToSpeak(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateMediaInputSettingsInteractively(accountManager: arguments.sharedContext.accountManager, {
                     $0.withUpdatedEnableRaiseToSpeak(value)
                 }).start()
             })
         case let .keepChatNavigationStack(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
                     settings.keepChatNavigationStack = value
@@ -370,7 +370,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .skipReadHistory(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Skip read history", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Skip read history", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
                     settings.skipReadHistory = value
@@ -378,7 +378,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .crashOnSlowQueries(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
                     settings.crashOnLongQueries = value
@@ -386,13 +386,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .clearTips(theme):
-            return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.clearNotices()
                 }).start()
             })
         case let .reimport(theme):
-            return ItemListActionItem(theme: theme, title: "Reimport Application Data", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Reimport Application Data", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
                 let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
                 
@@ -407,7 +407,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }
             })
         case let .resetData(theme):
-            return ItemListActionItem(theme: theme, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                 let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -426,7 +426,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 arguments.presentController(actionSheet, nil)
             })
         case let .resetDatabase(theme):
-            return ItemListActionItem(theme: theme, title: "Clear Database", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Database", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
@@ -448,7 +448,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 arguments.presentController(actionSheet, nil)
             })
         case let .resetHoles(theme):
-            return ItemListActionItem(theme: theme, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
@@ -463,13 +463,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
             })
         case let .resetBiometricsData(theme):
-            return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
         case let .optimizeDatabase(theme):
-            return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
@@ -485,7 +485,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
             })
         case let .photoPreview(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Photo Preview", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Photo Preview", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -495,7 +495,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .knockoutWallpaper(theme, value):
-            return ItemListSwitchItem(theme: theme, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -505,13 +505,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 }).start()
             })
         case let .hostInfo(theme, string):
-            return ItemListTextItem(theme: theme, text: .plain(string), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
             let bundle = Bundle.main
             let bundleId = bundle.bundleIdentifier ?? ""
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
             let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
-            return ItemListTextItem(theme: theme, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
         }
     }
 }
@@ -612,8 +612,8 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
             })
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

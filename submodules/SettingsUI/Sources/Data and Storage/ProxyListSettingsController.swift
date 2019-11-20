@@ -202,11 +202,11 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ProxySettingsControllerArguments
         switch self {
             case let .enabled(theme, text, value, createsNew):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: !createsNew, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: !createsNew, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     if createsNew {
                         arguments.addNewServer()
                     } else {
@@ -214,7 +214,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     }
                 })
             case let .serversHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .addServer(theme, text, _):
                 return ProxySettingsActionItem(theme: theme, title: text, icon: .add, sectionId: self.section, editing: false, action: {
                     arguments.addNewServer()
@@ -234,11 +234,11 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     arguments.shareProxyList()
                 })
             case let .useForCalls(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleUseForCalls(value)
                 })
             case let .useForCallsInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -315,10 +315,10 @@ public enum ProxySettingsControllerMode {
 
 public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    return proxySettingsController(accountManager: context.sharedContext.accountManager, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
+    return proxySettingsController(accountManager: context.sharedContext.accountManager, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData)
 }
 
-public func proxySettingsController(accountManager: AccountManager, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
+public func proxySettingsController(accountManager: AccountManager, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>) -> ViewController {
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
@@ -347,7 +347,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
             return current
         }).start()
     }, addNewServer: {
-        pushControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: nil))
+        pushControllerImpl?(proxyServerSettingsController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: nil))
     }, activateServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
@@ -360,7 +360,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
             return current
         }).start()
     }, editServer: { server in
-        pushControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: server))
+        pushControllerImpl?(proxyServerSettingsController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: server))
     }, removeServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
@@ -407,10 +407,10 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
     })
     
     let signal = combineLatest(updatedPresentationData, statePromise.get(), proxySettings.get(), statusesContext.statuses(), network.connectionStatus)
-    |> map { themeAndStrings, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         if case .modal = mode {
-            leftNavigationButton = ItemListNavigationButton(content: .text(themeAndStrings.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
         }
@@ -419,7 +419,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
         if proxySettings.servers.isEmpty {
             rightNavigationButton = nil
         } else if state.editing {
-            rightNavigationButton = ItemListNavigationButton(content: .text(strings.Common_Done), style: .bold, enabled: true, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 updateState { state in
                     var state = state
                     state.editing = false
@@ -427,7 +427,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
                 }
             })
         } else {
-            rightNavigationButton = ItemListNavigationButton(content: .text(strings.Common_Edit), style: .regular, enabled: true, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 updateState { state in
                     var state = state
                     state.editing = true
@@ -436,13 +436,13 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
             })
         }
         
-        let controllerState = ItemListControllerState(theme: themeAndStrings.0, title: .text(themeAndStrings.1.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: themeAndStrings.1.Common_Back))
-        let listState = ItemListNodeState(entries: proxySettingsControllerEntries(theme: themeAndStrings.0, strings: themeAndStrings.1, state: state, proxySettings: proxySettings, statuses: statuses, connectionStatus: connectionStatus), style: .blocks)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.SocksProxySetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: proxySettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state, proxySettings: proxySettings, statuses: statuses, connectionStatus: connectionStatus), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
+    let controller = ItemListController(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: updatedPresentationData |> map(ItemListPresentationData.init(_:)), state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)

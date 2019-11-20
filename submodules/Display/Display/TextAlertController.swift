@@ -73,7 +73,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
     }
     
     private func updateTitle() {
-        var font = Font.regular(17.0)
+        var font = Font.regular(theme.baseFontSize)
         var color: UIColor
         switch self.action.type {
             case .defaultAction, .genericAction:
@@ -83,7 +83,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         }
         switch self.action.type {
             case .defaultAction:
-                font = Font.semibold(17.0)
+                font = Font.semibold(theme.baseFontSize)
             case .destructiveAction, .genericAction:
                 break
         }
@@ -360,15 +360,15 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
     var dismissImpl: (() -> Void)?
     let attributedText: NSAttributedString
     if parseMarkdown {
-        let font = title == nil ? Font.semibold(17.0) : Font.regular(13.0)
-        let boldFont = title == nil ? Font.bold(17.0) : Font.semibold(13.0)
+        let font = title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
+        let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
         let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
         let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
         attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
     } else {
-        attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(17.0) : Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0)), textColor: theme.primaryColor, paragraphAlignment: .center)
     }
-    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: attributedText, actions: actions.map { action in
+    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(theme.baseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: attributedText, actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()

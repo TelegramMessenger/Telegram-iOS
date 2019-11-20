@@ -163,17 +163,17 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CallFeedbackControllerArguments
         switch self {
         case let .reasonsHeader(theme, text):
-            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .reason(theme, reason, title, value):
-            return ItemListSwitchItem(theme: theme, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleReason(reason, value)
             })
         case let .comment(theme, text, placeholder):
-            return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                 arguments.updateComment(updatedText)
             }, updatedFocus: { focused in
                 if focused {
@@ -181,11 +181,11 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
                 }
             }, tag: CallFeedbackControllerEntryTag.comment)
         case let .includeLogs(theme, title, value):
-            return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleIncludeLogs(value)
             })
         case let .includeLogsInfo(theme, text):
-            return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -289,8 +289,8 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
             presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
         })
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state), style: .blocks, animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

@@ -393,11 +393,11 @@ private enum UserInfoEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! UserInfoControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence, cachedData, state, displayCall):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -405,63 +405,63 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.call()
                 } : nil)
             case let .calls(theme, strings, dateTimeFormat, messages):
-                return ItemListCallListItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, messages: messages, sectionId: self.section, style: .plain)
+                return ItemListCallListItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, messages: messages, sectionId: self.section, style: .plain)
             case let .about(theme, peer, text, value):
                 var enabledEntityTypes: EnabledEntityTypes = []
                 if let peer = peer as? TelegramUser, let _ = peer.botInfo {
                     enabledEntityTypes = [.url, .mention, .hashtag]
                 }
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: enabledEntityTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
+                return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: enabledEntityTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayAboutContextMenu(value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)
                 }, tag: UserInfoEntryTag.about)
             case let .phoneNumber(theme, _, label, value, isMain):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(presentationData: presentationData, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.openCallMenu(value)
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.phoneNumber, value)
                 }, tag: UserInfoEntryTag.phoneNumber)
             case let .requestPhoneNumber(theme, label, value):
-                return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(presentationData: presentationData, label: label, text: value, textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.requestPhoneNumber()
                 })
             case let .userName(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: "@\(value)", textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
+                return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: "@\(value)", textColor: .accent, enabledEntityTypes: [], multiline: false, sectionId: self.section, action: {
                     arguments.displayUsernameContextMenu("@\(value)")
                 }, longTapAction: {
                     arguments.displayCopyContextMenu(.username, "@\(value)")
                 }, tag: UserInfoEntryTag.username)
             case let .sendMessage(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.openChat()
                 })
             case let .addContact(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.addContact()
                 })
             case let .shareContact(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.shareContact()
                 })
             case let .shareMyContact(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.shareMyContact()
                 })
             case let .startSecretChat(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.startSecretChat()
                 })
             case let .sharedMedia(theme, text):
-                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openSharedMedia()
                 })
             case let .notifications(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
                 })
             case let .groupsInCommon(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openGroupsInCommon()
                 })
             case let .secretEncryptionKey(theme, text, fingerprint):
@@ -469,31 +469,31 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.openEncryptionKey(fingerprint)
                 })
             case let .botAddToGroup(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.addBotToGroup()
                 })
             case let .botShare(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.shareBot()
             })
             case let .botSettings(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.botSettings()
                 })
             case let .botHelp(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.botHelp()
                 })
             case let .botPrivacy(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.botPrivacy()
                 })
             case let .botReport(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     arguments.report()
                 })
             case let .block(theme, text, action):
-                return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .plain, action: {
                     switch action {
                         case .block:
                             arguments.updatePeerBlocked(true)
@@ -1304,8 +1304,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
             })
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-        let listState = ItemListNodeState(entries: userInfoEntries(account: context.account, presentationData: presentationData, view: view.0, cachedPeerData: view.1, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: userInfoEntries(account: context.account, presentationData: presentationData, view: view.0, cachedPeerData: view.1, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
         
         return (controllerState, (listState, arguments))
     }

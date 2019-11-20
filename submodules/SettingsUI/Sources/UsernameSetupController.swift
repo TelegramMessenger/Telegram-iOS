@@ -91,16 +91,16 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: Any) -> ListViewItem {
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! UsernameSetupControllerArguments
         switch self {
             case let .editablePublicLink(theme, strings, prefix, currentText, text):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                 })
             case let .publicLinkInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
                     if case .tap = action {
                         arguments.shareLink()
                     }
@@ -122,7 +122,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                         string = NSAttributedString(string: text, textColor: theme.list.freeTextColor)
                         displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, theme: theme, text: string, sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: string, sectionId: self.section)
         }
     }
 }
@@ -339,8 +339,8 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 dismissImpl?()
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: false)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

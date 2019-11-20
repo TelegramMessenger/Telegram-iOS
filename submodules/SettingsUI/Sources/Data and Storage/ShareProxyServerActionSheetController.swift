@@ -21,8 +21,8 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
     
     private var isDismissed: Bool = false
         
-    public init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, link: String) {
-        let sheetTheme = ActionSheetControllerTheme(presentationTheme: theme)
+    public init(presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, link: String) {
+        let sheetTheme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
         super.init(theme: sheetTheme)
         
         let presentActivityController: (Any) -> Void = { [weak self] item in
@@ -35,10 +35,10 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
         }
         
         var items: [ActionSheetItem] = []
-        items.append(ProxyServerQRCodeItem(strings: strings, link: link, ready: { [weak self] in
+        items.append(ProxyServerQRCodeItem(strings: presentationData.strings, link: link, ready: { [weak self] in
             self?._ready.set(.single(true))
         }))
-        items.append(ActionSheetButtonItem(title: strings.SocksProxySetup_ShareQRCode, action: { [weak self] in
+        items.append(ActionSheetButtonItem(title: presentationData.strings.SocksProxySetup_ShareQRCode, action: { [weak self] in
             self?.dismissAnimated()
             let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .proxy)
             |> map { _, generator -> UIImage? in
@@ -52,22 +52,22 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
                 }
             })
         }))
-        items.append(ActionSheetButtonItem(title: strings.SocksProxySetup_ShareLink, action: { [weak self] in
+        items.append(ActionSheetButtonItem(title: presentationData.strings.SocksProxySetup_ShareLink, action: { [weak self] in
             self?.dismissAnimated()
             presentActivityController(link)
         }))
         self.setItemGroups([
             ActionSheetItemGroup(items: items),
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strings.Common_Cancel, action: { [weak self] in
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { [weak self] in
                     self?.dismissAnimated()
                 })
                 ])
             ])
         
-        self.presentationDisposable = updatedPresentationData.start(next: { [weak self] theme, strings in
+        self.presentationDisposable = updatedPresentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
             }
         })
     }

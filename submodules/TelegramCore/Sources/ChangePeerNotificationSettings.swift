@@ -27,7 +27,7 @@ public func togglePeerMuted(account: Account, peerId: PeerId) -> Signal<Void, No
                 case .muted:
                     updatedSettings = previousSettings.withUpdatedMuteState(.default)
             }
-            transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
+            transaction.updatePendingPeerNotificationSettings(peerId: notificationPeerId, settings: updatedSettings)
         }
     }
 }

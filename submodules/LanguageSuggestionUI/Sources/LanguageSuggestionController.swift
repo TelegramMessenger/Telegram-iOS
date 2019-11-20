@@ -217,21 +217,21 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: PresentationTheme, strings: LanguageSuggestionControllerStrings, englishStrings: LanguageSuggestionControllerStrings, suggestedLocalization: LocalizationInfo, openSelection: @escaping () -> Void, applyLocalization: @escaping (String, () -> Void) -> Void, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, strings: LanguageSuggestionControllerStrings, englishStrings: LanguageSuggestionControllerStrings, suggestedLocalization: LocalizationInfo, openSelection: @escaping () -> Void, applyLocalization: @escaping (String, () -> Void) -> Void, dismiss: @escaping () -> Void) {
         let selectedLocalization = ValuePromise(suggestedLocalization.languageCode, ignoreRepeated: true)
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: strings.ChooseLanguage, font: Font.bold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: strings.ChooseLanguage, font: Font.bold(presentationData.fontSize.baseDisplaySize), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         self.titleNode.maximumNumberOfLines = 2
         
         self.subtitleNode = ASTextNode()
-        self.subtitleNode.attributedText = NSAttributedString(string: englishStrings.ChooseLanguage, font: Font.regular(14.0), textColor: theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
+        self.subtitleNode.attributedText = NSAttributedString(string: englishStrings.ChooseLanguage, font: Font.regular(floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)), textColor: presentationData.theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
         self.subtitleNode.maximumNumberOfLines = 2
         
         self.titleSeparatorNode = ASDisplayNode()
-        self.titleSeparatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
+        self.titleSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.actionSheet.controlAccentColor, 22.0, 1.0, false))
+        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.actionSheet.controlAccentColor, 22.0, 1.0, false))
         self.activityIndicator.isHidden = true
         
         var items: [LanguageSuggestionItem] = []
@@ -250,7 +250,7 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
             applyImpl?()
         }))
         
-        self.nodes = items.map { LanguageSuggestionItemNode(theme: theme, item: $0) }
+        self.nodes = items.map { LanguageSuggestionItemNode(theme: presentationData.theme, item: $0) }
         
         super.init()
         
@@ -334,7 +334,8 @@ public func languageSuggestionController(context: AccountContext, suggestedLocal
         return nil
     }
     
-    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let theme = context.sharedContext.presentationData
     let strings = LanguageSuggestionControllerStrings(localization: suggestedLocalization)
     guard let mainPath = getAppBundle().path(forResource: "en", ofType: "lproj") else {
         return nil
@@ -344,7 +345,7 @@ public func languageSuggestionController(context: AccountContext, suggestedLocal
     let disposable = MetaDisposable()
     
     var dismissImpl: ((Bool) -> Void)?
-    let contentNode = LanguageSuggestionAlertContentNode(theme: theme, strings: strings, englishStrings: englishStrings, suggestedLocalization: localization, openSelection: {
+    let contentNode = LanguageSuggestionAlertContentNode(presentationData: presentationData, strings: strings, englishStrings: englishStrings, suggestedLocalization: localization, openSelection: {
         dismissImpl?(true)
         openSelection()
     }, applyLocalization: { languageCode, startActivity in
@@ -360,7 +361,7 @@ public func languageSuggestionController(context: AccountContext, suggestedLocal
     }, dismiss: {
         dismissImpl?(true)
     })
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode)
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

@@ -182,6 +182,7 @@ final class SharedApplicationContext {
     
     private let logoutDisposable = MetaDisposable()
     
+    private let openNotificationSettingsWhenReadyDisposable = MetaDisposable()
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
     
@@ -1292,7 +1293,7 @@ final class SharedApplicationContext {
                 }
                 if let sharedContext = strongSelf.contextValue?.context.sharedContext {
                     let presentationData = sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
+                    strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
                 }
             }
         })
@@ -1673,11 +1674,11 @@ final class SharedApplicationContext {
                 if let proxyData = parseProxyUrl(url) {
                     authContext.rootController.view.endEditing(true)
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    let controller = ProxyServerActionSheetController(theme: presentationData.theme, strings: presentationData.strings, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, presentationData: nil)
+                    let controller = ProxyServerActionSheetController(presentationData: presentationData, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, updatedPresentationData: nil)
                     authContext.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
                 } else if let secureIdData = parseSecureIdUrl(url) {
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
                         if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
                             UIApplication.shared.openURL(callbackUrl)
                         }
@@ -1686,7 +1687,7 @@ final class SharedApplicationContext {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
                 } else if let _ = parseWalletUrl(url) {
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
-                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 }
             }
         })
@@ -1821,6 +1822,14 @@ final class SharedApplicationContext {
             } else {
                 proceed()
             }
+        })
+    }
+    
+    private func openNotificationSettingsWhenReady() {
+        let signal = (self.authorizedContext()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            context.openNotificationSettings()
         })
     }
     
@@ -2081,7 +2090,7 @@ final class SharedApplicationContext {
     
     @available(iOS 12.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, openSettingsFor notification: UNNotification?) {
-        
+        self.openNotificationSettingsWhenReady()
     }
     
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {

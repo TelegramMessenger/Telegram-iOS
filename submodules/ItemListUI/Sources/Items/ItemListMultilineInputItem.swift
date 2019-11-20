@@ -33,7 +33,7 @@ public struct ItemListMultilineInputInlineAction {
 }
 
 public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let text: String
     let placeholder: String
     public let sectionId: ItemListSectionId
@@ -51,8 +51,8 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let inlineAction: ItemListMultilineInputInlineAction?
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
+        self.presentationData = presentationData
         self.text = text
         self.placeholder = placeholder
         self.maxLength = maxLength
@@ -104,8 +104,6 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         }
     }
 }
-
-private let titleFont = Font.regular(17.0)
 
 public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
@@ -159,9 +157,11 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         
         var textColor: UIColor = .black
         if let item = self.item {
-            textColor = item.theme.list.itemPrimaryTextColor
+            textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), NSAttributedString.Key.foregroundColor.rawValue: textColor]
+        } else {
+            self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: textColor]
         }
-        self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: textColor]
         self.textNode.clipsToBounds = true
         self.textNode.delegate = self
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
@@ -175,8 +175,8 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
             let itemBackgroundColor: UIColor
@@ -185,11 +185,11 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             let leftInset = 16.0 + params.rightInset
             switch item.style {
                 case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                 case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
             }
             
             var limitTextString: NSAttributedString?
@@ -206,7 +206,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                 let displayTextLimit = textLength > maxLength.value * 70 / 100
                 let remainingCount = maxLength.value - textLength
                 if displayTextLimit {
-                    limitTextString = NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.theme.list.itemDestructiveColor : item.theme.list.itemSecondaryTextColor)
+                    limitTextString = NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemSecondaryTextColor)
                 }
                 
                 rightInset += 30.0 + 4.0
@@ -226,8 +226,8 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             if measureText.hasSuffix("\n") || measureText.isEmpty {
                measureText += "|"
             }
-            let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
-            let attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+            let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: .black)
+            let attributedText = NSAttributedString(string: item.text, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedMeasureText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 16.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
@@ -246,7 +246,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemPlaceholderTextColor)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -259,12 +259,12 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         
                         if strongSelf.isNodeLoaded {
-                            strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
-                            strongSelf.textNode.tintColor = item.theme.list.itemAccentColor
+                            strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), NSAttributedString.Key.foregroundColor.rawValue: item.presentationData.theme.list.itemPrimaryTextColor]
+                            strongSelf.textNode.tintColor = item.presentationData.theme.list.itemAccentColor
                         }
                         
                         if let inlineAction = item.inlineAction {
-                            strongSelf.inlineActionButtonNode?.setImage(generateTintedImage(image: inlineAction.icon, color: item.theme.list.itemAccentColor), for: .normal)
+                            strongSelf.inlineActionButtonNode?.setImage(generateTintedImage(image: inlineAction.icon, color: item.presentationData.theme.list.itemAccentColor), for: .normal)
                         }
                     }
                     
@@ -323,7 +323,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -334,7 +334,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
                     }
                     
-                    strongSelf.textNode.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
+                    strongSelf.textNode.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
                     
                     strongSelf.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: params.width - leftInset - params.rightInset, height: textLayout.size.height))
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width - leftInset - 16.0 - rightInset, height: textLayout.size.height + 1.0))
@@ -355,7 +355,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                             inlineActionButtonNode = currentInlineActionButtonNode
                         } else {
                             inlineActionButtonNode = HighlightableButtonNode()
-                            inlineActionButtonNode.setImage(generateTintedImage(image: inlineAction.icon, color: item.theme.list.itemAccentColor), for: .normal)
+                            inlineActionButtonNode.setImage(generateTintedImage(image: inlineAction.icon, color: item.presentationData.theme.list.itemAccentColor), for: .normal)
                             inlineActionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.inlineActionPressed), forControlEvents: .touchUpInside)
                             strongSelf.addSubnode(inlineActionButtonNode)
                             strongSelf.inlineActionButtonNode = inlineActionButtonNode
@@ -431,7 +431,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         if let item = self.item {
             if let text = self.textNode.attributedText {
                 let updatedText = text.string
-                let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+                let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize), textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                 if text.string != updatedAttributedText.string {
                     self.textNode.attributedText = updatedAttributedText
                 }

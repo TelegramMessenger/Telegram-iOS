@@ -13,6 +13,6 @@ public extension ItemListController {
     
     convenience init<ItemGenerationArguments>(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         let presentationData = sharedContext.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
+        self.init(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: sharedContext.presentationData |> map(ItemListPresentationData.init(_:)), state: state, tabBarItem: tabBarItem)
     }
 }
