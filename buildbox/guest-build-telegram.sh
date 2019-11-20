@@ -31,8 +31,8 @@ elif [ "$1" == "appstore" ]; then
 	FASTLANE_PASSWORD="$TELEGRAM_BUILD_APPSTORE_PASSWORD"
 	FASTLANE_ITC_TEAM_NAME="$TELEGRAM_BUILD_APPSTORE_TEAM_NAME"
 elif [ "$1" == "verify" ]; then
-	CERTS_PATH="buildbox/build-system/fake-codesigning/certs/distribution"
-	PROFILES_PATH="buildbox/build-system/fake-codesigning/profiles"
+	CERTS_PATH="build-system/fake-codesigning/certs/distribution"
+	PROFILES_PATH="build-system/fake-codesigning/profiles"
 else
 	echo "Unknown configuration $1"
 	exit 1
@@ -48,18 +48,6 @@ security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
 security set-keychain-settings "$MY_KEYCHAIN"
 security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
-
-for f in $(ls "$CERTS_PATH"); do
-	"$HOME/.fastlane/bin/fastlane" run import_certificate "certificate_path:$CERTS_PATH/$f" keychain_name:"$MY_KEYCHAIN" keychain_password:"$MY_KEYCHAIN_PASSWORD" log_output:true
-done
-
-mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-
-for f in $(ls "$PROFILES_PATH"); do
-	PROFILE_PATH="$PROFILES_PATH/$f"
-	uuid=`grep UUID -A1 -a "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}"`
-	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
-done
 
 SOURCE_PATH="telegram-ios"
 
@@ -96,6 +84,18 @@ BASE_DIR=$(pwd)
 cd "$SOURCE_PATH"
 tar -xf "../source.tar"
 
+for f in $(ls "$CERTS_PATH"); do
+	"$HOME/.fastlane/bin/fastlane" run import_certificate "certificate_path:$CERTS_PATH/$f" keychain_name:"$MY_KEYCHAIN" keychain_password:"$MY_KEYCHAIN_PASSWORD" log_output:true
+done
+
+mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+
+for f in $(ls "$PROFILES_PATH"); do
+	PROFILE_PATH="$PROFILES_PATH/$f"
+	uuid=`grep UUID -A1 -a "$PROFILE_PATH" | grep -io "[-A-F0-9]\{36\}"`
+	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
+done
+
 if [ "$1" == "hockeyapp" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
 	APP_TARGET="app_arm64"
@@ -105,8 +105,9 @@ elif [ "$1" == "appstore" ]; then
 elif [ "$1" == "verify" ]; then
 	BUILD_ENV_SCRIPT="build-system/verify.sh"
 	APP_TARGET="app"
-	APP_TARGET="build_verbose"
 	export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
+	export CODESIGNING_CERTS_VARIANT="distribution"
+	export CODESIGNING_PROFILES_VARIANT="appstore"
 else
 	echo "Unsupported configuration $1"
 	exit 1
