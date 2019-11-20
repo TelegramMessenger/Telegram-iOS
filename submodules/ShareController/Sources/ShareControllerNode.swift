@@ -540,7 +540,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         if let account = self.account {
-            donateSendMessageIntent(account: account, sharedContext: self.sharedContext, peerIds: peerIds)
+            donateSendMessageIntent(account: account, sharedContext: self.sharedContext, intentContext: .share, peerIds: peerIds)
         }
         
         if let signal = self.share?(self.inputFieldNode.text, peerIds) {

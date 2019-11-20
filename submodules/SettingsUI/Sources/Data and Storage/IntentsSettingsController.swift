@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import ItemListPeerItem
 import AccountContext
 import AppIntents
 
@@ -185,11 +186,10 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case let .accountHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            //            case let .browser(theme, title, application, identifier, selected, _):
-            //                return WebBrowserItem(account: arguments.context.account, theme: theme, title: title, application: application, checked: selected, sectionId: self.section) {
-            //                    arguments.updateDefaultBrowser(identifier)
-            //                }
             case let .account(theme, peer, selected, _):
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: arguments.context.account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                    arguments.updateSettings { $0.withUpdatedAccount(peer.id) }
+                }, setPeerIdWithRevealedOptions: { _, _ in}, removePeer: { _ in })
                 return ItemListTextItem(presentationData: presentationData, text: .plain(""), sectionId: self.section)
             case let .accountInfo(theme, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -232,18 +232,18 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings) -> [IntentsSettingsControllerEntry] {
+private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, Peer)]) -> [IntentsSettingsControllerEntry] {
     var entries: [IntentsSettingsControllerEntry] = []
     
-    entries.append(.accountHeader(presentationData.theme, presentationData.strings.IntentsSettings_MainAccount.uppercased()))
-    
-    var index: Int32 = 0
-//    for option in options {
-//        entries.append(.browser(presentationData.theme, option.title, option.application, option.identifier, option.identifier == selectedBrowser, index))
-//        index += 1
-//    }
-    
-    //entries.append(.accountInfo(presentationData.theme, presentationData.strings.IntentsSettings_MainAccountInfo))
+    if accounts.count > 1 {
+        entries.append(.accountHeader(presentationData.theme, presentationData.strings.IntentsSettings_MainAccount.uppercased()))
+        var index: Int32 = 0
+        for (_, peer) in accounts {
+            entries.append(.account(presentationData.theme, peer, peer.id == settings.account, index))
+            index += 1
+        }
+        entries.append(.accountInfo(presentationData.theme, presentationData.strings.IntentsSettings_MainAccountInfo))
+    }
     
     entries.append(.chatsHeader(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedChats.uppercased()))
     entries.append(.contacts(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedChatsContacts, settings.contacts))
@@ -286,13 +286,13 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
         presentControllerImpl?(actionSheet)
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), activeAccountsAndPeers(context: context, includePrimary: true))
     |> deliverOnMainQueue
-    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, sharedData, accounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.IntentsSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: intentsSettingsControllerEntries(context: context, presentationData: presentationData, settings: settings), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: intentsSettingsControllerEntries(context: context, presentationData: presentationData, settings: settings, accounts: accounts.1.map { ($0.0, $0.1) }), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

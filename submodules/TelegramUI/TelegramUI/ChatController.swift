@@ -2812,7 +2812,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
                 
-                donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, peerIds: [peerId])
+                donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             }
         }
         
@@ -6021,7 +6021,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, peerIds: [peerId])
+            donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, intentContext: .chat, peerIds: [peerId])
         } else {
             self.presentScheduleTimePicker(dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {

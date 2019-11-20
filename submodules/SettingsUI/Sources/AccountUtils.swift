@@ -6,7 +6,7 @@ import SyncCore
 import TelegramUIPreferences
 import AccountContext
 
-func activeAccountsAndPeers(context: AccountContext) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
+func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
     return context.sharedContext.activeAccounts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
@@ -37,7 +37,8 @@ func activeAccountsAndPeers(context: AccountContext) -> Signal<((Account, Peer)?
             if let first = accounts.filter({ $0?.0.id == primary?.id }).first, let (account, peer, _) = first {
                 primaryRecord = (account, peer)
             }
-            return (primaryRecord, accounts.filter({ $0?.0.id != primary?.id }).compactMap({ $0 }))
+            let accountRecords: [(Account, Peer, Int32)] = (includePrimary ? accounts : accounts.filter({ $0?.0.id != primary?.id })).compactMap({ $0 })
+            return (primaryRecord, accountRecords)
         }
     }
 }
