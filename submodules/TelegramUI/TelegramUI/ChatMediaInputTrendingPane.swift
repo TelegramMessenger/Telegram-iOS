@@ -248,25 +248,6 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
         
-//        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
-//
-//        var duration: Double = 0.0
-//        var listViewCurve: ListViewAnimationCurve = .Default(duration: nil)
-//        switch transition {
-//            case .immediate:
-//                break
-//            case let .animated(animationDuration, animationCurve):
-//                duration = animationDuration
-//                switch animationCurve {
-//                    case .easeInOut, .custom:
-//                        listViewCurve = .Default(duration: duration)
-//                    case .spring:
-//                        listViewCurve = .Spring(duration: duration)
-//                }
-//        }
-//
-//        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-        
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()

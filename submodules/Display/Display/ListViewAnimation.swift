@@ -176,3 +176,29 @@ public final class ListViewAnimation {
         self.update(ct, self.valueAt(ct))
     }
 }
+
+public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTransition) -> (Double, ListViewAnimationCurve) {
+    var duration: Double = 0.0
+    var curve: UInt = 0
+    switch transition {
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+                case .easeInOut, .custom:
+                    break
+                case .spring:
+                    curve = 7
+            }
+    }
+    
+    let listViewCurve: ListViewAnimationCurve
+    if curve == 7 {
+        listViewCurve = .Spring(duration: duration)
+    } else {
+        listViewCurve = .Default(duration: duration)
+    }
+    
+    return (duration, listViewCurve)
+}

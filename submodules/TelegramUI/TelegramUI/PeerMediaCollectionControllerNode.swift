@@ -312,21 +312,6 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             }
         }
         
-        var duration: Double = 0.0
-        var curve: UInt = 0
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        break
-                    case .spring:
-                        curve = 7
-                }
-        }
-        
         let previousBounds = self.historyNode.bounds
         self.historyNode.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
         self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
@@ -336,21 +321,15 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         self.historyEmptyNode.updateLayout(size: layout.size, insets: vanillaInsets, transition: transition, interfaceState: mediaCollectionInterfaceState)
         transition.updateFrame(node: self.historyEmptyNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-
-        let listViewCurve: ListViewAnimationCurve
-        if curve == 7 {
-            listViewCurve = .Spring(duration: duration)
-        } else {
-            listViewCurve = .Default(duration: duration)
-        }
         
         var additionalBottomInset: CGFloat = 0.0
         if let selectionPanel = self.selectionPanel {
             additionalBottomInset = selectionPanel.bounds.size.height
         }
         
+        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         listViewTransaction(ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.top, left:
-            insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.right), duration: duration, curve: listViewCurve))
+            insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.right), duration: duration, curve: curve))
         
         if let (candidateHistoryNode, _) = self.candidateHistoryNode {
             let previousBounds = candidateHistoryNode.bounds
@@ -358,7 +337,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             candidateHistoryNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
             
             (candidateHistoryNode as! ChatHistoryNode).updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: insets.top, left:
-                insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.left), duration: duration, curve: listViewCurve))
+                insets.right + layout.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + layout.safeInsets.left), duration: duration, curve: curve))
         }
     }
     
