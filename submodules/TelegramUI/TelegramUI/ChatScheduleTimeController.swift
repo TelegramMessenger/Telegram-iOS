@@ -23,7 +23,6 @@ final class ChatScheduleTimeController: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let mode: ChatScheduleTimeControllerMode
-    private let editingTime: Bool
     private let currentTime: Int32?
     private let minimalTime: Int32?
     private let dismissByTapOutside: Bool
@@ -35,7 +34,6 @@ final class ChatScheduleTimeController: ViewController {
         self.context = context
         self.peerId = peerId
         self.mode = mode
-        self.editingTime = currentTime != nil
         self.currentTime = currentTime != scheduleWhenOnlineTimestamp ? currentTime : nil
         self.minimalTime = minimalTime
         self.dismissByTapOutside = dismissByTapOutside
@@ -71,23 +69,7 @@ final class ChatScheduleTimeController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            if time == scheduleWhenOnlineTimestamp {
-                let _ = (strongSelf.context.account.viewTracker.peerView(strongSelf.peerId)
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                    guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
-                        return
-                    }
-                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                    if !strongSelf.editingTime, let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
-                        strongSelf.completion(0)
-                    } else {
-                        strongSelf.completion(time)
-                    }
-                })
-            } else {
-                strongSelf.completion(time + 5)
-            }
+            strongSelf.completion(time == scheduleWhenOnlineTimestamp ? time : time + 5)
             strongSelf.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in

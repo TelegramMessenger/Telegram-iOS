@@ -270,7 +270,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
-    
+
+    private weak var sendingOptionsTooltipController: TooltipController?
     private weak var searchResultsTooltipController: TooltipController?
     private weak var messageTooltipController: TooltipController?
     private weak var videoUnmuteTooltipController: TooltipController?
@@ -4104,15 +4105,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
         }, displaySendMessageOptions: { [weak self] node, gesture in
             if let strongSelf = self, let textInputNode = strongSelf.chatDisplayNode.textInputNode(), let layout = strongSelf.validLayout {
+                let previousSupportedOrientations = strongSelf.supportedOrientations
                 if layout.size.width > layout.size.height {
                     strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
                 } else {
                     strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                 }
                 
+                let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
+                
                 let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sendButtonFrame: node.view.convert(node.bounds, to: nil), textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+                        strongSelf.supportedOrientations = previousSupportedOrientations
                     }
                 })
                 strongSelf.sendMessageActionsController = controller
@@ -4478,36 +4482,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = checkPeerChatServiceActions(postbox: self.context.account.postbox, peerId: peerId).start()
             }
             
-            if self.chatDisplayNode.frameForInputActionButton() != nil, self.presentationInterfaceState.interfaceState.mediaRecordingMode == .audio {
-                var canSendMedia = false
-                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                    if channel.hasBannedPermission(.banSendMedia) == nil {
+            if self.chatDisplayNode.frameForInputActionButton() != nil {
+                let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
+                if !inputText.isEmpty {
+                    if inputText.count > 4 {
+                        let _ = (ApplicationSpecificNotice.getChatMessageOptionsTip(accountManager: context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).start(next: { [weak self] counter in
+                            if let strongSelf = self, counter < 3 {
+                                let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                strongSelf.displaySendingOptionsTooltip()
+                            }
+                        })
+                    }
+                } else if self.presentationInterfaceState.interfaceState.mediaRecordingMode == .audio {
+                    var canSendMedia = false
+                    if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                        if channel.hasBannedPermission(.banSendMedia) == nil {
+                            canSendMedia = true
+                        }
+                    } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                        if !group.hasBannedPermission(.banSendMedia) {
+                            canSendMedia = true
+                        }
+                    } else {
                         canSendMedia = true
                     }
-                } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                    if !group.hasBannedPermission(.banSendMedia) {
-                        canSendMedia = true
+                    if canSendMedia {
+                        let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(accountManager: self.context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).start(next: { [weak self] counter in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            var displayTip = false
+                            if counter == 0 {
+                                displayTip = true
+                            } else if counter < 3 && arc4random_uniform(4) == 1 {
+                                displayTip = true
+                            }
+                            if displayTip {
+                                let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                strongSelf.displayMediaRecordingTooltip()
+                            }
+                        })
                     }
-                } else {
-                    canSendMedia = true
-                }
-                if canSendMedia {
-                    let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(accountManager: self.context.sharedContext.accountManager)
-                    |> deliverOnMainQueue).start(next: { [weak self] counter in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        var displayTip = false
-                        if counter == 0 {
-                            displayTip = true
-                        } else if counter < 3 && arc4random_uniform(4) == 1 {
-                            displayTip = true
-                        }
-                        if displayTip {
-                            let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                            strongSelf.displayMediaRecordingTooltip()
-                        }
-                    })
                 }
             }
         }
@@ -7871,7 +7888,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    private func displaySendingOptionsTooltip() {
+        guard let rect = self.chatDisplayNode.frameForInputActionButton() else {
+            return
+        }
+        self.sendingOptionsTooltipController?.dismiss()
+        let tooltipController = TooltipController(content: .text(self.presentationData.strings.Conversation_SendingOptionsTooltip), timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+        self.sendingOptionsTooltipController = tooltipController
+        tooltipController.dismissed = { [weak self, weak tooltipController] _ in
+            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.sendingOptionsTooltipController === tooltipController {
+                strongSelf.sendingOptionsTooltipController = nil
+            }
+        }
+        self.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+            if let strongSelf = self {
+                return (strongSelf.chatDisplayNode, rect)
+            }
+            return nil
+        }))
+    }
+    
     private func dismissAllTooltips() {
+        self.sendingOptionsTooltipController?.dismiss()
         self.searchResultsTooltipController?.dismiss()
         self.messageTooltipController?.dismiss()
         self.videoUnmuteTooltipController?.dismiss()
