@@ -26,8 +26,9 @@ private final class DataAndStorageControllerArguments {
     let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
+    let openIntents: () -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -40,6 +41,7 @@ private final class DataAndStorageControllerArguments {
         self.toggleAutoplayVideos = toggleAutoplayVideos
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
+        self.openIntents = openIntents
     }
 }
 
@@ -81,6 +83,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case voiceCallsHeader(PresentationTheme, String)
     case useLessVoiceData(PresentationTheme, String, String)
     case otherHeader(PresentationTheme, String)
+    case shareSheet(PresentationTheme, String)
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case openLinksIn(PresentationTheme, String, String)
@@ -99,7 +102,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.autoPlay.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
+            case .otherHeader, .shareSheet, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -132,20 +135,22 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 10
             case .otherHeader:
                 return 11
-            case .saveIncomingPhotos:
+            case .shareSheet:
                 return 12
-            case .saveEditedPhotos:
+            case .saveIncomingPhotos:
                 return 13
-            case .openLinksIn:
+            case .saveEditedPhotos:
                 return 14
-            case .downloadInBackground:
+            case .openLinksIn:
                 return 15
-            case .downloadInBackgroundInfo:
+            case .downloadInBackground:
                 return 16
-            case .connectionHeader:
+            case .downloadInBackgroundInfo:
                 return 17
-            case .connectionProxy:
+            case .connectionHeader:
                 return 18
+            case .connectionProxy:
+                return 19
         }
     }
     
@@ -219,6 +224,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .otherHeader(lhsTheme, lhsText):
                 if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .shareSheet(lhsTheme, lhsText):
+                if case let .shareSheet(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -317,6 +328,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 })
             case let .otherHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .shareSheet(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openIntents()
+                })
             case let .saveIncomingPhotos(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openSaveIncomingPhotos()
@@ -453,6 +468,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(dataSaving, strings: presentationData.strings)))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
+    entries.append(.shareSheet(presentationData.theme, "Share Sheet"))
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
@@ -587,6 +603,9 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     }, openBrowserSelection: {
         let controller = webBrowserSettingsController(context: context)
         pushControllerImpl?(controller)
+    }, openIntents: {
+        let controller = intentsSettingsController(context: context)
+          pushControllerImpl?(controller)
     })
 
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])) |> deliverOnMainQueue

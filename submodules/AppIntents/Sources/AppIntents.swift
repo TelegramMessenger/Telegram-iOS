@@ -30,6 +30,13 @@ private let savedMessagesAvatar: UIImage = {
     }!
 }()
 
+public enum SendMessageIntentSubject {
+    case contact
+    case privateChat
+    case savedMessages
+    case group
+}
+
 public func donateSendMessageIntent(account: Account, sharedContext: SharedAccountContext, peerIds: [PeerId]) {
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         let _ = (account.postbox.transaction { transaction -> [Peer] in
@@ -98,8 +105,12 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
     }
 }
 
-public func deleteAllSendMessageIntents(accountPeerId: PeerId) {
+public func deleteAllSendMessageIntents(accountPeerId: PeerId? = nil) {
     if #available(iOS 10.0, *) {
-        INInteraction.delete(with: "sendMessage_\(accountPeerId.toInt64())")
+        if let peerId = accountPeerId {
+            INInteraction.delete(with: "sendMessage_\(peerId.toInt64())")
+        } else {
+            INInteraction.deleteAll()
+        }
     }
 }

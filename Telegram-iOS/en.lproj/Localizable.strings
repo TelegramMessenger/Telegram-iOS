@@ -5115,3 +5115,24 @@ Any member of this group will be able to see messages in the channel.";
 
 "Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
 "Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";
+
+"IntentsSettings.Title" = "Share Sheet";
+
+"IntentsSettings.MainAccount" = "Main Account";
+"IntentsSettings.MainAccountInfo" = "Choose an account for Siri and share suggestions.";
+
+"IntentsSettings.SuggestedChats" = "Suggested Chats";
+"IntentsSettings.SuggestedChatsContacts" = "Contacts";
+"IntentsSettings.SuggestedChatsSavedMessages" = "Saved Messages";
+"IntentsSettings.SuggestedChatsPrivateChats" = "Private Chats";
+"IntentsSettings.SuggestedChatsGroups" = "Groups";
+"IntentsSettings.SuggestedChatsInfo" = "Archived chats will not be suggested.";
+
+"IntentsSettings.SuggestBy" = "Suggest By";
+"IntentsSettings.SuggestByAll" = "All Sent Messages";
+"IntentsSettings.SuggestByShare" = "Only Shared Messages";
+
+"IntentsSettings.ResetAll" = "Reset All Share Suggestions";
+"IntentsSettings.Reset" = "Reset";
+
+"Conversation.SendingOptionsTooltip" = "Hold this button to schedule your message\nor send it without sound.";

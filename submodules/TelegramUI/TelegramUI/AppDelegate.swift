@@ -2113,14 +2113,14 @@ final class SharedApplicationContext {
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
         let _ = (context.sharedContext.accountManager.transaction { transaction in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
-            if !settings.initiallyReset {
+            if !settings.initiallyReset || settings.account == nil {
                 if #available(iOS 10.0, *) {
                     Queue.mainQueue().async {
                         INInteraction.deleteAll()
                     }
                 }
-                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
-                    return IntentsSettings(initiallyReset: true)
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { _ in
+                    return IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared)
                 })
             }
         }).start()
