@@ -30,6 +30,8 @@ elif [ "$1" == "appstore" ]; then
 	FASTLANE_ITC_USERNAME="$TELEGRAM_BUILD_APPSTORE_USERNAME"
 	FASTLANE_PASSWORD="$TELEGRAM_BUILD_APPSTORE_PASSWORD"
 	FASTLANE_ITC_TEAM_NAME="$TELEGRAM_BUILD_APPSTORE_TEAM_NAME"
+	CERTS_PATH="codesigning_data/certs"
+	PROFILES_PATH="codesigning_data/profiles"
 elif [ "$1" == "verify" ]; then
 	CERTS_PATH="build-system/fake-codesigning/certs/distribution"
 	PROFILES_PATH="build-system/fake-codesigning/profiles"
