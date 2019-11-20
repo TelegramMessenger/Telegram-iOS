@@ -356,7 +356,7 @@ build_verbose: check_env
 	//:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
-	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 deps: check_env
 	$(BUCK) query "deps(//:AppPackage)" --dot  \
