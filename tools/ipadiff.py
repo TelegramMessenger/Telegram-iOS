@@ -285,6 +285,7 @@ def ipadiff(self_base_path, ipa1, ipa2):
         print('Different files in ' + ipa1 + ' and ' + ipa2)
         for relative_file_path in different_files:
             print('    ' + relative_file_path)
+        sys.exit(1)
     else:
         if len(encrypted_files) != 0 or len(watch_ipa1_files) != 0 or len(plugin_ipa1_files) != 0:
             print('IPAs are equal, except for the files that can\'t currently be checked:')
