@@ -1,6 +1,7 @@
 stages:
   - build
   - deploy
+  - verify
 
 variables:
   LANG: "en_US.UTF-8"
@@ -48,5 +49,18 @@ deploy_beta_testflight:
     - tags
   script:
     - bash buildbox/deploy-telegram.sh appstore
+  environment:
+    name: testflight_llc
+
+verify_beta_testflight:
+  tags:
+    - ios_beta
+  stage: verify
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/verify-telegram.sh appstore
   environment:
     name: testflight_llc
