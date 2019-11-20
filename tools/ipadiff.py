@@ -163,7 +163,7 @@ def is_plist(file1):
 
 
 def diff_plists(file1, file2):
-    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild']
+    remove_properties = ['UISupportedDevices', 'DTAppStoreToolsBuild', 'MinimumOSVersion', 'BuildMachineOSBuild', 'CFBundleVersion']
 
     clean1_properties = ''
     clean2_properties = ''
