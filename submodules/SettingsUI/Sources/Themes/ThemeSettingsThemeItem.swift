@@ -144,6 +144,14 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     }
 }
 
+private func areBubbleColorsEqual(_ lhs: (UIColor, UIColor)?, _ rhs: (UIColor, UIColor)?) -> Bool {
+    if let (lhsTopColor, lhsBottomColor) = lhs, let (rhsTopColor, rhsBottomColor) = rhs {
+        return lhsTopColor.rgb == rhsTopColor.rgb && lhsBottomColor.rgb == rhsBottomColor.rgb
+    } else {
+        return (lhs == nil) == (rhs == nil)
+    }
+}
+
 private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
@@ -201,10 +209,11 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
                 contextActionEnabled = false
             }
         } else {
-            if theme != self.theme || accentColor != self.accentColor {
+            if theme != self.theme || accentColor != self.accentColor || !areBubbleColorsEqual(bubbleColors, self.bubbleColors) {
                 self.imageNode.setSignal(themeIconImage(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, accentColor: accentColor, bubbleColors: bubbleColors))
                 self.theme = theme
                 self.accentColor = accentColor
+                self.bubbleColors = bubbleColors
             }
         }
         if updatedTheme || bordered != self.bordered || selected != self.selected {

@@ -618,6 +618,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - colorPanelHeight + colorPanelOffset), size: CGSize(width: layout.size.width, height: colorPanelHeight))
         bottomInset += (colorPanelHeight - colorPanelOffset)
         
+        if bottomInset + navigationBarHeight > bounds.height {
+            return
+        }
+        
         transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
         self.colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
         

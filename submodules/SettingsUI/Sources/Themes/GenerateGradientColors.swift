@@ -19,7 +19,6 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0x544a7d, 0xffd452),
     (0x009fff, 0xec2f4b),
     (0x654ea3, 0xeaafc8),
-    (0xff416c, 0xff4b2b),
     (0xa8ff78, 0x78ffd6),
     (0xed213a, 0x93291e),
     (0xfdc830, 0xf37335),
@@ -57,7 +56,6 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0xc9d6ff, 0xe2e2e2),
     (0x396afc, 0x2948ff),
     (0xd9a7c7, 0xfffcdc),
-    (0x06beb6, 0x48b1bf),
     (0x642b73, 0xc6426e),
     (0x1c92d2, 0xf2fcfe),
     (0x000000, 0x0f9b0f),
@@ -117,12 +115,10 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0xfceabb, 0xf8b500),
     (0xf85032, 0xe73827),
     (0xf79d00, 0x64f38c),
-    (0xcb2d3e, 0xef473a),
     (0x56ab2f, 0xa8e063),
     (0x000428, 0x004e92),
     (0x42275a, 0x734b6d),
     (0x141e30, 0x243b55),
-    (0xf00000, 0xdc281e),
     (0x2c3e50, 0xfd746c),
     (0x2c3e50, 0x4ca1af),
     (0xe96443, 0x904e95),
@@ -139,7 +135,6 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0xf7ff00, 0xdb36a4),
     (0xff4b1f, 0x1fddff),
     (0xba5370, 0xf4e2d8),
-    (0xe0eafc, 0xcfdef3),
     (0x4ca1af, 0xc4e0e5),
     (0x000000, 0x434343),
     (0x4b79a1, 0x283e51),
@@ -278,7 +273,6 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0x3ca55c, 0xb5ac49),
     (0x348f50, 0x56b4d3),
     (0xda22ff, 0x9733ee),
-    (0x02aab0, 0x00cdac),
     (0xede574, 0xe1f5c4),
     (0xd31027, 0xea384d),
     (0x16a085, 0xf4d03f),
@@ -313,7 +307,7 @@ func generateGradientColors(color: UIColor) -> (UIColor, UIColor) {
     var nearest: (colors: (lhs: UInt32, rhs: UInt32), distance: Int32)?
     for (lhs, rhs) in colorPairs {
         let lhsDistance = color.distance(to: UIColor(rgb: lhs))
-        let rhsDistance = color.distance(to: UIColor(rgb: lhs))
+        let rhsDistance = color.distance(to: UIColor(rgb: rhs))
         if let currentNearest = nearest {
             if lhsDistance < currentNearest.distance || rhsDistance < currentNearest.distance {
                 if lhsDistance < rhsDistance {
