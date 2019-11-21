@@ -41,3 +41,6 @@ mv "$IPA_PATH" "$VERIFY_PATH"
 BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" sh buildbox/build-telegram.sh verify
 
 python3 tools/ipadiff.py "$IPA_PATH" "$VERIFY_PATH"
+
+# No need to upload artifacts if the output matches previous step
+rm -rf "$OUTPUT_PATH"

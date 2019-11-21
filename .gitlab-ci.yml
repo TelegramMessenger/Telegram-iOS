@@ -40,18 +40,18 @@ beta_testflight:
       - build/artifacts
     expire_in: 1 week
 
-#deploy_beta_testflight:
-#  tags:
-#    - ios_beta
-#  stage: deploy
-#  only:
-#    - beta
-#  except:
-#    - tags
-#  script:
-#    - bash buildbox/deploy-telegram.sh appstore
-#  environment:
-#    name: testflight_llc
+deploy_beta_testflight:
+  tags:
+    - ios_beta
+  stage: deploy
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/deploy-telegram.sh appstore
+  environment:
+    name: testflight_llc
 
 verifysanity_beta_testflight:
   tags:
