@@ -399,6 +399,7 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
 
 public struct NetworkInitializationArguments {
     public let apiId: Int32
+    public let apiHash: String
     public let languagesCategory: String
     public let appVersion: String
     public let voipMaxLayer: Int32
@@ -406,8 +407,9 @@ public struct NetworkInitializationArguments {
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider) {
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider) {
         self.apiId = apiId
+        self.apiHash = apiHash
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
         self.voipMaxLayer = voipMaxLayer

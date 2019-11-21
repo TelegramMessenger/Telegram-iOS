@@ -35,6 +35,7 @@ import AppBundle
 import ContextUI
 import WalletUI
 import PhoneNumberFormat
+import AuthTransferUI
 
 private let maximumNumberOfAccounts = 3
 
@@ -112,6 +113,7 @@ private final class SettingsItemArguments {
     let keepPhone: () -> Void
     let openPhoneNumberChange: () -> Void
     let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+    let openLoginDesktop: () -> Void
     
     init(
         accountManager: AccountManager,
@@ -144,7 +146,8 @@ private final class SettingsItemArguments {
         removeAccount: @escaping (AccountRecordId) -> Void,
         keepPhone: @escaping () -> Void,
         openPhoneNumberChange: @escaping () -> Void,
-        accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
+        accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
+        openLoginDesktop: @escaping () -> Void
     ) {
         self.accountManager = accountManager
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -177,6 +180,7 @@ private final class SettingsItemArguments {
         self.keepPhone = keepPhone
         self.openPhoneNumberChange = openPhoneNumberChange
         self.accountContextAction = accountContextAction
+        self.openLoginDesktop = openLoginDesktop
     }
 }
 
@@ -185,6 +189,7 @@ private enum SettingsSection: Int32 {
     case phone
     case accounts
     case proxy
+    case loginDesktop
     case media
     case generalSettings
     case advanced
@@ -205,6 +210,8 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     case proxy(PresentationTheme, UIImage?, String, String)
     
+    case loginDesktop(PresentationTheme, UIImage?, String)
+    
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
@@ -223,22 +230,24 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .userInfo, .setProfilePhoto, .setUsername:
-                return SettingsSection.info.rawValue
-            case .phoneInfo, .keepPhone, .changePhone:
-                return SettingsSection.phone.rawValue
-            case .account, .addAccount:
-                return SettingsSection.accounts.rawValue
-            case .proxy:
-                return SettingsSection.proxy.rawValue
-            case .savedMessages, .recentCalls, .stickers:
-                return SettingsSection.media.rawValue
-            case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
-                return SettingsSection.generalSettings.rawValue
-            case .passport, .wallet, .watch :
-                return SettingsSection.advanced.rawValue
-            case .askAQuestion, .faq:
-                return SettingsSection.help.rawValue
+        case .userInfo, .setProfilePhoto, .setUsername:
+            return SettingsSection.info.rawValue
+        case .phoneInfo, .keepPhone, .changePhone:
+            return SettingsSection.phone.rawValue
+        case .account, .addAccount:
+            return SettingsSection.accounts.rawValue
+        case .proxy:
+            return SettingsSection.proxy.rawValue
+        case .loginDesktop:
+            return SettingsSection.loginDesktop.rawValue
+        case .savedMessages, .recentCalls, .stickers:
+            return SettingsSection.media.rawValue
+        case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
+            return SettingsSection.generalSettings.rawValue
+        case .passport, .wallet, .watch :
+            return SettingsSection.advanced.rawValue
+        case .askAQuestion, .faq:
+            return SettingsSection.help.rawValue
         }
     }
     
@@ -262,32 +271,34 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return 1002
         case .proxy:
             return 1003
-        case .savedMessages:
+        case .loginDesktop:
             return 1004
-        case .recentCalls:
+        case .savedMessages:
             return 1005
-        case .stickers:
+        case .recentCalls:
             return 1006
-        case .notificationsAndSounds:
+        case .stickers:
             return 1007
-        case .privacyAndSecurity:
+        case .notificationsAndSounds:
             return 1008
-        case .dataAndStorage:
+        case .privacyAndSecurity:
             return 1009
-        case .themes:
+        case .dataAndStorage:
             return 1010
-        case .language:
+        case .themes:
             return 1011
-        case .wallet:
+        case .language:
             return 1012
-        case .passport:
+        case .wallet:
             return 1013
-        case .watch:
+        case .passport:
             return 1014
-        case .askAQuestion:
+        case .watch:
             return 1015
-        case .faq:
+        case .askAQuestion:
             return 1016
+        case .faq:
+            return 1017
         }
     }
     
@@ -375,6 +386,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 }
             case let .proxy(lhsTheme, lhsImage, lhsText, lhsValue):
                 if case let .proxy(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .loginDesktop(lhsTheme, lhsImage, lhsText):
+                if case let .loginDesktop(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -528,6 +545,10 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openProxy()
                 })
+            case let .loginDesktop(theme, image, text):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openLoginDesktop()
+                })
             case let .savedMessages(theme, image, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSavedMessages()
@@ -635,6 +656,8 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             }
             entries.append(.proxy(presentationData.theme, PresentationResourcesSettings.proxy, presentationData.strings.Settings_Proxy, valueString))
         }
+        
+        entries.append(.loginDesktop(presentationData.theme, PresentationResourcesSettings.security, "Telegram Desktop"))
         
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
@@ -1045,6 +1068,12 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         } else {
             gesture?.cancel()
         }
+    }, openLoginDesktop: {
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(AuthTransferScanScreen(context: context))
+        })
     })
     
     changeProfilePhotoImpl = {

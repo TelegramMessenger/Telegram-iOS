@@ -4145,6 +4145,8 @@ public extension Api {
         case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
         case updateTheme(theme: Api.Theme)
         case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
+        case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
+        case updateLoginToken
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4777,6 +4779,19 @@ public extension Api {
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     reactions.serialize(buffer, true)
                     break
+                case .updateGeoLiveViewed(let peer, let msgId):
+                    if boxed {
+                        buffer.appendInt32(-2027964103)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .updateLoginToken:
+                    if boxed {
+                        buffer.appendInt32(1448076945)
+                    }
+                    
+                    break
     }
     }
     
@@ -4932,6 +4947,10 @@ public extension Api {
                 return ("updateTheme", [("theme", theme)])
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                 return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
+                case .updateGeoLiveViewed(let peer, let msgId):
+                return ("updateGeoLiveViewed", [("peer", peer), ("msgId", msgId)])
+                case .updateLoginToken:
+                return ("updateLoginToken", [])
     }
     }
     
@@ -6210,6 +6229,25 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_updateGeoLiveViewed(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateGeoLiveViewed(peer: _1!, msgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateLoginToken(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateLoginToken
         }
     
     }

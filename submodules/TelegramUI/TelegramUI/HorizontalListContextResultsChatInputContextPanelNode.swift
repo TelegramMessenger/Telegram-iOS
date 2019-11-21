@@ -127,6 +127,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         super.didLoad()
         
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.listView.view.disablesInteractiveKeyboardGestureRecognizer = true
         self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
             if let strongSelf = self {
                 let convertedPoint = strongSelf.listView.view.convert(point, from: strongSelf.view)

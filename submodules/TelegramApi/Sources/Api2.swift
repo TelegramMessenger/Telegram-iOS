@@ -494,6 +494,90 @@ public struct payments {
 }
 public extension Api {
 public struct auth {
+    public enum LoginToken: TypeConstructorDescription {
+        case loginToken(expires: Int32, token: Buffer)
+        case loginTokenMigrateTo(dcId: Int32, token: Buffer)
+        case loginTokenSuccess(authorization: Api.auth.Authorization)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .loginToken(let expires, let token):
+                    if boxed {
+                        buffer.appendInt32(1654593920)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    serializeBytes(token, buffer: buffer, boxed: false)
+                    break
+                case .loginTokenMigrateTo(let dcId, let token):
+                    if boxed {
+                        buffer.appendInt32(110008598)
+                    }
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeBytes(token, buffer: buffer, boxed: false)
+                    break
+                case .loginTokenSuccess(let authorization):
+                    if boxed {
+                        buffer.appendInt32(957176926)
+                    }
+                    authorization.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .loginToken(let expires, let token):
+                return ("loginToken", [("expires", expires), ("token", token)])
+                case .loginTokenMigrateTo(let dcId, let token):
+                return ("loginTokenMigrateTo", [("dcId", dcId), ("token", token)])
+                case .loginTokenSuccess(let authorization):
+                return ("loginTokenSuccess", [("authorization", authorization)])
+    }
+    }
+    
+        public static func parse_loginToken(_ reader: BufferReader) -> LoginToken? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.auth.LoginToken.loginToken(expires: _1!, token: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_loginTokenMigrateTo(_ reader: BufferReader) -> LoginToken? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.auth.LoginToken.loginTokenMigrateTo(dcId: _1!, token: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_loginTokenSuccess(_ reader: BufferReader) -> LoginToken? {
+            var _1: Api.auth.Authorization?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.auth.Authorization
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.auth.LoginToken.loginTokenSuccess(authorization: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Authorization: TypeConstructorDescription {
         case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
         case authorizationSignUpRequired(flags: Int32, termsOfService: Api.help.TermsOfService?)
@@ -773,6 +857,76 @@ public struct auth {
         }
         public static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
             return Api.auth.CodeType.codeTypeFlashCall
+        }
+    
+    }
+    public enum LoginTokenInfo: TypeConstructorDescription {
+        case loginTokenInfo(dcId: Int32, authKeyId: Int64, deviceModel: String, platform: String, systemVersion: String, apiId: Int32, appName: String, appVersion: String, ip: String, region: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .loginTokenInfo(let dcId, let authKeyId, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let ip, let region):
+                    if boxed {
+                        buffer.appendInt32(1375940666)
+                    }
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt64(authKeyId, buffer: buffer, boxed: false)
+                    serializeString(deviceModel, buffer: buffer, boxed: false)
+                    serializeString(platform, buffer: buffer, boxed: false)
+                    serializeString(systemVersion, buffer: buffer, boxed: false)
+                    serializeInt32(apiId, buffer: buffer, boxed: false)
+                    serializeString(appName, buffer: buffer, boxed: false)
+                    serializeString(appVersion, buffer: buffer, boxed: false)
+                    serializeString(ip, buffer: buffer, boxed: false)
+                    serializeString(region, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .loginTokenInfo(let dcId, let authKeyId, let deviceModel, let platform, let systemVersion, let apiId, let appName, let appVersion, let ip, let region):
+                return ("loginTokenInfo", [("dcId", dcId), ("authKeyId", authKeyId), ("deviceModel", deviceModel), ("platform", platform), ("systemVersion", systemVersion), ("apiId", apiId), ("appName", appName), ("appVersion", appVersion), ("ip", ip), ("region", region)])
+    }
+    }
+    
+        public static func parse_loginTokenInfo(_ reader: BufferReader) -> LoginTokenInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: String?
+            _9 = parseString(reader)
+            var _10: String?
+            _10 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.auth.LoginTokenInfo.loginTokenInfo(dcId: _1!, authKeyId: _2!, deviceModel: _3!, platform: _4!, systemVersion: _5!, apiId: _6!, appName: _7!, appVersion: _8!, ip: _9!, region: _10!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

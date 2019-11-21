@@ -53,6 +53,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[-2103600678] = { return Api.SecureRequiredType.parse_secureRequiredType($0) }
     dict[41187252] = { return Api.SecureRequiredType.parse_secureRequiredTypeOneOf($0) }
+    dict[1654593920] = { return Api.auth.LoginToken.parse_loginToken($0) }
+    dict[110008598] = { return Api.auth.LoginToken.parse_loginTokenMigrateTo($0) }
+    dict[957176926] = { return Api.auth.LoginToken.parse_loginTokenSuccess($0) }
     dict[1064139624] = { return Api.JSONValue.parse_jsonNull($0) }
     dict[-952869270] = { return Api.JSONValue.parse_jsonBool($0) }
     dict[736157604] = { return Api.JSONValue.parse_jsonNumber($0) }
@@ -242,6 +245,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1870238482] = { return Api.Update.parse_updateDeleteScheduledMessages($0) }
     dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
     dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
+    dict[-2027964103] = { return Api.Update.parse_updateGeoLiveViewed($0) }
+    dict[1448076945] = { return Api.Update.parse_updateLoginToken($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
@@ -594,6 +599,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
     dict[82699215] = { return Api.messages.FeaturedStickers.parse_featuredStickersNotModified($0) }
     dict[-123893531] = { return Api.messages.FeaturedStickers.parse_featuredStickers($0) }
+    dict[1375940666] = { return Api.auth.LoginTokenInfo.parse_loginTokenInfo($0) }
     dict[-2048646399] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonMissed($0) }
     dict[-527056480] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonDisconnect($0) }
     dict[1471006352] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonHangup($0) }
@@ -867,6 +873,8 @@ public struct Api {
             case let _1 as Api.account.TmpPassword:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureRequiredType:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.auth.LoginToken:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.JSONValue:
                 _1.serialize(buffer, boxed)
@@ -1243,6 +1251,8 @@ public struct Api {
             case let _1 as Api.InputStickeredMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FeaturedStickers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.auth.LoginTokenInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallDiscardReason:
                 _1.serialize(buffer, boxed)
