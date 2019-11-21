@@ -66,8 +66,9 @@ verifysanity_beta_testflight:
   environment:
     name: testflight_llc
   artifacts:
+    when: on_failure
     paths:
-      - build/artifacts
+      - build/verifysanity_artifacts
     expire_in: 1 week
 
 verify_beta_testflight:
@@ -83,6 +84,7 @@ verify_beta_testflight:
   environment:
     name: testflight_llc
   artifacts:
+    when: on_failure
     paths:
-      - build/artifacts
+      - build/verify_artifacts
     expire_in: 1 week

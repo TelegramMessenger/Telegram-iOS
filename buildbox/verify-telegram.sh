@@ -13,8 +13,10 @@ fi
 
 if [ "$MODE" == "cached" ]; then
 	BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE"
+	ERROR_OUTPUT_PATH="build/verifysanity_artifacts"
 elif [ "$MODE" == "full" ]; then
 	BUCK_HTTP_CACHE=""
+	ERROR_OUTPUT_PATH="build/verify_artifacts"
 else
 	echo "Unknown mode $MODE"
 	exit 1
@@ -41,6 +43,11 @@ mv "$IPA_PATH" "$VERIFY_PATH"
 BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" sh buildbox/build-telegram.sh verify
 
 python3 tools/ipadiff.py "$IPA_PATH" "$VERIFY_PATH"
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    mkdir -p "$ERROR_OUTPUT_PATH"
+    cp "$IPA_PATH" "$ERROR_OUTPUT_PATH"/
+    exit 1
+fi
 
-# No need to upload artifacts if the output matches previous step
-rm -rf "$OUTPUT_PATH"
+
