@@ -15,8 +15,7 @@ import CallListUI
 import NotificationSoundSelectionUI
 import PresentationDataUtils
 import PhoneNumberFormat
-
-private let maximumNumberOfAccounts = 3
+import AccountUtils
 
 enum SettingsSearchableItemIcon {
     case profile

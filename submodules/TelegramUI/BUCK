@@ -201,6 +201,7 @@ framework(
         "//submodules/LocationResources:LocationResources",
         "//submodules/ItemListVenueItem:ItemListVenueItem",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/AccountUtils:AccountUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

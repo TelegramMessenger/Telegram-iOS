@@ -22,6 +22,7 @@ import ImageBlur
 import WatchBridge
 import SettingsUI
 import AppLock
+import AccountUtils
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -752,6 +753,27 @@ final class AuthorizedApplicationContext {
     
     func openRootCamera() {
         self.rootController.openRootCamera()
+    }
+    
+    func switchAccount() {
+        let _ = (activeAccountsAndPeers(context: self.context)
+        |> take(1)
+        |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+            return primaryAndAccounts.1.first
+        }
+        |> map { accountAndPeer -> Account? in
+            if let (account, _, _) = accountAndPeer {
+                return account
+            } else {
+                return nil
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] account in
+            guard let strongSelf = self, let account = account else {
+                return
+            }
+            strongSelf.context.sharedContext.switchToAccount(id: account.id, fromSettingsController: nil, withChatListController: nil)
+        })
     }
     
     private func updateCoveringViewSnaphot(_ visible: Bool) {

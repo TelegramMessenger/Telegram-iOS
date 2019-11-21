@@ -35,8 +35,7 @@ import AppBundle
 import ContextUI
 import WalletUI
 import PhoneNumberFormat
-
-private let maximumNumberOfAccounts = 3
+import AccountUtils
 
 private let avatarFont = avatarPlaceholderFont(size: 13.0)
 

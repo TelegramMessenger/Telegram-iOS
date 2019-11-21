@@ -7,11 +7,13 @@ enum ApplicationShortcutItemType: String {
     case compose
     case camera
     case savedMessages
+    case account
 }
 
 struct ApplicationShortcutItem: Equatable {
     let type: ApplicationShortcutItemType
     let title: String
+    let subtitle: String?
 }
 
 @available(iOS 9.1, *)
@@ -27,16 +29,27 @@ extension ApplicationShortcutItem {
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/Camera")
             case .savedMessages:
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/SavedMessages")
+            case .account:
+                icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/Account")
         }
-        return UIApplicationShortcutItem(type: self.type.rawValue, localizedTitle: self.title, localizedSubtitle: nil, icon: icon, userInfo: nil)
+        return UIApplicationShortcutItem(type: self.type.rawValue, localizedTitle: self.title, localizedSubtitle: self.subtitle, icon: icon, userInfo: nil)
     }
 }
 
-func applicationShortcutItems(strings: PresentationStrings) -> [ApplicationShortcutItem] {
-    return [
-        ApplicationShortcutItem(type: .search, title: strings.Common_Search),
-        ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage),
-        ApplicationShortcutItem(type: .camera, title: strings.Camera_Title),
-        ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages)
-    ]
+func applicationShortcutItems(strings: PresentationStrings, otherAccountName: String?) -> [ApplicationShortcutItem] {
+    if let otherAccountName = otherAccountName {
+        return [
+            ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
+            ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage, subtitle: nil),
+            ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil),
+            ApplicationShortcutItem(type: .account, title: strings.Shortcut_SwitchAccount, subtitle: otherAccountName)
+        ]
+    } else {
+        return [
+            ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
+            ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage, subtitle: nil),
+            ApplicationShortcutItem(type: .camera, title: strings.Camera_Title, subtitle: nil),
+            ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil)
+        ]
+    }
 }

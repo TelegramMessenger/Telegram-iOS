@@ -5136,3 +5136,5 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.TextSize.Title" = "Text Size";
 "Appearance.TextSize.UseSystem" = "User System Text Size";
 "Appearance.TextSize.Apply" = "Set";
+
+"Shortcut.SwitchAccount" = "Switch Account";

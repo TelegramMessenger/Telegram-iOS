@@ -84,6 +84,7 @@ static_library(
         "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
+        "//submodules/AccountUtils:AccountUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

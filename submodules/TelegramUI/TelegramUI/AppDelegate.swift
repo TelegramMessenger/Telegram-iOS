@@ -34,6 +34,7 @@ import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
 import AppIntents
+import AccountUtils
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -960,14 +961,23 @@ final class SharedApplicationContext {
                 return true
             })
             |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
-                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
+                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
+                }
+                |> reduceLeft(value: nil) { current, updated -> CallListSettings? in
+                    var result: CallListSettings?
+                    if let updated = updated {
+                        result = updated
+                    } else if let current = current {
+                        result = current
+                    }
+                    return result
                 }
                 |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
                     if let account = account {
                         return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings)? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings)
+                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings)
                         }
                     } else {
                         return .single(nil)
@@ -1243,7 +1253,22 @@ final class SharedApplicationContext {
             |> mapToSignal { context -> Signal<[ApplicationShortcutItem], NoError> in
                 if let context = context {
                     let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                    return .single(applicationShortcutItems(strings: presentationData.strings))
+                    
+                    return activeAccountsAndPeers(context: context.context)
+                    |> take(1)
+                    |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+                        return primaryAndAccounts.1.first
+                    }
+                    |> map { accountAndPeer -> String? in
+                        if let (_, peer, _) = accountAndPeer {
+                            return peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        } else {
+                            return nil
+                        }
+                    } |> mapToSignal { otherAccountName -> Signal<[ApplicationShortcutItem], NoError> in
+                        let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                        return .single(applicationShortcutItems(strings: presentationData.strings, otherAccountName: otherAccountName))
+                    }
                 } else {
                     return .single([])
                 }
@@ -1792,27 +1817,31 @@ final class SharedApplicationContext {
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
+            let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
+            var immediately = type == .account
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { context in
                     if let context = context {
-                        if let type = ApplicationShortcutItemType(rawValue: shortcutItem.type) {
+                        if let type = type {
                             switch type {
-                            case .search:
-                                context.openRootSearch()
-                            case .compose:
-                                context.openRootCompose()
-                            case .camera:
-                                context.openRootCamera()
-                            case .savedMessages:
-                                self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                case .search:
+                                    context.openRootSearch()
+                                case .compose:
+                                    context.openRootCompose()
+                                case .camera:
+                                    context.openRootCamera()
+                                case .savedMessages:
+                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                case .account:
+                                    context.switchAccount()
                             }
                         }
                     }
                 })
             }
-            if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl {
+            if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
                 let _ = (appLockContext.isCurrentlyLocked
                 |> filter { !$0 }
                 |> take(1)

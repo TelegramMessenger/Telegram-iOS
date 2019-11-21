@@ -1,0 +1,19 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "AccountUtils",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

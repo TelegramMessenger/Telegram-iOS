@@ -10,6 +10,7 @@ import ItemListUI
 import ItemListPeerItem
 import AccountContext
 import AppIntents
+import AccountUtils
 
 private final class IntentsSettingsControllerArguments {
     let context: AccountContext
