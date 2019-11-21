@@ -8,8 +8,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, bubbleColors: (UICo
     let secretColor: UIColor = UIColor(rgb: 0x89df9e)
     
     var accentColor = accentColor
-    let hsv = accentColor.hsv
-    accentColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: max(hsv.2, 0.18), alpha: 1.0)
+    let hsb = accentColor.hsb
+    accentColor = UIColor(hue: hsb.0, saturation: hsb.1, brightness: max(hsb.2, 0.18), alpha: 1.0)
     
     let secondaryBadgeTextColor: UIColor
     let lightness = accentColor.lightness

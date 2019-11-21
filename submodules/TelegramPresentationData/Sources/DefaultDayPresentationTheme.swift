@@ -29,8 +29,8 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, bubbleColors:
     }
     
     if accentColor.lightness > 0.705 {
-        let accentColorHsv = accentColor.hsv
-        accentColor = UIColor(hue: accentColorHsv.0, saturation: min(1.0, accentColorHsv.1 * 1.1), brightness: min(accentColorHsv.2, 0.6), alpha: 1.0)
+        let accentColorHsb = accentColor.hsb
+        accentColor = UIColor(hue: accentColorHsb.0, saturation: min(1.0, accentColorHsb.1 * 1.1), brightness: min(accentColorHsb.2, 0.6), alpha: 1.0)
     }
     
     let outgoingBubbleLightnessColor = outgoingBubbleFillColor.mixedWith(outgoingBubbleFillGradientColor, alpha: 0.5)

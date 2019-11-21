@@ -106,12 +106,12 @@ public extension UIColor {
         }
     }
     
-    var hsv: (CGFloat, CGFloat, CGFloat) {
+    var hsb: (CGFloat, CGFloat, CGFloat) {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0
-        var value: CGFloat = 0.0
-        if self.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
-            return (hue, saturation, value)
+        var brightness: CGFloat = 0.0
+        if self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil) {
+            return (hue, saturation, brightness)
         } else {
             return (0.0, 0.0, 0.0)
         }
