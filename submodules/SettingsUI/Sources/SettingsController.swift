@@ -113,7 +113,7 @@ private final class SettingsItemArguments {
     let keepPhone: () -> Void
     let openPhoneNumberChange: () -> Void
     let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
-    let openLoginDesktop: () -> Void
+    let openDevices: () -> Void
     
     init(
         accountManager: AccountManager,
@@ -147,7 +147,7 @@ private final class SettingsItemArguments {
         keepPhone: @escaping () -> Void,
         openPhoneNumberChange: @escaping () -> Void,
         accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
-        openLoginDesktop: @escaping () -> Void
+        openDevices: @escaping () -> Void
     ) {
         self.accountManager = accountManager
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -180,7 +180,7 @@ private final class SettingsItemArguments {
         self.keepPhone = keepPhone
         self.openPhoneNumberChange = openPhoneNumberChange
         self.accountContextAction = accountContextAction
-        self.openLoginDesktop = openLoginDesktop
+        self.openDevices = openDevices
     }
 }
 
@@ -189,7 +189,6 @@ private enum SettingsSection: Int32 {
     case phone
     case accounts
     case proxy
-    case loginDesktop
     case media
     case generalSettings
     case advanced
@@ -210,7 +209,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     
     case proxy(PresentationTheme, UIImage?, String, String)
     
-    case loginDesktop(PresentationTheme, UIImage?, String)
+    case devices(PresentationTheme, UIImage?, String, String)
     
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
@@ -238,8 +237,8 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return SettingsSection.accounts.rawValue
         case .proxy:
             return SettingsSection.proxy.rawValue
-        case .loginDesktop:
-            return SettingsSection.loginDesktop.rawValue
+        case .devices:
+            return SettingsSection.media.rawValue
         case .savedMessages, .recentCalls, .stickers:
             return SettingsSection.media.rawValue
         case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
@@ -271,13 +270,13 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return 1002
         case .proxy:
             return 1003
-        case .loginDesktop:
-            return 1004
         case .savedMessages:
-            return 1005
+            return 1004
         case .recentCalls:
-            return 1006
+            return 1005
         case .stickers:
+            return 1006
+        case .devices:
             return 1007
         case .notificationsAndSounds:
             return 1008
@@ -390,8 +389,8 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .loginDesktop(lhsTheme, lhsImage, lhsText):
-                if case let .loginDesktop(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .devices(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .devices(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -545,9 +544,9 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openProxy()
                 })
-            case let .loginDesktop(theme, image, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.openLoginDesktop()
+            case let .devices(theme, image, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openDevices()
                 })
             case let .savedMessages(theme, image, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -657,11 +656,10 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.proxy(presentationData.theme, PresentationResourcesSettings.proxy, presentationData.strings.Settings_Proxy, valueString))
         }
         
-        entries.append(.loginDesktop(presentationData.theme, PresentationResourcesSettings.security, "Telegram Desktop"))
-        
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
+        entries.append(.devices(presentationData.theme, PresentationResourcesSettings.stickers, "Devices", ""))
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
@@ -1068,7 +1066,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         } else {
             gesture?.cancel()
         }
-    }, openLoginDesktop: {
+    }, openDevices: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in

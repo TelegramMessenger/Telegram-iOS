@@ -9,6 +9,7 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/SyncCore:SyncCore#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
@@ -16,6 +17,8 @@ static_library(
         "//submodules/Camera:Camera",
         "//submodules/GlassButtonNode:GlassButtonNode",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

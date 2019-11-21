@@ -217,6 +217,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     
     private var qrNode: ASImageNode?
     private let exportTokenDisposable = MetaDisposable()
+    private let tokenEventsDisposable = MetaDisposable()
     var accountUpdated: ((UnauthorizedAccount) -> Void)?
     
     private let debugAction: () -> Void
@@ -297,10 +298,16 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.phoneAndCountryNode.checkPhone = { [weak self] in
             self?.checkPhone?()
         }
+        
+        self.tokenEventsDisposable.set((account.updateLoginTokenEvents
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?.refreshQrToken()
+        }))
     }
     
     deinit {
         self.exportTokenDisposable.dispose()
+        self.tokenEventsDisposable.dispose()
     }
     
     override func didLoad() {
@@ -425,6 +432,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 strongSelf.exportTokenDisposable.set(nil)
                 strongSelf.account = account
                 strongSelf.accountUpdated?(account)
+                strongSelf.tokenEventsDisposable.set((account.updateLoginTokenEvents
+                |> deliverOnMainQueue).start(next: { _ in
+                    self?.refreshQrToken()
+                }))
                 strongSelf.refreshQrToken()
             case .loggedIn:
                 strongSelf.exportTokenDisposable.set(nil)

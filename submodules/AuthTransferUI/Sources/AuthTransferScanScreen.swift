@@ -136,16 +136,34 @@ public final class AuthTransferScanScreen: ViewController {
                 return
             }
             if let url = URL(string: code), let parsedToken = parseAuthTransferUrl(url) {
-                print("import token: \(parsedToken.base64EncodedString())")
-                
-                strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken)
-                |> deliverOnMainQueue).start(error: { _ in
-                }, completed: {
+                let _ = (getAuthTransferTokenInfo(network: strongSelf.context.account.network, token: parsedToken)
+                |> deliverOnMainQueue).start(next: { tokenInfo in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.dismiss()
-                }))
+                    (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: AuthTransferConfirmationNode(context: strongSelf.context, presentationData: strongSelf.presentationData, tokenInfo: tokenInfo, accept: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken)
+                        |> deliverOnMainQueue).start(error: { _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: nil)
+                        }, completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.dismiss()
+                        }))
+                    }, cancel: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: nil)
+                    }))
+                })
             }
         })
     }
@@ -166,15 +184,19 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
     private let bottomDimNode: ASDisplayNode
     private let leftDimNode: ASDisplayNode
     private let rightDimNode: ASDisplayNode
+    private let centerDimNode: ASDisplayNode
     private let frameNode: ASImageNode
     private let torchButtonNode: GlassButtonNode
     private let titleNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
     
     private let camera: Camera
     private let codeDisposable = MetaDisposable()
     
     fileprivate let focusedCode = ValuePromise<CameraCode?>(ignoreRepeated: true)
     private var focusedRect: CGRect?
+    
+    private(set) var confirmationNode: AuthTransferConfirmationNode?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -204,6 +226,10 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.rightDimNode.alpha = 0.625
         self.rightDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.8)
         
+        self.centerDimNode = ASDisplayNode()
+        self.centerDimNode.alpha = 0.0
+        self.centerDimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.8)
+        
         self.frameNode = ASImageNode()
         self.frameNode.image = generateFrameImage()
         
@@ -214,6 +240,12 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Qr_ScanCode, font: Font.bold(32.0), textColor: .white)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.attributedText = NSAttributedString(string: "Scan a QR code to log into\nthis account on another device.", font: Font.regular(16.0), textColor: .white)
+        self.textNode.maximumNumberOfLines = 0
+        self.textNode.textAlignment = .center
         
         self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false))
         
@@ -227,9 +259,11 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.addSubnode(self.bottomDimNode)
         self.addSubnode(self.leftDimNode)
         self.addSubnode(self.rightDimNode)
+        self.addSubnode(self.centerDimNode)
         self.addSubnode(self.frameNode)
         self.addSubnode(self.torchButtonNode)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
       
         self.torchButtonNode.addTarget(self, action: #selector(self.torchPressed), forControlEvents: .touchUpInside)
     }
@@ -281,6 +315,28 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         }
     }
     
+    func updateTokenPreview(confirmationNode: AuthTransferConfirmationNode?) {
+        if let confirmationNode = self.confirmationNode {
+            confirmationNode.animateOut { [weak confirmationNode] in
+                confirmationNode?.removeFromSupernode()
+            }
+            self.confirmationNode = nil
+        }
+        self.confirmationNode = confirmationNode
+        if let confirmationNode = self.confirmationNode {
+            self.addSubnode(confirmationNode)
+            if let (layout, navigationHeight) = self.validLayout {
+                confirmationNode.updateLayout(layout: layout, transition: .immediate)
+                confirmationNode.animateIn()
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        } else {
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        }
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationHeight)
         
@@ -307,7 +363,21 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         let dimAlpha: CGFloat
         let dimRect: CGRect
         let controlsAlpha: CGFloat
-        if let focusedRect = self.focusedRect {
+        var centerDimAlpha: CGFloat = 0.0
+        var frameAlpha: CGFloat = 1.0
+        if self.confirmationNode != nil {
+            controlsAlpha = 0.0
+            dimAlpha = 0.625
+            centerDimAlpha = 0.625
+            frameAlpha = 0.0
+            if let focusedRect = self.focusedRect {
+                let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
+                let center = CGPoint(x: (1.0 - focusedRect.center.y) * bounds.width, y: focusedRect.center.x * bounds.height)
+                dimRect = CGRect(x: center.x - side / 2.0, y: center.y - side / 2.0, width: side, height: side)
+            } else {
+                dimRect = CGRect(x: dimInset, y: dimHeight, width: layout.size.width - dimInset * 2.0, height: layout.size.height - dimHeight * 2.0)
+            }
+        } else if let focusedRect = self.focusedRect {
             controlsAlpha = 0.0
             dimAlpha = 1.0
             let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
@@ -323,22 +393,33 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateAlpha(node: self.bottomDimNode, alpha: dimAlpha)
         transition.updateAlpha(node: self.leftDimNode, alpha: dimAlpha)
         transition.updateAlpha(node: self.rightDimNode, alpha: dimAlpha)
+        transition.updateAlpha(node: self.centerDimNode, alpha: centerDimAlpha)
+        transition.updateAlpha(node: self.frameNode, alpha: frameAlpha)
         
         transition.updateFrame(node: self.topDimNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: dimRect.minY))
         transition.updateFrame(node: self.bottomDimNode, frame: CGRect(x: 0.0, y: dimRect.maxY, width: layout.size.width, height: max(0.0, layout.size.height - dimRect.maxY)))
         transition.updateFrame(node: self.leftDimNode, frame: CGRect(x: 0.0, y: dimRect.minY, width: max(0.0, dimRect.minX), height: dimRect.height))
         transition.updateFrame(node: self.rightDimNode, frame: CGRect(x: dimRect.maxX, y: dimRect.minY, width: max(0.0, layout.size.width - dimRect.maxX), height: dimRect.height))
         transition.updateFrame(node: self.frameNode, frame: dimRect.insetBy(dx: -2.0, dy: -2.0))
+        transition.updateFrame(node: self.centerDimNode, frame: dimRect)
         
         let buttonSize = CGSize(width: 72.0, height: 72.0)
         transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 50.0), size: buttonSize))
         
         transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
+        transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: dimHeight - titleSize.height - titleSpacing), size: titleSize)
+        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: dimHeight - textSize.height - titleSpacing), size: textSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
+        transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+        
+        if let confirmationNode = self.confirmationNode {
+            confirmationNode.updateLayout(layout: layout, transition: transition)
+        }
     }
     
     @objc private func torchPressed() {
