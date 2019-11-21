@@ -181,11 +181,6 @@ def diff_plists(file1, file2):
     if data1 == data2:
         return 'equal'
     else:
-        with open('lhs.plist', 'wb') as f:
-            f.write(str.encode(data1))
-        with open('rhs.plist', 'wb') as f:
-            f.write(str.encode(data2))
-        sys.exit(1)
         return 'not_equal'
 
 
