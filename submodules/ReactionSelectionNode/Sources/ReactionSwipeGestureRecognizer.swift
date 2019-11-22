@@ -16,6 +16,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     public var availableReactions: (() -> [ReactionGestureItem])?
     public var getReactionContainer: (() -> ReactionSelectionParentNode?)?
     public var getAnchorPoint: (() -> CGPoint?)?
+    public var shouldElevateAnchorPoint: (() -> Bool)?
     public var began: (() -> Void)?
     public var updateOffset: ((CGFloat, Bool) -> Void)?
     public var completed: ((ReactionGestureItem?) -> Void)?
@@ -99,7 +100,9 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                         self.f()
                     }
                 }
-                let activationTimer = Timer(timeInterval: 0.1, target: TimerTarget { [weak self] in
+                let elevate = self.shouldElevateAnchorPoint?() ?? false
+                
+                let activationTimer = Timer(timeInterval: elevate ? 0.1 : 0.01, target: TimerTarget { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -108,7 +111,9 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                         let location = strongSelf.currentLocation
                         if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?(), let localAnchorPoint = strongSelf.getAnchorPoint?() {
                             strongSelf.currentContainer = reactionContainer
-                            let reactionContainerLocation = reactionContainer.view.convert(localAnchorPoint, from: strongSelf.view)
+                            //let reactionContainerLocation = reactionContainer.view.convert(localAnchorPoint, from: strongSelf.view)
+                            let elevate = strongSelf.shouldElevateAnchorPoint?() ?? false
+                            let reactionContainerLocation = reactionContainer.view.convert(location, from: nil).offsetBy(dx: 0.0, dy: elevate ? -44.0 : 22.0)
                             let reactionContainerTouchPoint = reactionContainer.view.convert(location, from: nil)
                             strongSelf.currentAnchorPoint = reactionContainerLocation
                             strongSelf.currentAnchorStartPoint = location

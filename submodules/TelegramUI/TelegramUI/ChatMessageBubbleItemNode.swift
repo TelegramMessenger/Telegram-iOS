@@ -449,6 +449,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
                 return CGPoint(x: strongSelf.backgroundNode.frame.maxX, y: strongSelf.backgroundNode.frame.minY)
             }
+            reactionRecognizer.shouldElevateAnchorPoint = { [weak self] in
+                guard let strongSelf = self, let item = strongSelf.item else {
+                    return false
+                }
+                return item.controllerInteraction.canSetupReply(item.message)
+            }
             reactionRecognizer.began = { [weak self] in
                 guard let strongSelf = self, let item = strongSelf.item else {
                     return
@@ -491,6 +497,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             reactionRecognizer.displayReply = { [weak self] offset in
                 guard let strongSelf = self, let item = strongSelf.item else {
+                    return
+                }
+                if !item.controllerInteraction.canSetupReply(item.message) {
                     return
                 }
                 if strongSelf.swipeToReplyFeedback == nil {

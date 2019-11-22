@@ -61,6 +61,12 @@ public class UnauthorizedAccount {
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
+    private let stateManager: UnauthorizedAccountStateManager
+    
+    private let updateLoginTokenPipe = ValuePipe<Void>()
+    public var updateLoginTokenEvents: Signal<Void, NoError> {
+        return self.updateLoginTokenPipe.signal()
+    }
     
     public var masterDatacenterId: Int32 {
         return Int32(self.network.mtProto.datacenterId)
@@ -76,6 +82,10 @@ public class UnauthorizedAccount {
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
+        let updateLoginTokenPipe = self.updateLoginTokenPipe
+        self.stateManager = UnauthorizedAccountStateManager(network: network, updateLoginToken: {
+            updateLoginTokenPipe.putNext(Void())
+        })
         
         network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()
         |> map { mode -> Bool in
@@ -99,6 +109,8 @@ public class UnauthorizedAccount {
             }
             network.context.beginExplicitBackupAddressDiscovery()
         })
+        
+        self.stateManager.reset()
     }
     
     public func changedMasterDatacenterId(accountManager: AccountManager, masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {

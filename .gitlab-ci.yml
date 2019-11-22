@@ -1,6 +1,8 @@
 stages:
   - build
   - deploy
+  - verifysanity
+  - verify
 
 variables:
   LANG: "en_US.UTF-8"
@@ -50,3 +52,39 @@ deploy_beta_testflight:
     - bash buildbox/deploy-telegram.sh appstore
   environment:
     name: testflight_llc
+
+verifysanity_beta_testflight:
+  tags:
+    - ios_beta
+  stage: verifysanity
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/verify-telegram.sh appstore cached
+  environment:
+    name: testflight_llc
+  artifacts:
+    when: on_failure
+    paths:
+      - build/verifysanity_artifacts
+    expire_in: 1 week
+
+verify_beta_testflight:
+  tags:
+    - ios_beta
+  stage: verify
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - bash buildbox/verify-telegram.sh appstore full
+  environment:
+    name: testflight_llc
+  artifacts:
+    when: on_failure
+    paths:
+      - build/verify_artifacts
+    expire_in: 1 week

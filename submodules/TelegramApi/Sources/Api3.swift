@@ -4139,6 +4139,63 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func exportLoginToken(apiId: Int32, apiHash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginToken>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(434003159)
+                    serializeInt32(apiId, buffer: buffer, boxed: false)
+                    serializeString(apiHash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.exportLoginToken", parameters: [("apiId", apiId), ("apiHash", apiHash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginToken? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.auth.LoginToken?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.auth.LoginToken
+                        }
+                        return result
+                    })
+                }
+            
+                public static func importLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginToken>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1783866140)
+                    serializeBytes(token, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.importLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginToken? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.auth.LoginToken?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.auth.LoginToken
+                        }
+                        return result
+                    })
+                }
+            
+                public static func acceptLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1122447801)
+                    serializeBytes(token, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.acceptLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func checkLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginTokenInfo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2102383792)
+                    serializeBytes(token, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.checkLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginTokenInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.auth.LoginTokenInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.auth.LoginTokenInfo
+                        }
+                        return result
+                    })
+                }
             }
             public struct bots {
                 public static func sendCustomRequest(customMethod: String, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DataJSON>) {

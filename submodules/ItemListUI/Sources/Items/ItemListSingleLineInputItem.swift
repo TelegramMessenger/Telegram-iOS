@@ -108,6 +108,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     private let maskNode: ASImageNode
     
     private let titleNode: TextNode
+    private let measureTitleSizeNode: TextNode
     private let textNode: TextFieldNode
     private let clearIconNode: ASImageNode
     private let clearButtonNode: HighlightableButtonNode
@@ -131,6 +132,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         self.maskNode = ASImageNode()
         
         self.titleNode = TextNode()
+        self.measureTitleSizeNode = TextNode()
         self.textNode = TextFieldNode()
         
         self.clearIconNode = ASImageNode()
@@ -185,6 +187,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     
     public func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeMeasureTitleSizeLayout = TextNode.asyncLayout(self.measureTitleSizeNode)
         
         let currentItem = self.item
         
@@ -215,9 +218,11 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let (measureTitleLayout, measureTitleSizeApply) = makeMeasureTitleSizeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "A", font: Font.regular(item.presentationData.fontSize.itemListBaseFontSize)), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let separatorHeight = UIScreenPixel
             
-            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
+            let contentSize = CGSize(width: params.width, height: max(titleLayout.size.height, measureTitleLayout.size.height) + 22.0)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -245,6 +250,8 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                     
                     let _ = titleApply()
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    
+                    let _ = measureTitleSizeApply()
                     
                     let secureEntry: Bool
                     let capitalizationType: UITextAutocapitalizationType

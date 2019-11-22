@@ -19,6 +19,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     private let sharedContext: SharedAccountContext
+    private var account: UnauthorizedAccount
     private let isTestingEnvironment: Bool
     private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let network: Network
@@ -41,13 +42,15 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         }
     }
     var loginWithNumber: ((String, Bool) -> Void)?
+    var accountUpdated: ((UnauthorizedAccount) -> Void)?
     
     private let termsDisposable = MetaDisposable()
     
     private let hapticFeedback = HapticFeedback()
     
-    init(sharedContext: SharedAccountContext, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.sharedContext = sharedContext
+        self.account = account
         self.isTestingEnvironment = isTestingEnvironment
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
@@ -95,13 +98,21 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(strings: self.presentationData.strings, theme: self.presentationData.theme, debugAction: { [weak self] in
+        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(accountManager: self.sharedContext.accountManager, account: self.account, strings: self.presentationData.strings, theme: self.presentationData.theme, debugAction: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.view.endEditing(true)
             self?.present(debugController(sharedContext: strongSelf.sharedContext, context: nil, modal: true), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil)
+        }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil)
+        self.controllerNode.accountUpdated = { [weak self] account in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.account = account
+            strongSelf.accountUpdated?(account)
+        }
+        
         if let (code, name, number) = self.currentData {
             self.controllerNode.codeAndNumber = (code, name, number)
         }

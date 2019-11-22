@@ -5138,3 +5138,8 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.TextSize.Apply" = "Set";
 
 "Shortcut.SwitchAccount" = "Switch Account";
+
+"Settings.Devices" = "Devices";
+"Settings.AddDevice" = "Add";
+"AuthSessions.DevicesTitle" = "Devices";
+"AuthSessions.AddDevice" = "Add Device";

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import AuthTransferUI
 
 private final class RecentSessionsControllerArguments {
     let account: Account
@@ -21,7 +22,9 @@ private final class RecentSessionsControllerArguments {
     let removeWebSession: (Int64) -> Void
     let terminateAllWebSessions: () -> Void
     
-    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void) {
+    let addDevice: () -> Void
+    
+    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void) {
         self.account = account
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
@@ -29,6 +32,8 @@ private final class RecentSessionsControllerArguments {
         
         self.removeWebSession = removeWebSession
         self.terminateAllWebSessions = terminateAllWebSessions
+        
+        self.addDevice = addDevice
     }
 }
 
@@ -84,6 +89,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case pendingSession(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case pendingSessionsInfo(PresentationTheme, String)
     case otherSessionsHeader(PresentationTheme, String)
+    case addDevice(PresentationTheme, String)
     case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case website(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
     
@@ -93,7 +99,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return RecentSessionsSection.currentSession.rawValue
             case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
                 return RecentSessionsSection.pendingSessions.rawValue
-            case .otherSessionsHeader, .session, .website:
+            case .otherSessionsHeader, .addDevice, .session, .website:
                 return RecentSessionsSection.otherSessions.rawValue
         }
     }
@@ -118,6 +124,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return .index(6)
             case .otherSessionsHeader:
                 return .index(7)
+            case .addDevice:
+                return .index(8)
             case let .session(_, _, _, _, session, _, _, _):
                 return .session(session.hash)
             case let .website(_, _, _, _, _, website, _, _, _, _):
@@ -171,6 +179,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 }
             case let .otherSessionsHeader(lhsTheme, lhsText):
                 if case let .otherSessionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .addDevice(lhsTheme, lhsText):
+                if case let .addDevice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -271,6 +285,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .otherSessionsHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .addDevice(theme, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.addDevice()
+                })
             case let .session(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
                 return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
@@ -370,6 +388,8 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             
             entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
             
+            entries.append(.addDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
+            
             let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
@@ -421,7 +441,10 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    activeSessionsContext.loadMore()
+    
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -575,6 +598,8 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, addDevice: {
+        pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
     })
     
     let websitesSignal: Signal<([WebAuthorization], [PeerId : Peer])?, NoError> = .single(nil) |> then(webSessions(network: context.account.network) |> map(Optional.init))
@@ -619,7 +644,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         if let websites = websites, !websites.isEmpty {
             title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
         } else {
-            title = .text(presentationData.strings.AuthSessions_Title)
+            title = .text(presentationData.strings.AuthSessions_DevicesTitle)
         }
         
         var animateChanges = true
@@ -654,6 +679,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     
     return controller
