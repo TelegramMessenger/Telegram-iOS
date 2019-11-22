@@ -1615,7 +1615,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time, completion: { [weak self] in
-                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                 strongSelf.openScheduledMessages()
                             }
                         })
@@ -4243,12 +4243,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
                 
-                self.sentMessageEventsDisposable.set(self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId).start(next: { [weak self] _ in
+                self.sentMessageEventsDisposable.set((self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] namespace in
                     if let strongSelf = self {
-                        let inAppNotificationSettings: InAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        
+                        let inAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                         if inAppNotificationSettings.playSounds {
                             serviceSoundManager.playMessageDeliveredSound()
+                        }
+                        if !strongSelf.presentationInterfaceState.isScheduledMessages && namespace == Namespaces.Message.ScheduledCloud {
+                            strongSelf.openScheduledMessages()
                         }
                     }
                 }))
@@ -4526,11 +4529,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }
-        
-        /*if let subject = self.subject, case .scheduledMessages = subject {
-            self.chatDisplayNode.animateIn()
-            self.updateTransitionWhenPresentedAsModal?(1.0, .animated(duration: 0.5, curve: .spring))
-        }*/
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -5514,7 +5512,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                                 if let strongSelf = self {
                                     done(time)
-                                    if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                    if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                         strongSelf.openScheduledMessages()
                                     }
                                 }
@@ -5553,7 +5551,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                         if let strongSelf = self {
                              done(time)
-                            if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                            if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                 strongSelf.openScheduledMessages()
                             }
                          }
@@ -5745,7 +5743,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                                 if let strongSelf = self {
                                      done(time)
-                                     if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                     if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
                                          strongSelf.openScheduledMessages()
                                      }
                                  }
@@ -7887,7 +7885,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func displaySendingOptionsTooltip() {
-        guard let rect = self.chatDisplayNode.frameForInputActionButton() else {
+        guard let rect = self.chatDisplayNode.frameForInputActionButton(), self.effectiveNavigationController?.topViewController === self else {
             return
         }
         self.sendingOptionsTooltipController?.dismiss()
@@ -8165,9 +8163,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func openScheduledMessages() {
+        guard let navigationController = self.effectiveNavigationController, navigationController.topViewController == self else {
+            return
+        }
         let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
-        self.effectiveNavigationController?.pushViewController(controller)
+        navigationController.pushViewController(controller)
     }
     
     private func presentScheduleTimePicker(selectedTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {

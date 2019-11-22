@@ -215,7 +215,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         let updatedRawMessageIds = result.updatedRawMessageIds
         
         var namespace = Namespaces.Message.Cloud
-        if let message = messages.first, Namespaces.Message.allScheduled.contains(message.id.namespace) {
+        if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
             namespace = Namespaces.Message.ScheduledCloud
         }
         
@@ -225,7 +225,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 resultMessages[id] = resultMessage
             }
         }
-        
+
         var mapping: [(Message, MessageIndex, StoreMessage)] = []
         
         for message in messages {
