@@ -610,7 +610,7 @@ private struct SettingsState: Equatable {
     var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -659,7 +659,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
-        entries.append(.devices(presentationData.theme, PresentationResourcesSettings.stickers, "Devices", ""))
+        entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount)"))
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
@@ -839,6 +839,23 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let displayPhoneNumberConfirmation = ValuePromise<Bool>(false)
     
+    let activeSessionsContextAndCountSignal = contextValue.get()
+    |> deliverOnMainQueue
+    |> mapToSignal { context -> Signal<(ActiveSessionsContext, Int), NoError> in
+        let activeSessionsContext = ActiveSessionsContext(account: context.account)
+        let otherSessionCount = activeSessionsContext.state
+        |> map { state -> Int in
+            return state.sessions.filter({ !$0.isCurrent }).count
+        }
+        |> distinctUntilChanged
+        return otherSessionCount
+        |> map { value in
+            return (activeSessionsContext, value)
+        }
+    }
+    let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int)>()
+    activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
+    
     let arguments = SettingsItemArguments(accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
@@ -896,9 +913,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
-                privacySettings.set(.single(settings))
-            }))
+            let _ = (activeSessionsContextAndCount.get()
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { activeSessionsContext, _ in
+                pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
+                    privacySettings.set(.single(settings))
+                }, activeSessionsContext: activeSessionsContext))
+            })
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()
@@ -1067,10 +1088,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             gesture?.cancel()
         }
     }, openDevices: {
-        let _ = (contextValue.get()
+        let _ = (activeSessionsContextAndCount.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { context in
-            pushControllerImpl?(AuthTransferScanScreen(context: context))
+        |> take(1)).start(next: { activeSessionsContext, count in
+            if count == 0 {
+                pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
+            } else {
+                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext))
+            }
         })
     })
     
@@ -1308,8 +1333,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp), accountsAndPeers.get())
-    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let otherSessionCount = activeSessionsContextAndCount.1
+
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
         let experimentalUISettings: ExperimentalUISettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -1347,7 +1374,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet)
         
         let (hasWallet, hasPassport, hasWatchApp) = hasWalletPassportAndWatch
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }

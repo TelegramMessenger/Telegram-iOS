@@ -72,14 +72,16 @@ private func generateFrameImage() -> UIImage? {
 
 public final class AuthTransferScanScreen: ViewController {
     private let context: AccountContext
+    private let activeSessionsContext: ActiveSessionsContext?
     private var presentationData: PresentationData
     
     private var codeDisposable: Disposable?
     private var inForegroundDisposable: Disposable?
     private let approveDisposable = MetaDisposable()
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, activeSessionsContext: ActiveSessionsContext?) {
         self.context = context
+        self.activeSessionsContext = activeSessionsContext
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -155,6 +157,10 @@ public final class AuthTransferScanScreen: ViewController {
                             guard let strongSelf = self else {
                                 return
                             }
+                            let activeSessionsContext = strongSelf.activeSessionsContext
+                            Queue.mainQueue().after(1.5, {
+                                activeSessionsContext?.loadMore()
+                            })
                             strongSelf.dismiss()
                         }))
                     }, cancel: {
@@ -189,6 +195,7 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
     private let torchButtonNode: GlassButtonNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let descriptionNode: ImmediateTextNode
     
     private let camera: Camera
     private let codeDisposable = MetaDisposable()
@@ -247,6 +254,12 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
         
+        self.descriptionNode = ImmediateTextNode()
+        self.descriptionNode.displaysAsynchronously = false
+        self.descriptionNode.attributedText = NSAttributedString(string: "Telegram is available for\niPhone, iPad, macOS, Windows and Linux", font: Font.regular(14.0), textColor: .white)
+        self.descriptionNode.maximumNumberOfLines = 0
+        self.descriptionNode.textAlignment = .center
+        
         self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false))
         
         super.init()
@@ -261,9 +274,10 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.addSubnode(self.rightDimNode)
         self.addSubnode(self.centerDimNode)
         self.addSubnode(self.frameNode)
-        self.addSubnode(self.torchButtonNode)
+        //self.addSubnode(self.torchButtonNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.descriptionNode)
       
         self.torchButtonNode.addTarget(self, action: #selector(self.torchPressed), forControlEvents: .touchUpInside)
     }
@@ -408,14 +422,18 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         
         transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
+        transition.updateAlpha(node: self.descriptionNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: dimHeight - textSize.height - titleSpacing), size: textSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
+        let descriptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - descriptionSize.width) / 2.0), y: layout.size.height - dimHeight + titleSpacing), size: descriptionSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+        transition.updateFrameAdditive(node: self.descriptionNode, frame: descriptionFrame)
         
         if let confirmationNode = self.confirmationNode {
             confirmationNode.updateLayout(layout: layout, transition: transition)
