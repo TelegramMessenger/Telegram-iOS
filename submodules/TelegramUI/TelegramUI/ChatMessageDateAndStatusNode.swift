@@ -123,6 +123,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
             let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+            let isDefaultWallpaper = serviceMessageColorHasDefaultWallpaper(presentationData.theme.wallpaper)
             let offset: CGFloat = -UIScreenPixel
             
             let checkSize: CGFloat = floor(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
@@ -177,8 +178,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     dateColor = serviceColor.primaryText
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize)
-                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
@@ -190,8 +191,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
-                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize)
-                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize)
+                    loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
+                    loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                     clockFrameImage = graphics.clockFreeFrameImage
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {

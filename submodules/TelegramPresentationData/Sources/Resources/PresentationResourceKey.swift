@@ -226,6 +226,6 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatOutgoingPartialCheck(CGFloat)
     case chatMediaFullCheck(CGFloat)
     case chatMediaPartialCheck(CGFloat)
-    case chatFreeFullCheck(CGFloat)
-    case chatFreePartialCheck(CGFloat)
+    case chatFreeFullCheck(CGFloat, Bool)
+    case chatFreePartialCheck(CGFloat, Bool)
 }

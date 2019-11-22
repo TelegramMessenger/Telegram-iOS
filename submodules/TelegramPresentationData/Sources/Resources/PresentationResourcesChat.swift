@@ -937,15 +937,17 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatFreeFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
-        return theme.image(PresentationResourceParameterKey.chatFreeFullCheck(size), { _ in
-            return generateCheckImage(partial: false, color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText, width: size)
+    public static func chatFreeFullCheck(_ theme: PresentationTheme, size: CGFloat, isDefaultWallpaper: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreeFullCheck(size, isDefaultWallpaper), { _ in
+            let color = isDefaultWallpaper ? theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText : theme.chat.serviceMessage.components.withCustomWallpaper.primaryText
+            return generateCheckImage(partial: false, color: color, width: size)
         })
     }
     
-    public static func chatFreePartialCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
-        return theme.image(PresentationResourceParameterKey.chatFreePartialCheck(size), { _ in
-            return generateCheckImage(partial: true, color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText, width: size)
+    public static func chatFreePartialCheck(_ theme: PresentationTheme, size: CGFloat, isDefaultWallpaper: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatFreePartialCheck(size, isDefaultWallpaper), { _ in
+            let color = isDefaultWallpaper ? theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText : theme.chat.serviceMessage.components.withCustomWallpaper.primaryText
+            return generateCheckImage(partial: true, color: color, width: size)
         })
     }
 }

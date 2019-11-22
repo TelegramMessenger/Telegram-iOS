@@ -676,13 +676,17 @@ public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: T
     return serviceMessageColorComponents(chatTheme: theme.chat, wallpaper: wallpaper)
 }
 
-public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+public func serviceMessageColorHasDefaultWallpaper(_ wallpaper: TelegramWallpaper) -> Bool {
     switch wallpaper {
         case .color(0xffffff):
-            return chatTheme.serviceMessage.components.withDefaultWallpaper
+            return true
         default:
-            return chatTheme.serviceMessage.components.withCustomWallpaper
+            return false
     }
+}
+
+public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+    return serviceMessageColorHasDefaultWallpaper(wallpaper) ? chatTheme.serviceMessage.components.withDefaultWallpaper : chatTheme.serviceMessage.components.withCustomWallpaper
 }
 
 public final class PresentationThemeServiceMessageColor {

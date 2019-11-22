@@ -250,7 +250,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, bubbleColors:
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x748391, alpha: 0.45), primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: .white,  dateFillStatic: UIColor(rgb: 0x748391, alpha: 0.45), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: .white, dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x748391, alpha: 0.45), primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: .white, dateFillStatic: UIColor(rgb: 0x748391, alpha: 0.45), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), scam: .white, dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
         unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
         unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
         unreadBarTextColor: UIColor(rgb: 0x86868d),
