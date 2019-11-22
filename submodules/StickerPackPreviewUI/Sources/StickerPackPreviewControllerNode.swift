@@ -223,7 +223,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                         }
                                     return true
                                 }))
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { _, _ in return true }))
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true }))
                             }
                             return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {

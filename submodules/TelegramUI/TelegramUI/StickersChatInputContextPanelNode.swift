@@ -167,7 +167,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                         }
                                         return true
                                     }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
+                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
                                 ]
                                 return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                             } else {

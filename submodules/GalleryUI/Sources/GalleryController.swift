@@ -646,7 +646,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -671,7 +671,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -692,7 +692,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 UIPasteboard.general.string = mention
                             })
                         ]), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -706,7 +706,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             UIPasteboard.general.string = command
                         }))
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -727,7 +727,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 UIPasteboard.general.string = hashtag
                             })
                         ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])
@@ -749,7 +749,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 UIPasteboard.general.string = text
                             })
                         ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])

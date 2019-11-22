@@ -278,7 +278,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 }
             })
             ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -345,7 +345,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         }
         
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])

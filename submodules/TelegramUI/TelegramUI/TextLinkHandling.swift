@@ -123,7 +123,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             }
                         })
                     ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -141,7 +141,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             UIPasteboard.general.string = mention
                         })
                     ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -160,7 +160,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             UIPasteboard.general.string = hashtag
                         })
                     ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])

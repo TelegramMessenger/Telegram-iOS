@@ -507,7 +507,7 @@ public class ContactsController: ViewController {
             updateSortOrder(.presence)
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])

@@ -598,7 +598,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }).start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
                 ])])
@@ -931,7 +931,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                             }
                                             return true
                                         }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
+                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
                                     ]
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
@@ -1046,7 +1046,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                                 return true
                                             }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
+                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
                                         ]
                                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {

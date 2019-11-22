@@ -285,7 +285,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -309,7 +309,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -329,7 +329,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = mention
                             })
                             ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
@@ -343,7 +343,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = command
                             })
                             ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
@@ -364,7 +364,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = hashtag
                             })
                             ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
@@ -387,7 +387,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = text
                             })
                             ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])

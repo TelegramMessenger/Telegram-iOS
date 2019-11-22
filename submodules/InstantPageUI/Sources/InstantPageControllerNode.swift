@@ -931,7 +931,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                         }
                                     })
                                 ]), ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: self.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    ActionSheetButtonItem(title: self.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                     })
                                 ])])

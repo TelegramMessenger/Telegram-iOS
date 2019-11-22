@@ -368,7 +368,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
                                         }
                                     })
                                     ]), ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
                                         })
                                     ])])

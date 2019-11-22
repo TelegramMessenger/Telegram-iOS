@@ -492,7 +492,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
             }), nil)
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])
@@ -517,7 +517,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                 }))
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])
@@ -711,7 +711,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                 applyRights()
                             }))
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])

@@ -772,7 +772,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         actionSheet.setItemGroups([
                             ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])
@@ -835,7 +835,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -961,7 +961,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])

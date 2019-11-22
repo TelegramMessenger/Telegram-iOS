@@ -1215,7 +1215,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -1240,7 +1240,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }))
                         }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -1261,7 +1261,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     UIPasteboard.general.string = mention
                             })
                         ]), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -1284,7 +1284,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             UIPasteboard.general.string = command
                         }))
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -1318,7 +1318,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 UIPasteboard.general.string = hashtag
                             })
                         ]), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
@@ -1342,7 +1342,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 UIPasteboard.general.string = text
                             })
                             ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                 })
                             ])])
@@ -2941,7 +2941,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = clearPeerUnseenPersonalMessagesInteractively(account: strongSelf.context.account, peerId: peerId).start()
                 })
             ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -3986,7 +3986,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }), forKey: id)
                 })
             ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -5122,7 +5122,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
 
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
                 ])])
@@ -5440,7 +5440,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.presentContactPicker()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
                 ])])
@@ -5662,7 +5662,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         ]), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])
@@ -7015,7 +7015,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }))
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -7112,7 +7112,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }))
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -7157,7 +7157,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
             
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
@@ -7667,7 +7667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                     
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
@@ -7770,7 +7770,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             contextController.setItems(.single(contextItems))
         } else {
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })
             ])])
