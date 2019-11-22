@@ -589,7 +589,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
                     if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
-                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.size.height - imageSize.height) / 2.0)), size: imageSize)
+                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
                         switch thumbnailItem {
                             case .still:
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)

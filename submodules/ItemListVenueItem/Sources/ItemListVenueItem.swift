@@ -11,18 +11,20 @@ import ItemListUI
 import LocationResources
 
 public final class ItemListVenueItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let account: Account
     let venue: TelegramMediaMap
     
     public let sectionId: ItemListSectionId
+    let style: ItemListStyle
     let action: (() -> Void)?
     
-    public init(theme: PresentationTheme, account: Account, venue: TelegramMediaMap, sectionId: ItemListSectionId, action: (() -> Void)?) {
-        self.theme = theme
+    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?) {
+        self.presentationData = presentationData
         self.account = account
         self.venue = venue
         self.sectionId = sectionId
+        self.style = style
         self.action = action
     }
     
@@ -71,9 +73,6 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
         self.action?()
     }
 }
-
-private let titleFont = Font.regular(17.0)
-private let addressFont = Font.regular(14.0)
 
 public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -144,8 +143,11 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
             var updatedTheme: PresentationTheme?
             var updatedVenueType: String?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let addressFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
         
             let venueType = item.venue.venue?.type ?? ""
@@ -153,19 +155,24 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                 updatedVenueType = venueType
             }
         
-            let titleAttributedString = NSAttributedString(string: item.venue.venue?.title ?? "", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
-            let addressAttributedString = NSAttributedString(string: item.venue.venue?.address ?? "", font: addressFont, textColor: item.theme.list.itemSecondaryTextColor)
+            let titleAttributedString = NSAttributedString(string: item.venue.venue?.title ?? "", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            let addressAttributedString = NSAttributedString(string: item.venue.venue?.address ?? "", font: addressFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = params.rightInset
-            let height: CGFloat = 50.0
+            let verticalInset: CGFloat = addressAttributedString.string.isEmpty ? 14.0 : 8.0
             let iconSize: CGFloat = 40.0
            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: addressAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let titleSpacing: CGFloat = 1.0
+            
+            let minHeight: CGFloat = titleLayout.size.height + verticalInset * 2.0
+            let rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + addressLayout.size.height
+            
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: height)
+            let contentSize = CGSize(width: params.width, height: max(minHeight, rawHeight))
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -179,10 +186,10 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.accessibilityValue = addressAttributedString.string
                      
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                                         
                     let transition = ContainedViewLayoutTransition.immediate
@@ -233,29 +240,19 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: (addressAttributedString.string.isEmpty ? 14.0 : 6.0)), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.addressNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 27.0), size: addressLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.addressNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: addressLayout.size))
                     
-                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize)))
+                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((layout.contentSize.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize)))
                     
-//                    if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-//                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
-//                    } else {
-//                        var overrideImage: AvatarNodeImageOverride?
-//                        if item.peer.isDeleted {
-//                            overrideImage = .deletedIcon
-//                        }
-//                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
-//                    }
-                    
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

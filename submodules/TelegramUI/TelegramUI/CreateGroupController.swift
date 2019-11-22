@@ -258,7 +258,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .venueHeader(theme, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .venue(_, theme, venue):
-                return ItemListVenueItem(theme: theme, account: arguments.account, venue: venue, sectionId: self.section, action: {
+                return ItemListVenueItem(presentationData: presentationData, account: arguments.account, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }
