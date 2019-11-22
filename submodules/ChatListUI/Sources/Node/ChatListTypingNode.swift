@@ -10,8 +10,6 @@ import TelegramPresentationData
 import ChatTitleActivityNode
 import LocalizedPeerData
 
-private let textFont = Font.regular(15.0)
-
 final class ChatListInputActivitiesNode: ASDisplayNode {
     private let activityNode: ChatTitleActivityNode
     
@@ -23,8 +21,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, PresentationStrings, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
-        return { [weak self] boundingSize, strings, color, peerId, activities in
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+        return { [weak self] boundingSize, presentationData, color, peerId, activities in
+            let strings = presentationData.strings
+            
+            let textFont = Font.regular(floor(presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            
             var state = ChatTitleActivityNodeState.none
             
             if !activities.isEmpty {

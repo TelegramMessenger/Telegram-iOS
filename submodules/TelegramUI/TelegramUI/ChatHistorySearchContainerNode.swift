@@ -10,6 +10,7 @@ import TelegramPresentationData
 import MergeLists
 import AccountContext
 import SearchUI
+import TelegramUIPreferences
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
@@ -35,19 +36,19 @@ private enum ChatHistorySearchEntryStableId: Hashable {
 
 
 private enum ChatHistorySearchEntry: Comparable, Identifiable {
-    case message(Message, PresentationTheme, PresentationStrings, PresentationDateTimeFormat)
+    case message(Message, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationFontSize)
     
     var stableId: ChatHistorySearchEntryStableId {
         switch self {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 return .messageId(message.id)
         }
     }
     
     static func ==(lhs: ChatHistorySearchEntry, rhs: ChatHistorySearchEntry) -> Bool {
         switch lhs {
-            case let .message(lhsMessage, lhsTheme, lhsStrings, lhsDateTimeFormat):
-                if case let .message(rhsMessage, rhsTheme, rhsStrings, rhsDateTimeFormat) = rhs {
+            case let .message(lhsMessage, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsFontSize):
+                if case let .message(rhsMessage, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsFontSize) = rhs {
                     if lhsMessage.id != rhsMessage.id {
                         return false
                     }
@@ -63,6 +64,9 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
                     if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
+                    if lhsFontSize != rhsFontSize {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -72,8 +76,8 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     
     static func <(lhs: ChatHistorySearchEntry, rhs: ChatHistorySearchEntry) -> Bool {
         switch lhs {
-            case let .message(lhsMessage, _, _, _):
-                if case let .message(rhsMessage, _, _, _) = rhs {
+            case let .message(lhsMessage, _, _, _, _):
+                if case let .message(rhsMessage, _, _, _, _) = rhs {
                     return lhsMessage.index < rhsMessage.index
                 } else {
                     return false
@@ -83,8 +87,8 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
-            case let .message(message, theme, strings, dateTimeFormat):
-                return ListMessageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, context: context, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
+            case let .message(message, theme, strings, dateTimeFormat, fontSize):
+                return ListMessageItem(theme: theme, strings: strings, fontSize: fontSize, dateTimeFormat: dateTimeFormat, context: context, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
         }
     }
 }
@@ -134,7 +138,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationFontSize)>
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
@@ -143,7 +147,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.fontSize))
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
@@ -191,7 +195,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                             return ([], [:])
                         } else {
                             return (messages.map { message -> ChatHistorySearchEntry in
-                                return .message(message, themeAndStrings.0, themeAndStrings.1, themeAndStrings.2)
+                                return .message(message, themeAndStrings.0, themeAndStrings.1, themeAndStrings.2, themeAndStrings.3)
                             }, Dictionary(messages.map { ($0.id, $0) }, uniquingKeysWith: { lhs, _ in lhs }))
                         }
                     }
@@ -224,7 +228,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)))
+                strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.fontSize)))
                 
                 strongSelf.emptyResultsTitleNode.attributedText = NSAttributedString(string: presentationData.strings.SharedMedia_SearchNoResults, font: Font.semibold(17.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
                 
@@ -342,10 +346,10 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         if let currentEntries = self.currentEntries {
             for entry in currentEntries {
                 switch entry {
-                    case let .message(message, _, _, _):
-                        if message.id == id {
-                            return message
-                        }
+                case let .message(message, _, _, _, _):
+                    if message.id == id {
+                        return message
+                    }
                 }
             }
         }

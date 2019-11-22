@@ -34,6 +34,8 @@ enum ChatListStatusNodeState: Equatable {
 private let transitionDuration = 0.2
 
 class ChatListStatusContentNode: ASDisplayNode {
+    var fontSize: CGFloat = 17.0
+    
     override init() {
         super.init()
         
@@ -57,6 +59,13 @@ class ChatListStatusContentNode: ASDisplayNode {
 final class ChatListStatusNode: ASDisplayNode {
     private(set) var state: ChatListStatusNodeState = .none
     
+    var fontSize: CGFloat = 17.0 {
+        didSet {
+            self.contentNode?.fontSize = self.fontSize
+            self.nextContentNode?.fontSize = self.fontSize
+        }
+    }
+    
     private var contentNode: ChatListStatusContentNode?
     private var nextContentNode: ChatListStatusContentNode?
     
@@ -66,6 +75,7 @@ final class ChatListStatusNode: ASDisplayNode {
             self.state = state
             
             let contentNode = state.contentNode()
+            contentNode?.fontSize = self.fontSize
             if contentNode?.classForCoder != self.contentNode?.classForCoder {
                 contentNode?.updateWithState(state, animated: animated)
                 self.transitionToContentNode(contentNode, state: state, fromState: currentState, animated: animated, completion: completion)
@@ -190,10 +200,12 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
 private final class StatusChecksNodeParameters: NSObject {
     let color: UIColor
     let progress: CGFloat
+    let fontSize: CGFloat
     
-    init(color: UIColor, progress: CGFloat) {
+    init(color: UIColor, progress: CGFloat, fontSize: CGFloat) {
         self.color = color
         self.progress = progress
+        self.fontSize = fontSize
         
         super.init()
     }
@@ -209,6 +221,12 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
     }
     
     private var effectiveProgress: CGFloat = 1.0 {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
+    override var fontSize: CGFloat {
         didSet {
             self.setNeedsDisplay()
         }
@@ -241,7 +259,7 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return StatusChecksNodeParameters(color: self.color, progress: self.effectiveProgress)
+        return StatusChecksNodeParameters(color: self.color, progress: self.effectiveProgress, fontSize: self.fontSize)
     }
     
     override func didEnterHierarchy() {
@@ -260,6 +278,11 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
         guard let parameters = parameters as? StatusChecksNodeParameters else {
             return
         }
+        
+        let scaleFactor = min(1.4, parameters.fontSize / 17.0)
+        context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
+        context.scaleBy(x: scaleFactor, y: scaleFactor)
+        context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
         
         let progress = parameters.progress
         

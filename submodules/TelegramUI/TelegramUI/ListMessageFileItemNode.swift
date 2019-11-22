@@ -114,10 +114,6 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
         return nil
     }
 }
-
-private let titleFont = Font.medium(16.0)
-private let audioTitleFont = Font.regular(16.0)
-private let descriptionFont = Font.regular(13.0)
 private let extensionFont = Font.medium(13.0)
 
 private struct FetchControls {
@@ -316,6 +312,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                 updatedTheme = item.theme
             }
             
+            let titleFont = Font.medium(floor(item.fontSize.baseDisplaySize * 16.0 / 17.0))
+            let audioTitleFont = Font.regular(floor(item.fontSize.baseDisplaySize * 16.0 / 17.0))
+            let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 13.0 / 17.0))
+            
             var leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
             
@@ -494,7 +494,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 insets.top += header.height
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 56.0), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.size.height), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -562,7 +562,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: 32.0), size: descriptionNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 3.0), size: descriptionNodeLayout.size))
                     let _ = descriptionNodeApply()
                     
                     let iconFrame: CGRect
@@ -630,7 +630,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }))
                     }
                     
-                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 34.0), size: CGSize(width: 11.0, height: 11.0)))
+                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 11.0) / 2.0)), size: CGSize(width: 11.0, height: 11.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -840,6 +840,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             self.descriptionProgressNode.isHidden = true
             self.descriptionNode.isHidden = false
         }
+        let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 13.0 / 17.0))
         self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
         transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))

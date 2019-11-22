@@ -313,6 +313,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let avatarNode: AvatarNode
     let titleNode: TextNode
     let authorNode: TextNode
+    let measureNode: TextNode
+    private var currentItemHeight: CGFloat?
     let textNode: TextNode
     let contentImageNode: TransformImageNode
     let inputActivitiesNode: ChatListInputActivitiesNode
@@ -430,6 +432,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.contextContainer = ContextControllerSourceNode()
+        
+        self.measureNode = TextNode()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -633,6 +637,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let authorLayout = TextNode.asyncLayout(self.authorNode)
+        let makeMeasureLayout = TextNode.asyncLayout(self.measureNode)
         let inputActivitiesLayout = self.inputActivitiesNode.asyncLayout()
         let badgeLayout = self.badgeNode.asyncLayout()
         let mentionBadgeLayout = self.mentionBadgeNode.asyncLayout()
@@ -1105,21 +1110,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             badgeSize = max(badgeSize, reorderInset)
             
-            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, minimumNumberOfLines: 1, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (authorLayout, authorApply) = authorLayout(TextNodeLayoutArguments(attributedString: hideAuthor ? nil : authorAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             var textCutout: TextNodeCutout?
             if !textLeftCutout.isZero {
                 textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 4.0), topRight: nil, bottomRight: nil)
             }
-            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, minimumNumberOfLines: authorAttributedString == nil ? 2 : 1,  maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
-            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, minimumNumberOfLines: 1, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
             if let inputActivities = inputActivities, !inputActivities.isEmpty {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData.strings, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
+                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             }
@@ -1177,15 +1182,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 animateContent = true
             }
             
+            let measureString = NSAttributedString(string: "A", font: titleFont, textColor: .black)
+            let (measureLayout, measureApply) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let titleSpacing: CGFloat = -1.0
             let authorSpacing: CGFloat = -3.0
-            var itemHeight: CGFloat = 8.0 * 2.0 + titleLayout.size.height + titleSpacing
-            if authorLayout.size.height.isZero {
+            var itemHeight: CGFloat = 8.0 * 2.0 + 1.0
+            itemHeight += measureLayout.size.height * 3.0
+            itemHeight += titleSpacing
+            itemHeight += authorSpacing
+            
+            /*if authorLayout.size.height.isZero {
                 itemHeight += textLayout.size.height
             } else {
                 itemHeight += authorLayout.size.height
                 itemHeight += authorSpacing + textLayout.size.height
-            }
+            }*/
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
@@ -1209,6 +1221,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
+                    strongSelf.currentItemHeight = itemHeight
                     strongSelf.contentImageMedia = contentImageMedia
                     strongSelf.cachedChatListText = chatListText
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
@@ -1339,7 +1352,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
                     }
                     strongSelf.onlineNode.setImage(onlineIcon)
-                                        
+                                  
+                    let _ = measureApply()
                     let _ = dateApply()
                     let _ = textApply()
                     let _ = authorApply()
@@ -1354,6 +1368,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let statusSize = CGSize(width: 24.0, height: 24.0)
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width - statusSize.width, y: contentRect.origin.y + 2.0 - UIScreenPixel + floor((dateLayout.size.height - statusSize.height) / 2.0)), size: statusSize)
+                    strongSelf.statusNode.fontSize = item.presentationData.fontSize.itemListBaseFontSize
                     let _ = strongSelf.statusNode.transitionToState(statusState, animated: animateContent)
                     
                     if let _ = currentBadgeBackgroundImage {
@@ -1817,7 +1832,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let item = self.item {
             if case .groupReference = item.content {
-                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - self.bounds.size.height, 0.0)
+                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - (self.currentItemHeight ?? 0.0), 0.0)
             } else {
                 var separatorFrame = self.separatorNode.frame
                 separatorFrame.origin.y = currentValue - UIScreenPixel

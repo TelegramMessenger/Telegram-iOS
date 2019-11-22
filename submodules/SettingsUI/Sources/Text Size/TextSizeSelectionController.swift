@@ -113,7 +113,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         if case let .file(file) = presentationData.theme.chat.defaultWallpaper, file.id == 0 {
             self.remoteChatBackgroundNode.isHidden = false
-            self.toolbarNode.setDoneEnabled(false)
         } else {
             self.remoteChatBackgroundNode.isHidden = true
         }
@@ -212,7 +211,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             guard let strongSelf = self else {
                 return
             }
-            if case let .file(file) = wallpaper {
+            switch wallpaper {
+            case let .file(file):
                 let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                 let displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
 
@@ -267,6 +267,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                 }
 
                 strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
+            default:
+                break
             }
         }
         applyWallpaper(self.presentationData.chatWallpaper)
@@ -519,6 +521,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.toolbarNode.updatePresentationThemeSettings(presentationThemeSettings: self.presentationThemeSettings)
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            self.recursivelyEnsureDisplaySynchronously(true)
         }
     }
     
