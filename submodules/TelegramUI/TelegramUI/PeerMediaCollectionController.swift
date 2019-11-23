@@ -133,47 +133,56 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
             return false
-            }, openPeer: { [weak self] id, navigation, _ in
-                if let strongSelf = self, let id = id, let navigationController = strongSelf.navigationController as? NavigationController {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id)))
-                }
-            }, openPeerMention: { _ in
-            }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
+        }, openPeer: { [weak self] id, navigation, _ in
+            if let strongSelf = self, let id = id, let navigationController = strongSelf.navigationController as? NavigationController {
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id)))
+            }
+        }, openPeerMention: { _ in
+        }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let items = (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+            |> deliverOnMainQueue).start(next: { actions in
                 var messageIds = Set<MessageId>()
                 messageIds.insert(message.id)
                 
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
-                                    }
-                                }),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    if let strongSelf = self {
-                                        strongSelf.forwardMessages(messageIds)
-                                    }
-                                }),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    if let strongSelf = self {
-                                        strongSelf.deleteMessages(messageIds)
-                                    }
-                                })
-                            ]), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
+                        var items: [ActionSheetButtonItem] = []
+                        
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                            }
+                        }))
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.forwardMessages(messageIds)
+                            }
+                        }))
+                        if actions.options.contains(.deleteLocally) || actions.options.contains(.deleteGlobally) {
+                            items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.deleteMessages(messageIds)
+                                }
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
                             })
                         ])])
                         strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
                         strongSelf.present(actionSheet, in: .window(.root))
                     }
                 }
-            }, openMessageContextActions: { [weak self] message, node, rect, gesture in
+            })
+        }, openMessageContextActions: { [weak self] message, node, rect, gesture in
                 guard let strongSelf = self else {
                     gesture?.cancel()
                     return
