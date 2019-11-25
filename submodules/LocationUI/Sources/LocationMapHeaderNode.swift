@@ -112,7 +112,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.locationButtonNode, frame: CGRect(x: panelInset, y: panelInset + panelSize.height / 2.0, width: panelSize.width, height: panelSize.height / 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        let optionsAlpha: CGFloat = size.height > 110.0 + navigationBarHeight ? 1.0 : 0.0
+        let optionsAlpha: CGFloat = size.height > 124.0 + navigationBarHeight ? 1.0 : 0.0
         alphaTransition.updateAlpha(node: self.optionsBackgroundNode, alpha: optionsAlpha)
     }
     

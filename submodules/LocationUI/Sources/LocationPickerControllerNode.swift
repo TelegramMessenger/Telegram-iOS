@@ -21,6 +21,7 @@ private struct LocationPickerTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isLoading: Bool
+    let crossFade: Bool
 }
 
 private enum LocationPickerEntryId: Hashable {
@@ -159,17 +160,17 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
+private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, crossFade: Bool, account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return LocationPickerTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading)
+    return LocationPickerTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, crossFade: crossFade)
 }
 
-enum LocationPickerLocation {
+enum LocationPickerLocation: Equatable {
     case none
     case selecting
     case location(CLLocationCoordinate2D, String?)
@@ -177,10 +178,40 @@ enum LocationPickerLocation {
     
     var isCustom: Bool {
         switch self {
-            case .none:
-                return false
-            default:
+            case .selecting, .location:
                 return true
+            default:
+                return false
+        }
+    }
+    
+    public static func ==(lhs: LocationPickerLocation, rhs: LocationPickerLocation) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .selecting:
+                if case .selecting = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .location(lhsCoordinate, lhsAddress):
+                if case let .location(rhsCoordinate, rhsAddress) = rhs, lhsCoordinate == rhsCoordinate, lhsAddress == rhsAddress {
+                    return true
+                } else {
+                    return false
+                }
+            case let .venue(lhsVenue):
+                if case let .venue(rhsVenue) = rhs, lhsVenue.venue?.id == rhsVenue.venue?.id {
+                    return true
+                } else {
+                    return false
+                }
+            
         }
     }
 }
@@ -211,7 +242,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     private let optionsNode: LocationOptionsNode
     private(set) var searchContainerNode: LocationSearchContainerNode?
     
-    private var enqueuedTransitions: [(LocationPickerTransaction, Bool)] = []
+    private var enqueuedTransitions: [LocationPickerTransaction] = []
     
     private var disposable: Disposable?
     private var state: LocationPickerState
@@ -232,6 +263,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.statePromise = Promise(self.state)
         
         self.listNode = ListView()
+        self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
@@ -332,8 +364,15 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                     }
                 }
                 let previousEntries = previousEntries.swap(entries)
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: venues == nil, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
-                strongSelf.enqueueTransition(transition, firstTime: false)
+                let previousState = previousState.swap(state)
+                
+                var crossFade = false
+                if previousEntries?.count != entries.count || previousState.selectedLocation != state.selectedLocation {
+                    crossFade = true
+                }
+                
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: venues == nil, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
+                strongSelf.enqueueTransition(transition)
                 
                 strongSelf.headerNode.updateState(state)
                 
@@ -362,8 +401,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 if annotations != previousAnnotations {
                     strongSelf.headerNode.mapNode.annotations = annotations
                 }
-                
-                let previousState = previousState.swap(state)
                 
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
@@ -473,6 +510,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.headerNode.updatePresentationData(self.presentationData)
         self.optionsNode.updatePresentationData(self.presentationData)
         self.searchContainerNode?.updatePresentationData(self.presentationData)
@@ -483,8 +521,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.statePromise.set(.single(self.state))
     }
     
-    private func enqueueTransition(_ transition: LocationPickerTransaction, firstTime: Bool) {
-        self.enqueuedTransitions.append((transition, firstTime))
+    private func enqueueTransition(_ transition: LocationPickerTransaction) {
+        self.enqueuedTransitions.append(transition)
         
         if let _ = self.validLayout {
             while !self.enqueuedTransitions.isEmpty {
@@ -494,15 +532,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     }
     
     private func dequeueTransition() {
-        guard let layout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first else {
+        guard let layout = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
         
         var options = ListViewDeleteAndInsertOptions()
-        if firstTime {
-            options.insert(.PreferSynchronousDrawing)
-        } else {
+        if transition.crossFade {
             options.insert(.AnimateCrossfade)
         }
         

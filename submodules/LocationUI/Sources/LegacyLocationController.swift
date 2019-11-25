@@ -11,6 +11,7 @@ import ShareController
 import LegacyUI
 import OpenInExternalAppUI
 import AppBundle
+import LocationResources
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
@@ -142,6 +143,7 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
     legacyController.navigationPresentation = .modal
     let controller: TGLocationViewController
     
+    let venueColor = mapMedia.venue?.type.flatMap { venueIconColor(type: $0) }
     if let message = message {
         let legacyMessage = makeLegacyMessage(message)
         let legacyAuthor: AnyObject? = message.author.flatMap(makeLegacyPeer)
@@ -201,7 +203,7 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
                 controller.setLiveLocationsSignal(updatedLocations)
             }
         } else {
-            controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor)!
+            controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor, color: venueColor)!
             controller.receivingPeer = message.peers[message.id.peerId].flatMap(makeLegacyPeer)
             controller.setLiveLocationsSignal(updatedLocations)
         }
@@ -218,7 +220,7 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
         let attachment = TGLocationMediaAttachment()
         attachment.latitude = mapMedia.latitude
         attachment.longitude = mapMedia.longitude
-        controller = TGLocationViewController(context: legacyController.context, locationAttachment: attachment, peer: nil)
+        controller = TGLocationViewController(context: legacyController.context, locationAttachment: attachment, peer: nil, color: venueColor)
     }
     
     controller.remainingTimeForMessage = { message in

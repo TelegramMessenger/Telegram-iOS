@@ -43,6 +43,7 @@
     id _peer;
     TGMessage *_message;
     TGLocationMediaAttachment *_locationAttachment;
+    UIColor *_venueColor;
     
     TGLocationAnnotation *_annotation;
     
@@ -75,12 +76,13 @@
 
 @implementation TGLocationViewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context locationAttachment:(TGLocationMediaAttachment *)locationAttachment peer:(id)peer
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context locationAttachment:(TGLocationMediaAttachment *)locationAttachment peer:(id)peer color:(UIColor *)color
 {
     self = [self initWithContext:context];
     if (self != nil)
     {
         _locationAttachment = locationAttachment;
+        _venueColor = color;
         
         _reloadDisposable = [[SMetaDisposable alloc] init];
         _reloadReady = [[SVariable alloc] init];
@@ -90,7 +92,7 @@
         _peer = peer;
         
         if (locationAttachment.period == 0)
-            _annotation = [[TGLocationAnnotation alloc] initWithLocation:locationAttachment];
+            _annotation = [[TGLocationAnnotation alloc] initWithLocation:locationAttachment color:color];
         
         _liveLocationsDisposable = [[SMetaDisposable alloc] init];
         
@@ -128,7 +130,7 @@
     return self;
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context message:(TGMessage *)message peer:(id)peer
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context message:(TGMessage *)message peer:(id)peer color:(UIColor *)color
 {
     self = [self initWithContext:context];
     if (self != nil)
@@ -142,9 +144,10 @@
         
         _context = context;
         _peer = peer;
+        _venueColor = color;
         
         if (_locationAttachment.period == 0)
-            _annotation = [[TGLocationAnnotation alloc] initWithLocation:_locationAttachment];
+            _annotation = [[TGLocationAnnotation alloc] initWithLocation:_locationAttachment color:color];
         
         _liveLocationsDisposable = [[SMetaDisposable alloc] init];
         
@@ -1005,7 +1008,7 @@
         if (cell == nil)
             cell = [[TGLocationInfoCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGLocationInfoCellKind];
         cell.pallete = self.pallete;
-        [cell setLocation:_locationAttachment messageId:_message.mid userLocationSignal:[self userLocationSignal]];
+        [cell setLocation:_locationAttachment color: _venueColor messageId:_message.mid userLocationSignal:[self userLocationSignal]];
         cell.locatePressed = ^
         {
             __strong TGLocationViewController *strongSelf = weakSelf;

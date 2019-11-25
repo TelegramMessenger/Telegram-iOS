@@ -14,7 +14,7 @@
 
 @property (nonatomic, readonly) UIButton *directionsButton;
 
-- (void)setLocation:(TGLocationMediaAttachment *)location messageId:(int32_t)messageId userLocationSignal:(SSignal *)userLocationSignal;
+- (void)setLocation:(TGLocationMediaAttachment *)location color:(UIColor *)color messageId:(int32_t)messageId userLocationSignal:(SSignal *)userLocationSignal;
 
 @end
 

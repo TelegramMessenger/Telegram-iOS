@@ -20,17 +20,13 @@ class LocationPickerInteraction {
     let sendLocation: (CLLocationCoordinate2D) -> Void
     let sendLiveLocation: (CLLocationCoordinate2D) -> Void
     let sendVenue: (TelegramMediaMap) -> Void
-    
     let toggleMapModeSelection: () -> Void
     let updateMapMode: (LocationMapMode) -> Void
     let goToUserLocation: () -> Void
-    
     let openSearch: () -> Void
     let updateSearchQuery: (String) -> Void
     let dismissSearch: () -> Void
-    
     let dismissInput: () -> Void
-    
     let updateSendActionHighlight: (Bool) -> Void
     
     init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void) {
@@ -62,11 +58,6 @@ public final class LocationPickerController: ViewController {
     private var searchNavigationContentNode: LocationSearchNavigationContentNode?
     
     private var interaction: LocationPickerInteraction?
-        
-    private let _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
-        return self._ready
-    }
         
     public init(context: AccountContext, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
         self.context = context
@@ -227,6 +218,8 @@ public final class LocationPickerController: ViewController {
                 strongSelf.controllerNode.scrollToTop()
             }
         }
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -238,14 +231,13 @@ public final class LocationPickerController: ViewController {
     }
     
     override public func loadDisplayNode() {
+        super.loadDisplayNode()
         guard let interaction = self.interaction else {
             return
         }
         
         self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction)
         self.displayNodeDidLoad()
-        
-        self._ready.set(.single(true))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
