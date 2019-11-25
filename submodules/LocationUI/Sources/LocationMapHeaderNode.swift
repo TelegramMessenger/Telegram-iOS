@@ -22,12 +22,12 @@ private func generateBackgroundImage(theme: PresentationTheme) -> UIImage? {
     }
 }
 
-private func generateShadowImage(theme: PresentationTheme) -> UIImage? {
+private func generateShadowImage(theme: PresentationTheme, highlighted: Bool) -> UIImage? {
     return generateImage(CGSize(width: 26.0, height: 14.0)) { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setShadow(offset: CGSize(), blur: 10.0, color: UIColor(rgb: 0x000000, alpha: 0.2).cgColor)
-        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        context.setFillColor(highlighted ? theme.list.itemHighlightedBackgroundColor.cgColor : theme.list.plainBackgroundColor.cgColor)
         let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: 4.0), size: CGSize(width: 26.0, height: 20.0)), cornerRadius: 9.0)
         context.addPath(path.cgPath)
         context.fillPath()
@@ -35,6 +35,7 @@ private func generateShadowImage(theme: PresentationTheme) -> UIImage? {
 }
 
 final class LocationMapHeaderNode: ASDisplayNode {
+    private var presentationData: PresentationData
     private let interaction: LocationPickerInteraction
     
     let mapNode: LocationMapNode
@@ -44,6 +45,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let shadowNode: ASImageNode
     
     init(presentationData: PresentationData, interaction: LocationPickerInteraction) {
+        self.presentationData = presentationData
         self.interaction = interaction
         
         self.mapNode = LocationMapNode()
@@ -66,7 +68,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.shadowNode.contentMode = .scaleToFill
         self.shadowNode.displaysAsynchronously = false
         self.shadowNode.displayWithoutProcessing = true
-        self.shadowNode.image = generateShadowImage(theme: presentationData.theme)
+        self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
         
         super.init()
         
@@ -88,12 +90,14 @@ final class LocationMapHeaderNode: ASDisplayNode {
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
         self.optionsBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.locationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/TrackIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
-        self.shadowNode.image = generateShadowImage(theme: presentationData.theme)
+        self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
     }
     
     func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, padding: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -110,6 +114,10 @@ final class LocationMapHeaderNode: ASDisplayNode {
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let optionsAlpha: CGFloat = size.height > 110.0 + navigationBarHeight ? 1.0 : 0.0
         alphaTransition.updateAlpha(node: self.optionsBackgroundNode, alpha: optionsAlpha)
+    }
+    
+    func updateHighlight(_ highlighted: Bool) {
+        self.shadowNode.image = generateShadowImage(theme: self.presentationData.theme, highlighted: highlighted)
     }
     
     @objc private func infoPressed() {

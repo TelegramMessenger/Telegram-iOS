@@ -30,5 +30,6 @@ static_library(
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/CoreLocation.framework",
+        "$SDKROOT/System/Library/Frameworks/MapKit.framework",
     ],
 )

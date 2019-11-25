@@ -8,7 +8,6 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
-import PresentationDataUtils
 import LocationResources
 import AppBundle
 
@@ -58,7 +57,7 @@ private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinForeground"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
     }!
@@ -74,7 +73,7 @@ private func generateLiveLocationIcon(theme: PresentationTheme) -> UIImage {
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/LiveLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLiveLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
     }!
@@ -87,14 +86,16 @@ public class LocationActionListItem: ListViewItem {
     let subtitle: String
     let icon: LocationActionListItemIcon
     let action: () -> Void
+    let highlighted: (Bool) -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, title: String, subtitle: String, icon: LocationActionListItemIcon, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, account: Account, title: String, subtitle: String, icon: LocationActionListItemIcon, action: @escaping () -> Void, highlighted: @escaping (Bool) -> Void = { _ in }) {
         self.presentationData = presentationData
         self.account = account
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.action = action
+        self.highlighted = highlighted
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -130,7 +131,7 @@ public class LocationActionListItem: ListViewItem {
     }
     
     public func selected(listView: ListView) {
-        listView.clearHighlightAnimated(true)
+        listView.clearHighlightAnimated(false)
         self.action()
     }
 }
@@ -183,6 +184,8 @@ class LocationActionListItemNode: ListViewItemNode {
     
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
+        
+        self.item?.highlighted(highlighted)
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0

@@ -138,6 +138,8 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     if let coordinate = coordinate {
                         interaction?.sendLocation(coordinate)
                     }
+                }, highlighted: { highlighted in
+                    interaction?.updateSendActionHighlight(highlighted)
                 })
             case let .liveLocation(theme, title, subtitle, coordinate):
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
@@ -218,9 +220,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
-    
-    var present: ((ViewController, Any?) -> Void)?
-    
+        
     init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction) {
         self.context = context
         self.presentationData = presentationData
@@ -605,5 +605,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             searchContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
             searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationHeight, transition: transition)
         }
+    }
+    
+    func updateSendActionHighlight(_ highlighted: Bool) {
+        self.headerNode.updateHighlight(highlighted)
     }
 }

@@ -31,7 +31,9 @@ class LocationPickerInteraction {
     
     let dismissInput: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    let updateSendActionHighlight: (Bool) -> Void
+    
+    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
@@ -42,6 +44,7 @@ class LocationPickerInteraction {
         self.updateSearchQuery = updateSearchQuery
         self.dismissSearch = dismissSearch
         self.dismissInput = dismissInput
+        self.updateSendActionHighlight = updateSendActionHighlight
     }
 }
 
@@ -212,6 +215,11 @@ public final class LocationPickerController: ViewController {
                 return
             }
             strongSelf.searchNavigationContentNode?.deactivate()
+        }, updateSendActionHighlight: { [weak self] highlighted in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.updateSendActionHighlight(highlighted)
         })
         
         self.scrollToTop = { [weak self] in
@@ -235,9 +243,6 @@ public final class LocationPickerController: ViewController {
         }
         
         self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction)
-        self.controllerNode.present = { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
-        }
         self.displayNodeDidLoad()
         
         self._ready.set(.single(true))
