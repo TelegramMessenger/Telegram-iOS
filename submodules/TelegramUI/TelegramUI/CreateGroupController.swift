@@ -252,7 +252,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .changeLocation(theme, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeLocation()
-                }, clearHighlightAutomatically: false)
+                })
             case let .locationInfo(theme, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .venueHeader(theme, title):
@@ -397,34 +397,8 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             })
         }
         
-        venuesPromise.set(resolvePeerByName(account: context.account, name: "foursquare")
-        |> take(1)
-        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-            guard let peerId = peerId else {
-                return .single(nil)
-            }
-            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((latitude, longitude)), offset: "")
-            |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
-                return .single(nil)
-            }
-        }
-        |> map { contextResult -> [TelegramMediaMap] in
-            guard let contextResult = contextResult else {
-                return []
-            }
-            var list: [TelegramMediaMap] = []
-            for result in contextResult.results {
-                switch result.message {
-                    case let .mapLocation(mapMedia, _):
-                        if let _ = mapMedia.venue {
-                            list.append(mapMedia)
-                        }
-                    default:
-                        break
-                }
-            }
-            return list
-        } |> map(Optional.init))
+        venuesPromise.set(nearbyVenues(account: context.account, latitude: latitude, longitude: longitude)
+        |> map(Optional.init))
     }
     
     let arguments = CreateGroupArguments(account: context.account, updateEditingName: { editingName in
@@ -645,38 +619,34 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
         })
     }, changeLocation: {
-        endEditingImpl?()
-        
-        let peer = TelegramChannel(id: PeerId(0), accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = legacyLocationPickerController(context: context, selfPeer: peer, peer: peer, sendLocation: { coordinate, _, address in
-            let addressSignal: Signal<String, NoError>
-            if let address = address {
-                addressSignal = .single(address)
-            } else {
-                addressSignal = reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                |> map { placemark in
-                    if let placemark = placemark {
-                        return placemark.fullAddress
-                    } else {
-                        return "\(coordinate.latitude), \(coordinate.longitude)"
-                    }
-                }
-            }
-            
-            let _ = (addressSignal
-            |> deliverOnMainQueue).start(next: { address in
-                addressPromise.set(.single(address))
-                updateState { current in
-                    var current = current
-                    current.location = PeerGeoLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address)
-                    return current
-                }
-            })
-        }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
-            clearHighlightImpl?()
-        })
-        pushImpl?(controller)
+            endEditingImpl?()
+                 
+         let controller = LocationPickerController(context: context, mode: .pick, completion: { location, address in
+             let addressSignal: Signal<String, NoError>
+             if let address = address {
+                 addressSignal = .single(address)
+             } else {
+                 addressSignal = reverseGeocodeLocation(latitude: location.latitude, longitude: location.longitude)
+                 |> map { placemark in
+                     if let placemark = placemark {
+                         return placemark.fullAddress
+                     } else {
+                         return "\(location.latitude), \(location.longitude)"
+                     }
+                 }
+             }
+             
+             let _ = (addressSignal
+             |> deliverOnMainQueue).start(next: { address in
+                 addressPromise.set(.single(address))
+                 updateState { current in
+                     var current = current
+                     current.location = PeerGeoLocation(latitude: location.latitude, longitude: location.longitude, address: address)
+                     return current
+                 }
+             })
+         })
+         pushImpl?(controller)
     }, updateWithVenue: { venue in
         guard let venueData = venue.venue else {
             return

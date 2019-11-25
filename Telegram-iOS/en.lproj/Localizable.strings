@@ -5143,3 +5143,5 @@ Any member of this group will be able to see messages in the channel.";
 "Settings.AddDevice" = "Add";
 "AuthSessions.DevicesTitle" = "Devices";
 "AuthSessions.AddDevice" = "Add Device";
+
+"Map.SendThisPlace" = "Send This Place";
