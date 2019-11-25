@@ -33,6 +33,7 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     var ignoreRegionChanges = false
+    var dragging = false
     var beganInteractiveDragging: (() -> Void)?
     var endedInteractiveDragging: ((CLLocationCoordinate2D) -> Void)?
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
@@ -93,6 +94,7 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         
         for gestureRecognizer in gestureRecognizers {
             if gestureRecognizer.state == .began || gestureRecognizer.state == .ended {
+                self.dragging = true
                 self.beganInteractiveDragging?()
                 break
             }
@@ -100,7 +102,8 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        if !self.ignoreRegionChanges, let coordinate = self.mapCenterCoordinate {
+        if self.dragging, let coordinate = self.mapCenterCoordinate {
+            self.dragging = false
             self.endedInteractiveDragging?(coordinate)
         }
     }
@@ -156,12 +159,12 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
-        Queue.mainQueue().async {
+        if let view = view as? LocationPinAnnotationView {
+            view.setZPosition(-1.0)
+        }
+        
+        Queue.mainQueue().after(0.05) {
             if mapView.selectedAnnotations.isEmpty {
-                if let view = view as? LocationPinAnnotationView {
-                    view.setZPosition(-1.0)
-                 }
-                
                 self.annotationSelected?(nil)
             }
         }
