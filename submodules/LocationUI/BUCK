@@ -25,6 +25,7 @@ static_library(
         "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/Geocoding:Geocoding",
+        "//submodules/ItemListVenueItem:ItemListVenueItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
