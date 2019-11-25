@@ -10,10 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
-import SearchUI
-import ChatListSearchItemHeader
 import ItemListVenueItem
-import ContextUI
 import ItemListUI
 import MapKit
 
@@ -44,7 +41,6 @@ private struct LocationSearchEntry: Identifiable, Comparable {
     }
     
     func item(account: Account, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
-//        let header = ChatListSearchItemHeader(type: .contacts, theme: self.theme, strings: self.strings, actionTitle: nil, action: nil)
         let venue = self.venue
         return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: self.venue, sectionId: 0, style: .plain, action: {
             sendVenue(venue)

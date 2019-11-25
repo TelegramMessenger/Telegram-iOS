@@ -256,7 +256,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         |> reduceLeft(value: nil) { current, updated, emit -> CLLocation? in
             if let current = current {
                 if let updated = updated {
-                    if updated.distance(from: current) > 250 {
+                    if updated.distance(from: current) > 250 || (updated.horizontalAccuracy < 50.0 && updated.horizontalAccuracy < current.horizontalAccuracy) {
                         emit(updated)
                         return updated
                     } else {
@@ -266,7 +266,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                     return current
                 }
             } else {
-                if let updated = updated, updated.horizontalAccuracy > 0.0 && updated.horizontalAccuracy < 50.0 {
+                if let updated = updated, updated.horizontalAccuracy > 0.0 {
                     emit(updated)
                     return updated
                 } else {

@@ -26,6 +26,9 @@ static_library(
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/Geocoding:Geocoding",
         "//submodules/ItemListVenueItem:ItemListVenueItem",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/SearchBarNode:SearchBarNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

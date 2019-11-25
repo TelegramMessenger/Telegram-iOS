@@ -114,13 +114,14 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         super.init(annotation: annotation, reuseIdentifier: locationPinReuseIdentifier)
         
-        self.addSubnode(self.smallNode)
-        self.smallNode.addSubnode(self.smallIconNode)
+        self.addSubnode(self.dotNode)
         
         self.addSubnode(self.shadowNode)
         self.shadowNode.addSubnode(self.backgroundNode)
         self.backgroundNode.addSubnode(self.iconNode)
-        self.addSubnode(self.dotNode)
+        
+        self.addSubnode(self.smallNode)
+        self.smallNode.addSubnode(self.smallIconNode)
         
         self.annotation = annotation
     }
