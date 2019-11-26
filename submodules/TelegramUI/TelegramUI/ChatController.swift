@@ -6559,18 +6559,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), keepStack: .always))
                 }
             } else if case let .peer(peerId) = self.chatLocation, (messageLocation.peerId == peerId || forceInCurrentChat) {
+                if let _ = fromId, let fromIndex = fromIndex, rememberInStack {
+                    self.historyNavigationStack.add(fromIndex)
+                }
+                
+                let scrollFromIndex: MessageIndex?
                 if let fromIndex = fromIndex {
-                    if let _ = fromId, rememberInStack {
-                        self.historyNavigationStack.add(fromIndex)
-                    }
-                    
+                    scrollFromIndex = fromIndex
+                } else if let message = self.chatDisplayNode.historyNode.lastVisbleMesssage() {
+                    scrollFromIndex = message.index
+                } else {
+                    scrollFromIndex = nil
+                }
+                
+                if let scrollFromIndex = scrollFromIndex {
                     if let messageId = messageLocation.messageId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         self.loadingMessage.set(false)
                         self.messageIndexDisposable.set(nil)
-                        self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
+                        self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
                         completion?()
                     } else if case let .index(index) = messageLocation, index.id.id == 0 && index.timestamp > 0, self.presentationInterfaceState.isScheduledMessages {
-                        self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
+                        self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                     } else {
                         self.loadingMessage.set(true)
                         let searchLocation: ChatHistoryInitialSearchLocation
@@ -6636,12 +6645,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         |> deliverOnMainQueue).start(next: { [weak self] index in
                             if let strongSelf = self, let index = index.0 {
-                                strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
+                                strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                                 completion?()
                             } else if index.1 {
                                 if !progressStarted {
                                     progressStarted = true
-                                progressDisposable.set(progressSignal.start())
+                                    progressDisposable.set(progressSignal.start())
                                 }
                             }
                         }, completed: { [weak self] in
