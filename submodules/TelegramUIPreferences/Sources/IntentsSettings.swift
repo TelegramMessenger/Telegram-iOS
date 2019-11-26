@@ -78,7 +78,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: savedMessages, groups: self.groups, onlyShared: self.onlyShared)
     }
     
-    public func withUpdatedGroups(_ savedMessages: Bool) -> IntentsSettings {
+    public func withUpdatedGroups(_ groups: Bool) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: groups, onlyShared: self.onlyShared)
     }
     
