@@ -2413,7 +2413,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             //print("replay after \(self.itemNodes.map({"\($0.index) \(unsafeAddressOf($0))"}))")
         }
         
-        if let scrollToItem = scrollToItem, !self.areAllItemsOnScreen() {
+        if let scrollToItem = scrollToItem, !self.areAllItemsOnScreen() || updateSizeAndInsets == nil {
             self.stopScrolling()
             
             for itemNode in self.itemNodes {
