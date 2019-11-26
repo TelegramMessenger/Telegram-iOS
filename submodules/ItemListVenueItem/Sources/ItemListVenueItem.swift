@@ -14,24 +14,46 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let account: Account
     let venue: TelegramMediaMap
-    
-    public let sectionId: ItemListSectionId
+    let title: String?
+    let subtitle: String?
     let style: ItemListStyle
     let action: (() -> Void)?
+    let infoAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?) {
+    public let sectionId: ItemListSectionId
+    let header: ListViewItemHeader?
+    
+    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
         self.account = account
         self.venue = venue
+        self.title = title
+        self.subtitle = subtitle
         self.sectionId = sectionId
         self.style = style
         self.action = action
+        self.infoAction = infoAction
+        self.header = header
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
+            var firstWithHeader = false
+            var last = false
+            if self.style == .plain {
+                if previousItem == nil {
+                    firstWithHeader = true
+                } else if let previousItem = previousItem as? ItemListVenueItem, self.header != nil && previousItem.header?.id != self.header?.id {
+                    firstWithHeader = true
+                }
+                if nextItem == nil {
+                    last = true
+                } else if let nextItem = nextItem as? ItemListVenueItem, self.header != nil && nextItem.header?.id != self.header?.id {
+                    last = true
+                }
+            }
             let node = ItemListVenueItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -55,7 +77,21 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    var firstWithHeader = false
+                    var last = false
+                    if self.style == .plain {
+                        if previousItem == nil {
+                            firstWithHeader = true
+                        } else if let previousItem = previousItem as? ItemListVenueItem, self.header != nil && previousItem.header?.id != self.header?.id {
+                            firstWithHeader = true
+                        }
+                        if nextItem == nil {
+                            last = true
+                        } else if let nextItem = nextItem as? ItemListVenueItem, self.header != nil && nextItem.header?.id != self.header?.id {
+                            last = true
+                        }
+                    }
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -84,8 +120,10 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
     private let iconNode: TransformImageNode
     private let titleNode: TextNode
     private let addressNode: TextNode
+    private let infoButton: HighlightableButtonNode
     
-    private var layoutParams: (ItemListVenueItem, ListViewItemLayoutParams, ItemListNeighbors)?
+    private var item: ItemListVenueItem?
+    private var layoutParams: (ItemListVenueItem, ListViewItemLayoutParams, ItemListNeighbors, Bool, Bool)?
     
     public var tag: ItemListItemTag?
     
@@ -119,6 +157,8 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         self.addressNode.isUserInteractionEnabled = false
         self.addressNode.contentMode = .left
         self.addressNode.contentsScale = UIScreen.main.scale
+        
+        self.infoButton = HighlightableButtonNode()
     
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -130,16 +170,19 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.addressNode)
+        self.addSubnode(self.infoButton)
+        
+        self.infoButton.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
     }
     
-    public func asyncLayout() -> (_ item: ItemListVenueItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListVenueItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
         let iconLayout = self.iconNode.asyncLayout()
         
         let currentItem = self.layoutParams?.0
                 
-        return { item, params, neighbors in
+        return { item, params, neighbors, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             var updatedVenueType: String?
             
@@ -155,11 +198,29 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                 updatedVenueType = venueType
             }
         
-            let titleAttributedString = NSAttributedString(string: item.venue.venue?.title ?? "", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-            let addressAttributedString = NSAttributedString(string: item.venue.venue?.address ?? "", font: addressFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            let title: String
+            if let venueTitle = item.venue.venue?.title {
+                title = venueTitle
+            } else if let customTitle = item.title {
+                title = customTitle
+            } else {
+                title = ""
+            }
+            
+            let subtitle: String
+            if let address = item.venue.venue?.address {
+                subtitle = address
+            } else if let customSubtitle = item.subtitle {
+                subtitle = customSubtitle
+            } else {
+                subtitle = ""
+            }
+            
+            let titleAttributedString = NSAttributedString(string: title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            let addressAttributedString = NSAttributedString(string: subtitle, font: addressFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 65.0 + params.leftInset
-            let rightInset: CGFloat = 16.0 + params.rightInset
+            let rightInset: CGFloat = 16.0 + params.rightInset + (item.infoAction != nil ? 48.0 : 0.0)
             let verticalInset: CGFloat = addressAttributedString.string.isEmpty ? 14.0 : 8.0
             let iconSize: CGFloat = 40.0
            
@@ -179,6 +240,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     insets = itemListNeighborsPlainInsets(neighbors)
+                    insets.top = firstWithHeader ? 29.0 : 0.0
                     insets.bottom = 0.0
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
@@ -193,7 +255,8 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, params, neighbors)
+                    strongSelf.item = item
+                    strongSelf.layoutParams = (item, params, neighbors, firstWithHeader, last)
                                         
                     strongSelf.accessibilityLabel = titleAttributedString.string
                     strongSelf.accessibilityValue = addressAttributedString.string
@@ -203,6 +266,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.infoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: item.presentationData.theme.list.itemAccentColor), for: .normal)
                     }
                                         
                     let transition = ContainedViewLayoutTransition.immediate
@@ -239,7 +303,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                                 stripeInset = leftInset
                             }
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: stripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - stripeInset, height: separatorHeight))
-                            strongSelf.bottomStripeNode.isHidden = false
+                            strongSelf.bottomStripeNode.isHidden = last
                         case .blocks:
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -286,6 +350,9 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     transition.updateFrame(node: strongSelf.addressNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: addressLayout.size))
                     
                     transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((layout.contentSize.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize)))
+                    
+                    transition.updateFrame(node: strongSelf.infoButton, frame: CGRect(x: layout.contentSize.width - params.rightInset - 60.0, y: 0.0, width: 60.0, height: layout.contentSize.height))
+                    strongSelf.infoButton.isHidden = item.infoAction == nil
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
@@ -337,5 +404,13 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    @objc private func infoPressed() {
+        self.item?.infoAction?()
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        return self.item?.header
     }
 }

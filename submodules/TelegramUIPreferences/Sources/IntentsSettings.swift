@@ -82,7 +82,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: groups, onlyShared: self.onlyShared)
     }
     
-    public func withUpdatedOnlyShared(_ savedMessages: Bool) -> IntentsSettings {
+    public func withUpdatedOnlyShared(_ onlyShared: Bool) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: self.groups, onlyShared: onlyShared)
     }
 }

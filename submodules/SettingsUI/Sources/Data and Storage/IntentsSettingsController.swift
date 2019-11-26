@@ -150,7 +150,6 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            
             case let .suggestHeader(lhsTheme, lhsText):
                 if case let .suggestHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true

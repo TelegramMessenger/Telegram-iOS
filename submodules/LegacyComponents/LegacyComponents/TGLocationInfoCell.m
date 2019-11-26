@@ -167,12 +167,14 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     
     _titleLabel.text = location.venue.title.length > 0 ? location.venue.title : TGLocalized(@"Map.Location");
     
+    UIColor *pinColor = _pallete != nil ? _pallete.iconColor : [UIColor whiteColor];
     if (color != nil) {
         [_circleView setImage:TGTintedImage([TGLocationVenueCell circleImage], color)];
+        pinColor = [UIColor whiteColor];
     }
     
     if (location.venue.type.length > 0 && [location.venue.provider isEqualToString:@"foursquare"])
-        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
+        [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, TGColorHexCode(pinColor)] withOptions:nil];
 
     SSignal *addressSignal = [SSignal single:@""];
     if (location.venue.address.length > 0)
