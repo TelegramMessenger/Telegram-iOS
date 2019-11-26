@@ -361,12 +361,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
-        switch mode {
+        /*switch mode {
         case .overlay:
             self.navigationPresentation = .standaloneModal
         default:
             break
-        }
+        }*/
         
         self.blocksBackgroundWhenInOverlay = true
         
@@ -4605,7 +4605,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .standard, .inline:
                 break
         case .overlay:
-            if layout.safeInsets.top.isZero {
+            if case .Ignore = self.statusBar.statusBarStyle {
+            } else if layout.safeInsets.top.isZero {
                 self.statusBar.statusBarStyle = .Hide
             } else {
                 self.statusBar.statusBarStyle = .Ignore
