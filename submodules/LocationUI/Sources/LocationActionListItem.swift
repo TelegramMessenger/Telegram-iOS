@@ -79,7 +79,7 @@ private func generateLiveLocationIcon(theme: PresentationTheme) -> UIImage {
     }!
 }
 
-public class LocationActionListItem: ListViewItem {
+final class LocationActionListItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let account: Account
     let title: String
@@ -136,7 +136,7 @@ public class LocationActionListItem: ListViewItem {
     }
 }
 
-class LocationActionListItemNode: ListViewItemNode {
+final class LocationActionListItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
