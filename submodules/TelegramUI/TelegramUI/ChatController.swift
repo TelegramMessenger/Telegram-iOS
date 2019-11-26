@@ -3222,27 +3222,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
             }
         }, beginMessageSearch: { [weak self] domain, query in
-            if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
-                    return current.updatedTitlePanelContext {
-                        if let index = $0.firstIndex(where: {
-                            switch $0 {
-                                case .chatInfo:
-                                    return true
-                                default:
-                                    return false
-                            }
-                        }) {
-                            var updatedContexts = $0
-                            updatedContexts.remove(at: index)
-                            return updatedContexts
-                        } else {
-                            return $0
-                        }
-                    }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
-                })
-                strongSelf.updateItemNodesSearchTextHighlightStates()
+            guard let strongSelf = self else {
+                return
             }
+            var interactive = true
+            if strongSelf.chatDisplayNode.isInputViewFocused {
+                interactive = false
+                strongSelf.context.sharedContext.mainWindow?.doNotAnimateLikelyKeyboardAutocorrectionSwitch()
+            }
+            
+            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: interactive, { current in
+                return current.updatedTitlePanelContext {
+                    if let index = $0.firstIndex(where: {
+                        switch $0 {
+                        case .chatInfo:
+                            return true
+                        default:
+                            return false
+                        }
+                    }) {
+                        var updatedContexts = $0
+                        updatedContexts.remove(at: index)
+                        return updatedContexts
+                    } else {
+                        return $0
+                    }
+                }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
+            })
+            strongSelf.updateItemNodesSearchTextHighlightStates()
         }, dismissMessageSearch: { [weak self] in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
@@ -4384,7 +4391,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return a && b
         })
         
-        self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings)
+        self.chatDisplayNode.loadInputPanels(theme: self.presentationInterfaceState.theme, strings: self.presentationInterfaceState.strings, fontSize: self.presentationInterfaceState.fontSize)
         
         self.recentlyUsedInlineBotsDisposable = (recentlyUsedInlineBots(postbox: self.context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] peers in
             self?.recentlyUsedInlineBotsValue = peers.filter({ $0.1 >= 0.14 }).map({ $0.0 })
