@@ -397,7 +397,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.impressionIcon = currentImpressionIcon
                             strongSelf.addSubnode(currentImpressionIcon)
                         }
-                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 3.0 + offset), size: impressionSize)
+                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 1.0 + offset + floor((date.size.height - impressionSize.height) / 2.0)), size: impressionSize)
                     } else if let impressionIcon = strongSelf.impressionIcon {
                         impressionIcon.removeFromSupernode()
                         strongSelf.impressionIcon = nil

@@ -1638,13 +1638,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.setNeedsLayout()
     }
     
-    func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings) {
+    func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         if self.inputMediaNode == nil {
             var peerId: PeerId?
             if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
                 peerId = id
             }
-            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, gifPaneIsActiveUpdated: { [weak self] value in
+            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                         if case let .media(_, expanded) = state.inputMode {

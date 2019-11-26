@@ -568,7 +568,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 })))
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
                     c.dismiss(completion: {
-                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -599,7 +599,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 })))
             }
             
-            let contextController = ContextController(account: context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: themeController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: themeController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
             presentInGlobalOverlayImpl?(contextController, nil)
         })
     })
@@ -716,7 +716,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     moreImpl = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_CreateTheme, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()

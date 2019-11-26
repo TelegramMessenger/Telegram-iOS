@@ -113,7 +113,7 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
         }).start()
     }, loginNewAccount: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

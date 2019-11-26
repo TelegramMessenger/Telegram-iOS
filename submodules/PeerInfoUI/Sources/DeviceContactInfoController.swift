@@ -869,7 +869,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }
@@ -992,7 +992,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     inviteAction(subject.contactData.basicData.phoneNumbers[0].value)
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                    let controller = ActionSheetController(presentationData: presentationData)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
@@ -1402,7 +1402,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
 
 func addContactOptionsController(context: AccountContext, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+    let controller = ActionSheetController(presentationData: presentationData)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
     }

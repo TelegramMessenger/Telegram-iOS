@@ -461,7 +461,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
         })
     }, openTimeout: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         let intervals: [Int32] = [
             1 * 60 * 60 * 24,
             7 * 60 * 60 * 24,
@@ -499,7 +499,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
         presentControllerImpl?(actionSheet, nil)
     }, delete: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.GroupPermission_Delete, color: .destructive, font: .default, enabled: true, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
@@ -703,7 +703,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                             }
                             
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                            let actionSheet = ActionSheetController(presentationData: presentationData)
                             var items: [ActionSheetItem] = []
                             items.append(ActionSheetTextItem(title: presentationData.strings.GroupPermission_ApplyAlertText(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0))
                             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupPermission_ApplyAlertAction, color: .accent, font: .default, enabled: true, action: { [weak actionSheet] in

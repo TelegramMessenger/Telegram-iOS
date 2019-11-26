@@ -309,7 +309,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                         presentLiveLocationController(context: strongSelf.context, peerId: messages[0].id.peerId, controller: strongSelf)
                                     } else {
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                                        let controller = ActionSheetController(presentationData: presentationData)
                                         let dismissAction: () -> Void = { [weak controller] in
                                             controller?.dismissAnimated()
                                         }
@@ -375,7 +375,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 closePeerId = peerId
                         }
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                        let controller = ActionSheetController(presentationData: presentationData)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
                         }

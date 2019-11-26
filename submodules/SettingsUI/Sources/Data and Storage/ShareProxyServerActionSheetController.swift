@@ -22,7 +22,7 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
     private var isDismissed: Bool = false
         
     public init(presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, link: String) {
-        let sheetTheme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+        let sheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
         super.init(theme: sheetTheme)
         
         let presentActivityController: (Any) -> Void = { [weak self] item in
@@ -67,7 +67,7 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
         
         self.presentationDisposable = updatedPresentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })
     }
@@ -119,13 +119,15 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         self.link = link
         self.ready = ready
         
+        let textFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
+        
         self.label = ASTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.maximumNumberOfLines = 0
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
         self.label.isUserInteractionEnabled = false
-        self.label.attributedText = NSAttributedString(string: strings.SocksProxySetup_ShareQRCodeInfo, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        self.label.attributedText = NSAttributedString(string: strings.SocksProxySetup_ShareQRCodeInfo, font: textFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         
         self.imageNode = TransformImageNode()
         self.imageNode.clipsToBounds = true

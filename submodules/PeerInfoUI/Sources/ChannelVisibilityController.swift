@@ -922,7 +922,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         })
     }, revokePrivateLink: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

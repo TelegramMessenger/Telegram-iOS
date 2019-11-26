@@ -167,7 +167,7 @@ final class ThemeGridController: ViewController {
             }
         }, deleteWallpapers: { [weak self] wallpapers, completed in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_DeleteConfirmation(Int32(wallpapers.count)), color: .destructive, action: { [weak self, weak actionSheet] in
    
@@ -220,7 +220,7 @@ final class ThemeGridController: ViewController {
             }
         }, resetWallpapers: { [weak self] in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 let items: [ActionSheetItem] = [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()

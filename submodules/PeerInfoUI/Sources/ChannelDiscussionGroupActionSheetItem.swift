@@ -75,9 +75,13 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         } else {
             text = strings.Channel_DiscussionGroup_PrivateChannelLink(groupPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), channelPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
         }
-        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
+        
+        let textFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))
+        let boldFont = Font.semibold(floor(theme.baseFontSize * 14.0 / 17.0))
+        
+        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
         for (_, range) in text.1 {
-            attributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+            attributedText.addAttribute(.font, value: boldFont, range: range)
         }
         
         self.textNode.attributedText = attributedText

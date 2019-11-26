@@ -106,6 +106,7 @@ class CaptionScrollWrapperNode: ASDisplayNode {
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private var presentationData: PresentationData
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var nameOrder: PresentationPersonNameOrder
@@ -243,6 +244,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
+        self.presentationData = presentationData
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.nameOrder = presentationData.nameDisplayOrder
@@ -757,7 +759,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                     
-                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -787,7 +789,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
         self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
             if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 var personalPeerName: String?
                 var isChannel = false
@@ -947,7 +949,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                         
-                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()

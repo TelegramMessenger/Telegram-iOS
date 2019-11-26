@@ -148,7 +148,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     @objc private func deleteButtonPressed() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         let items: [ActionSheetItem] = [
             ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()

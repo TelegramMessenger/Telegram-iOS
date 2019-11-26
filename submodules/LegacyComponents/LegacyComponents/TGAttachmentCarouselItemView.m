@@ -257,7 +257,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         if (_cameraView)
             [_collectionView addSubview:_cameraView];
     
-        _sendMediaItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeSend action:^
+        _sendMediaItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeSend fontSize:20.0 action:^
         {
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf != nil && strongSelf.sendPressed != nil)
@@ -272,7 +272,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         if (!_document)
         {
-            _sendFileItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeDefault action:^
+            _sendFileItemView = [[TGMenuSheetButtonItemView alloc] initWithTitle:nil type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf != nil && strongSelf.sendPressed != nil)

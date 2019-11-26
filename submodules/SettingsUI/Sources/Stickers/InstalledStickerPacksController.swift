@@ -507,7 +507,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         }
     }, removePack: { archivedItem in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -559,7 +559,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         }))
     }, openSuggestOptions: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

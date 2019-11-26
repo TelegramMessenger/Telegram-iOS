@@ -54,10 +54,12 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use widget")
         }
         
+        let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             let appLockedLabel = UILabel()
             appLockedLabel.textColor = self.primaryColor
-            appLockedLabel.font = UIFont.systemFont(ofSize: 16.0)
+            appLockedLabel.font = UIFont.systemFont(ofSize: fontSize)
             appLockedLabel.text = presentationData.applicationLockedString
             appLockedLabel.sizeToFit()
             self.appLockedLabel = appLockedLabel

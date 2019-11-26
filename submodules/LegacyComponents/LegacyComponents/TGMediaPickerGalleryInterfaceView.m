@@ -609,7 +609,7 @@
         
         NSArray *items = @
         [
-         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Camera.Discard") type:TGMenuSheetButtonTypeDefault action:^
+         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Camera.Discard") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
           {
               __strong TGMenuSheetController *strongController = weakController;
               if (strongController == nil)
@@ -624,7 +624,7 @@
               
               [strongController dismissAnimated:true manual:false completion:nil];
           }],
-         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
           {
               __strong TGMenuSheetController *strongController = weakController;
               if (strongController != nil)

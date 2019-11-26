@@ -42,11 +42,11 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
         let theme = presentationData.theme
         let strings = presentationData.strings
         
-        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })
         
@@ -137,7 +137,7 @@ public class BotCheckoutPaymentMethodItem: ActionSheetItem {
 }
 
 public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private let theme: ActionSheetControllerTheme
     
@@ -150,6 +150,7 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
     
     public override init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         
@@ -201,7 +202,7 @@ public class BotCheckoutPaymentMethodItemNode: ActionSheetItemNode {
     func setItem(_ item: BotCheckoutPaymentMethodItem) {
         self.item = item
         
-        self.titleNode.attributedText = NSAttributedString(string: item.title, font: BotCheckoutPaymentMethodItemNode.defaultFont, textColor: self.theme.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: item.title, font: self.defaultFont, textColor: self.theme.primaryTextColor)
         self.iconNode.image = item.icon
         if let value = item.value {
             self.checkNode.isHidden = !value

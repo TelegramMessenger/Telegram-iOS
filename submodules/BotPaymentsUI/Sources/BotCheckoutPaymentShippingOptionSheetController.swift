@@ -16,11 +16,11 @@ final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetControll
         let theme = presentationData.theme
         let strings = presentationData.strings
         
-        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })
         
@@ -113,7 +113,7 @@ public class BotCheckoutPaymentShippingOptionItem: ActionSheetItem {
 }
 
 public class BotCheckoutPaymentShippingOptionItemNode: ActionSheetItemNode {
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private let theme: ActionSheetControllerTheme
     
@@ -126,6 +126,7 @@ public class BotCheckoutPaymentShippingOptionItemNode: ActionSheetItemNode {
     
     public override init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         
@@ -178,8 +179,8 @@ public class BotCheckoutPaymentShippingOptionItemNode: ActionSheetItemNode {
     func setItem(_ item: BotCheckoutPaymentShippingOptionItem) {
         self.item = item
         
-        self.titleNode.attributedText = NSAttributedString(string: item.title, font: BotCheckoutPaymentShippingOptionItemNode.defaultFont, textColor: self.theme.primaryTextColor)
-        self.labelNode.attributedText = NSAttributedString(string: item.label, font: BotCheckoutPaymentShippingOptionItemNode.defaultFont, textColor: self.theme.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: item.title, font: self.defaultFont, textColor: self.theme.primaryTextColor)
+        self.labelNode.attributedText = NSAttributedString(string: item.label, font: self.defaultFont, textColor: self.theme.primaryTextColor)
         if let value = item.value {
             self.checkNode.isHidden = !value
         } else {

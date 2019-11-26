@@ -42,6 +42,7 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
@@ -85,7 +86,9 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetSwitchItem) {
         self.item = item
         
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: self.theme.primaryTextColor)
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
+        self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.primaryTextColor)
         self.label.isAccessibilityElement = false
         
         self.switchNode.isOn = item.isOn

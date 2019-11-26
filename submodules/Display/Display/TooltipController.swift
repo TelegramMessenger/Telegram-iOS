@@ -62,6 +62,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     }
     
     public private(set) var content: TooltipControllerContent
+    private let baseFontSize: CGFloat
     
     open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool, arrowOnBottom: Bool = true) {
         if self.content != content {
@@ -89,8 +90,9 @@ open class TooltipController: ViewController, StandalonePresentableController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true) {
+    public init(content: TooltipControllerContent, baseFontSize: CGFloat, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true) {
         self.content = content
+        self.baseFontSize = baseFontSize
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
@@ -111,7 +113,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] tappedInside in
+        self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, dismiss: { [weak self] tappedInside in
             self?.dismiss(tappedInside: tappedInside)
         }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
         self.controllerNode.arrowOnBottom = self.initialArrowOnBottom

@@ -739,7 +739,7 @@
         NSMutableArray *itemViews = [[NSMutableArray alloc] init];
         
         __weak TGMenuSheetController *weakController = controller;
-        TGMenuSheetButtonItemView *openItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.OpenInMaps") type:TGMenuSheetButtonTypeDefault action:^
+        TGMenuSheetButtonItemView *openItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.OpenInMaps") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGLocationViewController *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -754,7 +754,7 @@
         }];
         [itemViews addObject:openItem];
         
-        TGMenuSheetButtonItemView *shareItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.ContextMenuShare") type:TGMenuSheetButtonTypeDefault action:^
+        TGMenuSheetButtonItemView *shareItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.ContextMenuShare") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController == nil)
@@ -767,7 +767,7 @@
         }];
         [itemViews addObject:shareItem];
         
-        TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+        TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController == nil)
@@ -867,7 +867,7 @@
             __weak TGMenuSheetController *weakController = controller;
             NSArray *items = @
             [
-             [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.GetDirections") type:TGMenuSheetButtonTypeDefault action:^
+             [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Map.GetDirections") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
               {
                   __strong TGMenuSheetController *strongController = weakController;
                   if (strongController == nil)
@@ -876,7 +876,7 @@
                   [strongController dismissAnimated:true];
                   block();
               }],
-             [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+             [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
               {
                   __strong TGMenuSheetController *strongController = weakController;
                   if (strongController != nil)

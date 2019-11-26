@@ -305,7 +305,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             }
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+            let actionSheet = ActionSheetController(presentationData: presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ChannelDiscussionGroupActionSheetItem(context: context, channelPeer: channelPeer, groupPeer: groupPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
                 ActionSheetButtonItem(title: presentationData.strings.Channel_DiscussionGroup_LinkGroup, color: .accent, action: { [weak actionSheet] in

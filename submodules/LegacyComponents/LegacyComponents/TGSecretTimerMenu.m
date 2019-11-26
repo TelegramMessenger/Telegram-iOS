@@ -37,7 +37,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGSecretTimerPickerItemView *weakTimerItem = timerItem;
-    TGMenuSheetButtonItemView *doneItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Done") type:TGMenuSheetButtonTypeSend action:^
+    TGMenuSheetButtonItemView *doneItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Done") type:TGMenuSheetButtonTypeSend fontSize:20.0 action:^
     {
         __strong TGSecretTimerPickerItemView *strongTimerItem = weakTimerItem;
         if (strongTimerItem != nil)

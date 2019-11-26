@@ -208,7 +208,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
                 arguments.openPeer(peer.id)
             }))
         ]
-        let contextController = ContextController(account: context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
     return controller

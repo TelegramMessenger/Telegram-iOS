@@ -554,7 +554,7 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
         pushControllerImpl?(autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType))
     }, resetAutomaticDownload: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
             ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
