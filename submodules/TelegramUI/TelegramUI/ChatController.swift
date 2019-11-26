@@ -5433,7 +5433,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 items.append(ActionSheetTextItem(title: banDescription))
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_Location, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    self?.presentMapPicker(editingMessage: false)
+                    self?.presentLocationPicker()
                 }))
                 if canSendPolls {
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.AttachmentMenu_Poll, color: .accent, action: { [weak actionSheet] in
@@ -5533,7 +5533,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, openWebSearch: {
                 self?.presentWebSearch(editingMessage : editMediaOptions != nil)
             }, openMap: {
-                self?.presentMapPicker(editingMessage: editMediaOptions != nil)
+                self?.presentLocationPicker()
             }, openContacts: {
                 self?.presentContactPicker()
             }, openPoll: {
@@ -5811,7 +5811,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
       
-    private func presentMapPicker(editingMessage: Bool) {
+    private func presentLocationPicker() {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -5823,23 +5823,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         let _ = (self.context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(selfPeerId)
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] selfPeer in
-            guard let strongSelf = self, let selfPeer = selfPeer else {
-                return
             }
-            
-            strongSelf.chatDisplayNode.dismissInput()
-            strongSelf.effectiveNavigationController?.pushViewController(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
-                guard let strongSelf = self else {
+            |> deliverOnMainQueue).start(next: { [weak self] selfPeer in
+                guard let strongSelf = self, let selfPeer = selfPeer else {
                     return
                 }
-                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil)), replyToMessageId: replyMessageId, localGroupingKey: nil)
-                
-                if editingMessage {
-                    strongSelf.editMessageMediaWithMessages([message])
-                } else {
+                let hasLiveLocation = peer.id.namespace != Namespaces.Peer.SecretChat && peer.id != strongSelf.context.account.peerId && !strongSelf.presentationInterfaceState.isScheduledMessages
+                let controller = LocationPickerController(context: strongSelf.context, mode: .share(peer: peer, selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: replyMessageId, localGroupingKey: nil)
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
@@ -5848,27 +5843,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                     strongSelf.sendMessages([message])
-                }
-            }, sendLiveLocation: { [weak self] coordinate, period in
-                guard let strongSelf = self else {
-                    return
-                }
-                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: replyMessageId, localGroupingKey: nil)
-                if editingMessage {
-                    strongSelf.editMessageMediaWithMessages([message])
-                } else {
-                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                        if let strongSelf = self {
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                            })
-                        }
-                    })
-                    strongSelf.sendMessages([message])
-                }
-            }, theme: strongSelf.presentationData.theme, hasLiveLocation: !strongSelf.presentationInterfaceState.isScheduledMessages))
-        })
+                })
+                strongSelf.effectiveNavigationController?.pushViewController(controller)
+                strongSelf.chatDisplayNode.dismissInput()
+            })
     }
     
     private func presentContactPicker() {

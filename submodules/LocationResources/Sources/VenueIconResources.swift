@@ -114,12 +114,39 @@ private func venueIconData(postbox: Postbox, resource: MediaResource) -> Signal<
     return signal
 }
 
-private let colors = [UIColor(rgb: 0xe56cd5), UIColor(rgb: 0xf89440), UIColor(rgb: 0x9986ff), UIColor(rgb: 0x44b3f5), UIColor(rgb: 0x6dc139), UIColor(rgb: 0xff5d5a), UIColor(rgb: 0xf87aad), UIColor(rgb: 0x6e82b3), UIColor(rgb: 0xf5ba21)]
+private let randomColors = [UIColor(rgb: 0xe56cd5), UIColor(rgb: 0xf89440), UIColor(rgb: 0x9986ff), UIColor(rgb: 0x44b3f5), UIColor(rgb: 0x6dc139), UIColor(rgb: 0xff5d5a), UIColor(rgb: 0xf87aad), UIColor(rgb: 0x6e82b3), UIColor(rgb: 0xf5ba21)]
+
+private let venueColors: [String: UIColor] = [
+    "building/medical": UIColor(rgb: 0x43b3f4),
+    "building/gym": UIColor(rgb: 0x43b3f4),
+    "arts_entertainment": UIColor(rgb: 0xe56dd6),
+    "travel/bedandbreakfast": UIColor(rgb: 0x9987ff),
+    "travel/hotel": UIColor(rgb: 0x9987ff),
+    "travel/hostel": UIColor(rgb: 0x9987ff),
+    "travel/resort": UIColor(rgb: 0x9987ff),
+    "building": UIColor(rgb: 0x6e81b2),
+    "education": UIColor(rgb: 0xa57348),
+    "event": UIColor(rgb: 0x959595),
+    "food": UIColor(rgb: 0xf7943f),
+    "education/cafeteria": UIColor(rgb: 0xf7943f),
+    "nightlife": UIColor(rgb: 0xe56dd6),
+    "travel/hotel_bar": UIColor(rgb: 0xe56dd6),
+    "parks_outdoors": UIColor(rgb: 0x6cc039),
+    "shops": UIColor(rgb: 0xffb300),
+    "travel": UIColor(rgb: 0x1c9fff),
+]
 
 public func venueIconColor(type: String) -> UIColor {
-    let parentType = type.components(separatedBy: "/").first ?? type
-    let index = Int(abs(persistentHash32(parentType)) % Int32(colors.count))
-    return colors[index]
+    if let color = venueColors[type] {
+        return color
+    }
+    let generalType = type.components(separatedBy: "/").first ?? type
+    if let color = venueColors[generalType] {
+        return color
+    }
+    
+    let index = Int(abs(persistentHash32(type)) % Int32(randomColors.count))
+    return randomColors[index]
 }
 
 public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {

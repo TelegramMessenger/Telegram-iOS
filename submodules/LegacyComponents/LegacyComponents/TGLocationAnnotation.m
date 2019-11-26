@@ -31,10 +31,16 @@
 
 - (instancetype)initWithLocation:(TGLocationMediaAttachment *)location
 {
+    return [self initWithLocation:location color:nil];
+}
+
+- (instancetype)initWithLocation:(TGLocationMediaAttachment *)location color:(UIColor *)color
+{
     self = [super init];
     if (self != nil)
     {
         _coordinate = CLLocationCoordinate2DMake(location.latitude, location.longitude);
+        _color = color;
         _location = location;
         _observers = [[NSMutableSet alloc] init];
     }

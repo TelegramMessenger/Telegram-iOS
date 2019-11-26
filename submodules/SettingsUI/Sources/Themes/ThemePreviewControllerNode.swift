@@ -173,7 +173,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if case let .file(file) = self.previewTheme.chat.defaultWallpaper {
             if file.settings.blur {
-                self.chatContainerNode.addSubnode(self.blurredNode)
+                self.chatContainerNode.insertSubnode(self.blurredNode, belowSubnode: self.messagesContainerNode)
             }
         }
         

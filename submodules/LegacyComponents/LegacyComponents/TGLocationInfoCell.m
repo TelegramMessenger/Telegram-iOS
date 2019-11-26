@@ -158,7 +158,7 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     return _directionsButton;
 }
 
-- (void)setLocation:(TGLocationMediaAttachment *)location messageId:(int32_t)messageId userLocationSignal:(SSignal *)userLocationSignal
+- (void)setLocation:(TGLocationMediaAttachment *)location color:(UIColor *)color messageId:(int32_t)messageId userLocationSignal:(SSignal *)userLocationSignal
 {
     if (_messageId == messageId)
         return;
@@ -166,6 +166,10 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     _messageId = messageId;
     
     _titleLabel.text = location.venue.title.length > 0 ? location.venue.title : TGLocalized(@"Map.Location");
+    
+    if (color != nil) {
+        [_circleView setImage:TGTintedImage([TGLocationVenueCell circleImage], color)];
+    }
     
     if (location.venue.type.length > 0 && [location.venue.provider isEqualToString:@"foursquare"])
         [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
