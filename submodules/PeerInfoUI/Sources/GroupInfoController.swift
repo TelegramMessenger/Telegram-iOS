@@ -1998,7 +1998,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, channel.flags.contains(.isCreator), stateValue.with({ $0 }).editingState != nil {
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }
@@ -2015,7 +2015,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     ])
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else if let peer = peerView.peers[peerView.peerId] {
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }

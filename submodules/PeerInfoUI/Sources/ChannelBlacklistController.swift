@@ -359,7 +359,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+            let actionSheet = ActionSheetController(presentationData: presentationData)
             var items: [ActionSheetItem] = []
             if !participant.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).isEmpty {
                 items.append(ActionSheetTextItem(title: participant.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)))

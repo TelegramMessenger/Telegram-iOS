@@ -135,9 +135,13 @@ final class PeerView: UIView {
             title.append("\n")
             title.append(lastName)
         }
+        
+        let systemFontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        let fontSize = floor(systemFontSize * 11.0 / 17.0)
+        
         self.titleLabel.text = title
         self.titleLabel.textColor = primaryColor
-        self.titleLabel.font = UIFont.systemFont(ofSize: 11.0)
+        self.titleLabel.font = UIFont.systemFont(ofSize: fontSize)
         self.titleLabel.lineBreakMode = .byTruncatingTail
         self.titleLabel.numberOfLines = 2
         self.titleLabel.textAlignment = .center

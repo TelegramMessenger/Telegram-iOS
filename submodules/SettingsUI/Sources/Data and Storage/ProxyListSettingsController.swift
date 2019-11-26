@@ -216,7 +216,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
             case let .serversHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .addServer(theme, text, _):
-                return ProxySettingsActionItem(theme: theme, title: text, icon: .add, sectionId: self.section, editing: false, action: {
+                return ProxySettingsActionItem(presentationData: presentationData, title: text, icon: .add, sectionId: self.section, editing: false, action: {
                     arguments.addNewServer()
                 })
             case let .server(_, theme, strings, settings, active, status, editing, enabled):
@@ -230,7 +230,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                     arguments.removeServer(settings)
                 })
             case let .shareProxyList(theme, text):
-                return ProxySettingsActionItem(theme: theme, title: text, sectionId: self.section, editing: false, action: {
+                return ProxySettingsActionItem(presentationData: presentationData, title: text, sectionId: self.section, editing: false, action: {
                     arguments.shareProxyList()
                 })
             case let .useForCalls(theme, text, value):

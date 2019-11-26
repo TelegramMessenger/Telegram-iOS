@@ -677,7 +677,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         updateAccountTimeoutDisposable.set(signal.start(next: { [weak updateAccountTimeoutDisposable] privacySettingsValue in
             if let _ = privacySettingsValue {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }

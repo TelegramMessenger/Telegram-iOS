@@ -50,7 +50,7 @@ private let avatarFont = avatarPlaceholderFont(size: 15.0)
 public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private var item: LocationBroadcastActionSheetItem?
     
@@ -61,6 +61,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         
@@ -99,8 +100,10 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
     func setItem(_ item: LocationBroadcastActionSheetItem) {
         self.item = item
         
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
         let textColor: UIColor = self.theme.primaryTextColor
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
+        self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: textColor)
         
         self.avatarNode.setPeer(account: item.context.account, theme: (item.context.sharedContext.currentPresentationData.with { $0 }).theme, peer: item.peer)
         

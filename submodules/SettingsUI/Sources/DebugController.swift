@@ -155,7 +155,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let _ = (Logger.shared.collectLogs()
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
                     
                     var items: [ActionSheetButtonItem] = []
                     
@@ -206,7 +206,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         
                         var items: [ActionSheetButtonItem] = []
                         
@@ -284,7 +284,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let _ = (Logger.shared.collectShortLogFiles()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: presentationData)
                         
                         var items: [ActionSheetButtonItem] = []
                         
@@ -409,7 +409,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case let .resetData(theme):
             return ItemListActionItem(presentationData: presentationData, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: "All data will be lost."),
                     ActionSheetButtonItem(title: "Reset Data", color: .destructive, action: { [weak actionSheet] in
@@ -431,7 +431,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: "All secret chats will be lost."),
                     ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in

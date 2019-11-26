@@ -339,8 +339,8 @@ final class AuthorizedApplicationContext {
                                 let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
                                 //chatController.navigation_setNavigationController(strongSelf.rootController)
                                 chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
-                                strongSelf.rootController.pushViewController(chatController)
-                                //(strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
+                                //strongSelf.rootController.pushViewController(chatController)
+                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                             }
                         }))
                     }

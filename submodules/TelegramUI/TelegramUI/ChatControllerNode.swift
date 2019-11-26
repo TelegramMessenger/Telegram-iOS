@@ -97,6 +97,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
     private var inputPanelNode: ChatInputPanelNode?
+    private weak var currentDismissedInputPanelNode: ASDisplayNode?
     private var secondaryInputPanelNode: ChatInputPanelNode?
     private var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
@@ -1105,7 +1106,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
                 inputPanelNode.alpha = 0.0
             }
-            
+            if !transition.isAnimated {
+                inputPanelNode.layer.removeAllAnimations()
+                if let currentDismissedInputPanelNode = self.currentDismissedInputPanelNode, inputPanelNode is ChatSearchInputPanelNode {
+                    currentDismissedInputPanelNode.layer.removeAllAnimations()
+                }
+            }
             transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
             transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
         }
@@ -1197,12 +1203,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let dismissedInputPanelNode = dismissedInputPanelNode, dismissedInputPanelNode !== self.secondaryInputPanelNode {
             var frameCompleted = false
             var alphaCompleted = false
+            self.currentDismissedInputPanelNode = dismissedInputPanelNode
             let completed = { [weak self, weak dismissedInputPanelNode] in
-                if let strongSelf = self, let dismissedInputPanelNode = dismissedInputPanelNode, strongSelf.inputPanelNode === dismissedInputPanelNode {
+                guard let strongSelf = self, let dismissedInputPanelNode = dismissedInputPanelNode else {
+                    return
+                }
+                if strongSelf.currentDismissedInputPanelNode === dismissedInputPanelNode {
+                    strongSelf.currentDismissedInputPanelNode = nil
+                }
+                if strongSelf.inputPanelNode === dismissedInputPanelNode {
                     return
                 }
                 if frameCompleted && alphaCompleted {
-                    dismissedInputPanelNode?.removeFromSupernode()
+                    dismissedInputPanelNode.removeFromSupernode()
                 }
             }
             let transitionTargetY = layout.size.height - insets.bottom
@@ -1638,13 +1651,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.setNeedsLayout()
     }
     
-    func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings) {
+    func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         if self.inputMediaNode == nil {
             var peerId: PeerId?
             if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
                 peerId = id
             }
-            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, gifPaneIsActiveUpdated: { [weak self] value in
+            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                         if case let .media(_, expanded) = state.inputMode {
@@ -2257,5 +2270,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
+    }
+    
+    func setEnablePredictiveTextInput(_ value: Bool) {
+        self.textInputPanelNode?.enablePredictiveInput = value
     }
 }

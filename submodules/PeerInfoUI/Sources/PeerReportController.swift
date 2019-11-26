@@ -111,7 +111,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
 
 public func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
+    let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationData: presentationData))
     
     let options: [PeerReportOption] = [
         .spam,

@@ -2143,6 +2143,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         return self._itemParams!
     }
     
+    private var presentationData: PresentationData
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
@@ -2161,6 +2162,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     private let hiddenItemDisposable = MetaDisposable()
     
     required init(initParams: SecureIdDocumentFormControllerNodeInitParams, presentationData: PresentationData) {
+        self.presentationData = presentationData
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.context = initParams.context
@@ -2414,7 +2416,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, nil)
                     case .gender:
-                        let controller = ActionSheetController(presentationTheme: strongSelf.theme)
+                        let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
                         }
@@ -2756,7 +2758,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             return
         }
         
-        let controller = ActionSheetController(presentationTheme: theme)
+        let controller = ActionSheetController(presentationData: self.presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -2816,7 +2818,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     }
     
     private func openDocument(document: SecureIdVerificationDocument) {
-        let controller = ActionSheetController(presentationTheme: theme)
+        let controller = ActionSheetController(presentationData: self.presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

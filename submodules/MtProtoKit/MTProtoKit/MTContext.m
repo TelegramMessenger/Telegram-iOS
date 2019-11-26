@@ -491,10 +491,11 @@ static int32_t fixedTimeDifferenceValue = 0;
                     [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
             }
             
-            if (previousAddressSetWasEmpty || updateSchemes || true) {
+            if (true) {
+                bool shouldReset = previousAddressSetWasEmpty || updateSchemes;
                 for (id<MTContextChangeListener> listener in currentListeners) {
-                    if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:)]) {
-                        [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId];
+                    if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:shouldReset:)]) {
+                        [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:shouldReset];
                     }
                 }
             } else {
@@ -664,8 +665,8 @@ static int32_t fixedTimeDifferenceValue = 0;
             }
             
             for (id<MTContextChangeListener> listener in currentListeners) {
-                if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:)])
-                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId];
+                if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:shouldReset:)])
+                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:true];
             }
         }
     }];

@@ -501,7 +501,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             applyImpl()
             return
         }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

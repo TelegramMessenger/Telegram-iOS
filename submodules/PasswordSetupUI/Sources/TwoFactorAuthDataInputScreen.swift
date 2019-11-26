@@ -505,12 +505,12 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: theme.list.freePlainInputField.backgroundColor)
         
         self.inputNode = TextFieldNode()
         self.inputNode.textField.font = Font.regular(17.0)
-        self.inputNode.textField.textColor = theme.actionSheet.inputTextColor
-        self.inputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        self.inputNode.textField.textColor = theme.list.freePlainInputField.primaryColor
+        self.inputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.list.freePlainInputField.placeholderColor)
         
         self.hideButtonNode = HighlightableButtonNode()
         
@@ -548,10 +548,10 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         }
         self.inputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         
-        self.hideButtonNode.setImage(generateTextHiddenImage(color: theme.actionSheet.inputClearButtonColor, on: false), for: [])
+        self.hideButtonNode.setImage(generateTextHiddenImage(color: theme.list.freePlainInputField.controlColor, on: false), for: [])
         
         self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.setImage(generateClearImage(color: theme.actionSheet.inputClearButtonColor), for: [])
+        self.clearButtonNode.setImage(generateClearImage(color: theme.list.freePlainInputField.controlColor), for: [])
         self.clearButtonNode.isHidden = true
         
         super.init()
@@ -1198,11 +1198,27 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         transition.updateFrame(node: self.skipActionButtonNode, frame: buttonFrame)
         transition.updateFrame(node: self.skipActionTitleNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - skipActionSize.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - skipActionSize.height) / 2.0)), size: skipActionSize))
         
-        transition.updateFrame(node: self.changeEmailActionButtonNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height)))
-        transition.updateFrame(node: self.resendCodeActionButtonNode, frame: CGRect(origin: CGPoint(x: buttonFrame.maxX - floor(buttonFrame.width / 2.0), y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height)))
+        let changeEmailActionFrame: CGRect
+        let changeEmailActionButtonFrame: CGRect
+        let resendCodeActionFrame: CGRect
+        let resendCodeActionButtonFrame: CGRect
+        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - 24.0 {
+            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
+            changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX + floor((changeEmailActionButtonFrame.width - changeEmailActionSize.width) / 2.0), y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
+            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.maxY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
+            resendCodeActionFrame = CGRect(origin: CGPoint(x: resendCodeActionButtonFrame.minX + floor((resendCodeActionButtonFrame.width - resendCodeActionSize.width) / 2.0), y: resendCodeActionButtonFrame.minY + floor((resendCodeActionButtonFrame.height - resendCodeActionSize.height) / 2.0)), size: resendCodeActionSize)
+        } else {
+            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height))
+            changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX, y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
+            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.maxX - floor(buttonFrame.width / 2.0), y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height))
+            resendCodeActionFrame = CGRect(origin: CGPoint(x: resendCodeActionButtonFrame.maxX - resendCodeActionSize.width, y: resendCodeActionButtonFrame.minY + floor((resendCodeActionButtonFrame.height - resendCodeActionSize.height) / 2.0)), size: resendCodeActionSize)
+        }
         
-        transition.updateFrame(node: self.changeEmailActionTitleNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY + floor((buttonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize))
-        transition.updateFrame(node: self.resendCodeActionTitleNode, frame: CGRect(origin: CGPoint(x: buttonFrame.maxX - resendCodeActionSize.width, y: buttonFrame.minY + floor((buttonFrame.height - resendCodeActionSize.height) / 2.0)), size: resendCodeActionSize))
+        transition.updateFrame(node: self.changeEmailActionButtonNode, frame: changeEmailActionButtonFrame)
+        transition.updateFrame(node: self.resendCodeActionButtonNode, frame: resendCodeActionButtonFrame)
+        
+        transition.updateFrame(node: self.changeEmailActionTitleNode, frame: changeEmailActionFrame)
+        transition.updateFrame(node: self.resendCodeActionTitleNode, frame: resendCodeActionFrame)
         
         transition.animateView {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0)

@@ -16,6 +16,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     bool _dark;
     bool _requiresDivider;
     UIView *_customDivider;
+    CGFloat _fontSize;
     
     TGMenuSheetPallete *_pallete;
 }
@@ -23,12 +24,13 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 @implementation TGMenuSheetButtonItemView
 
-- (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type action:(void (^)(void))action
+- (instancetype)initWithTitle:(NSString *)title type:(TGMenuSheetButtonType)type fontSize:(CGFloat)fontSize action:(void (^)(void))action
 {
     self = [super initWithType:(type == TGMenuSheetButtonTypeCancel) ? TGMenuSheetItemTypeFooter : TGMenuSheetItemTypeDefault];
     if (self != nil)
     {
         self.action = action;
+        _fontSize = fontSize;
         _buttonType = type;
         _requiresDivider = true;
         
@@ -115,7 +117,7 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 - (void)_updateForType:(TGMenuSheetButtonType)type
 {
-    _button.titleLabel.font = (type == TGMenuSheetButtonTypeCancel || type == TGMenuSheetButtonTypeSend) ? TGMediumSystemFontOfSize(20) : TGSystemFontOfSize(20);
+    _button.titleLabel.font = (type == TGMenuSheetButtonTypeCancel || type == TGMenuSheetButtonTypeSend) ? TGMediumSystemFontOfSize(_fontSize) : TGSystemFontOfSize(_fontSize);
     UIColor *accentColor = _dark ? UIColorRGB(0x4fbcff) : TGAccentColor();
     if (_pallete != nil)
         accentColor = _pallete.accentColor;

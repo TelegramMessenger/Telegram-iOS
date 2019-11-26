@@ -39,7 +39,7 @@ private enum ContextItemNode {
 }
 
 final class ContextActionsContainerNode: ASDisplayNode {
-    private let theme: PresentationTheme
+    private let presentationData: PresentationData
     private var effectView: UIVisualEffectView?
     private var itemNodes: [ContextItemNode]
     private let feedbackTap: () -> Void
@@ -47,23 +47,23 @@ final class ContextActionsContainerNode: ASDisplayNode {
     private(set) var gesture: UIGestureRecognizer?
     private var currentHighlightedActionNode: ContextActionNode?
     
-    init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
-        self.theme = theme
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.feedbackTap = feedbackTap
         
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
             case let .action(action):
-                itemNodes.append(.action(ContextActionNode(theme: theme, action: action, getController: getController, actionSelected: actionSelected)))
+                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
                 if i != items.count - 1, case .action = items[i + 1] {
                     let separatorNode = ASDisplayNode()
-                    separatorNode.backgroundColor = theme.contextMenu.itemSeparatorColor
+                    separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
                     itemNodes.append(.itemSeparator(separatorNode))
                 }
             case .separator:
                 let separatorNode = ASDisplayNode()
-                separatorNode.backgroundColor = theme.contextMenu.sectionSeparatorColor
+                separatorNode.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
                 itemNodes.append(.separator(separatorNode))
             }
         }
@@ -75,7 +75,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.clipsToBounds = true
         self.cornerRadius = 14.0
         
-        self.backgroundColor = theme.contextMenu.backgroundColor
+        self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
         
         self.itemNodes.forEach({ itemNode in
             switch itemNode {
@@ -133,7 +133,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
             if self.effectView == nil {
                 let effectView: UIVisualEffectView
                 if #available(iOS 13.0, *) {
-                    if self.theme.overallDarkAppearance {
+                    if self.presentationData.theme.overallDarkAppearance {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
                     } else {
                         effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialLight))
@@ -213,19 +213,19 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return size
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    func updateTheme(presentationData: PresentationData) {
         for itemNode in self.itemNodes {
             switch itemNode {
             case let .action(action):
-                action.updateTheme(theme: theme)
+                action.updateTheme(presentationData: presentationData)
             case let .separator(separator):
-                separator.backgroundColor = theme.contextMenu.sectionSeparatorColor
+                separator.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
             case let .itemSeparator(itemSeparator):
-                itemSeparator.backgroundColor = theme.contextMenu.itemSeparatorColor
+                itemSeparator.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
             }
         }
         
-        self.backgroundColor = theme.contextMenu.backgroundColor
+        self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNode? {

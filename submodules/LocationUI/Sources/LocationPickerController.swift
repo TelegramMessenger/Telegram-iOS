@@ -135,7 +135,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let controller = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            let controller = ActionSheetController(presentationData: strongSelf.presentationData)
             var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
             if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer {
                 title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0

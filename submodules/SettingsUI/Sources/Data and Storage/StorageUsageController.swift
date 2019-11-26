@@ -402,7 +402,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let controller = ActionSheetController(presentationData: presentationData)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
                 }
@@ -624,7 +624,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     }
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                    let controller = ActionSheetController(presentationData: presentationData)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }

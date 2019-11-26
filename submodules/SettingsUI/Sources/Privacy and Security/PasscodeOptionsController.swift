@@ -233,7 +233,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOff: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
@@ -313,7 +313,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         })
     }, changePasscodeTimeout: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         var items: [ActionSheetItem] = []
         let setAction: (Int32?) -> Void = { value in
             let _ = (passcodeOptionsDataPromise.get()

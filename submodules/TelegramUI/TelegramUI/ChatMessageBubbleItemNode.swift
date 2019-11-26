@@ -2716,19 +2716,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if let backgroundType = self.backgroundType {
                 let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
-                if highlighted {
-                    self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: .immediate)
-                } else {
-                    if let previousContents = self.backgroundNode.layer.contents, animated {
-                        self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: .immediate)
-                        
-                        if let updatedContents = self.backgroundNode.layer.contents {
-                            self.backgroundNode.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
-                        }
-                    } else {
-                        self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: .immediate)
-                    }
-                }
+                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
             }
         }
     }

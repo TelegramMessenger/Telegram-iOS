@@ -200,7 +200,7 @@ final class WalletContextImpl: WalletContext {
                 navigationBar: navigationBarData.theme,
                 keyboardAppearance: theme.rootController.keyboardColor.keyboardAppearance,
                 alert: AlertControllerTheme(presentationData: presentationData),
-                actionSheet: ActionSheetControllerTheme(presentationTheme: theme)
+                actionSheet: ActionSheetControllerTheme(presentationData: presentationData)
             ), strings: WalletStrings(
                 primaryComponent: WalletStringsComponent(
                     languageCode: strings.primaryComponent.languageCode,

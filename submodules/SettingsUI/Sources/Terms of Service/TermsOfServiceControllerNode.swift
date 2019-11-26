@@ -138,7 +138,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                 return
             }
             let theme: PresentationTheme = strongSelf.presentationData.theme
-            let actionSheet = ActionSheetController(presentationTheme: theme)
+            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: strongSelf.presentationData.strings.Login_TermsOfService_ProceedBot(mention).0),
                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.PrivacyPolicy_Accept, color: .accent, action: { [weak actionSheet] in
@@ -170,7 +170,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
             }
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 let theme: PresentationTheme = strongSelf.presentationData.theme
-                let actionSheet = ActionSheetController(presentationTheme: theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                     ActionSheetTextItem(title: url),
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in

@@ -560,14 +560,14 @@ public func trimChatInputText(_ text: NSAttributedString) -> NSAttributedString 
 }
 
 public func breakChatInputText(_ text: NSAttributedString) -> [NSAttributedString] {
-    if text.length <= 4000 {
+    if text.length <= 4096 {
         return [text]
     } else {
         let rawText: NSString = text.string as NSString
         var result: [NSAttributedString] = []
         var offset = 0
         while offset < text.length {
-            var range = NSRange(location: offset, length: min(text.length - offset, 4000))
+            var range = NSRange(location: offset, length: min(text.length - offset, 4096))
             if range.upperBound < text.length {
                 inner: for i in (range.lowerBound ..< range.upperBound).reversed() {
                     let c = rawText.character(at: i)

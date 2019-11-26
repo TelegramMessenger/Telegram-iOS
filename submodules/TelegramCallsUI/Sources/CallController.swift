@@ -132,7 +132,7 @@ public final class CallController: ViewController {
                     }
                 }
             } else {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
                     let title: String

@@ -26,7 +26,7 @@ public class ActionSheetTextItem: ActionSheetItem {
 }
 
 public class ActionSheetTextNode: ActionSheetItemNode {
-    public static let defaultFont: UIFont = Font.regular(13.0)
+    private let defaultFont: UIFont
     
     private let theme: ActionSheetControllerTheme
     
@@ -38,6 +38,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
         self.label = ASTextNode()
         self.label.isUserInteractionEnabled = false
@@ -60,7 +61,9 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
+        self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         self.accessibilityArea.accessibilityLabel = item.title
         
         self.setNeedsLayout()

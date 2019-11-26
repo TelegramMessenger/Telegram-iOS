@@ -64,7 +64,7 @@
         sendTitle = [NSString stringWithFormat:format, [NSString stringWithFormat:@"%ld", photosCount]];
     }
     
-    TGMenuSheetButtonItemView *sendItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:sendTitle type:TGMenuSheetButtonTypeSend action:^
+    TGMenuSheetButtonItemView *sendItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:sendTitle type:TGMenuSheetButtonTypeSend fontSize:20.0 action:^
     {
         __strong TGClipboardPreviewItemView *strongPreviewItem = weakPreviewItem;
         completed(strongPreviewItem.selectionContext, strongPreviewItem.editingContext, nil);
@@ -90,7 +90,7 @@
         [strongPreviewItem setCollapsed:count == 0 animated:true];
     };
     
-    TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+    TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
     {
         __strong TGMenuSheetController *strongController = weakController;
         [strongController dismissAnimated:true];
