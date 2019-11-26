@@ -23,9 +23,20 @@ public enum LocationMapMode {
     }
 }
 
-class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
+private class PickerAnnotationContainerView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result == self {
+            return nil
+        }
+        return result
+    }
+}
+
+final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private let locationPromise = Promise<CLLocation?>(nil)
     
+    private let pickerAnnotationContainerView: PickerAnnotationContainerView
     private weak var userLocationAnnotationView: MKAnnotationView?
     
     private var mapView: MKMapView? {
@@ -33,11 +44,15 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     var ignoreRegionChanges = false
+    var isDragging = false
     var beganInteractiveDragging: (() -> Void)?
     var endedInteractiveDragging: ((CLLocationCoordinate2D) -> Void)?
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
     
     override init() {
+        self.pickerAnnotationContainerView = PickerAnnotationContainerView()
+        self.pickerAnnotationContainerView.isHidden = true
+        
         super.init()
         
         self.setViewBlock({
@@ -60,6 +75,8 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         self.mapView?.isRotateEnabled = self.isRotateEnabled
         self.mapView?.showsUserLocation = true
         self.mapView?.showsPointsOfInterest = false
+        
+        self.view.addSubview(self.pickerAnnotationContainerView)
     }
     
     var isRotateEnabled: Bool = true {
@@ -74,7 +91,7 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
-    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), animated: Bool = false) {
+    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, animated: Bool = false) {
         let region = MKCoordinateRegion(center: coordinate, span: span)
         self.ignoreRegionChanges = true
         if offset == CGPoint() {
@@ -93,14 +110,23 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         
         for gestureRecognizer in gestureRecognizers {
             if gestureRecognizer.state == .began || gestureRecognizer.state == .ended {
+                self.isDragging = true
                 self.beganInteractiveDragging?()
+                
+                if self.hasPickerAnnotation {
+                    self.customUserLocationAnnotationView?.isHidden = true
+                    self.pickerAnnotationContainerView.isHidden = false
+                    self.pickerAnnotationView?.setCustom(true, animated: true)
+                    self.resetAnnotationSelection()
+                }
                 break
             }
         }
     }
     
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        if !self.ignoreRegionChanges, let coordinate = self.mapCenterCoordinate {
+        if self.isDragging, let coordinate = self.mapCenterCoordinate {
+            self.isDragging = false
             self.endedInteractiveDragging?(coordinate)
         }
     }
@@ -137,6 +163,9 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         for view in views {
             if view.annotation is MKUserLocation {
                 self.userLocationAnnotationView = view
+                if let annotationView = self.customUserLocationAnnotationView {
+                    view.addSubview(annotationView)
+                }
             } else if let view = view as? LocationPinAnnotationView {
                 view.setZPosition(-1.0)
             }
@@ -153,16 +182,27 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
         
         self.annotationSelected?(annotation)
+        
+        if let annotationView = self.customUserLocationAnnotationView, annotationView.isSelected {
+            annotationView.setSelected(false, animated: true)
+        }
     }
     
     func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
-        Queue.mainQueue().async {
+        if let view = view as? LocationPinAnnotationView {
+            Queue.mainQueue().after(0.2) {
+                view.setZPosition(-1.0)
+            }
+        }
+        
+        Queue.mainQueue().after(0.05) {
             if mapView.selectedAnnotations.isEmpty {
-                if let view = view as? LocationPinAnnotationView {
-                    view.setZPosition(-1.0)
-                 }
-                
-                self.annotationSelected?(nil)
+                if !self.isDragging {
+                    self.annotationSelected?(nil)
+                }
+                if let annotationView = self.customUserLocationAnnotationView, !annotationView.isSelected {
+                    annotationView.setSelected(true, animated: true)
+                }
             }
         }
     }
@@ -187,6 +227,39 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
+    var pickerAnnotationView: LocationPinAnnotationView? = nil
+    var hasPickerAnnotation: Bool = false {
+        didSet {
+            if self.hasPickerAnnotation, let annotation = self.userLocationAnnotation {
+                let pickerAnnotationView = LocationPinAnnotationView(annotation: annotation)
+                pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0 + 16.0)
+                self.pickerAnnotationContainerView.addSubview(pickerAnnotationView)
+                self.pickerAnnotationView = pickerAnnotationView
+            } else {
+                self.pickerAnnotationView?.removeFromSuperview()
+                self.pickerAnnotationView = nil
+            }
+        }
+    }
+    
+    var customUserLocationAnnotationView: LocationPinAnnotationView? = nil
+    var userLocationAnnotation: LocationPinAnnotation? = nil {
+        didSet {
+            if let annotation = self.userLocationAnnotation {
+                let annotationView = LocationPinAnnotationView(annotation: annotation)
+                annotationView.frame = annotationView.frame.offsetBy(dx: 21.0, dy: 22.0)
+                if let parentView = self.userLocationAnnotationView {
+                    parentView.addSubview(annotationView)
+                }
+                self.customUserLocationAnnotationView = annotationView
+                
+                self.pickerAnnotationView?.annotation = annotation
+            } else {
+                self.customUserLocationAnnotationView?.removeFromSuperview()
+                self.customUserLocationAnnotationView = nil
+            }
+        }
+    }
     
     var annotations: [LocationPinAnnotation] = [] {
         didSet {
@@ -196,7 +269,7 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             
             var dict: [String: LocationPinAnnotation] = [:]
             for annotation in self.annotations {
-                if let identifier = annotation.location.venue?.id {
+                if let identifier = annotation.location?.venue?.id {
                     dict[identifier] = annotation
                 }
             }
@@ -207,7 +280,7 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                     continue
                 }
                 
-                if let identifier = annotation.location.venue?.id, let updatedAnnotation = dict[identifier] {
+                if let identifier = annotation.location?.venue?.id, let updatedAnnotation = dict[identifier] {
                     annotation.coordinate = updatedAnnotation.coordinate
                     dict[identifier] = nil
                 } else {
@@ -217,6 +290,15 @@ class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             
             mapView.removeAnnotations(Array(annotationsToRemove))
             mapView.addAnnotations(Array(dict.values))
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((self.frame.size.height - self.frame.size.width) / 2.0), width: self.frame.size.width, height: self.frame.size.width)
+        if let pickerAnnotationView = self.pickerAnnotationView {
+            pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0 + 16.0)
         }
     }
 }

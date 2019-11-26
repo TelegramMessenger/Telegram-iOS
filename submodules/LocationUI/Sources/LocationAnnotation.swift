@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import MapKit
 import Display
+import SwiftSignalKit
 import Postbox
 import SyncCore
 import TelegramCore
@@ -30,14 +31,26 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     let account: Account
     let theme: PresentationTheme
     var coordinate: CLLocationCoordinate2D
-    let location: TelegramMediaMap
+    let location: TelegramMediaMap?
+    let peer: Peer?
+    
     var title: String? = ""
     var subtitle: String? = ""
+    
+    init(account: Account, theme: PresentationTheme, peer: Peer) {
+        self.account = account
+        self.theme = theme
+        self.location = nil
+        self.peer = peer
+        self.coordinate = kCLLocationCoordinate2DInvalid
+        super.init()
+    }
     
     init(account: Account, theme: PresentationTheme, location: TelegramMediaMap) {
         self.account = account
         self.theme = theme
         self.location = location
+        self.peer = nil
         self.coordinate = location.coordinate
         super.init()
     }
@@ -133,20 +146,29 @@ class LocationPinAnnotationView: MKAnnotationView {
     override var annotation: MKAnnotation? {
         didSet {
             if let annotation = self.annotation as? LocationPinAnnotation {
-                let venueType = annotation.location.venue?.type ?? ""
-                let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
-                self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
-                self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: annotation.location.venue?.type ?? "", background: false))
-                self.smallIconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: annotation.location.venue?.type ?? "", background: false))
-                self.smallNode.image = generateSmallBackgroundImage(color: color)
-                self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
-                
-                self.dotNode.isHidden = false
-                
-                if !self.isSelected {
-                    self.dotNode.alpha = 0.0
-                    self.shadowNode.isHidden = true
-                    self.smallNode.isHidden = false
+                if let peer = annotation.peer {
+                    self.iconNode.isHidden = true
+                    self.dotNode.isHidden = true
+                    self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
+                    
+                    self.setPeer(account: annotation.account, theme: annotation.theme, peer: peer)
+                    self.setSelected(true, animated: false)
+                } else if let location = annotation.location {
+                    let venueType = annotation.location?.venue?.type ?? ""
+                    let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
+                    self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
+                    self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
+                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
+                    self.smallNode.image = generateSmallBackgroundImage(color: color)
+                    self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
+                    
+                    self.dotNode.isHidden = false
+                    
+                    if !self.isSelected {
+                        self.dotNode.alpha = 0.0
+                        self.shadowNode.isHidden = true
+                        self.smallNode.isHidden = false
+                    }
                 }
             }
         }
@@ -165,6 +187,17 @@ class LocationPinAnnotationView: MKAnnotationView {
             
             self.animating = true
             if selected {
+                let avatarSnapshot = self.avatarNode?.view.snapshotContentTree()
+                if let avatarSnapshot = avatarSnapshot, let avatarNode = self.avatarNode {
+                    self.smallNode.view.addSubview(avatarSnapshot)
+                    avatarSnapshot.layer.transform = avatarNode.transform
+                    avatarSnapshot.center = CGPoint(x: self.smallNode.frame.width / 2.0, y: self.smallNode.frame.height / 2.0)
+                    
+                    avatarNode.transform = CATransform3DIdentity
+                    self.backgroundNode.addSubnode(avatarNode)
+                    avatarNode.position = CGPoint(x: self.backgroundNode.frame.width / 2.0, y: self.backgroundNode.frame.height / 2.0 - 5.0)
+                }
+                
                 self.shadowNode.position = CGPoint(x: self.shadowNode.position.x, y: self.shadowNode.position.y + self.shadowNode.frame.height / 2.0)
                 self.shadowNode.anchorPoint = CGPoint(x: 0.5, y: 1.0)
                 self.shadowNode.isHidden = false
@@ -184,11 +217,27 @@ class LocationPinAnnotationView: MKAnnotationView {
                     
                     self.smallNode.isHidden = true
                     self.smallNode.transform = CATransform3DIdentity
+                    
+                    if let avatarNode = self.avatarNode {
+                        self.addSubnode(avatarNode)
+                        avatarSnapshot?.removeFromSuperview()
+                    }
                 }
                                 
                 self.dotNode.alpha = 1.0
                 self.dotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             } else {
+                let avatarSnapshot = self.avatarNode?.view.snapshotContentTree()
+                if let avatarSnapshot = avatarSnapshot, let avatarNode = self.avatarNode {
+                    self.backgroundNode.view.addSubview(avatarSnapshot)
+                    avatarSnapshot.layer.transform = avatarNode.transform
+                    avatarSnapshot.center = CGPoint(x: self.backgroundNode.frame.width / 2.0, y: self.backgroundNode.frame.height / 2.0 - 5.0)
+                    
+                    avatarNode.transform = CATransform3DMakeScale(0.64, 0.64, 1.0)
+                    self.smallNode.addSubnode(avatarNode)
+                    avatarNode.position = CGPoint(x: self.smallNode.frame.width / 2.0, y: self.smallNode.frame.height / 2.0)
+                }
+                
                 self.smallNode.isHidden = false
                 self.smallNode.transform = CATransform3DMakeScale(0.01, 0.01, 1.0)
                 
@@ -209,6 +258,11 @@ class LocationPinAnnotationView: MKAnnotationView {
                     
                     self.shadowNode.isHidden = true
                     self.shadowNode.transform = CATransform3DIdentity
+                    
+                    if let avatarNode = self.avatarNode {
+                        self.addSubnode(avatarNode)
+                        avatarSnapshot?.removeFromSuperview()
+                    }
                 }
                 
                 let previousAlpha = self.dotNode.alpha
@@ -249,6 +303,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         if let avatarNode = self.avatarNode {
             avatarNode.position = self.isSelected ? CGPoint(x: UIScreenPixel, y: -41.0) : CGPoint()
             avatarNode.transform = self.isSelected ? CATransform3DIdentity : CATransform3DMakeScale(0.64, 0.64, 1.0)
+            avatarNode.view.superview?.bringSubviewToFront(avatarNode.view)
         }
         
         if !self.appeared {
@@ -277,9 +332,77 @@ class LocationPinAnnotationView: MKAnnotationView {
         avatarNode.setPeer(account: account, theme: theme, peer: peer)
     }
     
-    func setRaised(_ raised: Bool, avatar: Bool, animated: Bool, completion: @escaping () -> Void = {}) {
+    private var raised = false
+    func setRaised(_ raised: Bool, animated: Bool, completion: @escaping () -> Void = {}) {
+        guard raised != self.raised else {
+            return
+        }
         
+        self.raised = raised
+        self.shadowNode.layer.removeAllAnimations()
+        
+        if animated {
+            if raised {
+                let previousPosition = self.shadowNode.position
+                self.shadowNode.layer.animatePosition(from: previousPosition, to: CGPoint(x: UIScreenPixel, y: -66.0), duration: 0.2, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring) { finished in
+                    if finished {
+                        completion()
+                    }
+                }
+            } else {
+                UIView.animate(withDuration: 0.2, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.0, options: [.allowAnimatedContent], animations: {
+                    self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
+                }) { finished in
+                    if finished {
+                        completion()
+                    }
+                }
+            }
+        } else {
+            self.shadowNode.position = CGPoint(x: UIScreenPixel, y: raised ? -66.0 : -36.0)
+            completion()
+        }
+    }
+    
+    func setCustom(_ custom: Bool, animated: Bool) {
+        if animated {
+            self.animating = true
+            
+            if let annotation = self.annotation as? LocationPinAnnotation {
+                self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: "", background: false))
+            }
+            
+            if let avatarNode = self.avatarNode {
+                self.backgroundNode.addSubnode(avatarNode)
+                avatarNode.position = CGPoint(x: self.backgroundNode.frame.width / 2.0, y: self.backgroundNode.frame.height / 2.0 - 5.0)
+            }
+            self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
+            self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)
+            self.iconNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0 - 5.0)
+            
+            Queue.mainQueue().after(0.01) {
+                UIView.transition(with: self.backgroundNode.view, duration: 0.2, options: [.transitionCrossDissolve, .allowAnimatedContent], animations: {
+                    let color: UIColor
+                    if custom, let annotation = self.annotation as? LocationPinAnnotation {
+                        color = annotation.theme.list.itemAccentColor
+                    } else {
+                        color = .white
+                    }
+                    self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
+                    self.avatarNode?.isHidden = custom
+                    self.iconNode.isHidden = !custom
+                }) { finished in
+                    if !custom, let avatarNode = self.avatarNode {
+                        self.addSubnode(avatarNode)
+                    }
+                    self.animating = false
+                    self.setNeedsLayout()
+                }
+            }
+            
+            self.setNeedsLayout()
+        }
+        
+        self.dotNode.isHidden = !custom
     }
 }
-
-
