@@ -31,7 +31,7 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
     let corner: CGFloat = 7.0
     let knockout = knockoutValue && !mask
     
-    let inset: CGFloat = extendedEdges ? 0.0 : 1.0
+    let inset: CGFloat = (extendedEdges && !mask) ? 1.0 : 0.0
     
     return generateImage(CGSize(width: 42.0 + inset * 2.0, height: diameter + inset * 2.0), contextGenerator: { rawSize, context in
         var drawWithClearColor = false
@@ -48,26 +48,27 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
         }
         
-        let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
-        context.translateBy(x: inset, y: inset)
-        
         let additionalOffset: CGFloat
         switch neighbors {
-            case .none, .bottom:
-                additionalOffset = 0.0
-            case .both, .side, .top:
-                additionalOffset = 6.0
+        case .none, .bottom:
+            additionalOffset = 0.0
+        case .both, .side, .top:
+            additionalOffset = 6.0
         }
         
-        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
         context.scaleBy(x: incoming ? 1.0 : -1.0, y: -1.0)
-        context.translateBy(x: -size.width / 2.0 + 0.5 + additionalOffset, y: -size.height / 2.0 + 0.5)
+        context.translateBy(x: -rawSize.width / 2.0 + 0.5 + additionalOffset, y: -rawSize.height / 2.0 + 0.5)
+        
+        let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
+        context.translateBy(x: inset, y: inset)
         
         let lineWidth: CGFloat = 1.0
         
         if drawWithClearColor {
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
+            context.setStrokeColor(UIColor.clear.cgColor)
         } else {
             context.setFillColor(fillColor.cgColor)
             context.setLineWidth(lineWidth)

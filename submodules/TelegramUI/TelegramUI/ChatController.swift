@@ -2688,7 +2688,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(index.id) {
                         let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
                         controllerInteraction.highlightedState = highlightedState
-                        strongSelf.updateItemNodesHighlightedStates(animated: true)
+                        strongSelf.updateItemNodesHighlightedStates(animated: false)
                         
                         strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(0.7, queue: Queue.mainQueue())).start(completed: {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {

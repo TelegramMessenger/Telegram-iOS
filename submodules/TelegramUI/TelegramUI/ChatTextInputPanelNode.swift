@@ -267,6 +267,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
+    var enablePredictiveInput: Bool = true {
+        didSet {
+            if let textInputNode = self.textInputNode {
+                textInputNode.textView.autocorrectionType = self.enablePredictiveInput ? .default : .no
+            }
+        }
+    }
+    
     override var context: AccountContext? {
         didSet {
             self.actionButtons.micButton.account = self.context?.account

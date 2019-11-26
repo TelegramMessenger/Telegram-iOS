@@ -183,6 +183,13 @@ private func makeDarkPresentationTheme(accentColor: UIColor, bubbleColors: (UICo
             primaryColor: .white,
             controlColor: UIColor(rgb: 0x4d4d4d)
         ),
+        freePlainInputField: PresentationInputFieldTheme(
+            backgroundColor: mainSecondaryTextColor.withAlphaComponent(0.5),
+            strokeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
+            placeholderColor: UIColor(rgb: 0x4d4d4d),
+            primaryColor: .white,
+            controlColor: UIColor(rgb: 0x4d4d4d)
+        ),
         mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23),
         scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),

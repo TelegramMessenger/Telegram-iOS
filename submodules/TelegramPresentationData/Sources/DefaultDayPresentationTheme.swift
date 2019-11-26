@@ -170,6 +170,13 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, bubbleColors:
             primaryColor: .black,
             controlColor: UIColor(rgb: 0x96979d)
         ),
+        freePlainInputField: PresentationInputFieldTheme(
+            backgroundColor: UIColor(rgb: 0xe9e9e9),
+            strokeColor: UIColor(rgb: 0xe9e9e9),
+            placeholderColor: UIColor(rgb: 0x8E8D92),
+            primaryColor: .black,
+            controlColor: UIColor(rgb: 0xBCBCC0)
+        ),
         mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4),
         scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
         pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7),
