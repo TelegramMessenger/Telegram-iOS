@@ -281,8 +281,6 @@ public final class LocationPickerController: ViewController {
                 strongSelf.controllerNode.scrollToTop()
             }
         }
-        
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {
