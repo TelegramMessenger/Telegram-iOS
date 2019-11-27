@@ -272,7 +272,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.messageBackgroundNode.contentMode = .scaleToFill
         
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
-        self.messageBackgroundNode.image = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
+        self.messageBackgroundNode.image = messageBubbleImage(incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.stroke, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
