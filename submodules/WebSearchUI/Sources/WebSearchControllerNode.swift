@@ -149,7 +149,6 @@ class WebSearchControllerNode: ASDisplayNode {
     
     private let attributionNode: ASImageNode
     
-    private let recentQueriesPlaceholder: ImmediateTextNode
     private let recentQueriesNode: ListView
     private var enqueuedRecentTransitions: [(WebSearchRecentTransition, Bool)] = []
     
@@ -215,8 +214,6 @@ class WebSearchControllerNode: ASDisplayNode {
         
         self.recentQueriesNode = ListView()
         self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
-        
-        self.recentQueriesPlaceholder = ImmediateTextNode()
         
         super.init()
         

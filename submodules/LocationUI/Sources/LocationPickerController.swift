@@ -64,7 +64,7 @@ public final class LocationPickerController: ViewController {
     private var searchNavigationContentNode: LocationSearchNavigationContentNode?
     private var isSearchingDisposable = MetaDisposable()
     
-    private let locationManager = CLLocationManager()
+    private let locationManager = LocationManager()
     private var permissionDisposable: Disposable?
     
     private var interaction: LocationPickerInteraction?
@@ -135,43 +135,52 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-            var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-            if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer {
-                title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
-            }
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: title),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
-                            strongSelf.dismiss()
-                        }
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
-                            strongSelf.dismiss()
-                        }
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
-                            strongSelf.dismiss()
-                        }
-                    })
-                ]),
-                ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
-                        controller?.dismissAnimated()
-                    })
+            DeviceAccess.authorizeAccess(to: .location(.live), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
+                strongSelf.present(c, in: .window(.root), with: a)
+            }, openSettings: {
+                strongSelf.context.sharedContext.applicationBindings.openSettings()
+            }) { [weak self] authorized in
+                guard let strongSelf = self, authorized else {
+                    return
+                }
+                let controller = ActionSheetController(presentationData: strongSelf.presentationData)
+                var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
+                if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer {
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: title),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
+                                strongSelf.dismiss()
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
+                                strongSelf.dismiss()
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
+                                strongSelf.dismiss()
+                            }
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+                            controller?.dismissAnimated()
+                        })
+                    ])
                 ])
-            ])
-            strongSelf.present(controller, in: .window(.root))
+                strongSelf.present(controller, in: .window(.root))
+            }
         }, sendVenue: { [weak self] venue in
             guard let strongSelf = self else {
                 return

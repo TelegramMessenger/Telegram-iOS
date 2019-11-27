@@ -230,10 +230,16 @@ class LocationPinAnnotationView: MKAnnotationView {
                 
                 
                 if let annotation = self.annotation as? LocationPinAnnotation, let venue = annotation.location?.venue {
+                    var textColor = UIColor.black
+                    if #available(iOS 13.0, *) {
+                        if self.traitCollection.userInterfaceStyle == .dark {
+                            textColor = .white
+                        }
+                    }
                     let labelNode = ImmediateTextNode()
                     labelNode.displaysAsynchronously = false
                     labelNode.isUserInteractionEnabled = false
-                    labelNode.attributedText = NSAttributedString(string: venue.title, font: Font.medium(10), textColor: .black)
+                    labelNode.attributedText = NSAttributedString(string: venue.title, font: Font.medium(10), textColor: textColor)
                     labelNode.maximumNumberOfLines = 2
                     labelNode.textAlignment = .center
                     labelNode.truncationType = .end
@@ -241,9 +247,10 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.labelNode = labelNode
                     self.addSubnode(labelNode)
                     
-                    let size = labelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+                    var size = labelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+                    size.height += 2.0
                     labelNode.bounds = CGRect(origin: CGPoint(), size: size)
-                    labelNode.position = CGPoint(x: 0.0, y: 10.0)
+                    labelNode.position = CGPoint(x: 0.0, y: 10.0 + floor(size.height / 2.0))
                     
                     labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 } else {
@@ -317,13 +324,28 @@ class LocationPinAnnotationView: MKAnnotationView {
         } else {
             avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 24.0))
             avatarNode.isLayerBacked = false
-            avatarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 55.0, height: 55.0))
+            avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 55.0, height: 55.0))
             avatarNode.position = CGPoint()
             self.avatarNode = avatarNode
             self.addSubnode(avatarNode)
         }
         
         avatarNode.setPeer(account: account, theme: theme, peer: peer)
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        
+        if let labelNode = self.labelNode {
+            var textColor = UIColor.black
+            if #available(iOS 13.0, *) {
+                if self.traitCollection.userInterfaceStyle == .dark {
+                    textColor = .white
+                }
+            }
+            labelNode.attributedText = NSAttributedString(string: labelNode.attributedText?.string ?? "", font: Font.medium(10), textColor: textColor)
+            let _ = labelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+        }
     }
     
     var isRaised = false

@@ -136,7 +136,9 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     icon = .location
                 }
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, action: {
-                    if let coordinate = coordinate {
+                    if let venue = venue {
+                        interaction?.sendVenue(venue)
+                    } else if let coordinate = coordinate {
                         interaction?.sendLocation(coordinate)
                     }
                 }, highlighted: { highlighted in
