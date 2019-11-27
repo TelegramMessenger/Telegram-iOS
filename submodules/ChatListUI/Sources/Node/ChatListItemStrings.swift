@@ -40,7 +40,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 processed = true
                                 break inner
                             case let .Audio(isVoice, _, title, performer, _):
-                                if isVoice {
+                                if !message.text.isEmpty {
+                                    messageText = "🎤 \(messageText)"
+                                } else if isVoice {
                                     if message.text.isEmpty {
                                         messageText = strings.Message_Audio
                                     } else {

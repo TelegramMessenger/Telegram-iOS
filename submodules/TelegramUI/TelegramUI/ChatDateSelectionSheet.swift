@@ -15,20 +15,20 @@ final class ChatDateSelectionSheet: ActionSheetController {
         return self._ready
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, completion: @escaping (Int32) -> Void) {
-        self.strings = strings
+    init(presentationData: PresentationData, completion: @escaping (Int32) -> Void) {
+        self.strings = presentationData.strings
         
-        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self._ready.set(.single(true))
         
         var updatedValue: Int32?
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                ChatDateSelectorItem(strings: strings, valueChanged: { value in
+                ChatDateSelectorItem(strings: self.strings, valueChanged: { value in
                     updatedValue = value
                 }),
-                ActionSheetButtonItem(title: strings.Common_Search, action: { [weak self] in
+                ActionSheetButtonItem(title: self.strings.Common_Search, action: { [weak self] in
                     self?.dismissAnimated()
                     if let updatedValue = updatedValue {
                         completion(updatedValue)
@@ -36,7 +36,7 @@ final class ChatDateSelectionSheet: ActionSheetController {
                 })
             ]),
             ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strings.Common_Cancel, action: { [weak self] in
+                ActionSheetButtonItem(title: self.strings.Common_Cancel, action: { [weak self] in
                     self?.dismissAnimated()
                 }),
             ])

@@ -266,14 +266,16 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             _iconView.hidden = false;
             
             UIColor *color = _pallete != nil ? _pallete.locationColor : UIColorRGB(0x008df2);
+            UIColor *pinColor = _pallete != nil ? _pallete.iconColor : [UIColor whiteColor];
             if (locationAnnotation.color != nil) {
                 color = locationAnnotation.color;
+                pinColor = [UIColor whiteColor];
             }
             
             _backgroundView.image = TGTintedImage(TGComponentsImageNamed(@"LocationPinBackground"), color);
             if (location.venue.type.length > 0)
             {
-                [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 64, 64, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
+                [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 64, 64, TGColorHexCode(pinColor)] withOptions:nil];
             }
             else
             {

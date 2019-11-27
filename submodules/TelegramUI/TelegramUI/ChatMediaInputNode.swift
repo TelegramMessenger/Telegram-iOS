@@ -7,6 +7,7 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
@@ -434,6 +435,7 @@ final class ChatMediaInputNode: ChatInputNode {
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var fontSize: PresentationFontSize
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
     private let _ready = Promise<Void>()
@@ -442,12 +444,13 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.theme = theme
         self.strings = strings
+        self.fontSize = fontSize
         self.gifPaneIsActiveUpdated = gifPaneIsActiveUpdated
         
         self.themeAndStringsPromise = Promise((theme, strings))
@@ -589,7 +592,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self?.dismissPeerSpecificPackSetup()
         }, clearRecentlyUsedStickers: { [weak self] in
             if let strongSelf = self {
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: strongSelf.theme, fontSize: strongSelf.fontSize))
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
@@ -839,7 +842,7 @@ final class ChatMediaInputNode: ChatInputNode {
             
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
-            let contextController = ContextController(account: strongSelf.context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(items), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.controllerInteraction.presentGlobalOverlayController(contextController, nil)
         }
     }

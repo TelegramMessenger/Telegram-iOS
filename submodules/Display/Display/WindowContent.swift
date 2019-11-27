@@ -272,6 +272,8 @@ public class Window1 {
     public var previewThemeAccentColor: UIColor = .blue
     public var previewThemeDarkBlur: Bool = false
     
+    private var shouldNotAnimateLikelyKeyboardAutocorrectionSwitch: Bool = false
+    
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {
         didSet {
@@ -522,7 +524,15 @@ public class Window1 {
                     transitionCurve = .easeInOut
                 }
                 
-                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: .animated(duration: duration, curve: transitionCurve), overrideTransition: false) }
+                var transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: transitionCurve)
+                
+                if strongSelf.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch, let inputHeight = strongSelf.windowLayout.inputHeight {
+                    if abs(inputHeight - keyboardHeight) <= 44.1 {
+                        transition = .immediate
+                    }
+                }
+                
+                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: transition, overrideTransition: false) }
             }
         })
         
@@ -1201,6 +1211,13 @@ public class Window1 {
             if !f(controller) {
                 break
             }
+        }
+    }
+    
+    public func doNotAnimateLikelyKeyboardAutocorrectionSwitch() {
+        self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = true
+        DispatchQueue.main.async {
+            self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = false
         }
     }
 }

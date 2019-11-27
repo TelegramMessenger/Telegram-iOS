@@ -2715,15 +2715,20 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
 }
 
-- (void)contextDatacenterTransportSchemesUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+- (void)contextDatacenterTransportSchemesUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset {
     [[MTProto managerQueue] dispatchOnQueue:^ {
         if (context == _context && datacenterId == _datacenterId && ![self isStopped]) {
+            bool resolvedShouldReset = shouldReset;
+            
             if (_mtState & MTProtoStateAwaitingDatacenterScheme) {
                 [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterScheme)];
+                resolvedShouldReset = true;
             }
             
-            [self resetTransport];
-            [self requestTransportTransaction];
+            if (resolvedShouldReset) {
+                [self resetTransport];
+                [self requestTransportTransaction];
+            }
         }
     }];
 }

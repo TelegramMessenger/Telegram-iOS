@@ -39,10 +39,13 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private let pickerAnnotationContainerView: PickerAnnotationContainerView
     private weak var userLocationAnnotationView: MKAnnotationView?
     
+    private let pinDisposable = MetaDisposable()
+    
     private var mapView: MKMapView? {
         return self.view as? MKMapView
     }
     
+    var returnedToUserLocation = true
     var ignoreRegionChanges = false
     var isDragging = false
     var beganInteractiveDragging: (() -> Void)?
@@ -101,6 +104,11 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             self.mapView?.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: offset.y, left: offset.x, bottom: 0.0, right: 0.0), animated: animated)
         }
          self.ignoreRegionChanges = false
+        
+        if isUserLocation && !self.returnedToUserLocation {
+            self.returnedToUserLocation = true
+            self.pickerAnnotationView?.setRaised(true, animated: true)
+        }
     }
     
     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
@@ -111,13 +119,18 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         for gestureRecognizer in gestureRecognizers {
             if gestureRecognizer.state == .began || gestureRecognizer.state == .ended {
                 self.isDragging = true
+                self.returnedToUserLocation = false
                 self.beganInteractiveDragging?()
                 
                 if self.hasPickerAnnotation {
                     self.customUserLocationAnnotationView?.isHidden = true
                     self.pickerAnnotationContainerView.isHidden = false
-                    self.pickerAnnotationView?.setCustom(true, animated: true)
+                    if let pickerAnnotationView = self.pickerAnnotationView, !pickerAnnotationView.isRaised {
+                        pickerAnnotationView.setCustom(true, animated: true)
+                        pickerAnnotationView.setRaised(true, animated: true)
+                    }
                     self.resetAnnotationSelection()
+                    self.resetScheduledPin()
                 }
                 break
             }
@@ -125,9 +138,18 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        if self.isDragging, let coordinate = self.mapCenterCoordinate {
+        let wasDragging = self.isDragging
+        if self.isDragging {
             self.isDragging = false
-            self.endedInteractiveDragging?(coordinate)
+            if let coordinate = self.mapCenterCoordinate {
+                self.endedInteractiveDragging?(coordinate)
+            }
+        }
+        
+        if let pickerAnnotationView = self.pickerAnnotationView {
+            if pickerAnnotationView.isRaised && (wasDragging || self.returnedToUserLocation) {
+                self.schedulePin(wasDragging: wasDragging)
+            }
         }
     }
     
@@ -293,12 +315,41 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
-    override func layout() {
-        super.layout()
-        
-        self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((self.frame.size.height - self.frame.size.width) / 2.0), width: self.frame.size.width, height: self.frame.size.width)
+    private func schedulePin(wasDragging: Bool) {
+        let timeout: Double = wasDragging ? 0.38 : 0.05
+         
+         let signal: Signal<Never, NoError> = .complete()
+         |> delay(timeout, queue: Queue.mainQueue())
+         self.pinDisposable.set(signal.start(completed: { [weak self] in
+            guard let strongSelf = self, let pickerAnnotationView = strongSelf.pickerAnnotationView else {
+                return
+            }
+            
+            pickerAnnotationView.setRaised(false, animated: true) { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+               
+                if strongSelf.returnedToUserLocation {
+                    strongSelf.pickerAnnotationContainerView.isHidden = true
+                    strongSelf.customUserLocationAnnotationView?.isHidden = false
+                }
+            }
+            
+            if strongSelf.returnedToUserLocation {
+                pickerAnnotationView.setCustom(false, animated: true)
+            }
+         }))
+    }
+    
+    private func resetScheduledPin() {
+        self.pinDisposable.set(nil)
+    }
+    
+    func updateLayout(size: CGSize) {
+        self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - size.width) / 2.0), width: size.width, height: size.width)
         if let pickerAnnotationView = self.pickerAnnotationView {
-            pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0 + 16.0)
+            pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0)
         }
     }
 }

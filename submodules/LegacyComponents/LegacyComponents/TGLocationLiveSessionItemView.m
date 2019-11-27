@@ -23,7 +23,7 @@
 {
     bool isUser = [peer isKindOfClass:[TGUser class]];
     NSString *title = isUser ? ((TGUser *)peer).displayName : ((TGConversation *)peer).chatTitle;
-    self = [super initWithTitle:@"" type:TGMenuSheetButtonTypeDefault action:action];
+    self = [super initWithTitle:@"" type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:action];
     if (self != nil)
     {
         _label = [[UILabel alloc] init];

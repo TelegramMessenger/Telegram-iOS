@@ -60,8 +60,7 @@ private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIV
 }
 
 private final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
+    private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<[ContextMenuItem], NoError>
     private let beginDismiss: (ContextMenuActionResult) -> Void
@@ -108,9 +107,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
-    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.source = source
         self.items = items
         self.beginDismiss = beginDismiss
@@ -126,7 +124,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.effectView = UIVisualEffectView()
         if #available(iOS 9.0, *) {
         } else {
-            if theme.rootController.keyboardColor == .dark {
+            if presentationData.theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)
@@ -135,7 +133,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = theme.contextMenu.dimColor
+        self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         self.dimNode.alpha = 0.0
         
         self.withoutBlurDimNode = ASDisplayNode()
@@ -159,7 +157,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         var feedbackTap: (() -> Void)?
         
-        self.actionsContainerNode = ContextActionsContainerNode(theme: theme, items: [], getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: [], getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
@@ -168,7 +166,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         })
         
         if !reactionItems.isEmpty {
-            let reactionContextNode = ReactionContextNode(account: account, theme: theme, items: reactionItems)
+            let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
             self.reactionContextNode = reactionContextNode
         } else {
             self.reactionContextNode = nil
@@ -966,7 +964,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.currentItems = items
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(theme: self.theme, items: items, getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: items, getController: { [weak self] in
             return self?.getController()
         }, actionSelected: { [weak self] result in
             self?.beginDismiss(result)
@@ -988,11 +986,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func updateTheme(theme: PresentationTheme) {
-        self.theme = theme
+    func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
         
-        self.dimNode.backgroundColor = theme.contextMenu.dimColor
-        self.actionsContainerNode.updateTheme(theme: theme)
+        self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
+        self.actionsContainerNode.updateTheme(presentationData: presentationData)
         
         if let validLayout = self.validLayout {
             self.updateLayout(layout: validLayout, transition: .immediate, previousActionsContainerNode: nil)
@@ -1364,8 +1362,7 @@ public enum ContextContentSource {
 
 public final class ContextController: ViewController, StandalonePresentableController {
     private let account: Account
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
+    private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<[ContextMenuItem], NoError>
     private var reactionItems: [ReactionContextItem]
@@ -1387,10 +1384,9 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((String) -> Void)?
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         self.source = source
         self.items = items
         self.reactionItems = reactionItems
@@ -1407,7 +1403,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContextControllerNode(account: self.account, controller: self, theme: self.theme, strings: self.strings, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
+        self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
             }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
             guard let strongSelf = self else {
@@ -1464,10 +1460,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
     }
     
-    public func updateTheme(theme: PresentationTheme) {
-        self.theme = theme
+    public func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
         if self.isNodeLoaded {
-            self.controllerNode.updateTheme(theme: theme)
+            self.controllerNode.updateTheme(presentationData: presentationData)
         }
     }
     

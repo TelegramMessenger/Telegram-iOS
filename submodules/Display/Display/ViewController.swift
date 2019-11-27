@@ -529,7 +529,11 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open func dismiss(completion: (() -> Void)? = nil) {
-        (self.navigationController as? NavigationController)?.filterController(self, animated: true)
+        if let navigationController = self.navigationController as? NavigationController {
+            navigationController.filterController(self, animated: true)
+        } else {
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)

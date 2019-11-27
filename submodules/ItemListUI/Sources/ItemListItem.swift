@@ -178,22 +178,7 @@ public final class ItemListPresentationData: Equatable {
 
 public extension PresentationFontSize {
     var itemListBaseHeaderFontSize: CGFloat {
-        switch self {
-        case .extraSmall:
-            return 13.0
-        case .small:
-            return 14.0
-        case .medium:
-            return 15.0
-        case .regular:
-            return 16.0
-        case .large:
-            return 18.0
-        case .extraLarge:
-            return 22.0
-        case .extraLargeX2:
-            return 25.0
-        }
+        return floor(self.itemListBaseFontSize * 13.0 / 17.0)
     }
     
     var itemListBaseFontSize: CGFloat {

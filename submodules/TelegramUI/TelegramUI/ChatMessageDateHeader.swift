@@ -59,8 +59,6 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     }
 }
 
-private let titleFont = Font.medium(13.0)
-
 private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
     switch index {
         case 0:
@@ -172,6 +170,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         
@@ -191,6 +191,8 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
+        
+        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)

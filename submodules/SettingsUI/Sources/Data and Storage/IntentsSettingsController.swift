@@ -150,7 +150,6 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            
             case let .suggestHeader(lhsTheme, lhsText):
                 if case let .suggestHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -272,7 +271,7 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
         let _ = updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager, f).start()
     }, resetAll: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.IntentsSettings_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()

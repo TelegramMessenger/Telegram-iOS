@@ -523,8 +523,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             if file.isVideo && !isSecretMedia && automaticPlayback && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
-                                    if let currentFile = currentMedia as? TelegramMediaFile, currentFile.resource is EmptyMediaResource {
-                                        replaceVideoNode = true
+                                    if let currentFile = currentMedia as? TelegramMediaFile {
+                                        if currentFile.resource is EmptyMediaResource {
+                                            replaceVideoNode = true
+                                        } else if currentFile.fileId.namespace == Namespaces.Media.CloudFile && file.fileId.namespace == Namespaces.Media.CloudFile && currentFile.fileId != file.fileId {
+                                            replaceVideoNode = true
+                                        }
                                     }
                                 } else if !(file.resource is LocalFileVideoMediaResource) {
                                     replaceVideoNode = true

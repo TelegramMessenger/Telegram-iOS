@@ -100,19 +100,21 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
     }
     
-    func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, padding: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.mapNode, frame: CGRect(x: 0.0, y: floorToScreenPixels((size.height - layout.size.height + navigationBarHeight) / 2.0), width: size.width, height: layout.size.height))
+    func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
+        let mapHeight: CGFloat = floor(layout.size.height * 1.5)
+        let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset, width: size.width, height: mapHeight)
+        transition.updateFrame(node: self.mapNode, frame: mapFrame)
+        self.mapNode.updateLayout(size: mapFrame.size)
         
         transition.updateFrame(node: self.shadowNode, frame: CGRect(x: 0.0, y: size.height - 14.0, width: size.width, height: 14.0))
         
         let inset: CGFloat = 6.0
-        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelSize.width - panelInset * 2.0, y: navigationBarHeight + padding + inset, width: panelSize.width + panelInset * 2.0, height: panelSize.height + panelInset * 2.0))
-        
+        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelSize.width - panelInset * 2.0, y: navigationBarHeight + topPadding + inset, width: panelSize.width + panelInset * 2.0, height: panelSize.height + panelInset * 2.0))
         transition.updateFrame(node: self.infoButtonNode, frame: CGRect(x: panelInset, y: panelInset, width: panelSize.width, height: panelSize.height / 2.0))
         transition.updateFrame(node: self.locationButtonNode, frame: CGRect(x: panelInset, y: panelInset + panelSize.height / 2.0, width: panelSize.width, height: panelSize.height / 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        let optionsAlpha: CGFloat = size.height > 124.0 + navigationBarHeight ? 1.0 : 0.0
+        let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight ? 1.0 : 0.0
         alphaTransition.updateAlpha(node: self.optionsBackgroundNode, alpha: optionsAlpha)
     }
     

@@ -306,7 +306,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     let arguments = DataPrivacyControllerArguments(account: context.account, clearPaymentInfo: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
@@ -453,7 +453,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         }
     }, deleteCloudDrafts: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }

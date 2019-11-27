@@ -680,7 +680,7 @@ public final class ShareController: ViewController {
             strongSelf.controllerNode.animateOut(shared: false, completion: {})
             
             let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
-            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let controller = ActionSheetController(presentationData: presentationData)
             controller.dismissed = { [weak self] cancelled in
                 if cancelled {
                     self?.controllerNode.animateIn()

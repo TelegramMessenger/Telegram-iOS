@@ -29,6 +29,9 @@ static_library(
         "//submodules/MergeLists:MergeLists",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/SearchBarNode:SearchBarNode",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

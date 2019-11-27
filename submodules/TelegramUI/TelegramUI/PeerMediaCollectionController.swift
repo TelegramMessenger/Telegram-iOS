@@ -149,7 +149,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         var items: [ActionSheetButtonItem] = []
                         
                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
@@ -282,7 +282,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                         switch previewData {
                         case let .gallery(gallery):
                             gallery.setHintWillBePresentedInPreviewingContext(true)
-                            let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
+                            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
                             strongSelf.presentInGlobalOverlay(contextController)
                         case .instantPage:
                             break
@@ -363,7 +363,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                         case let .url(url):
                             let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                             let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                                 ActionSheetTextItem(title: url),
                                 ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
@@ -870,7 +870,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         if !messageIds.isEmpty {
             self.messageContextDisposable.set((combineLatest(self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
                 if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                     var items: [ActionSheetItem] = []
                     var personalPeerName: String?
                     var isChannel = false

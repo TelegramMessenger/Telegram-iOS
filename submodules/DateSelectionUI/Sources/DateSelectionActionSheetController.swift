@@ -20,11 +20,11 @@ public final class DateSelectionActionSheetController: ActionSheetController {
         let theme = presentationData.theme
         let strings = presentationData.strings
         
-        super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
         })
         

@@ -1435,6 +1435,28 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    func lastVisbleMesssage() -> Message? {
+        var currentMessage: Message?
+        if let historyView = self.historyView {
+            if let visibleRange = self.displayedItemRange.visibleRange {
+                var index = 0
+                loop: for entry in historyView.filteredEntries.reversed() {
+                    if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
+                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            currentMessage = message
+                            break loop
+                        } else if case let .MessageGroupEntry(_, messages, _) = entry {
+                            currentMessage = messages.first?.0
+                            break loop
+                        }
+                    }
+                    index += 1
+                }
+            }
+        }
+        return currentMessage
+    }
+    
     func immediateScrollState() -> ChatInterfaceHistoryScrollState? {
         var currentMessage: Message?
         if let historyView = self.historyView {

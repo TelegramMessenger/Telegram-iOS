@@ -774,7 +774,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let enableChatListPhotos = item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos
             
-            let leftInset: CGFloat = params.leftInset + 78.0
+            let avatarDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0)
+            let avatarLeftInset = 18.0 + avatarDiameter
+            
+            let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
             enum ContentData {
                 case chat(itemPeer: RenderedPeer, peer: Peer?, hideAuthor: Bool, messageText: String)
@@ -1337,7 +1340,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: strongSelf.statusNode, alpha: 1.0)
                     }
                     
-                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: floor((layout.contentSize.height - 60.0) / 2.0)), size: CGSize(width: 60.0, height: 60.0))
+                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((layout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     let onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
@@ -1417,7 +1420,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.secretIconNode = iconNode
                         }
                         iconNode.image = currentSecretIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + 4.0), size: currentSecretIconImage.size))
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + floor((strongSelf.titleNode.frame.height - currentSecretIconImage.size.height) / 2.0)), size: currentSecretIconImage.size))
                         titleOffset += currentSecretIconImage.size.width + 3.0
                     } else if let secretIconNode = strongSelf.secretIconNode {
                         strongSelf.secretIconNode = nil
@@ -1616,7 +1619,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let _ = self.item, let params = self.layoutParams?.5, let countersSize = self.layoutParams?.6 {
+        if let item = self.item, let params = self.layoutParams?.5, let countersSize = self.layoutParams?.6 {
             let editingOffset: CGFloat
             if let selectableControlNode = self.selectableControlNode {
                 editingOffset = selectableControlNode.bounds.size.width
@@ -1635,14 +1638,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
             }
             
-            let leftInset: CGFloat = params.leftInset + 78.0
+            let avatarDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0)
+            let avatarLeftInset = 18.0 + avatarDiameter
+            
+            let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: params.width - leftInset - params.rightInset - 10.0 - 1.0 - editingOffset, height: self.bounds.size.height - 12.0 - 9.0))
             
             let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + offset, dy: 0.0)
             
             var avatarFrame = self.avatarNode.frame
-            avatarFrame.origin.x = leftInset - 78.0 + editingOffset + 10.0 + offset
+            avatarFrame.origin.x = leftInset - avatarLeftInset + editingOffset + 10.0 + offset
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             
             var onlineFrame = self.onlineNode.frame

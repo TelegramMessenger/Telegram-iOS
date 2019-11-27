@@ -435,7 +435,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let titleBoldFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
             let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
-            let badgeFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            let badgeFont = Font.regular(14.0)
+            let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -611,7 +612,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let verticalInset: CGFloat = statusAttributedString == nil ? 11.0 : 6.0
+            let titleVerticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
+            let verticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
             
             let statusHeightComponent: CGFloat
             if statusAttributedString == nil {
@@ -624,7 +626,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let titleFrame: CGRect
             if statusAttributedString != nil {
-                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleVerticalInset), size: titleLayout.size)
             } else {
                 titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
             }
@@ -707,7 +709,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0)))
+                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))

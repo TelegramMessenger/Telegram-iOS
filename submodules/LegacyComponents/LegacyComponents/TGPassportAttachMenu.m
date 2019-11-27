@@ -84,7 +84,7 @@
     };
     [itemViews addObject:carouselItem];
     
-    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") type:TGMenuSheetButtonTypeDefault action:^
+    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
     {
         __strong TGMenuSheetController *strongController = weakController;
         if (strongController == nil)
@@ -101,7 +101,7 @@
     
     if (iosMajorVersion() >= 8 && intent != TGPassportAttachIntentSelfie)
     {
-        TGMenuSheetButtonItemView *icloudItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.FileICloudDrive") type:TGMenuSheetButtonTypeDefault action:^
+        TGMenuSheetButtonItemView *icloudItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Conversation.FileICloudDrive") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController == nil)
@@ -124,7 +124,7 @@
     }
     carouselItem.remainingHeight = TGMenuSheetButtonItemViewHeight * (itemViews.count - 1);
     
-    TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+    TGMenuSheetButtonItemView *cancelItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
     {
         __strong TGMenuSheetController *strongController = weakController;
         if (strongController == nil)

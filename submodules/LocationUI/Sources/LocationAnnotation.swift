@@ -80,6 +80,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     let smallIconNode: TransformImageNode
     let dotNode: ASImageNode
     var avatarNode: AvatarNode?
+    var labelNode: ImmediateTextNode?
     
     var appeared = false
     var animating = false
@@ -226,6 +227,29 @@ class LocationPinAnnotationView: MKAnnotationView {
                                 
                 self.dotNode.alpha = 1.0
                 self.dotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                
+                
+                if let annotation = self.annotation as? LocationPinAnnotation, let venue = annotation.location?.venue {
+                    let labelNode = ImmediateTextNode()
+                    labelNode.displaysAsynchronously = false
+                    labelNode.isUserInteractionEnabled = false
+                    labelNode.attributedText = NSAttributedString(string: venue.title, font: Font.medium(10), textColor: .black)
+                    labelNode.maximumNumberOfLines = 2
+                    labelNode.textAlignment = .center
+                    labelNode.truncationType = .end
+                    labelNode.textStroke = (UIColor.white, 1.0)
+                    self.labelNode = labelNode
+                    self.addSubnode(labelNode)
+                    
+                    let size = labelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+                    labelNode.bounds = CGRect(origin: CGPoint(), size: size)
+                    labelNode.position = CGPoint(x: 0.0, y: 10.0)
+                    
+                    labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                } else {
+                    self.labelNode?.removeFromSupernode()
+                    self.labelNode = nil
+                }
             } else {
                 let avatarSnapshot = self.avatarNode?.view.snapshotContentTree()
                 if let avatarSnapshot = avatarSnapshot, let avatarNode = self.avatarNode {
@@ -268,6 +292,13 @@ class LocationPinAnnotationView: MKAnnotationView {
                 let previousAlpha = self.dotNode.alpha
                 self.dotNode.alpha = 0.0
                 self.dotNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
+                
+                if let labelNode = self.labelNode {
+                    self.labelNode = nil
+                    labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                        labelNode.removeFromSupernode()
+                    })
+                }
             }
         } else {
             self.smallNode.isHidden = selected
@@ -279,50 +310,13 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
-    
-        guard !self.animating else {
-            return
-        }
-        
-        self.dotNode.position = CGPoint()
-        self.smallNode.position = CGPoint()
-        self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
-        self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)
-        self.iconNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0 - 5.0)
-       
-        let smallIconLayout = self.smallIconNode.asyncLayout()
-        let smallIconApply = smallIconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.smallIconNode.bounds.size, boundingSize: self.smallIconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
-        smallIconApply()
-        
-        let iconLayout = self.iconNode.asyncLayout()
-        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
-        iconApply()
-        
-        if let avatarNode = self.avatarNode {
-            avatarNode.position = self.isSelected ? CGPoint(x: UIScreenPixel, y: -41.0) : CGPoint()
-            avatarNode.transform = self.isSelected ? CATransform3DIdentity : CATransform3DMakeScale(0.64, 0.64, 1.0)
-            avatarNode.view.superview?.bringSubviewToFront(avatarNode.view)
-        }
-        
-        if !self.appeared {
-            self.appeared = true
-            
-            self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
-            UIView.animate(withDuration: 0.55, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
-                self.smallNode.transform = CATransform3DIdentity
-            }) { _ in
-            }
-        }
-    }
-    
     func setPeer(account: Account, theme: PresentationTheme, peer: Peer) {
         let avatarNode: AvatarNode
         if let currentAvatarNode = self.avatarNode {
             avatarNode = currentAvatarNode
         } else {
             avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 24.0))
+            avatarNode.isLayerBacked = false
             avatarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 55.0, height: 55.0))
             avatarNode.position = CGPoint()
             self.avatarNode = avatarNode
@@ -332,19 +326,23 @@ class LocationPinAnnotationView: MKAnnotationView {
         avatarNode.setPeer(account: account, theme: theme, peer: peer)
     }
     
-    private var raised = false
+    var isRaised = false
     func setRaised(_ raised: Bool, animated: Bool, completion: @escaping () -> Void = {}) {
-        guard raised != self.raised else {
+        guard raised != self.isRaised else {
             return
         }
         
-        self.raised = raised
+        self.isRaised = raised
         self.shadowNode.layer.removeAllAnimations()
         
         if animated {
+            self.animating = true
+            
             if raised {
                 let previousPosition = self.shadowNode.position
-                self.shadowNode.layer.animatePosition(from: previousPosition, to: CGPoint(x: UIScreenPixel, y: -66.0), duration: 0.2, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring) { finished in
+                self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -66.0)
+                self.shadowNode.layer.animatePosition(from: previousPosition, to: self.shadowNode.position, duration: 0.2, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring) { finished in
+                    self.animating = false
                     if finished {
                         completion()
                     }
@@ -353,6 +351,7 @@ class LocationPinAnnotationView: MKAnnotationView {
                 UIView.animate(withDuration: 0.2, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.0, options: [.allowAnimatedContent], animations: {
                     self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
                 }) { finished in
+                    self.animating = false
                     if finished {
                         completion()
                     }
@@ -396,7 +395,6 @@ class LocationPinAnnotationView: MKAnnotationView {
                         self.addSubnode(avatarNode)
                     }
                     self.animating = false
-                    self.setNeedsLayout()
                 }
             }
             
@@ -404,5 +402,43 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
         
         self.dotNode.isHidden = !custom
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+    
+        guard !self.animating else {
+            return
+        }
+        
+        self.dotNode.position = CGPoint()
+        self.smallNode.position = CGPoint()
+        self.shadowNode.position = CGPoint(x: UIScreenPixel, y: self.isRaised ? -66.0 : -36.0)
+        self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)
+        self.iconNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0 - 5.0)
+       
+        let smallIconLayout = self.smallIconNode.asyncLayout()
+        let smallIconApply = smallIconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.smallIconNode.bounds.size, boundingSize: self.smallIconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
+        smallIconApply()
+        
+        let iconLayout = self.iconNode.asyncLayout()
+        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
+        iconApply()
+        
+        if let avatarNode = self.avatarNode {
+            avatarNode.position = self.isSelected ? CGPoint(x: UIScreenPixel, y: -41.0) : CGPoint()
+            avatarNode.transform = self.isSelected ? CATransform3DIdentity : CATransform3DMakeScale(0.64, 0.64, 1.0)
+            avatarNode.view.superview?.bringSubviewToFront(avatarNode.view)
+        }
+        
+        if !self.appeared {
+            self.appeared = true
+            
+            self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
+            UIView.animate(withDuration: 0.55, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
+                self.smallNode.transform = CATransform3DIdentity
+            }) { _ in
+            }
+        }
     }
 }

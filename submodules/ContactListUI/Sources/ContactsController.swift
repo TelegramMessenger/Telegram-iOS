@@ -495,7 +495,7 @@ public class ContactsController: ViewController {
             }
         }
         
-        let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetTextItem(title: self.presentationData.strings.Contacts_SortBy))
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByName, color: .accent, action: { [weak actionSheet] in

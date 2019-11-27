@@ -29,7 +29,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     }
     
     public init(presentationData: PresentationData, accountManager: AccountManager, postbox: Postbox, network: Network, server: ProxyServerSettings, updatedPresentationData: Signal<PresentationData, NoError>?) {
-        let sheetTheme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+        let sheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
         super.init(theme: sheetTheme)
         
         self._ready.set(.single(true))
@@ -63,7 +63,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
         if let updatedPresentationData = updatedPresentationData {
             self.presentationDisposable = updatedPresentationData.start(next: { [weak self] presentationData in
                 if let strongSelf = self {
-                    strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                    strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
                 }
             })
         }
@@ -97,8 +97,6 @@ private final class ProxyServerInfoItem: ActionSheetItem {
     }
 }
 
-private let textFont = Font.regular(16.0)
-
 private enum ProxyServerInfoStatusType {
     case generic(String)
     case failed(String)
@@ -107,6 +105,7 @@ private enum ProxyServerInfoStatusType {
 private final class ProxyServerInfoItemNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     private let strings: PresentationStrings
+    private let textFont: UIFont
     
     private let network: Network
     private let server: ProxyServerSettings
@@ -121,6 +120,8 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         self.strings = strings
         self.network = network
         self.server = server
+        
+        self.textFont = Font.regular(floor(theme.baseFontSize * 16.0 / 17.0))
         
         var fieldNodes: [(ImmediateTextNode, ImmediateTextNode)] = []
         let serverTitleNode = ImmediateTextNode()
@@ -317,10 +318,12 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.dismiss = dismiss
         self.present = present
         
+        let titleFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
         self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: theme.controlAccentColor)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.SocksProxySetup_ConnectAndSave, font: titleFont, textColor: theme.controlAccentColor)
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 22.0, 1.5, false))
         self.activityIndicator.isHidden = true

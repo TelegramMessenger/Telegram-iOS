@@ -54,6 +54,10 @@ final class LocationSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.deactivate(clear: false)
     }
     
+    func updateActivity(_ activity: Bool) {
+        self.searchBar.activity = activity
+    }
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings)

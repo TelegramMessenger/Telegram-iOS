@@ -868,7 +868,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         }
     }, dismissAdmin: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        let actionSheet = ActionSheetController(presentationData: presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_Moderator_AccessLevelRevoke, color: .destructive, font: .default, enabled: true, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()

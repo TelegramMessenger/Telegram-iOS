@@ -145,17 +145,21 @@ class ChatMessageBackground: ASDisplayNode {
         if let previousType = previousType, previousType != .none, type == .none {
             if transition.isAnimated {
                 let tempLayer = CALayer()
-                tempLayer.contents = self.layer.contents
-                tempLayer.contentsScale = self.layer.contentsScale
-                tempLayer.rasterizationScale = self.layer.rasterizationScale
-                tempLayer.contentsGravity = self.layer.contentsGravity
-                tempLayer.contentsCenter = self.layer.contentsCenter
+                tempLayer.contents = self.imageNode.layer.contents
+                tempLayer.contentsScale = self.imageNode.layer.contentsScale
+                tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
+                tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
+                tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
                 
                 tempLayer.frame = self.bounds
                 self.layer.addSublayer(tempLayer)
                 transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                     tempLayer?.removeFromSuperlayer()
                 })
+            }
+        } else if transition.isAnimated {
+            if let previousContents = self.imageNode.layer.contents, let image = image {
+                self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
             }
         }
         

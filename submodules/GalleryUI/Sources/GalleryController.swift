@@ -609,7 +609,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         } else if canOpenIn {
                             openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: cleanUrl))
@@ -652,7 +652,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .peerMention(peerId, mention):
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         var items: [ActionSheetItem] = []
                         if !mention.isEmpty {
                             items.append(ActionSheetTextItem(title: mention))
@@ -677,7 +677,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .textMention(mention):
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: mention),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -698,7 +698,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .botCommand(command):
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetTextItem(title: command))
                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -712,7 +712,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .hashtag(peerName, hashtag):
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: hashtag),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -734,7 +734,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         ])
                         strongSelf.present(actionSheet, in: .window(.root))
                     case let .timecode(timecode, text):
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                             ActionSheetTextItem(title: text),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in

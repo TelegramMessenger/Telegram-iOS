@@ -714,6 +714,7 @@ extension PresentationThemeList: Codable {
         case check
         case controlSecondary
         case freeInputField
+        case freePlainInputField
         case mediaPlaceholder
         case scrollIndicator
         case pageIndicatorInactive
@@ -723,35 +724,46 @@ extension PresentationThemeList: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(blocksBackgroundColor: try decodeColor(values, .blocksBg),
-                  plainBackgroundColor: try decodeColor(values, .plainBg),
-                  itemPrimaryTextColor: try decodeColor(values, .primaryText),
-                  itemSecondaryTextColor: try decodeColor(values, .secondaryText),
-                  itemDisabledTextColor: try decodeColor(values, .disabledText),
-                  itemAccentColor: try decodeColor(values, .accent),
-                  itemHighlightedColor: try decodeColor(values, .highlighted),
-                  itemDestructiveColor: try decodeColor(values, .destructive),
-                  itemPlaceholderTextColor: try decodeColor(values, .placeholderText),
-                  itemBlocksBackgroundColor: try decodeColor(values, .itemBlocksBg),
-                  itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
-                  itemBlocksSeparatorColor: try decodeColor(values, .blocksSeparator),
-                  itemPlainSeparatorColor: try decodeColor(values, .plainSeparator),
-                  disclosureArrowColor: try decodeColor(values, .disclosureArrow),
-                  sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
-                  freeTextColor: try decodeColor(values, .freeText),
-                  freeTextErrorColor: try decodeColor(values, .freeTextError),
-                  freeTextSuccessColor: try decodeColor(values, .freeTextSuccess),
-                  freeMonoIconColor: try decodeColor(values, .freeMonoIcon),
-                  itemSwitchColors: try values.decode(PresentationThemeSwitch.self, forKey: .switch),
-                  itemDisclosureActions: try values.decode(PresentationThemeItemDisclosureActions.self, forKey: .disclosureActions),
-                  itemCheckColors: try values.decode(PresentationThemeFillStrokeForeground.self, forKey: .check),
-                  controlSecondaryColor: try decodeColor(values, .controlSecondary),
-                  freeInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .freeInputField),
-                  mediaPlaceholderColor: try decodeColor(values, .mediaPlaceholder),
-                  scrollIndicatorColor: try decodeColor(values, .scrollIndicator),
-                  pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
-                  inputClearButtonColor: try decodeColor(values, .inputClearButton),
-                  itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart))
+        
+        let freePlainInputField: PresentationInputFieldTheme
+        if let value = try? values.decode(PresentationInputFieldTheme.self, forKey: .freePlainInputField) {
+            freePlainInputField = value
+        } else {
+            freePlainInputField = try values.decode(PresentationInputFieldTheme.self, forKey: .freeInputField)
+        }
+        
+        self.init(
+            blocksBackgroundColor: try decodeColor(values, .blocksBg),
+            plainBackgroundColor: try decodeColor(values, .plainBg),
+            itemPrimaryTextColor: try decodeColor(values, .primaryText),
+            itemSecondaryTextColor: try decodeColor(values, .secondaryText),
+            itemDisabledTextColor: try decodeColor(values, .disabledText),
+            itemAccentColor: try decodeColor(values, .accent),
+            itemHighlightedColor: try decodeColor(values, .highlighted),
+            itemDestructiveColor: try decodeColor(values, .destructive),
+            itemPlaceholderTextColor: try decodeColor(values, .placeholderText),
+            itemBlocksBackgroundColor: try decodeColor(values, .itemBlocksBg),
+            itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+            itemBlocksSeparatorColor: try decodeColor(values, .blocksSeparator),
+            itemPlainSeparatorColor: try decodeColor(values, .plainSeparator),
+            disclosureArrowColor: try decodeColor(values, .disclosureArrow),
+            sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
+            freeTextColor: try decodeColor(values, .freeText),
+            freeTextErrorColor: try decodeColor(values, .freeTextError),
+            freeTextSuccessColor: try decodeColor(values, .freeTextSuccess),
+            freeMonoIconColor: try decodeColor(values, .freeMonoIcon),
+            itemSwitchColors: try values.decode(PresentationThemeSwitch.self, forKey: .switch),
+            itemDisclosureActions: try values.decode(PresentationThemeItemDisclosureActions.self, forKey: .disclosureActions),
+            itemCheckColors: try values.decode(PresentationThemeFillStrokeForeground.self, forKey: .check),
+            controlSecondaryColor: try decodeColor(values, .controlSecondary),
+            freeInputField: try values.decode(PresentationInputFieldTheme.self, forKey: .freeInputField),
+            freePlainInputField: freePlainInputField,
+            mediaPlaceholderColor: try decodeColor(values, .mediaPlaceholder),
+            scrollIndicatorColor: try decodeColor(values, .scrollIndicator),
+            pageIndicatorInactiveColor: try decodeColor(values, .pageIndicatorInactive),
+            inputClearButtonColor: try decodeColor(values, .inputClearButton),
+            itemBarChart: try values.decode(PresentationThemeItemBarChart.self, forKey: .itemBarChart)
+        )
     }
     
     public func encode(to encoder: Encoder) throws {

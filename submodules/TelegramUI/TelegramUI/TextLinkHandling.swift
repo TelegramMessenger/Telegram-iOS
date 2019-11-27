@@ -105,7 +105,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                 case let .url(url):
                     let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url)).count > 1
                     let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
-                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                         ActionSheetTextItem(title: url),
                         ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
@@ -129,7 +129,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     ])])
                     controller.present(actionSheet, in: .window(.root))
                 case let .mention(mention):
-                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                         ActionSheetTextItem(title: mention),
                         ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
@@ -147,7 +147,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     ])])
                     controller.present(actionSheet, in: .window(.root))
                 case let .hashtag(_, hashtag):
-                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                         ActionSheetTextItem(title: hashtag),
                         ActionSheetButtonItem(title: presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in

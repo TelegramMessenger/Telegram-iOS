@@ -354,13 +354,14 @@ public final class PresentationThemeList {
     public let itemCheckColors: PresentationThemeFillStrokeForeground
     public let controlSecondaryColor: UIColor
     public let freeInputField: PresentationInputFieldTheme
+    public let freePlainInputField: PresentationInputFieldTheme
     public let mediaPlaceholderColor: UIColor
     public let scrollIndicatorColor: UIColor
     public let pageIndicatorInactiveColor: UIColor
     public let inputClearButtonColor: UIColor
     public let itemBarChart: PresentationThemeItemBarChart
     
-    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIconColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeFillStrokeForeground, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor, itemBarChart: PresentationThemeItemBarChart) {
+    public init(blocksBackgroundColor: UIColor, plainBackgroundColor: UIColor, itemPrimaryTextColor: UIColor, itemSecondaryTextColor: UIColor, itemDisabledTextColor: UIColor, itemAccentColor: UIColor, itemHighlightedColor: UIColor, itemDestructiveColor: UIColor, itemPlaceholderTextColor: UIColor, itemBlocksBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemBlocksSeparatorColor: UIColor, itemPlainSeparatorColor: UIColor, disclosureArrowColor: UIColor, sectionHeaderTextColor: UIColor, freeTextColor: UIColor, freeTextErrorColor: UIColor, freeTextSuccessColor: UIColor, freeMonoIconColor: UIColor, itemSwitchColors: PresentationThemeSwitch, itemDisclosureActions: PresentationThemeItemDisclosureActions, itemCheckColors: PresentationThemeFillStrokeForeground, controlSecondaryColor: UIColor, freeInputField: PresentationInputFieldTheme, freePlainInputField: PresentationInputFieldTheme, mediaPlaceholderColor: UIColor, scrollIndicatorColor: UIColor, pageIndicatorInactiveColor: UIColor, inputClearButtonColor: UIColor, itemBarChart: PresentationThemeItemBarChart) {
         self.blocksBackgroundColor = blocksBackgroundColor
         self.plainBackgroundColor = plainBackgroundColor
         self.itemPrimaryTextColor = itemPrimaryTextColor
@@ -385,6 +386,7 @@ public final class PresentationThemeList {
         self.itemCheckColors = itemCheckColors
         self.controlSecondaryColor = controlSecondaryColor
         self.freeInputField = freeInputField
+        self.freePlainInputField = freePlainInputField
         self.mediaPlaceholderColor = mediaPlaceholderColor
         self.scrollIndicatorColor = scrollIndicatorColor
         self.pageIndicatorInactiveColor = pageIndicatorInactiveColor

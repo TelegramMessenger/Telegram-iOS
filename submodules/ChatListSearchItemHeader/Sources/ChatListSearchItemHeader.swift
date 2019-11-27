@@ -17,6 +17,8 @@ public enum ChatListSearchItemHeaderType: Int32 {
     case phoneNumber
     case exceptions
     case addToExceptions
+    case mapAddress
+    case nearbyVenues
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -30,7 +32,7 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     
     public let height: CGFloat = 28.0
     
-    public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String?, action: (() -> Void)?) {
+    public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.type = type
         self.id = Int64(self.type.rawValue)
         self.theme = theme
@@ -93,6 +95,10 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
                 self.sectionHeaderNode.title = strings.GroupInfo_Permissions_Exceptions.uppercased()
             case .addToExceptions:
                 self.sectionHeaderNode.title = strings.Exceptions_AddToExceptions.uppercased()
+            case .mapAddress:
+                self.sectionHeaderNode.title = strings.Map_AddressOnMap.uppercased()
+            case .nearbyVenues:
+                self.sectionHeaderNode.title = strings.Map_PlacesNearby.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle

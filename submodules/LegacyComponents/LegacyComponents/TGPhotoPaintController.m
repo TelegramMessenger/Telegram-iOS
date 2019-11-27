@@ -550,7 +550,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     __weak TGPhotoPaintController *weakSelf = self;
     NSArray *items = @
     [
-        [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Paint.ClearConfirm") type:TGMenuSheetButtonTypeDestructive action:^
+     [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Paint.ClearConfirm") type:TGMenuSheetButtonTypeDestructive fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController == nil)
@@ -570,7 +570,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             
             [strongController dismissAnimated:true manual:false completion:nil];
         }],
-        [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel action:^
+        [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
         {
             __strong TGMenuSheetController *strongController = weakController;
             if (strongController != nil)

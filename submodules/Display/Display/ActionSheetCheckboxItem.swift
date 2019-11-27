@@ -39,7 +39,7 @@ public class ActionSheetCheckboxItem: ActionSheetItem {
 }
 
 public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
-    public static let defaultFont: UIFont = Font.regular(20.0)
+    private let defaultFont: UIFont
     
     private let theme: ActionSheetControllerTheme
     
@@ -54,6 +54,7 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
         
         self.button = HighlightTrackingButton()
         self.button.isAccessibilityElement = false
@@ -118,8 +119,10 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetCheckboxItem) {
         self.item = item
         
-        self.titleNode.attributedText = NSAttributedString(string: item.title, font: ActionSheetCheckboxItemNode.defaultFont, textColor: self.theme.primaryTextColor)
-        self.labelNode.attributedText = NSAttributedString(string: item.label, font: ActionSheetCheckboxItemNode.defaultFont, textColor: self.theme.secondaryTextColor)
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        
+        self.titleNode.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.primaryTextColor)
+        self.labelNode.attributedText = NSAttributedString(string: item.label, font: defaultFont, textColor: self.theme.secondaryTextColor)
         self.checkNode.isHidden = !item.value
         
         self.accessibilityArea.accessibilityLabel = item.title

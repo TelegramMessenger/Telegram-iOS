@@ -389,7 +389,7 @@ func networkUsageStatsController(context: AccountContext) -> ViewController {
     
     let arguments = NetworkUsageStatsControllerArguments(resetStatistics: { [weak stats] section in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
