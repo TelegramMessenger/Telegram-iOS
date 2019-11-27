@@ -102,7 +102,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var previousColor: UIColor?
     private var validLayout: (CGSize, Bool)?
     
-    private var returned = false
+    private var skipEndEditing = false
     
     init(theme: PresentationTheme) {
         self.theme = theme
@@ -190,6 +190,10 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc private func removePressed() {
+        if self.textFieldNode.textField.isFirstResponder {
+            self.skipEndEditing = true
+        }
+        
         self.colorRemoved?()
         self.removeButton.layer.removeAnimation(forKey: "opacity")
         self.removeButton.alpha = 1.0
@@ -218,7 +222,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldTextChanged(_ sender: UITextField) {
-        if let text = sender.text, text.count == 6, let color = UIColor(hexString: text) {
+        if let color = self.colorFromCurrentText() {
             self.setColor(color)
         }
         
@@ -228,19 +232,19 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        self.returned = true
-        if let text = self.textFieldNode.textField.text, text.count == 6, let color = UIColor(hexString: text) {
+        self.skipEndEditing = true
+        if let color = self.colorFromCurrentText() {
             self.setColor(color)
         } else {
             self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
         }
-        self.textFieldNode.resignFirstResponder()
+        self.textFieldNode.textField.resignFirstResponder()
         return false
     }
     
     func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
         if self.isSelected {
-            self.returned = false
+            self.skipEndEditing = false
             self.previousColor = self.color
             self.previousIsDefault = self.isDefault
             
@@ -254,8 +258,22 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldDidEndEditing(_ textField: UITextField) {
-        if !self.returned {
+        if !self.skipEndEditing {
             self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+        }
+    }
+    
+    func setSkipEndEditingIfNeeded() {
+        if self.textFieldNode.textField.isFirstResponder && self.colorFromCurrentText() != nil {
+            self.skipEndEditing = true
+        }
+    }
+    
+    private func colorFromCurrentText() -> UIColor? {
+        if let text = self.textFieldNode.textField.text, text.count == 6, let color = UIColor(hexString: text) {
+            return color
+        } else {
+            return nil
         }
     }
     
@@ -393,6 +411,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.firstColorFieldNode.colorSelected = { [weak self] in
             if let strongSelf = self {
+                strongSelf.secondColorFieldNode.setSkipEndEditingIfNeeded()
                 strongSelf.updateState({ current in
                     var updated = current
                     if updated.selection != .none {
@@ -428,6 +447,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.secondColorFieldNode.colorSelected = { [weak self] in
             if let strongSelf = self {
+                strongSelf.firstColorFieldNode.setSkipEndEditingIfNeeded()
                 strongSelf.updateState({ current in
                     var updated = current
                     updated.selection = .second
