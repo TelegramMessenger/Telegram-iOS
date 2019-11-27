@@ -197,7 +197,7 @@ framework(
         "//submodules/AppLock:AppLock",
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
         "//submodules/UrlWhitelist:UrlWhitelist",
-        "//submodules/AppIntents:AppIntents",
+        "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/LocationResources:LocationResources",
         "//submodules/ItemListVenueItem:ItemListVenueItem",
         "//submodules/SemanticStatusNode:SemanticStatusNode",

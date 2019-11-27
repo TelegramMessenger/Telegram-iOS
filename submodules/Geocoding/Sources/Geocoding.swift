@@ -2,6 +2,19 @@ import Foundation
 import CoreLocation
 import SwiftSignalKit
 
+public func geocodeLocation(address: String) -> Signal<[CLPlacemark]?, NoError> {
+    return Signal { subscriber in
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { (placemarks, _) in
+            subscriber.putNext(placemarks)
+            subscriber.putCompletion()
+        }
+        return ActionDisposable {
+            geocoder.cancelGeocode()
+        }
+    }
+}
+
 public func geocodeLocation(dictionary: [String: String]) -> Signal<(Double, Double)?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()

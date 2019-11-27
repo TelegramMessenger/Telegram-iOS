@@ -8,7 +8,7 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import AccountContext
-import AppIntents
+import TelegramIntents
 
 enum ShareState {
     case preparing

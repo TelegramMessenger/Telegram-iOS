@@ -244,7 +244,7 @@ public final class DeviceAccess {
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(to subject: DeviceAccessSubject, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
@@ -382,7 +382,18 @@ public final class DeviceAccess {
                                 })]), nil)
                             }
                         case .notDetermined:
-                            completion(true)
+                            switch locationSubject {
+                                case .send, .tracking:
+                                    locationManager?.requestWhenInUseAuthorization(completion: { status in
+                                        completion(status == .authorizedWhenInUse || status == .authorizedAlways)
+                                    })
+                                case .live:
+                                    locationManager?.requestAlwaysAuthorization(completion: { status in
+                                        completion(status == .authorizedAlways)
+                                    })
+                                default:
+                                    break
+                            }
                         @unknown default:
                             fatalError()
                 }

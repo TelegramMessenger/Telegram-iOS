@@ -58,82 +58,94 @@ public enum SendMessageIntentSubject: CaseIterable {
 
 public func donateSendMessageIntent(account: Account, sharedContext: SharedAccountContext, intentContext: SendMessageIntentContext, peerIds: [PeerId]) {
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
-        let _ = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings])
-        |> mapToSignal { sharedData -> Signal<[(Peer, SendMessageIntentSubject)], NoError> in
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
-            if let accountId = settings.account, accountId != account.peerId {
-                return .single([])
-            }
-            if case .chat = intentContext, settings.onlyShared {
-                return .single([])
-            }
-            return account.postbox.transaction { transaction -> [(Peer, SendMessageIntentSubject)] in
-                var peers: [(Peer, SendMessageIntentSubject)] = []
-                for peerId in peerIds {
-                    if peerId.namespace != Namespaces.Peer.SecretChat, let peer = transaction.getPeer(peerId) {
-                        var subject: SendMessageIntentSubject?
-                        let chatListIndex = transaction.getPeerChatListIndex(peerId)
-                        if chatListIndex?.0 == Namespaces.PeerGroup.archive {
-                            continue
-                        }
-                        if peerId.namespace == Namespaces.Peer.CloudUser {
-                            if peerId == account.peerId {
-                                if !settings.savedMessages {
-                                    continue
-                                }
-                                subject = .savedMessages
-                            }
-                            if transaction.isPeerContact(peerId: peerId) {
-                                if !settings.contacts {
-                                    continue
-                                }
-                                subject = .contact
-                            } else {
-                                if !settings.privateChats {
-                                    continue
-                                }
-                                subject = .privateChat
-                            }
-                        } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                            if !settings.groups {
-                                 continue
-                            }
-                            subject = .group
-                        } else if let peer = peer as? TelegramChannel {
-                            if case .group = peer.info {
-                                if !settings.groups {
-                                    continue
-                                }
-                                subject = .group
-                            } else {
-                                continue
-                            }
-                        } else {
-                            continue
-                        }
-                        
-                        if let subject = subject {
-                            peers.append((peer, subject))
-                        }
-                    }
-                }
-                return peers
+        let _ = (sharedContext.accountManager.transaction { transaction -> Bool in
+            if case .none = transaction.getAccessChallengeData() {
+                return true
+            } else {
+                return false
             }
         }
-        |> mapToSignal { peers -> Signal<[(Peer, SendMessageIntentSubject, UIImage?)], NoError> in
-            var signals: [Signal<(Peer, SendMessageIntentSubject, UIImage?), NoError>] = []
-            for (peer, subject) in peers {
-                if peer.id == account.peerId {
-                    signals.append(.single((peer, subject, savedMessagesAvatar)))
-                } else {
-                    let peerAndAvatar = (peerAvatarImage(account: account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil))
-                    |> map { avatarImage in
-                        return (peer, subject, avatarImage)
+        |> mapToSignal { unlocked -> Signal<[(Peer, SendMessageIntentSubject, UIImage?)], NoError> in
+            if unlocked {
+                return sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings])
+                |> mapToSignal { sharedData -> Signal<[(Peer, SendMessageIntentSubject)], NoError> in
+                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
+                    if let accountId = settings.account, accountId != account.peerId {
+                        return .single([])
                     }
-                    signals.append(peerAndAvatar)
+                    if case .chat = intentContext, settings.onlyShared {
+                        return .single([])
+                    }
+                    return account.postbox.transaction { transaction -> [(Peer, SendMessageIntentSubject)] in
+                        var peers: [(Peer, SendMessageIntentSubject)] = []
+                        for peerId in peerIds {
+                            if peerId.namespace != Namespaces.Peer.SecretChat, let peer = transaction.getPeer(peerId) {
+                                var subject: SendMessageIntentSubject?
+                                let chatListIndex = transaction.getPeerChatListIndex(peerId)
+                                if chatListIndex?.0 == Namespaces.PeerGroup.archive {
+                                    continue
+                                }
+                                if peerId.namespace == Namespaces.Peer.CloudUser {
+                                    if peerId == account.peerId {
+                                        if !settings.savedMessages {
+                                            continue
+                                        }
+                                        subject = .savedMessages
+                                    } else if transaction.isPeerContact(peerId: peerId) {
+                                        if !settings.contacts {
+                                            continue
+                                        }
+                                        subject = .contact
+                                    } else {
+                                        if !settings.privateChats {
+                                            continue
+                                        }
+                                        subject = .privateChat
+                                    }
+                                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                    if !settings.groups {
+                                         continue
+                                    }
+                                    subject = .group
+                                } else if let peer = peer as? TelegramChannel {
+                                    if case .group = peer.info {
+                                        if !settings.groups {
+                                            continue
+                                        }
+                                        subject = .group
+                                    } else {
+                                        continue
+                                    }
+                                } else {
+                                    continue
+                                }
+                                
+                                if let subject = subject {
+                                    peers.append((peer, subject))
+                                }
+                            }
+                        }
+                        return peers
+                    }
                 }
+                |> mapToSignal { peers -> Signal<[(Peer, SendMessageIntentSubject, UIImage?)], NoError> in
+                    var signals: [Signal<(Peer, SendMessageIntentSubject, UIImage?), NoError>] = []
+                    for (peer, subject) in peers {
+                        if peer.id == account.peerId {
+                            signals.append(.single((peer, subject, savedMessagesAvatar)))
+                        } else {
+                            let peerAndAvatar = (peerAvatarImage(account: account, peer: peer, authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil))
+                            |> map { avatarImage in
+                                return (peer, subject, avatarImage)
+                            }
+                            signals.append(peerAndAvatar)
+                        }
+                    }
+                    return combineLatest(signals)
+                }
+            } else {
+                return .single([])
             }
-            return combineLatest(signals)
         }
         |> deliverOnMainQueue).start(next: { peers in
             let presentationData = sharedContext.currentPresentationData.with { $0 }
@@ -169,7 +181,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
-                //interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64)"
+                interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64)"
                 interaction.groupIdentifier = "sendMessage_\(subject.toString())_\(account.peerId.toInt64())"
                 interaction.donate()
             }

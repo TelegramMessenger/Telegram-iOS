@@ -9,7 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import ItemListPeerItem
 import AccountContext
-import AppIntents
+import TelegramIntents
 import AccountUtils
 
 private final class IntentsSettingsControllerArguments {
@@ -150,7 +150,6 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            
             case let .suggestHeader(lhsTheme, lhsText):
                 if case let .suggestHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -269,7 +268,27 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
     
     let updateDisposable = MetaDisposable()
     let arguments = IntentsSettingsControllerArguments(context: context, updateSettings: { f in
-        let _ = updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager, f).start()
+        let _ = updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager, f).start(next: { previous, updated in
+            guard let previous = previous, let updated = updated else {
+                return
+            }
+            let accountPeerId = context.account.peerId
+            if previous.contacts && !updated.contacts {
+                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .contact)
+            }
+            if previous.savedMessages && !updated.savedMessages {
+                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .savedMessages)
+            }
+            if previous.privateChats && !updated.privateChats {
+                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .privateChat)
+            }
+            if previous.groups && !updated.groups {
+                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .group)
+            }
+            if previous.account != updated.account, let previousAccount = previous.account {
+                deleteAllSendMessageIntents(accountPeerId: previousAccount)
+            }
+        })
     }, resetAll: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)

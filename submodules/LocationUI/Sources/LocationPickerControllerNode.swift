@@ -136,7 +136,9 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     icon = .location
                 }
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, action: {
-                    if let coordinate = coordinate {
+                    if let venue = venue {
+                        interaction?.sendVenue(venue)
+                    } else if let coordinate = coordinate {
                         interaction?.sendLocation(coordinate)
                     }
                 }, highlighted: { highlighted in
@@ -151,9 +153,12 @@ private enum LocationPickerEntry: Comparable, Identifiable {
             case let .header(theme, title):
                 return LocationSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
             case let .venue(theme, venue, _):
-                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, sectionId: 0, style: .plain, action: {
+                let venueType = venue.venue?.type ?? ""
+                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: {
                     interaction?.sendVenue(venue)
-                })
+                }, infoAction: ["home", "work"].contains(venueType) ? {
+                    interaction?.openHomeWorkInfo()
+                    } : nil)
             case let .attribution(theme):
                 return LocationAttributionItem(presentationData: ItemListPresentationData(presentationData))
         }
@@ -220,11 +225,13 @@ struct LocationPickerState {
     var mapMode: LocationMapMode
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationPickerLocation
+    var forceSelection: Bool
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .none
+        self.forceSelection = false
     }
 }
 
@@ -415,10 +422,23 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
                     case .selecting:
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
+                    case let .location(coordinate, _):
+                        var updateMap = false
+                        switch previousState.selectedLocation {
+                            case .none, .venue:
+                                updateMap = true
+                            case let .location(previousCoordinate, address):
+                                if previousCoordinate != coordinate {
+                                    updateMap = true
+                                }
+                            default:
+                                break
+                        }
+                        if updateMap {
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, animated: true)
+                        }
                     case let .venue(venue):
                         strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, animated: true)
-                    default:
-                        break
                 }
                 
                 let annotations: [LocationPinAnnotation]
@@ -482,7 +502,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             strongSelf.listOffset = max(0.0, offset)
             let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(0.0, offset + overlap)))
             listTransition.updateFrame(node: strongSelf.headerNode, frame: headerFrame)
-            strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, padding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, size: headerFrame.size, transition: listTransition)
+            strongSelf.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: strongSelf.state.displayingMapModeOptions ? 38.0 : 0.0, offset: 0.0, size: headerFrame.size, transition: listTransition)
             strongSelf.layoutActivityIndicator(transition: listTransition)
         }
         
@@ -590,9 +610,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         })
     }
     
-    func activateSearch(navigationBar: NavigationBar) {
+    func activateSearch(navigationBar: NavigationBar) -> Signal<Bool, NoError> {
         guard let (layout, navigationBarHeight) = self.validLayout, self.searchContainerNode == nil, let coordinate = self.headerNode.mapNode.mapCenterCoordinate else {
-            return
+            return .complete()
         }
         
         let searchContainerNode = LocationSearchContainerNode(context: self.context, coordinate: coordinate, interaction: self.interaction)
@@ -602,6 +622,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         searchContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         self.containerLayoutUpdated(layout, navigationHeight: navigationBarHeight, transition: .immediate)
+        
+        return searchContainerNode.isSearching
     }
     
     func deactivateSearch() {
@@ -643,10 +665,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = (layout, navigationHeight)
         
+        let isPickingLocation = self.state.selectedLocation.isCustom || self.state.forceSelection
         let optionsHeight: CGFloat = 38.0
-        
-        let pickingCustomLocation = self.state.selectedLocation.isCustom
-        
         var actionHeight: CGFloat?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? LocationActionListItemNode {
@@ -659,7 +679,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         let topInset: CGFloat = floor((layout.size.height - navigationHeight) / 2.0 + navigationHeight)
         let overlap: CGFloat = 6.0
         let headerHeight: CGFloat
-        if pickingCustomLocation, let actionHeight = actionHeight {
+        if isPickingLocation, let actionHeight = actionHeight {
             self.listOffset = topInset
             headerHeight = layout.size.height - actionHeight - layout.intrinsicInsets.bottom + overlap - 2.0
         } else if let listOffset = self.listOffset {
@@ -669,26 +689,29 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         }
         let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: headerHeight))
         transition.updateFrame(node: self.headerNode, frame: headerFrame)
-        self.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationHeight, padding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, size: headerFrame.size, transition: transition)
+        
+        self.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationHeight, topPadding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, offset: 0.0, size: headerFrame.size, transition: transition)
             
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let scrollToItem: ListViewScrollToItem?
-        if pickingCustomLocation {
+        if isPickingLocation {
             scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: curve, directionHint: .Up)
         } else {
             scrollToItem = nil
         }
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), headerInsets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-        self.listNode.scrollEnabled = !pickingCustomLocation
+        
+        let insets = UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.scrollEnabled = !isPickingLocation
         
         var listFrame: CGRect = CGRect(origin: CGPoint(), size: layout.size)
-        if pickingCustomLocation {
+        if isPickingLocation {
             listFrame.origin.y = headerHeight - topInset - overlap
         }
         transition.updateFrame(node: self.listNode, frame: listFrame)
-        transition.updateAlpha(node: self.shadeNode, alpha: pickingCustomLocation ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.shadeNode, alpha: isPickingLocation ? 1.0 : 0.0)
         transition.updateFrame(node: self.shadeNode, frame: CGRect(x: 0.0, y: listFrame.minY + topInset + (actionHeight ?? 0.0) - 3.0, width: layout.size.width, height: 10000.0))
-        self.shadeNode.isUserInteractionEnabled = pickingCustomLocation
+        self.shadeNode.isUserInteractionEnabled = isPickingLocation
         self.innerShadeNode.frame = CGRect(x: 0.0, y: 4.0, width: layout.size.width, height: 10000.0)
         self.innerShadeNode.alpha = layout.intrinsicInsets.bottom > 0.0 ? 1.0 : 0.0
         

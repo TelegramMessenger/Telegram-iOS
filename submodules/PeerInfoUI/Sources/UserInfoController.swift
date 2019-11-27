@@ -27,6 +27,7 @@ import NotificationSoundSelectionUI
 import Markdown
 import LocalizedPeerData
 import PhoneNumberFormat
+import TelegramIntents
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -1026,6 +1027,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                 } else if reportSpam {
                                     let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
                                 }
+                                
+                                deleteSendMessageIntents(account: context.account, peerId: peerId)
                             })
                         ]),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -1094,6 +1097,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         |> deliverOnMainQueue).start(completed: {
                             dismissImpl?()
                         }))
+                        
+                        deleteSendMessageIntents(account: context.account, peerId: peerId)
                     })
                 })
             ]),

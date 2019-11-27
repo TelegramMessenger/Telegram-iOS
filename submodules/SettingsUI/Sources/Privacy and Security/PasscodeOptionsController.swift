@@ -15,6 +15,7 @@ import AccountContext
 import LocalAuth
 import PasscodeUI
 import TelegramStringFormatting
+import TelegramIntents
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void
@@ -414,6 +415,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                     }, error: { _ in
                     }, completed: {
                         completion(true)
+                        deleteAllSendMessageIntents()
                     })
                 }
                 pushController?(setupController)

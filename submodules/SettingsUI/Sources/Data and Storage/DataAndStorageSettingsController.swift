@@ -468,7 +468,9 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(dataSaving, strings: presentationData.strings)))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
-    entries.append(.shareSheet(presentationData.theme, "Share Sheet"))
+    if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
+        entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
+    }
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))

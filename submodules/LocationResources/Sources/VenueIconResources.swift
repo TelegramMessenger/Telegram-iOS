@@ -134,9 +134,14 @@ private let venueColors: [String: UIColor] = [
     "parks_outdoors": UIColor(rgb: 0x6cc039),
     "shops": UIColor(rgb: 0xffb300),
     "travel": UIColor(rgb: 0x1c9fff),
+    "work": UIColor(rgb: 0xad7854),
+    "home": UIColor(rgb: 0x00aeef)
 ]
 
 public func venueIconColor(type: String) -> UIColor {
+    if type.isEmpty {
+        return UIColor(rgb: 0x008df2)
+    }
     if let color = venueColors[type] {
         return color
     }
@@ -150,7 +155,8 @@ public func venueIconColor(type: String) -> UIColor {
 }
 
 public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let data: Signal<Data?, NoError> = type.isEmpty ? .single(nil) : venueIconData(postbox: postbox, resource: VenueIconResource(type: type))
+    let isBuiltinIcon = ["", "home", "work"].contains(type)
+    let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(postbox: postbox, resource: VenueIconResource(type: type))
     return data |> map { data in
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
@@ -172,8 +178,21 @@ public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signa
                     let boundsSize = CGSize(width: arguments.drawingRect.size.width - 4.0 * 2.0, height: arguments.drawingRect.size.height - 4.0 * 2.0)
                     let fittedSize = image.size.aspectFitted(boundsSize)
                     c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - fittedSize.width) / 2.0), y: floor((arguments.drawingRect.height - fittedSize.height) / 2.0)), size: fittedSize))
-                } else if type.isEmpty, let pinImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/LocationPinForeground"), color: foregroundColor), let cgImage = pinImage.cgImage {
-                    c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - pinImage.size.width) / 2.0), y: floor((arguments.drawingRect.height - pinImage.size.height) / 2.0)), size: pinImage.size))
+                } else if isBuiltinIcon {
+                    let image: UIImage?
+                    switch type {
+                        case "":
+                            image = UIImage(bundleImageName: "Chat/Message/LocationPinForeground")
+                        case "home":
+                            image = UIImage(bundleImageName: "Location/HomeIcon")
+                        case "work":
+                            image = UIImage(bundleImageName: "Location/WorkIcon")
+                        default:
+                            image = nil
+                    }
+                    if let image = image, let pinImage = generateTintedImage(image: image, color: foregroundColor), let cgImage = pinImage.cgImage {
+                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - pinImage.size.width) / 2.0), y: floor((arguments.drawingRect.height - pinImage.size.height) / 2.0)), size: pinImage.size))
+                    }
                 }
             }
                         

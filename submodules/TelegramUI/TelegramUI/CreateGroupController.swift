@@ -619,7 +619,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
         })
     }, changeLocation: {
-            endEditingImpl?()
+        endEditingImpl?()
                  
          let controller = LocationPickerController(context: context, mode: .pick, completion: { location, address in
              let addressSignal: Signal<String, NoError>
@@ -651,15 +651,33 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         guard let venueData = venue.venue else {
             return
         }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         updateState { current in
             var current = current
             if current.editingName.isEmpty || current.nameSetFromVenue {
                 current.editingName = .title(title: venueData.title ?? "", type: .group)
                 current.nameSetFromVenue = true
             }
-            current.location = PeerGeoLocation(latitude: venue.latitude, longitude: venue.longitude, address: venueData.address ?? "")
+            current.location = PeerGeoLocation(latitude: venue.latitude, longitude: venue.longitude, address: presentationData.strings.Map_Locating + "\n\n")
             return current
         }
+        
+        let _ = (reverseGeocodeLocation(latitude: venue.latitude, longitude: venue.longitude)
+        |> map { placemark -> String in
+            if let placemark = placemark {
+                return placemark.fullAddress
+            } else {
+                return venueData.address ?? ""
+            }
+        }
+        |> deliverOnMainQueue).start(next: { address in
+            addressPromise.set(.single(address))
+            updateState { current in
+                var current = current
+                current.location = PeerGeoLocation(latitude: venue.latitude, longitude: venue.longitude, address: address)
+                return current
+            }
+        })
         ensureItemVisibleImpl?(.info, true)
     })
     

@@ -5114,6 +5114,7 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.Colors.ColorWallpaperWarning" = "Are you sure you want to change your chat wallpaper to a color?";
 "Theme.Colors.ColorWallpaperWarningProceed" = "Proceed";
 
+"ChatSettings.IntentsSettings" = "Share Sheet";
 "IntentsSettings.Title" = "Share Sheet";
 "IntentsSettings.MainAccount" = "Main Account";
 "IntentsSettings.MainAccountInfo" = "Choose an account for Siri and share suggestions.";
@@ -5146,3 +5147,10 @@ Any member of this group will be able to see messages in the channel.";
 
 "Map.SendThisPlace" = "Send This Place";
 "Map.SetThisPlace" = "Set This Place";
+"Map.AddressOnMap" = "Address On Map";
+"Map.PlacesNearby" = "Places Nearby";
+"Map.Home" = "Home";
+"Map.Work" = "Work";
+"Map.HomeAndWorkTitle" = "Home & Work Addresses";
+"Map.HomeAndWorkInfo" = "Telegram uses the Home and Work addresses from your Contact Card.\n\nKeep your Contact Card up to date for quick access to sending Home and Work addresses.";
+"Map.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";

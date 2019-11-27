@@ -10,6 +10,8 @@ import TelegramPresentationData
 import AccountContext
 import AppBundle
 import CoreLocation
+import PresentationDataUtils
+import DeviceAccess
 
 public enum LocationPickerMode {
     case share(peer: Peer?, selfPeer: Peer?, hasLiveLocation: Bool)
@@ -23,24 +25,28 @@ class LocationPickerInteraction {
     let toggleMapModeSelection: () -> Void
     let updateMapMode: (LocationMapMode) -> Void
     let goToUserLocation: () -> Void
+    let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let openSearch: () -> Void
     let updateSearchQuery: (String) -> Void
     let dismissSearch: () -> Void
     let dismissInput: () -> Void
     let updateSendActionHighlight: (Bool) -> Void
+    let openHomeWorkInfo: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void) {
+    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.goToUserLocation = goToUserLocation
+        self.goToCoordinate = goToCoordinate
         self.openSearch = openSearch
         self.updateSearchQuery = updateSearchQuery
         self.dismissSearch = dismissSearch
         self.dismissInput = dismissInput
         self.updateSendActionHighlight = updateSendActionHighlight
+        self.openHomeWorkInfo = openHomeWorkInfo
     }
 }
 
@@ -56,6 +62,10 @@ public final class LocationPickerController: ViewController {
     private var presentationDataDisposable: Disposable?
     
     private var searchNavigationContentNode: LocationSearchNavigationContentNode?
+    private var isSearchingDisposable = MetaDisposable()
+    
+    private let locationManager = LocationManager()
+    private var permissionDisposable: Disposable?
     
     private var interaction: LocationPickerInteraction?
         
@@ -85,7 +95,9 @@ public final class LocationPickerController: ViewController {
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)
             strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.searchPressed))
             
-            strongSelf.controllerNode.updatePresentationData(presentationData)
+            if strongSelf.isNodeLoaded {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
         })
         
         let locationWithTimeout: (CLLocationCoordinate2D, Int32?) -> TelegramMediaMap = { coordinate, timeout in
@@ -102,48 +114,62 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-            var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-            if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer {
-                title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
-            }
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: title),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
-                            strongSelf.dismiss()
-                        }
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
-                            strongSelf.dismiss()
-                        }
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
-                            strongSelf.dismiss()
-                        }
-                    })
-                ]),
-                ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
-                        controller?.dismissAnimated()
-                    })
+            DeviceAccess.authorizeAccess(to: .location(.live), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
+                strongSelf.present(c, in: .window(.root), with: a)
+            }, openSettings: {
+                strongSelf.context.sharedContext.applicationBindings.openSettings()
+            }) { [weak self] authorized in
+                guard let strongSelf = self, authorized else {
+                    return
+                }
+                let controller = ActionSheetController(presentationData: strongSelf.presentationData)
+                var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
+                if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer {
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: title),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
+                                strongSelf.dismiss()
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
+                                strongSelf.dismiss()
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
+                            controller?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
+                                strongSelf.dismiss()
+                            }
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+                            controller?.dismissAnimated()
+                        })
+                    ])
                 ])
-            ])
-            strongSelf.present(controller, in: .window(.root))
+                strongSelf.present(controller, in: .window(.root))
+            }
         }, sendVenue: { [weak self] venue in
             guard let strongSelf = self else {
                 return
             }
-            completion(venue, nil)
+            let venueType = venue.venue?.type ?? ""
+            if ["home", "work"].contains(venueType) {
+                completion(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil), nil)
+            } else {
+                completion(venue, nil)
+            }
             strongSelf.dismiss()
         }, toggleMapModeSelection: { [weak self] in
             guard let strongSelf = self else {
@@ -174,6 +200,16 @@ public final class LocationPickerController: ViewController {
                 state.selectedLocation = .none
                 return state
             }
+        }, goToCoordinate: { [weak self] coordinate in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.updateState { state in
+                var state = state
+                state.displayingMapModeOptions = false
+                state.selectedLocation = .location(coordinate, nil)
+                return state
+            }
         }, openSearch: { [weak self] in
             guard let strongSelf = self, let interaction = strongSelf.interaction, let navigationBar = strongSelf.navigationBar else {
                 return
@@ -186,8 +222,15 @@ public final class LocationPickerController: ViewController {
             let contentNode = LocationSearchNavigationContentNode(presentationData: strongSelf.presentationData, interaction: interaction)
             strongSelf.searchNavigationContentNode = contentNode
             navigationBar.setContentNode(contentNode, animated: true)
-            strongSelf.controllerNode.activateSearch(navigationBar: navigationBar)
+            let isSearching = strongSelf.controllerNode.activateSearch(navigationBar: navigationBar)
             contentNode.activate()
+
+            strongSelf.isSearchingDisposable.set((isSearching
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                if let strongSelf = self, let searchNavigationContentNode = strongSelf.searchNavigationContentNode {
+                    searchNavigationContentNode.updateActivity(value)
+                }
+            }))
         }, updateSearchQuery: { [weak self] query in
             guard let strongSelf = self else {
                 return
@@ -197,6 +240,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self, let navigationBar = strongSelf.navigationBar else {
                 return
             }
+            strongSelf.isSearchingDisposable.set(nil)
             strongSelf.searchNavigationContentNode?.deactivate()
             strongSelf.searchNavigationContentNode = nil
             navigationBar.setContentNode(nil, animated: true)
@@ -211,6 +255,13 @@ public final class LocationPickerController: ViewController {
                 return
             }
             strongSelf.controllerNode.updateSendActionHighlight(highlighted)
+        }, openHomeWorkInfo: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
+            strongSelf.present(controller, in: .window(.root))
         })
         
         self.scrollToTop = { [weak self] in
@@ -218,8 +269,6 @@ public final class LocationPickerController: ViewController {
                 strongSelf.controllerNode.scrollToTop()
             }
         }
-        
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -228,6 +277,8 @@ public final class LocationPickerController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.permissionDisposable?.dispose()
+        self.isSearchingDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -238,6 +289,29 @@ public final class LocationPickerController: ViewController {
         
         self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction)
         self.displayNodeDidLoad()
+        
+        self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            guard let strongSelf = self else {
+                return
+            }
+            switch next {
+                case .notDetermined:
+                    DeviceAccess.authorizeAccess(to: .location(.send), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
+                        strongSelf.present(c, in: .window(.root), with: a)
+                    }, openSettings: {
+                        strongSelf.context.sharedContext.applicationBindings.openSettings()
+                    })
+                case .denied:
+                    strongSelf.controllerNode.updateState { state in
+                        var state = state
+                        state.forceSelection = true
+                        return state
+                }
+                default:
+                    break
+            }
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -33,7 +33,7 @@ import WalletCore
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
-import AppIntents
+import TelegramIntents
 import AccountUtils
 
 #if canImport(BackgroundTasks)

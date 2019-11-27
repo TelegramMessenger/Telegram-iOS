@@ -78,18 +78,20 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: savedMessages, groups: self.groups, onlyShared: self.onlyShared)
     }
     
-    public func withUpdatedGroups(_ savedMessages: Bool) -> IntentsSettings {
+    public func withUpdatedGroups(_ groups: Bool) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: groups, onlyShared: self.onlyShared)
     }
     
-    public func withUpdatedOnlyShared(_ savedMessages: Bool) -> IntentsSettings {
+    public func withUpdatedOnlyShared(_ onlyShared: Bool) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: self.account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: self.groups, onlyShared: onlyShared)
     }
 }
 
 
-public func updateIntentsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<Void, NoError> {
-    return accountManager.transaction { transaction -> Void in
+public func updateIntentsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<(IntentsSettings?, IntentsSettings?), NoError> {
+    return accountManager.transaction { transaction -> (IntentsSettings?, IntentsSettings?) in
+        var previousSettings: IntentsSettings? = nil
+        var updatedSettings: IntentsSettings? = nil
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
             let currentSettings: IntentsSettings
             if let entry = entry as? IntentsSettings {
@@ -97,7 +99,10 @@ public func updateIntentsSettingsInteractively(accountManager: AccountManager, _
             } else {
                 currentSettings = IntentsSettings.defaultSettings
             }
-            return f(currentSettings)
+            previousSettings = currentSettings
+            updatedSettings = f(currentSettings)
+            return updatedSettings
         })
+        return (previousSettings, updatedSettings)
     }
 }

@@ -20,6 +20,7 @@ import LanguageSuggestionUI
 import ContextUI
 import AppBundle
 import LocalizedPeerData
+import TelegramIntents
 
 public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
@@ -122,9 +123,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private var badgeIconDisposable: Disposable?
     
     private var dismissSearchOnDisappear = false
-    
-    private var didSetup3dTouch = false
-    
+        
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
     
@@ -226,7 +225,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.top)
             }
-            //.auto for unread navigation
         }
         self.longTapWithTabBar = { [weak self] in
             guard let strongSelf = self else {
@@ -760,17 +758,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.displayNodeDidLoad()
     }
     
-    override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if !self.didSetup3dTouch && self.traitCollection.forceTouchCapability != .unknown {
-                self.didSetup3dTouch = true
-                //self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
-            }
-        }
-    }
-    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -883,13 +870,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 return true
             })
-        }
-        
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if !self.didSetup3dTouch {
-                self.didSetup3dTouch = true
-                //self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
-            }
         }
     }
     
@@ -1634,6 +1614,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
         
+                for peerId in peerIds {
+                    deleteSendMessageIntents(account: strongSelf.context.account, peerId: peerId)
+                }
+                
                 let action: (Bool) -> Void = { shouldCommit in
                     guard let strongSelf = self else {
                         return
@@ -1755,7 +1739,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         state.pendingRemovalPeerIds.remove(peer.peerId)
                         return state
                     })
-                    self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    
+                    deleteSendMessageIntents(account: strongSelf.context.account, peerId: peerId)
                 })
                 completion()
             } else {
@@ -1765,7 +1751,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     state.pendingRemovalPeerIds.remove(peer.peerId)
                     return state
                 })
-                self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
             }
         }), in: .current)
     }
