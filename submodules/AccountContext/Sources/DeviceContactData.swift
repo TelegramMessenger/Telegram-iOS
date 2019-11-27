@@ -374,7 +374,6 @@ public extension DeviceContactExtendedData {
         if let birthdayDate = self.birthdayDate {
             contact.birthday = Calendar(identifier: .gregorian).dateComponents([.day, .month, .year], from: birthdayDate)
         }
-        contact.note = self.note
         return contact
     }
     
@@ -426,7 +425,7 @@ public extension DeviceContactExtendedData {
         }
         
         let basicData = DeviceContactBasicData(firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
-        self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: contact.note)
+        self.init(basicData: basicData, middleName: contact.middleName, prefix: contact.namePrefix, suffix: contact.nameSuffix, organization: contact.organizationName, jobTitle: contact.jobTitle, department: contact.departmentName, emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: birthdayDate, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: "")
     }
     
     var isPrimitive: Bool {
