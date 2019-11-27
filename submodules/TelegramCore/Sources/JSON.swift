@@ -313,7 +313,7 @@ private extension Bool {
     }
 }
 
-extension JSON {
+public extension JSON {
     private init?(apiJson: Api.JSONValue, root: Bool) {
         switch (apiJson, root) {
             case (.jsonNull, false):
