@@ -95,29 +95,8 @@ public final class LocationPickerController: ViewController {
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)
             strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.searchPressed))
             
-            strongSelf.controllerNode.updatePresentationData(presentationData)
-        })
-        
-        self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))
-        |> deliverOnMainQueue).start(next: { [weak self] next in
-            guard let strongSelf = self else {
-                return
-            }
-            switch next {
-                case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .location(.send), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
-                        strongSelf.present(c, in: .window(.root), with: a)
-                    }, openSettings: {
-                        strongSelf.context.sharedContext.applicationBindings.openSettings()
-                    })
-                case .denied:
-                    strongSelf.controllerNode.updateState { state in
-                        var state = state
-                        state.forceSelection = true
-                        return state
-                    }
-                default:
-                    break
+            if strongSelf.isNodeLoaded {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
         
@@ -310,6 +289,29 @@ public final class LocationPickerController: ViewController {
         
         self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction)
         self.displayNodeDidLoad()
+        
+        self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            guard let strongSelf = self else {
+                return
+            }
+            switch next {
+                case .notDetermined:
+                    DeviceAccess.authorizeAccess(to: .location(.send), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
+                        strongSelf.present(c, in: .window(.root), with: a)
+                    }, openSettings: {
+                        strongSelf.context.sharedContext.applicationBindings.openSettings()
+                    })
+                case .denied:
+                    strongSelf.controllerNode.updateState { state in
+                        var state = state
+                        state.forceSelection = true
+                        return state
+                }
+                default:
+                    break
+            }
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
