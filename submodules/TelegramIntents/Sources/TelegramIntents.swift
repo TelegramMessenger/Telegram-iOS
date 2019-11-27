@@ -82,8 +82,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                                     continue
                                 }
                                 subject = .savedMessages
-                            }
-                            if transaction.isPeerContact(peerId: peerId) {
+                            } else if transaction.isPeerContact(peerId: peerId) {
                                 if !settings.contacts {
                                     continue
                                 }
@@ -169,7 +168,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
-                //interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64)"
+                interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64)"
                 interaction.groupIdentifier = "sendMessage_\(subject.toString())_\(account.peerId.toInt64())"
                 interaction.donate()
             }

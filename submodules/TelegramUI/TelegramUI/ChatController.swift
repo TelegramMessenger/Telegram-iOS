@@ -55,7 +55,7 @@ import LocalizedPeerData
 import PhoneNumberFormat
 import SettingsUI
 import UrlWhitelist
-import AppIntents
+import TelegramIntents
 
 public enum ChatControllerPeekActions {
     case standard

@@ -88,8 +88,10 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
 }
 
 
-public func updateIntentsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<Void, NoError> {
-    return accountManager.transaction { transaction -> Void in
+public func updateIntentsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<(IntentsSettings?, IntentsSettings?), NoError> {
+    return accountManager.transaction { transaction -> (IntentsSettings?, IntentsSettings?) in
+        var previousSettings: IntentsSettings? = nil
+        var updatedSettings: IntentsSettings? = nil
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
             let currentSettings: IntentsSettings
             if let entry = entry as? IntentsSettings {
@@ -97,7 +99,10 @@ public func updateIntentsSettingsInteractively(accountManager: AccountManager, _
             } else {
                 currentSettings = IntentsSettings.defaultSettings
             }
-            return f(currentSettings)
+            previousSettings = currentSettings
+            updatedSettings = f(currentSettings)
+            return updatedSettings
         })
+        return (previousSettings, updatedSettings)
     }
 }
