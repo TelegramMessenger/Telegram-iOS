@@ -115,7 +115,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
         
         self.iconNode = TransformImageNode()
-        self.iconNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 64.0, height: 64.0))
+        self.iconNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
         
         self.smallIconNode = TransformImageNode()
         self.smallIconNode.frame = CGRect(origin: CGPoint(x: 15.0, y: 15.0), size: CGSize(width: 26.0, height: 26.0))
@@ -138,6 +138,14 @@ class LocationPinAnnotationView: MKAnnotationView {
         self.smallNode.addSubnode(self.smallIconNode)
         
         self.annotation = annotation
+    }
+    
+    var defaultZPosition: CGFloat {
+        if let annotation = self.annotation as? LocationPinAnnotation, let venueType = annotation.location?.venue?.type, ["home", "work"].contains(venueType) {
+            return -0.5
+        } else {
+            return -1.0
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -386,44 +394,68 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     func setCustom(_ custom: Bool, animated: Bool) {
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: "", background: false))
+        }
+        
+        if let avatarNode = self.avatarNode {
+            self.backgroundNode.addSubnode(avatarNode)
+            avatarNode.position = CGPoint(x: self.backgroundNode.frame.width / 2.0, y: self.backgroundNode.frame.height / 2.0 - 5.0)
+        }
+        self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
+        self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)
+        self.iconNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0 - 5.0)
+        
+        let transition = {
+            let color: UIColor
+            if custom, let annotation = self.annotation as? LocationPinAnnotation {
+                color = annotation.theme.list.itemAccentColor
+            } else {
+                color = .white
+            }
+            self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
+            self.avatarNode?.isHidden = custom
+            self.iconNode.isHidden = !custom
+        }
+        
+        let completion = {
+            if !custom, let avatarNode = self.avatarNode {
+                self.addSubnode(avatarNode)
+            }
+        }
+        
         if animated {
             self.animating = true
-            
-            if let annotation = self.annotation as? LocationPinAnnotation {
-                self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: "", background: false))
-            }
-            
-            if let avatarNode = self.avatarNode {
-                self.backgroundNode.addSubnode(avatarNode)
-                avatarNode.position = CGPoint(x: self.backgroundNode.frame.width / 2.0, y: self.backgroundNode.frame.height / 2.0 - 5.0)
-            }
-            self.shadowNode.position = CGPoint(x: UIScreenPixel, y: -36.0)
-            self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)
-            self.iconNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0 - 5.0)
-            
             Queue.mainQueue().after(0.01) {
                 UIView.transition(with: self.backgroundNode.view, duration: 0.2, options: [.transitionCrossDissolve, .allowAnimatedContent], animations: {
-                    let color: UIColor
-                    if custom, let annotation = self.annotation as? LocationPinAnnotation {
-                        color = annotation.theme.list.itemAccentColor
-                    } else {
-                        color = .white
-                    }
-                    self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
-                    self.avatarNode?.isHidden = custom
-                    self.iconNode.isHidden = !custom
+                    transition()
                 }) { finished in
-                    if !custom, let avatarNode = self.avatarNode {
-                        self.addSubnode(avatarNode)
-                    }
+                    completion()
                     self.animating = false
                 }
             }
             
-            self.setNeedsLayout()
+        } else {
+            transition()
+            completion()
         }
+        self.setNeedsLayout()
         
         self.dotNode.isHidden = !custom
+    }
+    
+    func animateAppearance() {
+        self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
+        
+        let avatarNodeTransform = self.avatarNode?.transform
+        self.avatarNode?.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
+        UIView.animate(withDuration: 0.55, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
+            self.smallNode.transform = CATransform3DIdentity
+            if let avatarNodeTransform = avatarNodeTransform {
+                self.avatarNode?.transform = avatarNodeTransform
+            }
+        }) { _ in
+        }
     }
     
     override func layoutSubviews() {
@@ -456,10 +488,8 @@ class LocationPinAnnotationView: MKAnnotationView {
         if !self.appeared {
             self.appeared = true
             
-            self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
-            UIView.animate(withDuration: 0.55, delay: 0.0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [], animations: {
-                self.smallNode.transform = CATransform3DIdentity
-            }) { _ in
+            if let annotation = annotation as? LocationPinAnnotation, annotation.location != nil {
+                self.animateAppearance()
             }
         }
     }

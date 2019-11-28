@@ -499,4 +499,41 @@ extension DeviceContactAddressData {
         }
         return dictionary
     }
+    
+    public var string: String {
+        var array: [String] = []
+        if !self.street1.isEmpty {
+            array.append(self.street1)
+        }
+        if !self.city.isEmpty {
+            array.append(self.city)
+        }
+        if !self.state.isEmpty {
+            array.append(self.state)
+        }
+        if !self.country.isEmpty {
+            array.append(self.country)
+        }
+        if !self.postcode.isEmpty {
+            array.append(self.postcode)
+        }
+        return array.joined(separator: " ")
+    }
+    
+    public var displayString: String {
+        var array: [String] = []
+        if !self.street1.isEmpty {
+            array.append(self.street1)
+        }
+        if !self.city.isEmpty {
+            array.append(self.city)
+        }
+        if !self.state.isEmpty {
+            array.append(self.state)
+        }
+        if !self.country.isEmpty {
+            array.append(self.country)
+        }
+        return array.joined(separator: ", ")
+    }
 }

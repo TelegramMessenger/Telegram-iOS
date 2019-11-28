@@ -15,6 +15,7 @@ import AccountContext
 import AppBundle
 import CoreLocation
 import Geocoding
+import PhoneNumberFormat
 
 private struct LocationPickerTransaction {
     let deletions: [ListViewDeleteItem]
@@ -323,13 +324,106 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 }
             }
         }
+        
+        let personalAddresses = self.context.account.postbox.peerView(id: self.context.account.peerId)
+        |> mapToSignal { view -> Signal<(DeviceContactAddressData?, DeviceContactAddressData?)?, NoError> in
+            if let user = peerViewMainPeer(view) as? TelegramUser, let phoneNumber = user.phone {
+                return ((context.sharedContext.contactDataManager?.basicData() ?? .single([:])) |> take(1))
+                |> mapToSignal { basicData -> Signal<DeviceContactExtendedData?, NoError> in
+                    var stableId: String?
+                    let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                    outer: for (id, data) in basicData {
+                        for phoneNumber in data.phoneNumbers {
+                            if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                stableId = id
+                                break outer
+                            }
+                        }
+                    }
+                    if let stableId = stableId {
+                        return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
+                        |> take(1)
+                        |> map { extendedData -> DeviceContactExtendedData? in
+                            return extendedData
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+                |> map { extendedData -> (DeviceContactAddressData?, DeviceContactAddressData?)? in
+                    if let extendedData = extendedData {
+                        var homeAddress: DeviceContactAddressData?
+                        var workAddress: DeviceContactAddressData?
+                        for address in extendedData.addresses {
+                            if address.label == "_$!<Home>!$_" {
+                                homeAddress = address
+                            } else if address.label == "_$!<Work>!$_" {
+                                workAddress = address
+                            }
+                        }
+                        return (homeAddress, workAddress)
+                    } else {
+                        return nil
+                    }
+                }
+            } else {
+                return .single(nil)
+            }
+        }
+        
+        let personalVenues: Signal<[TelegramMediaMap]?, NoError> = .single(nil)
+        |> then(
+            personalAddresses
+            |> mapToSignal { homeAndWorkAddresses -> Signal<[TelegramMediaMap]?, NoError> in
+                if let (homeAddress, workAddress) = homeAndWorkAddresses {
+                    let home: Signal<(Double, Double)?, NoError>
+                    let work: Signal<(Double, Double)?, NoError>
+                    if let address = homeAddress {
+                        home = geocodeAddress(postbox: context.account.postbox, address: address)
+                    } else {
+                        home = .single(nil)
+                    }
+                    if let address = workAddress {
+                        work = geocodeAddress(postbox: context.account.postbox, address: address)
+                    } else {
+                        work = .single(nil)
+                    }
+                    return combineLatest(home, work)
+                    |> map { homeCoordinate, workCoordinate -> [TelegramMediaMap]? in
+                        var venues: [TelegramMediaMap] = []
+                        if let (latitude, longitude) = homeCoordinate, let address = homeAddress {
+                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Home, address: address.displayString, provider: nil, id: "home", type: "home"), liveBroadcastingTimeout: nil))
+                        }
+                        if let (latitude, longitude) = workCoordinate, let address = workAddress {
+                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Work, address: address.displayString, provider: nil, id: "work", type: "work"), liveBroadcastingTimeout: nil))
+                        }
+                        return venues
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
+        )
+        
         let venues: Signal<[TelegramMediaMap]?, NoError> = .single(nil)
         |> then(
             filteredUserLocation
             |> mapToSignal { location -> Signal<[TelegramMediaMap]?, NoError> in
                 if let location = location, location.horizontalAccuracy > 0 {
-                    return nearbyVenues(account: context.account, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
-                    |> map(Optional.init)
+                    return combineLatest(nearbyVenues(account: context.account, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
+                    |> map { nearbyVenues, personalVenues -> [TelegramMediaMap]? in
+                        var resultVenues: [TelegramMediaMap] = []
+                        if let personalVenues = personalVenues {
+                            for venue in personalVenues {
+                                let venueLocation = CLLocation(latitude: venue.latitude, longitude: venue.longitude)
+                                if venueLocation.distance(from: location) < 500 {
+                                    resultVenues.append(venue)
+                                }
+                            }
+                        }
+                        resultVenues.append(contentsOf: nearbyVenues)
+                        return resultVenues
+                    }
                 } else {
                     return .single(nil)
                 }
@@ -436,6 +530,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         }
                         if updateMap {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, animated: true)
+                            strongSelf.headerNode.mapNode.switchToPicking(animated: false)
                         }
                     case let .venue(venue):
                         strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, animated: true)
@@ -497,7 +592,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout, strongSelf.listNode.scrollEnabled else {
                 return
             }
-            
             let overlap: CGFloat = 6.0
             strongSelf.listOffset = max(0.0, offset)
             let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(0.0, offset + overlap)))
@@ -510,7 +604,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
@@ -522,7 +615,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
@@ -535,7 +627,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.updateState { state in
                 var state = state
                 if case .selecting = state.selectedLocation {
@@ -549,11 +640,22 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            
             strongSelf.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = annotation?.location.flatMap { .venue($0) } ?? .none
+                return state
+            }
+        }
+        
+        self.headerNode.mapNode.userLocationAnnotationSelected = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateState { state in
+                var state = state
+                state.displayingMapModeOptions = false
+                state.selectedLocation = .none
                 return state
             }
         }

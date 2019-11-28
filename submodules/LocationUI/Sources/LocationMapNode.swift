@@ -33,6 +33,17 @@ private class PickerAnnotationContainerView: UIView {
     }
 }
 
+private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
+    var customHitTest: ((CGPoint) -> Bool)?
+    
+    @objc override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let customHitTest = self.customHitTest, customHitTest(gestureRecognizer.location(in: self)) {
+            return false
+        }
+        return true
+    }
+}
+
 final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private let locationPromise = Promise<CLLocation?>(nil)
     
@@ -41,8 +52,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     private let pinDisposable = MetaDisposable()
     
-    private var mapView: MKMapView? {
-        return self.view as? MKMapView
+    private var mapView: LocationMapView? {
+        return self.view as? LocationMapView
     }
     
     var returnedToUserLocation = true
@@ -50,7 +61,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var isDragging = false
     var beganInteractiveDragging: (() -> Void)?
     var endedInteractiveDragging: ((CLLocationCoordinate2D) -> Void)?
+    
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
+    var userLocationAnnotationSelected: (() -> Void)?
     
     override init() {
         self.pickerAnnotationContainerView = PickerAnnotationContainerView()
@@ -59,7 +72,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         super.init()
         
         self.setViewBlock({
-            return MKMapView()
+            return LocationMapView()
         })
     }
     
@@ -78,6 +91,18 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         self.mapView?.isRotateEnabled = self.isRotateEnabled
         self.mapView?.showsUserLocation = true
         self.mapView?.showsPointsOfInterest = false
+        self.mapView?.customHitTest = { [weak self] point in
+            guard let strongSelf = self, let annotationView = strongSelf.customUserLocationAnnotationView else {
+                return false
+            }
+            
+            if let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
+                strongSelf.userLocationAnnotationSelected?()
+                return true
+            }
+            
+            return false
+        }
         
         self.view.addSubview(self.pickerAnnotationContainerView)
     }
@@ -105,9 +130,16 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
          self.ignoreRegionChanges = false
         
-        if isUserLocation && !self.returnedToUserLocation {
-            self.returnedToUserLocation = true
-            self.pickerAnnotationView?.setRaised(true, animated: true)
+        if isUserLocation {
+            if !self.returnedToUserLocation {
+                self.returnedToUserLocation = true
+                self.pickerAnnotationView?.setRaised(true, animated: true)
+            }
+        } else if self.hasPickerAnnotation, let customUserLocationAnnotationView = self.customUserLocationAnnotationView, customUserLocationAnnotationView.isHidden {
+            self.pickerAnnotationContainerView.isHidden = true
+            customUserLocationAnnotationView.setSelected(false, animated: false)
+            customUserLocationAnnotationView.isHidden = false
+            customUserLocationAnnotationView.animateAppearance()
         }
     }
     
@@ -122,16 +154,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 self.returnedToUserLocation = false
                 self.beganInteractiveDragging?()
                 
-                if self.hasPickerAnnotation {
-                    self.customUserLocationAnnotationView?.isHidden = true
-                    self.pickerAnnotationContainerView.isHidden = false
-                    if let pickerAnnotationView = self.pickerAnnotationView, !pickerAnnotationView.isRaised {
-                        pickerAnnotationView.setCustom(true, animated: true)
-                        pickerAnnotationView.setRaised(true, animated: true)
-                    }
-                    self.resetAnnotationSelection()
-                    self.resetScheduledPin()
-                }
+                self.switchToPicking(raise: true, animated: true)
                 break
             }
         }
@@ -189,7 +212,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                     view.addSubview(annotationView)
                 }
             } else if let view = view as? LocationPinAnnotationView {
-                view.setZPosition(-1.0)
+                view.setZPosition(view.defaultZPosition)
             }
         }
     }
@@ -213,7 +236,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
         if let view = view as? LocationPinAnnotationView {
             Queue.mainQueue().after(0.2) {
-                view.setZPosition(-1.0)
+                view.setZPosition(view.defaultZPosition)
             }
         }
         
@@ -262,6 +285,23 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 self.pickerAnnotationView = nil
             }
         }
+    }
+    
+    func switchToPicking(raise: Bool = false, animated: Bool) {
+        guard self.hasPickerAnnotation else {
+            return
+        }
+        
+        self.customUserLocationAnnotationView?.isHidden = true
+        self.pickerAnnotationContainerView.isHidden = false
+        if let pickerAnnotationView = self.pickerAnnotationView, !pickerAnnotationView.isRaised {
+            pickerAnnotationView.setCustom(true, animated: animated)
+            if raise {
+                pickerAnnotationView.setRaised(true, animated: animated)
+            }
+        }
+        self.resetAnnotationSelection()
+        self.resetScheduledPin()
     }
     
     var customUserLocationAnnotationView: LocationPinAnnotationView? = nil

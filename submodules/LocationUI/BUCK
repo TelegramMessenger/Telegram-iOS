@@ -32,6 +32,8 @@ static_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/PersistentStringHash:PersistentStringHash",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

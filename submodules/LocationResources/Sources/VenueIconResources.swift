@@ -174,8 +174,8 @@ public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signa
                     c.setFillColor(backgroundColor.cgColor)
                     c.fillEllipse(in: CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
                 }
+                let boundsSize = CGSize(width: arguments.drawingRect.size.width - 4.0 * 2.0, height: arguments.drawingRect.size.height - 4.0 * 2.0)
                 if let image = iconImage, let cgImage = generateTintedImage(image: image, color: foregroundColor)?.cgImage {
-                    let boundsSize = CGSize(width: arguments.drawingRect.size.width - 4.0 * 2.0, height: arguments.drawingRect.size.height - 4.0 * 2.0)
                     let fittedSize = image.size.aspectFitted(boundsSize)
                     c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - fittedSize.width) / 2.0), y: floor((arguments.drawingRect.height - fittedSize.height) / 2.0)), size: fittedSize))
                 } else if isBuiltinIcon {
@@ -191,7 +191,8 @@ public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signa
                             image = nil
                     }
                     if let image = image, let pinImage = generateTintedImage(image: image, color: foregroundColor), let cgImage = pinImage.cgImage {
-                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - pinImage.size.width) / 2.0), y: floor((arguments.drawingRect.height - pinImage.size.height) / 2.0)), size: pinImage.size))
+                        let fittedSize = image.size.aspectFitted(boundsSize)
+                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.width - fittedSize.width) / 2.0), y: floor((arguments.drawingRect.height - fittedSize.height) / 2.0)), size: fittedSize))
                     }
                 }
             }
