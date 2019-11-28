@@ -76,6 +76,7 @@
     CGRect _sendButtonFrame;
     bool _canSendSilently;
     bool _canSchedule;
+    bool _reminder;
     bool _autorotationWasEnabled;
     bool _dismissed;
     
@@ -91,13 +92,14 @@
 
 @implementation TGMediaPickerSendActionSheetController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder {
     self = [super initWithContext:context];
     if (self != nil) {
         _context = context;
         _sendButtonFrame = sendButtonFrame;
         _canSendSilently = canSendSilently;
         _canSchedule = canSchedule;
+        _reminder = reminder;
     }
     return self;
 }
@@ -128,7 +130,7 @@
     }
     
     if (_canSchedule) {
-        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
+        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(_reminder ? @"Conversation.SendMessage.SetReminder" : @"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
         _scheduleButton.pressed = ^{
             __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
             [strongSelf schedulePressed];

@@ -31,6 +31,7 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
         controller.hasSilentPosting = !isSecretChat
     }
     controller.hasSchedule = hasSchedule
+    controller.reminder = peer.id == context.account.peerId
     controller.presentScheduleController = { done in
         presentSchedulePicker { time in
             done?(time)

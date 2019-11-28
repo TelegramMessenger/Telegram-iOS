@@ -73,6 +73,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
         controller.hasSilentPosting = !isSecretChat
     }
     controller.hasSchedule = hasSchedule
+    controller.reminder = peer.id == context.account.peerId
     
     let screenSize = parentController.view.bounds.size
     var startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)

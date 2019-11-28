@@ -81,6 +81,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
             carouselItem.hasSilentPosting = !isSecretChat
         }
         carouselItem.hasSchedule = hasSchedule
+        carouselItem.reminder = peer.id == context.account.peerId
         carouselItem.presentScheduleController = { done in
             presentSchedulePicker { time in
                 done?(time)

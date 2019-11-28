@@ -29,6 +29,7 @@
 @property (nonatomic, strong) NSString *recipientName;
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
+@property (nonatomic, assign) bool reminder;
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;

@@ -530,7 +530,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         
                         if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
                             switch effectiveChatWallpaper {
-                                case .builtin, .color:
+                                case .builtin, .color, .gradient:
                                     effectiveChatWallpaper = themeValue.chat.defaultWallpaper
                                 case let .file(file):
                                     if file.isPattern {
