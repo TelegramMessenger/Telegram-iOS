@@ -28,7 +28,7 @@ public extension TelegramChannel {
                         return false
                     }
                 } else {
-                    if let adminRights = self.adminRights, adminRights.flags.contains(.canPostMessages) {
+                    if let _ = self.adminRights {
                         return true
                     }
                     if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banSendMessages) {
