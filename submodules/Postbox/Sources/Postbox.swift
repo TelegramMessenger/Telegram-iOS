@@ -919,6 +919,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.addHolesEverywhere(peerNamespaces: peerNamespaces, holeNamespace: holeNamespace)
     }
+    
+    public func reindexUnreadCounters() {
+        assert(!self.disposed)
+        self.postbox?.reindexUnreadCounters()
+    }
 }
 
 public enum PostboxResult {
@@ -1341,6 +1346,12 @@ public final class Postbox {
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
         let _ = self.transaction({ transaction -> Void in
+            let reindexUnreadVersion: Int32 = 1
+            if self.messageHistoryMetadataTable.getShouldReindexUnreadCountsState() != reindexUnreadVersion {
+                self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+                self.messageHistoryMetadataTable.setShouldReindexUnreadCountsState(value: reindexUnreadVersion)
+            }
+            
             if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
@@ -3156,6 +3167,19 @@ public final class Postbox {
             if peerNamespaces.contains(peerId.namespace) && self.messageHistoryMetadataTable.isInitialized(peerId) {
                 self.addHole(peerId: peerId, namespace: holeNamespace, space: .everywhere, range: 1 ... Int32.max - 1)
             }
+        }
+    }
+    
+    fileprivate func reindexUnreadCounters() {
+        self.groupMessageStatsTable.removeAll()
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let (rootState, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
+        
+        self.messageHistoryMetadataTable.setChatListTotalUnreadState(rootState)
+        self.currentUpdatedTotalUnreadState = rootState
+        for (groupId, summary) in summaries {
+            self.groupMessageStatsTable.set(groupId: groupId, summary: summary)
+            self.currentUpdatedGroupTotalUnreadSummaries[groupId] = summary
         }
     }
 }

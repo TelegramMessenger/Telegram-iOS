@@ -318,6 +318,8 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
         maskLayer.contentsScale = mask.contentsScale
         maskLayer.contentsCenter = mask.contentsCenter
         maskLayer.contentsGravity = mask.contentsGravity
+        maskLayer.frame = mask.frame
+        maskLayer.bounds = mask.bounds
         view.layer.mask = maskLayer
     }
     view.layer.cornerRadius = layer.cornerRadius

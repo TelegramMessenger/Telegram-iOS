@@ -68,6 +68,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
     case resetHoles(PresentationTheme)
+    case reindexUnread(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
@@ -85,7 +86,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper:
             return DebugControllerSection.experiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -128,8 +129,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 15
         case .resetHoles:
             return 16
-        case .resetBiometricsData:
+        case .reindexUnread:
             return 17
+        case .resetBiometricsData:
+            return 18
         case .optimizeDatabase:
             return 20
         case .photoPreview:
@@ -462,6 +465,21 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         controller.dismiss()
                     })
             })
+        case let .reindexUnread(theme):
+            return ItemListActionItem(presentationData: presentationData, title: "Reindex Unread Counters", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                arguments.presentController(controller, nil)
+                let _ = (context.account.postbox.transaction { transaction -> Void in
+                    transaction.reindexUnreadCounters()
+                }
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
+            })
         case let .resetBiometricsData(theme):
             return ItemListActionItem(presentationData: presentationData, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -542,6 +560,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
+    entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))

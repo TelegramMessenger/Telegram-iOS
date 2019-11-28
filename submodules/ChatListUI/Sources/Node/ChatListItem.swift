@@ -1420,7 +1420,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.secretIconNode = iconNode
                         }
                         iconNode.image = currentSecretIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + floor((strongSelf.titleNode.frame.height - currentSecretIconImage.size.height) / 2.0)), size: currentSecretIconImage.size))
+                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + floor((titleLayout.size.height - currentSecretIconImage.size.height) / 2.0)), size: currentSecretIconImage.size))
                         titleOffset += currentSecretIconImage.size.width + 3.0
                     } else if let secretIconNode = strongSelf.secretIconNode {
                         strongSelf.secretIconNode = nil

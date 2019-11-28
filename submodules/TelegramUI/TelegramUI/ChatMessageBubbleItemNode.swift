@@ -2503,14 +2503,30 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             return (nil, nil)
                         }
                         if strongSelf.backgroundNode.supernode != nil, let backgroundView = strongSelf.backgroundNode.view.snapshotContentTree(unhide: true) {
+                            let backgroundContainer = UIView()
+                            
+                            let backdropView = strongSelf.backgroundWallpaperNode.view.snapshotContentTree(unhide: true)
+                            if let backdropView = backdropView {
+                                backdropView.backgroundColor = .green
+                                let backdropFrame = strongSelf.backgroundWallpaperNode.layer.convert(strongSelf.backgroundWallpaperNode.bounds, to: strongSelf.backgroundNode.layer)
+                                backdropView.frame = backdropFrame
+                            }
+                            
+                            if let backdropView = backdropView {
+                                backgroundContainer.addSubview(backdropView)
+                            }
+                            
+                            backgroundContainer.addSubview(backgroundView)
+                            
                             let backgroundFrame = strongSelf.backgroundNode.layer.convert(strongSelf.backgroundNode.bounds, to: result.0.layer)
-                            backgroundView.frame = backgroundFrame
+                            backgroundView.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
+                            backgroundContainer.frame = backgroundFrame
                             let viewWithBackground = UIView()
-                            viewWithBackground.addSubview(backgroundView)
+                            viewWithBackground.addSubview(backgroundContainer)
                             viewWithBackground.frame = resultView.frame
                             resultView.frame = CGRect(origin: CGPoint(), size: resultView.frame.size)
                             viewWithBackground.addSubview(resultView)
-                            return (viewWithBackground, backgroundView)
+                            return (viewWithBackground, backgroundContainer)
                         }
                         return (resultView, nil)
                     })

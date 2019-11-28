@@ -10,6 +10,7 @@ private enum MetadataPrefix: Int8 {
     case GroupFeedIndexInitialized = 7
     case ShouldReindexUnreadCounts = 8
     case PeerHistoryInitialized = 9
+    case ShouldReindexUnreadCountsState = 10
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -145,6 +146,21 @@ final class MessageHistoryMetadataTable: Table {
             return true
         } else {
             return false
+        }
+    }
+    
+    func setShouldReindexUnreadCountsState(value: Int32) {
+        var value = value
+        self.valueBox.set(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCountsState), value: MemoryBuffer(memory: &value, capacity: 4, length: 4, freeWhenDone: false))
+       }
+    
+    func getShouldReindexUnreadCountsState() -> Int32? {
+        if let value = self.valueBox.get(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCountsState)) {
+            var version: Int32 = 0
+            value.read(&version, offset: 0, length: 4)
+            return version
+        } else {
+            return nil
         }
     }
     

@@ -61,7 +61,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
-        let defaultFont = Font.regular(floor(theme.baseFontSize * 20.0 / 17.0))
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
         self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         self.accessibilityArea.accessibilityLabel = item.title

@@ -425,7 +425,10 @@ class TabBarNode: ASDisplayNode {
                 }
                 
                 if !container.badgeContainerNode.isHidden {
-                    let hasSingleLetterValue = container.badgeTextNode.attributedText?.string.count == 1
+                    var hasSingleLetterValue: Bool = false
+                    if let string = container.badgeTextNode.attributedText?.string {
+                        hasSingleLetterValue = string.count == 1
+                    }
                     let badgeSize = container.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
                     let backgroundSize = CGSize(width: hasSingleLetterValue ? 18.0 : max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
                     let backgroundFrame: CGRect

@@ -69,6 +69,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let accountManager: AccountManager
     private let presentationDataSignal: Signal<PresentationData, NoError>
     private let window: Window1?
+    private let rootController: UIViewController?
     
     private var coveringView: LockedWindowCoveringView?
     private var passcodeController: PasscodeEntryController?
@@ -89,7 +90,7 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
-    public init(rootPath: String, window: Window1?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -97,6 +98,7 @@ public final class AppLockContextImpl: AppLockContext {
         self.presentationDataSignal = presentationDataSignal
         self.rootPath = rootPath
         self.window = window
+        self.rootController = rootController
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current
@@ -185,6 +187,9 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.presentedOverCoveringView = true
                         strongSelf.passcodeController = passcodeController
+                        if let rootViewController = strongSelf.rootController {
+                            rootViewController.dismiss(animated: false, completion: nil)
+                        }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
@@ -202,6 +207,10 @@ public final class AppLockContextImpl: AppLockContext {
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
+                    
+                    if let rootViewController = strongSelf.rootController {
+                        rootViewController.dismiss(animated: false, completion: nil)
+                    }
                 }
             } else {
                 if let coveringView = strongSelf.coveringView {
