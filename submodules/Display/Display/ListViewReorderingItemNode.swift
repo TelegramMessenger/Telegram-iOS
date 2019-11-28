@@ -86,12 +86,21 @@ final class ListViewReorderingItemNode: ASDisplayNode {
     
     func animateCompletion(completion: @escaping () -> Void) {
         if let itemNode = self.itemNode {
+            let offset = itemNode.frame.midY - copyView.frame.midY
+            itemNode.isHidden = false
+            self.copyView.isHidden = true
+            itemNode.transitionOffset = offset
+            itemNode.addTransitionOffsetAnimation(0.0, duration: 0.3 * UIView.animationDurationFactor(), beginAt: CACurrentMediaTime())
+            completion()
+                
+            /*itemNode.transitionOffset = 0.0
+            itemNode.setAnimationForKey("transitionOffset", animation: nil)
             self.copyView.topShadow.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             self.copyView.bottomShadow.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-            self.copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: itemNode.apparentFrame.midY - copyView.frame.midY), duration: 0.2, removeOnCompletion: false, additive: true, force: true, completion: { [weak itemNode] _ in
+            self.copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: itemNode.frame.midY - copyView.frame.midY), duration: 0.2, removeOnCompletion: false, additive: true, force: true, completion: { [weak itemNode] _ in
                 itemNode?.isHidden = false
                 completion()
-            })
+            })*/
         } else {
             completion()
         }

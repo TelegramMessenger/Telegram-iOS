@@ -129,14 +129,17 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, network:
 
 func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Bool, NoError> {
     return postbox.combinedView(keys: [.basicPeer(rawPeerId)])
-    |> mapToSignal { views -> Signal<Peer, NoError> in
+    |> mapToSignal { views -> Signal<Bool, NoError> in
+        if accountPeerId == rawPeerId {
+            return .single(true)
+        }
         guard let view = views.views[.basicPeer(rawPeerId)] as? BasicPeerView else {
             return .complete()
         }
         guard let peer = view.peer else {
             return .complete()
         }
-        return .single(peer)
+        return .single(true)
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<Bool, NoError> in

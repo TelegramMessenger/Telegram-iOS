@@ -1083,7 +1083,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let layoutOffset: CGFloat = 0.0
             
             let rawContentOriginX = 2.0
-            let rawContentWidth = params.width - leftInset - params.rightInset - 10.0
+            let rawContentWidth = params.width - leftInset - params.rightInset - 10.0 - reorderInset
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

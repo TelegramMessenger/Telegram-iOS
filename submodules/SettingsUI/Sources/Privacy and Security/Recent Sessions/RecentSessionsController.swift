@@ -359,7 +359,7 @@ private struct RecentSessionsControllerState: Equatable {
     }
 }
 
-private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState) -> [RecentSessionsEntry] {
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
     
     if !sessionsState.sessions.isEmpty {
@@ -370,7 +370,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
         
-        if sessionsState.sessions.count > 1 {
+        if sessionsState.sessions.count > 1 || enableQRLogin {
             entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
             entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
         
@@ -388,7 +388,9 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             
             entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
             
-            entries.append(.addDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
+            if enableQRLogin {
+                entries.append(.addDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
+            }
             
             let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
@@ -607,9 +609,21 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
-    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, websitesPromise.get())
+    let enableQRLogin = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+    |> map { view -> Bool in
+        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+            return false
+        }
+        guard let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR else {
+            return false
+        }
+        return true
+    }
+    |> distinctUntilChanged
+    
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, websitesPromise.get(), enableQRLogin)
     |> deliverOnMainQueue
-    |> map { presentationData, mode, state, sessionsState, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         let websites = websitesAndPeers?.0
         let peers = websitesAndPeers?.1
@@ -652,7 +666,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             case (.websites, let websites, let peers):
                 entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
             default:
-                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState)
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState, enableQRLogin: enableQRLogin)
         }
         
         let previousMode = previousMode.swap(mode)

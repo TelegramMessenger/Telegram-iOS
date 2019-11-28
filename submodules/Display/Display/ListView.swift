@@ -270,6 +270,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderNode: ListViewReorderingItemNode?
     private var reorderFeedback: HapticFeedback?
     private var reorderFeedbackDisposable: MetaDisposable?
+    private var isReorderingItems: Bool = false
+    private var reorderingItemsCompleted: (() -> Void)?
     
     private let waitingForNodesDisposable = MetaDisposable()
     
@@ -433,19 +435,29 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func endReordering() {
-        if let reorderNode = self.reorderNode {
-            self.reorderNode = nil
-            if let itemNode = reorderNode.itemNode, itemNode.supernode == self {
-                self.reorderItemNodeToFront(itemNode)
-                reorderNode.animateCompletion(completion: { [weak reorderNode] in
-                    reorderNode?.removeFromSupernode()
-                })
-                self.setNeedsAnimations()
-            } else {
-                reorderNode.removeFromSupernode()
+        let f: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
             }
+            if let reorderNode = strongSelf.reorderNode {
+                strongSelf.reorderNode = nil
+                if let itemNode = reorderNode.itemNode, itemNode.supernode == strongSelf {
+                    strongSelf.reorderItemNodeToFront(itemNode)
+                    reorderNode.animateCompletion(completion: { [weak reorderNode] in
+                        reorderNode?.removeFromSupernode()
+                    })
+                    strongSelf.setNeedsAnimations()
+                } else {
+                    reorderNode.removeFromSupernode()
+                }
+            }
+            strongSelf.reorderCompleted(strongSelf.opaqueTransactionState)
         }
-        self.reorderCompleted(self.opaqueTransactionState)
+        if self.isReorderingItems {
+            self.reorderingItemsCompleted = f
+        } else {
+            f()
+        }
     }
     
     private func updateReordering(offset: CGFloat) {
@@ -497,9 +509,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if self.reorderFeedbackDisposable == nil {
                             self.reorderFeedbackDisposable = MetaDisposable()
                         }
+                        self.isReorderingItems = true
                         self.reorderFeedbackDisposable?.set((self.reorderItem(reorderItemIndex, toIndex, self.opaqueTransactionState)
                         |> deliverOnMainQueue).start(next: { [weak self] value in
-                            guard let strongSelf = self, value else {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.isReorderingItems = false
+                            if let reorderingItemsCompleted = strongSelf.reorderingItemsCompleted {
+                                strongSelf.reorderingItemsCompleted = nil
+                                reorderingItemsCompleted()
+                            }
+                            
+                            if !value {
                                 return
                             }
                             if strongSelf.reorderFeedback == nil {
@@ -2163,6 +2186,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         let timestamp = CACurrentMediaTime()
         
+        var sizeOrInsetsUpdated = false
+        if let updateSizeAndInsets = updateSizeAndInsets {
+            if updateSizeAndInsets.size != self.visibleSize || updateSizeAndInsets.insets != self.insets {
+                sizeOrInsetsUpdated = true
+            }
+        }
+        
         let listInsets = updateSizeAndInsets?.insets ?? self.insets
         
         if let updateOpaqueState = updateOpaqueState {
@@ -2413,7 +2443,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             //print("replay after \(self.itemNodes.map({"\($0.index) \(unsafeAddressOf($0))"}))")
         }
         
-        if let scrollToItem = scrollToItem, !self.areAllItemsOnScreen() || updateSizeAndInsets == nil {
+        if let scrollToItem = scrollToItem, !self.areAllItemsOnScreen() || !sizeOrInsetsUpdated {
             self.stopScrolling()
             
             for itemNode in self.itemNodes {

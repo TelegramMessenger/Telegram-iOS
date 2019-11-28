@@ -23,6 +23,7 @@ public struct LegacyAttachmentMenuMediaEditing: OptionSet {
 
 public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let actionSheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
+    let fontSize = floor(actionSheetTheme.baseFontSize * 20.0 / 17.0)
     
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
@@ -101,7 +102,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         carouselItem.editingContext.setInitialCaption(initialCaption, entities: [])
         itemViews.append(carouselItem)
         
-        let galleryItem = TGMenuSheetButtonItemView(title: editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: { [weak controller] in
+        let galleryItem = TGMenuSheetButtonItemView(title: editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openGallery()
         })!
@@ -119,7 +120,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if !editing {
-        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: {[weak controller] in
+        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: {[weak controller] in
             controller?.dismiss(animated: true)
             openFileGallery()
         })!
@@ -128,7 +129,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if canEditCurrent {
-        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: {[weak controller] in
+        let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_File, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: {[weak controller] in
             controller?.dismiss(animated: true)
             openFileGallery()
         })!
@@ -136,21 +137,21 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
     }
     
     if editMediaOptions == nil {
-        let locationItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: { [weak controller] in
+        let locationItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Location, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openMap()
         })!
         itemViews.append(locationItem)
         
         if (peer is TelegramGroup || peer is TelegramChannel) && canSendMessagesToPeer(peer) && canSendPolls {
-            let pollItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: { [weak controller] in
+            let pollItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openPoll()
             })!
             itemViews.append(pollItem)
         }
     
-        let contactItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: { [weak controller] in
+        let contactItem = TGMenuSheetButtonItemView(title: presentationData.strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
             controller?.dismiss(animated: true)
             openContacts()
         })!
@@ -164,7 +165,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
             let peer = recentlyUsedInlineBots[i]
             let addressName = peer.addressName
             if let addressName = addressName {
-                let botItem = TGMenuSheetButtonItemView(title: "@" + addressName, type: TGMenuSheetButtonTypeDefault, fontSize: actionSheetTheme.baseFontSize, action: { [weak controller] in
+                let botItem = TGMenuSheetButtonItemView(title: "@" + addressName, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
                     controller?.dismiss(animated: true)
                     
                     selectRecentlyUsedInlineBot(peer)
