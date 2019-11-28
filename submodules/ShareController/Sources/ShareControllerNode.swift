@@ -31,6 +31,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
+    private var immediatePeerId: PeerId?
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -75,11 +76,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
+        self.immediatePeerId = immediatePeerId
         self.presentError = presentError
         
         self.defaultAction = defaultAction
@@ -151,7 +153,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         super.init()
-        
+                
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
                 var added = false
@@ -640,6 +642,17 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
             peersContentNode.peersValue.set(.single(peers))
             return
+        }
+        
+        if let peerId = self.immediatePeerId {
+            self.immediatePeerId = nil
+            let _ = (account.postbox.transaction { transaction -> RenderedPeer? in
+                return transaction.getPeer(peerId).flatMap(RenderedPeer.init(peer:))
+            } |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let strongSelf = self, let peer = peer {
+                    strongSelf.controllerInteraction?.togglePeer(peer, true)
+                }
+            })
         }
         
         let animated = self.peersContentNode == nil

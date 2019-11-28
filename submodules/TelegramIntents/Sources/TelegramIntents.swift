@@ -181,9 +181,13 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
-                interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64)"
+                interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64())"
                 interaction.groupIdentifier = "sendMessage_\(subject.toString())_\(account.peerId.toInt64())"
-                interaction.donate()
+                interaction.donate { error in
+                    if let error = error {
+                        print(error)
+                    }
+                }
             }
         })
     }
@@ -191,7 +195,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
 
 public func deleteSendMessageIntents(account: Account, peerId: PeerId) {
     if #available(iOS 10.0, *) {
-        INInteraction.delete(with: ["sendMessage_\(account.peerId.toInt64())_\(peerId.toInt64)"])
+        INInteraction.delete(with: ["sendMessage_\(account.peerId.toInt64())_\(peerId.toInt64())"])
     }
 }
 

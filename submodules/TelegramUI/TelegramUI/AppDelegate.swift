@@ -1199,7 +1199,7 @@ final class SharedApplicationContext {
         
         self.logoutDisposable.set((self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<Set<PeerId>, NoError> in
+        |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
             return sharedContext.sharedContext.activeAccounts
             |> map { _, accounts, _ -> Set<PeerId> in
                 return Set(accounts.map { $0.1.peerId })
@@ -1210,10 +1210,27 @@ final class SharedApplicationContext {
                 }
                 return updated
             }
-        }).start(next: { loggedOutAccountPeerIds in
+            |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
+                return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
+            }
+        }).start(next: { [weak self] accountManager, loggedOutAccountPeerIds in
+            guard let strongSelf = self else {
+                return
+            }
             for peerId in loggedOutAccountPeerIds {
                 deleteAllSendMessageIntents(accountPeerId: peerId)
             }
+            
+            let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
+                var updated = current
+                for peerId in loggedOutAccountPeerIds {
+                    if peerId == updated.account {
+                        updated = updated.withUpdatedAccount(nil)
+                        break
+                    }
+                }
+                return updated
+            }).start()
         }))
         
         self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in

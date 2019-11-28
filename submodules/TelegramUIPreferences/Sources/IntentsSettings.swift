@@ -27,7 +27,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.initiallyReset = decoder.decodeBoolForKey("initiallyReset_v2", orElse: false)
+        self.initiallyReset = decoder.decodeBoolForKey("initiallyReset_v1", orElse: false)
         self.account = decoder.decodeOptionalInt64ForKey("account").flatMap { PeerId($0) }
         self.contacts = decoder.decodeBoolForKey("contacts", orElse: true)
         self.privateChats = decoder.decodeBoolForKey("privateChats", orElse: false)
@@ -37,7 +37,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeBool(self.initiallyReset, forKey: "initiallyReset_v2")
+        encoder.encodeBool(self.initiallyReset, forKey: "initiallyReset_v1")
         if let account = self.account {
             encoder.encodeInt64(account.toInt64(), forKey: "account")
         } else {
@@ -62,7 +62,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
         return lhs.initiallyReset == rhs.initiallyReset && lhs.account == rhs.account && lhs.contacts == rhs.contacts && lhs.privateChats == rhs.privateChats && lhs.savedMessages == rhs.savedMessages && lhs.groups == rhs.groups && lhs.onlyShared == rhs.onlyShared
     }
     
-    public func withUpdatedAccount(_ account: PeerId) -> IntentsSettings {
+    public func withUpdatedAccount(_ account: PeerId?) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: self.groups, onlyShared: self.onlyShared)
     }
     

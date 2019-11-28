@@ -426,7 +426,7 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId)
         self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             self?.dismissed?(shared)
@@ -704,15 +704,12 @@ public final class ShareController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        if let _ = self.immediatePeerId {
-        } else {
-            self.peersDisposable.set((self.peers.get()
-            |> deliverOnMainQueue).start(next: { [weak self] next in
-                if let strongSelf = self {
-                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-                }
-            }))
-        }
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+            }
+        }))
         self._ready.set(self.controllerNode.ready.get())
     }
     
@@ -827,31 +824,23 @@ public final class ShareController: ViewController {
                 return (resultPeers, accountPeer)
             }
         })
-        if let immediatePeerId = self.immediatePeerId {
-            self.sendImmediately(peerId: immediatePeerId)
-        } else {
-            self.peersDisposable.set((self.peers.get()
-            |> deliverOnMainQueue).start(next: { [weak self] next in
-                if let strongSelf = self {
-                    strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
-                    
-                    if animateIn {
-                        strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
-                        |> filter({ $0 })
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] _ in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.controllerNode.animateIn()
-                        }))
-                    }
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                
+                if animateIn {
+                    strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
+                    |> filter({ $0 })
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.controllerNode.animateIn()
+                    }))
                 }
-            }))
-        }
-    }
-    
-    private func sendImmediately(peerId: PeerId) {
-        self.controllerNode.send(peerId: peerId)
+            }
+        }))
     }
 }

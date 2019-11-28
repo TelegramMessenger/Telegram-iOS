@@ -198,6 +198,16 @@ public class ShareRootControllerImpl {
                 globalInternalContext = internalContext
             }
             
+            var immediatePeerId: PeerId?
+            if #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
+                if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                    let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                    if let userId = Int32(string) {
+                        immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                    }
+                }
+            }
+            
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
                 return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
@@ -208,24 +218,36 @@ public class ShareRootControllerImpl {
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> Set<AccountRecordId> in
-                    return Set(transaction.getRecords().map { record in
+                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
+                    let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
+                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+                    return (accountRecords, intentsSettings.account)
                 })
                 |> castError(ShareAuthorizationError.self)
                 |> take(1)
-                |> mapToSignal { primaryAndAccounts, validAccountIds -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
+                |> mapToSignal { primaryAndAccounts, validAccountIdsAndIntentsAccountId -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                     var (maybePrimary, accounts) = primaryAndAccounts
+                    let (validAccountIds, intentsAccountId) = validAccountIdsAndIntentsAccountId
                     for i in (0 ..< accounts.count).reversed() {
                         if !validAccountIds.contains(accounts[i].account.id) {
                             accounts.remove(at: i)
                         }
                     }
                     
+                    if let _ = immediatePeerId, let intentsAccountId = intentsAccountId {
+                        for account in accounts {
+                            if account.peer.id == intentsAccountId {
+                                maybePrimary = account.account.id
+                            }
+                        }
+                    }
+                    
                     guard let primary = maybePrimary, validAccountIds.contains(primary) else {
                         return .fail(.unauthorized)
                     }
+                    
                     guard let info = accounts.first(where: { $0.account.id == primary }) else {
                         return .fail(.unauthorized)
                     }
@@ -294,17 +316,7 @@ public class ShareRootControllerImpl {
                         }
                         |> then(.single(.done))
                     }
-                    
-                    var immediatePeerId: PeerId?
-                    if #available(iOS 13.0, *), let sendMessageIntent = self?.getExtensionContext()?.intent as? INSendMessageIntent {
-                        if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
-                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                            if let userId = Int32(string) {
-                                immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            }
-                        }
-                    }
-                    
+                                        
                     let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
                         if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                             let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
