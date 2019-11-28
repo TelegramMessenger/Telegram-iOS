@@ -35,7 +35,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var apiMessage: Api.Message?
         
         for resultMessage in result.messages {
-            if let id = resultMessage.id(namespace: Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+            if let id = resultMessage.id() {
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break
@@ -43,7 +43,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
-        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+        if let apiMessage = apiMessage, let id = apiMessage.id() {
             messageId = id.id
         } else {
             messageId = result.rawMessageIds.first
@@ -80,7 +80,14 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
-                let namespace = Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud
+                var namespace: MessageId.Namespace = Namespaces.Message.Cloud
+                if let updatedTimestamp = updatedTimestamp {
+                    if message.scheduleTime != nil && message.scheduleTime == updatedTimestamp {
+                        namespace = Namespaces.Message.ScheduledCloud
+                    }
+                } else if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    namespace = Namespaces.Message.ScheduledCloud
+                }
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
             } else {
                 updatedId = currentMessage.id
@@ -112,6 +119,15 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                         }
                     }
                     updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
+                }
+                
+                if Namespaces.Message.allScheduled.contains(message.id.namespace) && updatedId.namespace == Namespaces.Message.Cloud {
+                    for i in 0 ..< updatedAttributes.count {
+                        if updatedAttributes[i] is OutgoingScheduleInfoMessageAttribute {
+                            updatedAttributes.remove(at: i)
+                            break
+                        }
+                    }
                 }
                 
                 attributes = updatedAttributes

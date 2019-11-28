@@ -33,6 +33,7 @@ public final class LocationManager: NSObject, CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         if let (pendingCompletion, _) = self.pendingCompletion {
             pendingCompletion(status)
+            self.pendingCompletion = nil
         }
     }
 }

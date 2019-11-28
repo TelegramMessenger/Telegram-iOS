@@ -380,7 +380,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     for attribute in attributes {
                         if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                             if attribute.scheduleTime == scheduleWhenOnlineTimestamp, let presence = peerPresence as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
-                                
                             } else {
                                 messageNamespace = Namespaces.Message.ScheduledLocal
                                 effectiveTimestamp = attribute.scheduleTime
@@ -526,7 +525,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                                 if attribute.scheduleTime == scheduleWhenOnlineTimestamp, let presence = peerPresence as? TelegramUserPresence, case let .present(statusTimestamp) = presence.status, statusTimestamp >= timestamp {
-                                    
                                 } else {
                                     messageNamespace = Namespaces.Message.ScheduledLocal
                                     effectiveTimestamp = attribute.scheduleTime

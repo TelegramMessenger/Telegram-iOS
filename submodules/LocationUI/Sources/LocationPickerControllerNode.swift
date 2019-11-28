@@ -416,7 +416,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         if let personalVenues = personalVenues {
                             for venue in personalVenues {
                                 let venueLocation = CLLocation(latitude: venue.latitude, longitude: venue.longitude)
-                                if venueLocation.distance(from: location) < 500 {
+                                if venueLocation.distance(from: location) <= 1000 {
                                     resultVenues.append(venue)
                                 }
                             }
