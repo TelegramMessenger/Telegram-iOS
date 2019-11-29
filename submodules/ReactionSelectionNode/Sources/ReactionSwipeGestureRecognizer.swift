@@ -102,7 +102,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                 }
                 let elevate = self.shouldElevateAnchorPoint?() ?? false
                 
-                let activationTimer = Timer(timeInterval: elevate ? 0.1 : 0.01, target: TimerTarget { [weak self] in
+                let activationTimer = Timer(timeInterval: elevate ? 0.15 : 0.01, target: TimerTarget { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -178,7 +178,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    public func complete(into targetNode: ASImageNode?, hideTarget: Bool) {
+    public func complete(into targetNode: ASDisplayNode?, hideTarget: Bool) {
         if self.isAwaitingCompletion {
             self.currentContainer?.dismissReactions(into: targetNode, hideTarget: hideTarget)
             self.state = .ended
