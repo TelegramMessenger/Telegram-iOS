@@ -466,7 +466,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                     arguments.openGroupsInCommon()
                 })
             case let .secretEncryptionKey(theme, text, fingerprint):
-                return ItemListSecretChatKeyItem(theme: theme, title: text, fingerprint: fingerprint, sectionId: self.section, style: .plain, action: {
+                return ItemListSecretChatKeyItem(presentationData: presentationData, title: text, fingerprint: fingerprint, sectionId: self.section, style: .plain, action: {
                     arguments.openEncryptionKey(fingerprint)
                 })
             case let .botAddToGroup(theme, text):

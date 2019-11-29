@@ -11,7 +11,7 @@ import PresentationDataUtils
 import EncryptionKeyVisualization
 
 class ItemListSecretChatKeyItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let icon: UIImage?
     let title: String
     let fingerprint: SecretChatKeyFingerprint
@@ -20,8 +20,8 @@ class ItemListSecretChatKeyItem: ListViewItem, ItemListItem {
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, fingerprint: SecretChatKeyFingerprint, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
-        self.theme = theme
+    init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, fingerprint: SecretChatKeyFingerprint, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+        self.presentationData = presentationData
         self.icon = icon
         self.title = title
         self.fingerprint = fingerprint
@@ -71,8 +71,6 @@ class ItemListSecretChatKeyItem: ListViewItem, ItemListItem {
         self.action?()
     }
 }
-
-private let titleFont = Font.regular(17.0)
 
 class ItemListSecretChatKeyItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -150,9 +148,9 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
             var updateArrowImage: UIImage?
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
-                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
             }
             
             var updateIcon = false
@@ -172,25 +170,26 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
             let itemSeparatorColor: UIColor
             
             var leftInset = 16.0 + params.leftInset
-            
-            switch item.style {
-            case .plain:
-                itemBackgroundColor = item.theme.list.plainBackgroundColor
-                itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                contentSize = CGSize(width: params.width, height: 44.0)
-                insets = itemListNeighborsPlainInsets(neighbors)
-            case .blocks:
-                itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                contentSize = CGSize(width: params.width, height: 44.0)
-                insets = itemListNeighborsGroupedInsets(neighbors)
-            }
-            
             if let _ = item.icon {
                 leftInset += 43.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            switch item.style {
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
+                insets = itemListNeighborsGroupedInsets(neighbors)
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
@@ -219,7 +218,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -271,7 +270,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                         strongSelf.keyNode.image = updateKeyImage
                     }
                     if let image = strongSelf.keyNode.image {
-                        strongSelf.keyNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - image.size.width, y: 10.0), size: image.size)
+                        strongSelf.keyNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - image.size.width, y: floor((layout.contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
@@ -285,7 +284,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                         strongSelf.arrowNode.isHidden = false
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel))
                 }
             })
         }
