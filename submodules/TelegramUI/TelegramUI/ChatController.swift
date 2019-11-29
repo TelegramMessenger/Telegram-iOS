@@ -567,7 +567,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     var reactionItems: [ReactionContextItem] = []
                     
-                    /*let reactions: [(String, String, String)] = [
+                    let reactions: [(String, String, String)] = [
                         ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
@@ -586,7 +586,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
                             reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
                         }
-                    }*/
+                    }
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
                     }
