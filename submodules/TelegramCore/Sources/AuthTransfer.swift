@@ -32,8 +32,8 @@ public enum ExportAuthTransferTokenResult {
     case loggedIn
 }
 
-public func exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
-    return account.network.request(Api.functions.auth.exportLoginToken(apiId: account.networkArguments.apiId, apiHash: account.networkArguments.apiHash))
+public func exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, otherAccountUserIds: [Int32], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
+    return account.network.request(Api.functions.auth.exportLoginToken(apiId: account.networkArguments.apiId, apiHash: account.networkArguments.apiHash, exceptIds: otherAccountUserIds))
     |> mapError { _ -> ExportAuthTransferTokenError in
         return .generic
     }

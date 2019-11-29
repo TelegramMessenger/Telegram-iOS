@@ -51,8 +51,6 @@ def remove_codesign_files(files):
             continue
         if re.match('Frameworks/.*\\.framework/_CodeSignature/CodeResources', f):
             continue
-        if f == 'Frameworks/ModernProto.framework/ModernProto':
-            continue
         result.add(f)
     return result
 
