@@ -56,7 +56,7 @@ final class AuthTransferConfirmationNode: ASDisplayNode {
         self.locationInfoNode.textAlignment = .center
         self.locationInfoNode.maximumNumberOfLines = 0
         
-        self.acceptButtonNode = SolidRoundedButtonNode(title: "Confirm Log In", icon: nil, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemDestructiveColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.acceptButtonNode = SolidRoundedButtonNode(title: presentationData.strings.AuthSessions_AddDevice_ConfirmDevice, icon: nil, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemDestructiveColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.cancelButtonNode = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, icon: nil, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()

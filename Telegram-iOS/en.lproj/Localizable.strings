@@ -5141,9 +5141,13 @@ Any member of this group will be able to see messages in the channel.";
 "Shortcut.SwitchAccount" = "Switch Account";
 
 "Settings.Devices" = "Devices";
-"Settings.AddDevice" = "Add";
+"Settings.AddDevice" = "Scan QR";
 "AuthSessions.DevicesTitle" = "Devices";
-"AuthSessions.AddDevice" = "Add Device";
+"AuthSessions.AddDevice" = "Scan QR";
+"AuthSessions.AddDevice.ScanInfo" = "Scan a QR code to log into\nthis account on another device.";
+"AuthSessions.AddDevice.ScanTitle" = "Scan QR Code";
+"AuthSessions.AddDevice.ScanApps" = "Telegram is available for\niPhone, iPad, macOS, Windows and Linux";
+"AuthSessions.AddDevice.ConfirmDevice" = "Confirm Log In";
 
 "Map.SendThisPlace" = "Send This Place";
 "Map.SetThisPlace" = "Set This Place";

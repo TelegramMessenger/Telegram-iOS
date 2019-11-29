@@ -244,19 +244,19 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Qr_ScanCode, font: Font.bold(32.0), textColor: .white)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_ScanTitle, font: Font.bold(32.0), textColor: .white)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: "Scan a QR code to log into\nthis account on another device.", font: Font.regular(16.0), textColor: .white)
+        self.textNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_ScanInfo, font: Font.regular(16.0), textColor: .white)
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
         
         self.descriptionNode = ImmediateTextNode()
         self.descriptionNode.displaysAsynchronously = false
-        self.descriptionNode.attributedText = NSAttributedString(string: "Telegram is available for\niPhone, iPad, macOS, Windows and Linux", font: Font.regular(14.0), textColor: .white)
+        self.descriptionNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_ScanApps, font: Font.regular(14.0), textColor: .white)
         self.descriptionNode.maximumNumberOfLines = 0
         self.descriptionNode.textAlignment = .center
         
