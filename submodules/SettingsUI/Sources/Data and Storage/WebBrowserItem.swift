@@ -11,16 +11,16 @@ import OpenInExternalAppUI
 
 class WebBrowserItem: ListViewItem, ItemListItem {
     let account: Account
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let application: OpenInApplication
     let checked: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(account: Account, theme: PresentationTheme, title: String, application: OpenInApplication, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(account: Account, presentationData: ItemListPresentationData, title: String, application: OpenInApplication, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.account = account
-        self.theme = theme
+        self.presentationData = presentationData
         self.title = title
         self.application = application
         self.checked = checked
@@ -68,8 +68,6 @@ class WebBrowserItem: ListViewItem, ItemListItem {
         self.action()
     }
 }
-
-private let titleFont = Font.regular(17.0)
 
 private final class WebBrowserItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -138,7 +136,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
             var leftInset: CGFloat = params.leftInset + 16.0 + 43.0
             
             let iconSize = CGSize(width: 29.0, height: 29.0)
-            let arguments = TransformImageArguments(corners: ImageCorners(radius: 5.0), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+            let arguments = TransformImageArguments(corners: ImageCorners(radius: 5.0), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
             let imageApply = makeIconLayout(arguments)
             
             var updatedIconSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
@@ -157,24 +155,23 @@ private final class WebBrowserItemNode: ListViewItemNode {
                 }
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
-            let contentSize = CGSize(width: params.width, height: 44.0)
+            let contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             var updateCheckImage: UIImage?
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
-            }
-            
-            if currentItem?.theme !== item.theme {
-                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updateCheckImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
             }
 
             return (layout, { [weak self] in
@@ -195,10 +192,10 @@ private final class WebBrowserItemNode: ListViewItemNode {
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -246,7 +243,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
