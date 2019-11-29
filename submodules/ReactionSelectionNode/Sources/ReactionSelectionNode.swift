@@ -255,7 +255,11 @@ final class ReactionSelectionNode: ASDisplayNode {
         let backgroundHeight: CGFloat = floor(self.minimizedReactionSize * 1.8)
         
         var backgroundFrame = CGRect(origin: CGPoint(x: -shadowBlur, y: -shadowBlur), size: CGSize(width: contentWidth + shadowBlur * 2.0, height: backgroundHeight + shadowBlur * 2.0))
-        backgroundFrame = backgroundFrame.offsetBy(dx: floor((constrainedSize.width - contentWidth) / 2.0), dy: startingPoint.y - backgroundHeight - 12.0)
+        if constrainedSize.width > 500.0 {
+            backgroundFrame = backgroundFrame.offsetBy(dx: constrainedSize.width - contentWidth - 44.0, dy: startingPoint.y - backgroundHeight - 12.0)
+        } else {
+            backgroundFrame = backgroundFrame.offsetBy(dx: floor((constrainedSize.width - contentWidth) / 2.0), dy: startingPoint.y - backgroundHeight - 12.0)
+        }
         backgroundFrame.origin.x = max(0.0, backgroundFrame.minX)
         backgroundFrame.origin.x = min(constrainedSize.width - backgroundFrame.width, backgroundFrame.minX)
         
@@ -383,9 +387,9 @@ final class ReactionSelectionNode: ASDisplayNode {
         
         let backgroundOffset: CGPoint
         if self.isRightAligned {
-            backgroundOffset = CGPoint(x: (self.backgroundNode.frame.width - shadowBlur) / 2.0 - 42.0, y: (self.backgroundNode.frame.height - shadowBlur) / 2.0)
+            backgroundOffset = CGPoint(x: (self.backgroundNode.frame.width - shadowBlur) / 2.0 - 42.0, y: 10.0)
         } else {
-            backgroundOffset = CGPoint(x: -(self.backgroundNode.frame.width - shadowBlur) / 2.0 + 42.0, y: (self.backgroundNode.frame.height - shadowBlur) / 2.0)
+            backgroundOffset = CGPoint(x: -(self.backgroundNode.frame.width - shadowBlur) / 2.0 + 42.0, y: 10.0)
         }
         let damping: CGFloat = 100.0
         
@@ -393,14 +397,15 @@ final class ReactionSelectionNode: ASDisplayNode {
             let animationOffset: Double = 1.0 - Double(i) / Double(self.reactionNodes.count - 1)
             var nodeOffset: CGPoint
             if self.isRightAligned {
-                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: 10.0)
             } else {
-                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.minX + shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.minX + shadowBlur) / 2.0 - 42.0, y: 10.0)
             }
-            nodeOffset.x = -nodeOffset.x
+            nodeOffset.x = 0.0
             nodeOffset.y = 30.0
-            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5 + animationOffset * 0.28, initialVelocity: 0.0, damping: damping)
-            self.reactionNodes[i].layer.animateSpring(from: NSValue(cgPoint: nodeOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, initialVelocity: 0.0, damping: damping, additive: true)
+            self.reactionNodes[i].layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04, delay: animationOffset * 0.1)
+            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, delay: animationOffset * 0.1, initialVelocity: 0.0, damping: damping)
+            //self.reactionNodes[i].layer.animateSpring(from: NSValue(cgPoint: nodeOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, delay: animationOffset * 0.1, initialVelocity: 0.0, damping: damping, additive: true)
         }
         
         self.backgroundNode.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, damping: damping)
@@ -409,7 +414,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         self.backgroundShadowNode.layer.animateSpring(from: NSValue(cgPoint: backgroundOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, initialVelocity: 0.0, damping: damping, additive: true)
     }
     
-    func animateOut(into targetNode: ASImageNode?, hideTarget: Bool, completion: @escaping () -> Void) {
+    func animateOut(into targetNode: ASDisplayNode?, hideTarget: Bool, completion: @escaping () -> Void) {
         self.hapticFeedback.prepareTap()
         
         var completedContainer = false
@@ -424,9 +429,8 @@ final class ReactionSelectionNode: ASDisplayNode {
         if let targetNode = targetNode {
             for i in 0 ..< self.reactionNodes.count {
                 if let isMaximized = self.reactionNodes[i].isMaximized, isMaximized {
-                    if let snapshotView = self.reactionNodes[i].view.snapshotContentTree() {
-                        let targetSnapshotView = UIImageView()
-                        targetSnapshotView.image = targetNode.image
+                    targetNode.recursivelyEnsureDisplaySynchronously(true)
+                    if let snapshotView = self.reactionNodes[i].view.snapshotContentTree(), let targetSnapshotView = targetNode.view.snapshotContentTree() {
                         targetSnapshotView.frame = self.view.convert(targetNode.bounds, from: targetNode.view)
                         self.reactionNodes[i].isHidden = true
                         self.view.addSubview(targetSnapshotView)
@@ -485,7 +489,7 @@ final class ReactionSelectionNode: ASDisplayNode {
             }
         }
         
-        self.backgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+        //self.backgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
         self.backgroundShadowNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
         self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.backgroundShadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in

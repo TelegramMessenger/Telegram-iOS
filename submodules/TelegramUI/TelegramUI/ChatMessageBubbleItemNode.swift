@@ -522,8 +522,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 if let item = strongSelf.item, let reaction = reaction {
                     switch reaction {
                     case let .reaction(value, _, _):
-                        strongSelf.awaitingAppliedReaction = (value, {})
-                        item.controllerInteraction.updateMessageReaction(item.message.id, value)
+                        var resolvedValue: String?
+                        if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), reactionsAttribute.reactions.contains(where: { $0.value == value }) {
+                            resolvedValue = nil
+                        } else {
+                            resolvedValue = value
+                        }
+                        strongSelf.awaitingAppliedReaction = (resolvedValue, {})
+                        item.controllerInteraction.updateMessageReaction(item.message.id, resolvedValue)
                     case .reply:
                         strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
                         var bounds = strongSelf.bounds
@@ -1994,13 +2000,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             
             strongSelf.awaitingAppliedReaction = nil
-            var targetNode: ASImageNode?
+            var targetNode: ASDisplayNode?
             var hideTarget = false
-            for contentNode in strongSelf.contentNodes {
-                if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
-                    targetNode = reactionNode
-                    hideTarget = count == 1
-                    break
+            if let awaitingAppliedReaction = awaitingAppliedReaction {
+                for contentNode in strongSelf.contentNodes {
+                    if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
+                        targetNode = reactionNode
+                        hideTarget = count == 1
+                        break
+                    }
                 }
             }
             strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)
@@ -2852,7 +2860,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
     
-    override func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+    override func targetReactionNode(value: String) -> (ASDisplayNode, Int)? {
         for contentNode in self.contentNodes {
             if let (reactionNode, count) = contentNode.reactionTargetNode(value: value) {
                 return (reactionNode, count)
