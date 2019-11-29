@@ -580,10 +580,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private let filter: ChatListNodePeersFilter
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.filter = filter
         self.dimNode = ASDisplayNode()
+        
+        let openPeer: (Peer, Bool) -> Void = { peer, value in
+            originalOpenPeer(peer, value)
+            
+            if peer.id.namespace != Namespaces.Peer.SecretChat {
+                addAppLogEvent(postbox: context.account.postbox, time: Date().timeIntervalSince1970, type: "search_global_open_peer", peerId: peer.id, data: .dictionary([:]))
+            }
+        }
+        
+        let openMessage: (Peer, MessageId) -> Void = { peer, messageId in
+            if peer.id.namespace != Namespaces.Peer.SecretChat {
+                addAppLogEvent(postbox: context.account.postbox, time: Date().timeIntervalSince1970, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
+            }
+        }
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
@@ -705,6 +719,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if filter.contains(.doNotSearchMessages) {
                 foundRemoteMessages = .single((([], [:], 0), false))
             } else {
+                if !query.isEmpty {
+                    addAppLogEvent(postbox: context.account.postbox, time: Date().timeIntervalSince1970, type: "search_global_query", peerId: nil, data: .dictionary([:]))
+                }
+                
                 let searchSignal = searchMessages(account: context.account, location: location, query: query, state: nil, limit: 50)
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
                     return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
