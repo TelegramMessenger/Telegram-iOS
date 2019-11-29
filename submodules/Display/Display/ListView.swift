@@ -4020,7 +4020,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             case .down:
                 var contentOffset = initialOffset
                 contentOffset.y += distance
-                contentOffset.y = max(self.scroller.contentInset.top, min(contentOffset.y, self.scroller.contentSize.height - self.visibleSize.height - self.insets.bottom - self.insets.top))
+                contentOffset.y = max(self.scroller.contentInset.top, min(contentOffset.y, self.scroller.contentSize.height - self.scroller.frame.height))
                 if contentOffset.y > initialOffset.y {
                     self.ignoreScrollingEvents = true
                     self.scroller.setContentOffset(contentOffset, animated: false)

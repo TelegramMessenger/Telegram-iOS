@@ -350,30 +350,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     public override func didLoad() {
         super.didLoad()
     }
-    
-    private var liveSelectingState: (selecting: Bool, currentMessageId: MessageId)?
-    
-    @objc private func panGesture(_ recognizer: UIGestureRecognizer) -> Void {
-        guard let selectionState = controllerInteraction.selectionState else {return}
         
-        switch recognizer.state {
-            case .began:
-                if let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId {
-                    liveSelectingState = (selecting: !selectionState.selectedIds.contains(messageId), currentMessageId: messageId)
-                    controllerInteraction.toggleMessagesSelection([messageId], !selectionState.selectedIds.contains(messageId))
-                }
-            case .changed:
-                if let liveSelectingState = liveSelectingState, let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId, messageId != liveSelectingState.currentMessageId {
-                    controllerInteraction.toggleMessagesSelection([messageId], liveSelectingState.selecting)
-                    self.liveSelectingState?.currentMessageId = messageId
-                }
-            case .ended, .failed, .cancelled:
-                liveSelectingState = nil
-            case .possible:
-                break
-        }
-    }
-    
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -508,5 +485,28 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     
     public func disconnect() {
         self.historyDisposable.set(nil)
+    }
+    
+    private var selectionPanState: (selecting: Bool, currentMessageId: MessageId)?
+    
+    @objc private func panGesture(_ recognizer: UIGestureRecognizer) -> Void {
+        guard let selectionState = self.controllerInteraction.selectionState else {return}
+        
+        switch recognizer.state {
+            case .began:
+                if let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId {
+                    self.selectionPanState = (selecting: !selectionState.selectedIds.contains(messageId), currentMessageId: messageId)
+                    self.controllerInteraction.toggleMessagesSelection([messageId], !selectionState.selectedIds.contains(messageId))
+                }
+            case .changed:
+                if let selectionPanState = self.selectionPanState, let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId, messageId != selectionPanState.currentMessageId {
+                    self.controllerInteraction.toggleMessagesSelection([messageId], selectionPanState.selecting)
+                    self.selectionPanState?.currentMessageId = messageId
+                }
+            case .ended, .failed, .cancelled:
+                self.selectionPanState = nil
+            case .possible:
+                break
+        }
     }
 }

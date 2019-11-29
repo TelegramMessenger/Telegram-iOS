@@ -650,7 +650,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 return transaction.getPeer(peerId).flatMap(RenderedPeer.init(peer:))
             } |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self, let peer = peer {
-                    strongSelf.controllerInteraction?.togglePeer(peer, true)
+                    strongSelf.controllerInteraction?.togglePeer(peer, peer.peerId != account.peerId)
                 }
             })
         }
