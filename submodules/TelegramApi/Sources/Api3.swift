@@ -4085,12 +4085,17 @@ public extension Api {
                     })
                 }
             
-                public static func exportLoginToken(apiId: Int32, apiHash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginToken>) {
+                public static func exportLoginToken(apiId: Int32, apiHash: String, exceptIds: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginToken>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(434003159)
+                    buffer.appendInt32(-1313598185)
                     serializeInt32(apiId, buffer: buffer, boxed: false)
                     serializeString(apiHash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.exportLoginToken", parameters: [("apiId", apiId), ("apiHash", apiHash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginToken? in
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(exceptIds.count))
+                    for item in exceptIds {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "auth.exportLoginToken", parameters: [("apiId", apiId), ("apiHash", apiHash), ("exceptIds", exceptIds)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginToken? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.LoginToken?
                         if let signature = reader.readInt32() {

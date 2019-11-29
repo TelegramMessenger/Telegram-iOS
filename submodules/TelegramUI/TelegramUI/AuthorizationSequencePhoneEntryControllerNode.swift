@@ -11,6 +11,7 @@ import AuthorizationUI
 import QrCode
 import SwiftSignalKit
 import Postbox
+import AccountContext
 
 private func emojiFlagForISOCountryCode(_ countryCode: NSString) -> String {
     if countryCode.length != 2 {
@@ -204,7 +205,7 @@ private final class ContactSyncNode: ASDisplayNode {
 }
 
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
-    private let accountManager: AccountManager
+    private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
     private let strings: PresentationStrings
     private let theme: PresentationTheme
@@ -255,8 +256,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
     }
     
-    init(accountManager: AccountManager, account: UnauthorizedAccount, strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void, hasOtherAccounts: Bool) {
-        self.accountManager = accountManager
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void, hasOtherAccounts: Bool) {
+        self.sharedContext = sharedContext
         self.account = account
         
         self.strings = strings
@@ -393,7 +394,21 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     }
     
     private func refreshQrToken() {
-        let tokenSignal = exportAuthTransferToken(accountManager: self.accountManager, account: self.account, syncContacts: true)
+        let sharedContext = self.sharedContext
+        let account = self.account
+        let tokenSignal = sharedContext.activeAccounts
+            |> castError(ExportAuthTransferTokenError.self)
+        |> take(1)
+        |> mapToSignal { activeAccountsAndInfo -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
+            let (primary, activeAccounts, _) = activeAccountsAndInfo
+            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            
+            let allProductionUserIds = activeProductionUserIds
+            let allTestingUserIds = activeTestingUserIds
+            
+            return exportAuthTransferToken(accountManager: sharedContext.accountManager, account: account, otherAccountUserIds: account.testingEnvironment ? allTestingUserIds : allProductionUserIds, syncContacts: true)
+        }
         
         self.exportTokenDisposable.set((tokenSignal
         |> deliverOnMainQueue).start(next: { [weak self] result in

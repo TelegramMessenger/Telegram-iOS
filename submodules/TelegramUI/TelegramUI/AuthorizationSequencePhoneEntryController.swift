@@ -98,7 +98,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(accountManager: self.sharedContext.accountManager, account: self.account, strings: self.presentationData.strings, theme: self.presentationData.theme, debugAction: { [weak self] in
+        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(sharedContext: self.sharedContext, account: self.account, strings: self.presentationData.strings, theme: self.presentationData.theme, debugAction: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
