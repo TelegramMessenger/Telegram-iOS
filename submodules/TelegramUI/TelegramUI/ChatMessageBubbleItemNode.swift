@@ -2507,7 +2507,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             
                             let backdropView = strongSelf.backgroundWallpaperNode.view.snapshotContentTree(unhide: true)
                             if let backdropView = backdropView {
-                                backdropView.backgroundColor = .green
                                 let backdropFrame = strongSelf.backgroundWallpaperNode.layer.convert(strongSelf.backgroundWallpaperNode.bounds, to: strongSelf.backgroundNode.layer)
                                 backdropView.frame = backdropFrame
                             }
