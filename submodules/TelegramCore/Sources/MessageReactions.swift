@@ -33,7 +33,6 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return .complete()
     return postbox.transaction { transaction -> (Peer, String?)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
