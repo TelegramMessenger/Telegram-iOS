@@ -594,6 +594,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         
         let openMessage: (Peer, MessageId) -> Void = { peer, messageId in
+            originalOpenMessage(peer, messageId)
+            
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 addAppLogEvent(postbox: context.account.postbox, time: Date().timeIntervalSince1970, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
