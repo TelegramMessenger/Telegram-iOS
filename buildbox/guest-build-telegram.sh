@@ -27,9 +27,6 @@ elif [ "$1" == "appstore" ]; then
 		echo "TELEGRAM_BUILD_APPSTORE_TEAM_NAME is not set"
 		exit 1
 	fi
-	FASTLANE_ITC_USERNAME="$TELEGRAM_BUILD_APPSTORE_USERNAME"
-	FASTLANE_PASSWORD="$TELEGRAM_BUILD_APPSTORE_PASSWORD"
-	FASTLANE_ITC_TEAM_NAME="$TELEGRAM_BUILD_APPSTORE_TEAM_NAME"
 	CERTS_PATH="$HOME/codesigning_data/certs"
 	PROFILES_PATH="$HOME/codesigning_data/profiles"
 elif [ "$1" == "verify" ]; then
@@ -87,7 +84,7 @@ cd "$SOURCE_PATH"
 tar -xf "../source.tar"
 
 for f in $(ls "$CERTS_PATH"); do
-	"$HOME/.fastlane/bin/fastlane" run import_certificate "certificate_path:$CERTS_PATH/$f" keychain_name:"$MY_KEYCHAIN" keychain_password:"$MY_KEYCHAIN_PASSWORD" log_output:true
+	security import "$CERTS_PATH/$f" -k "$MY_KEYCHAIN" -P ""
 done
 
 mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
