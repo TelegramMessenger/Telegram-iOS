@@ -183,14 +183,14 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, 
     for entry in view.entries {
         switch entry {
             case let .message(topMessage, messages):
-                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.theme, strings: state.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id))
+                result.append(.messageEntry(topMessage: topMessage, messages: messages, theme: state.presentationData.theme, strings: state.presentationData.strings, dateTimeFormat: state.dateTimeFormat, editing: state.editing, hasActiveRevealControls: state.messageIdWithRevealedOptions == topMessage.id))
             case let .hole(index):
-                result.append(.holeEntry(index: index, theme: state.theme))
+                result.append(.holeEntry(index: index, theme: state.presentationData.theme))
         }
     }
     if showSettings {
-        result.append(.displayTabInfo(state.theme, state.strings.CallSettings_TabIconDescription))
-        result.append(.displayTab(state.theme, state.strings.CallSettings_TabIcon, showCallsTab))
+        result.append(.displayTabInfo(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIconDescription))
+        result.append(.displayTab(state.presentationData.theme, state.presentationData.strings.CallSettings_TabIcon, showCallsTab))
     }
     return result
 }
