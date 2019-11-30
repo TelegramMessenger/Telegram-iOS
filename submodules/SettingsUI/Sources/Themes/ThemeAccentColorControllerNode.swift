@@ -633,7 +633,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         var messagesBottomInset: CGFloat = 0.0
         if pageControlAlpha > 0.0 {
-            messagesBottomInset += 37.0
+            messagesBottomInset = 37.0
         }
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
         self.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: messagesTransition)

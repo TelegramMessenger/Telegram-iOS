@@ -43,25 +43,14 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
-    
     private let separatorNode: ASDisplayNode
-    
-    private let chatContainerNode: ASDisplayNode
+    private let chatBackgroundNode: WallpaperBackgroundNode
     private let messagesContainerNode: ASDisplayNode
-    private let instantChatBackgroundNode: WallpaperBackgroundNode
-    private let remoteChatBackgroundNode: TransformImageNode
-    private let blurredNode: BlurredImageNode
     private var dateHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
-
     private let toolbarNode: TextSelectionToolbarNode
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
-    
-    private var wallpaperDisposable: Disposable?
-    private var colorDisposable: Disposable?
-    private var statusDisposable: Disposable?
-    private var fetchDisposable = MetaDisposable()
     
     init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize) -> Void) {
         self.context = context
@@ -85,38 +74,21 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
     
         self.chatListBackgroundNode = ASDisplayNode()
-        
-        self.chatContainerNode = ASDisplayNode()
-        self.chatContainerNode.clipsToBounds = true
+        self.chatBackgroundNode = WallpaperBackgroundNode()
+        self.chatBackgroundNode.displaysAsynchronously = false
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        self.instantChatBackgroundNode = WallpaperBackgroundNode()
-        self.instantChatBackgroundNode.displaysAsynchronously = false
-        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.theme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-        if case .gradient = presentationData.theme.chat.defaultWallpaper {
-            self.instantChatBackgroundNode.imageContentMode = .scaleToFill
+        self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+        self.chatBackgroundNode.motionEnabled = self.presentationData.chatWallpaper.settings?.motion ?? false
+        if case .gradient = self.presentationData.chatWallpaper {
+            self.chatBackgroundNode.imageContentMode = .scaleToFill
         }
-        self.instantChatBackgroundNode.motionEnabled = presentationData.theme.chat.defaultWallpaper.settings?.motion ?? false
-        self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
-        
-        self.remoteChatBackgroundNode = TransformImageNode()
-        self.remoteChatBackgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
-        self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
-        
-        self.blurredNode = BlurredImageNode()
-        self.blurredNode.blurView.contentMode = .scaleAspectFill
-        
+                        
         self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)
-        
-        if case let .file(file) = presentationData.theme.chat.defaultWallpaper, file.id == 0 {
-            self.remoteChatBackgroundNode.isHidden = false
-        } else {
-            self.remoteChatBackgroundNode.isHidden = true
-        }
-        
+                
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
         self.maskNode.displayWithoutProcessing = true
@@ -136,10 +108,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.presentationData.theme.chatList.backgroundColor)
         
-        if case let .color(value) = self.presentationData.theme.chat.defaultWallpaper {
-            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-        }
-        
         self.pageControlNode.isUserInteractionEnabled = false
         self.pageControlNode.pagesCount = 2
         
@@ -150,11 +118,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.addSubnode(self.toolbarNode)
         
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
-        self.scrollNode.addSubnode(self.chatContainerNode)
-        
-        self.chatContainerNode.addSubnode(self.instantChatBackgroundNode)
-        self.chatContainerNode.addSubnode(self.remoteChatBackgroundNode)
-        self.chatContainerNode.addSubnode(self.messagesContainerNode)
+        self.scrollNode.addSubnode(self.chatBackgroundNode)
+        self.scrollNode.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.separatorNode)
         
@@ -181,104 +146,11 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             strongSelf.presentationThemeSettings.fontSize = value
             strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
         }
-        
-        if case let .file(file) = self.presentationData.theme.chat.defaultWallpaper {
-            if file.settings.blur {
-                self.chatContainerNode.addSubnode(self.blurredNode)
-            }
-        }
-        
-        self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in
-            if let strongSelf = self, strongSelf.blurredNode.supernode != nil {
-                var image = image
-                if let imageToScale = image {
-                    let actualSize = CGSize(width: imageToScale.size.width * imageToScale.scale, height: imageToScale.size.height * imageToScale.scale)
-                    if actualSize.width > 1280.0 || actualSize.height > 1280.0 {
-                        image = TGScaleImageToPixelSize(image, actualSize.fitted(CGSize(width: 1280.0, height: 1280.0)))
-                    }
-                }
-                strongSelf.blurredNode.image = image
-                strongSelf.blurredNode.blurView.blurRadius = 45.0
-            }
-        }
-        
+          
         let _ = (chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
         |> deliverOnMainQueue).start(next: { [weak self] serviceColor in
             self?.pageControlBackgroundNode.backgroundColor = serviceColor
         })
-        
-        let applyWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
-            guard let strongSelf = self else {
-                return
-            }
-            switch wallpaper {
-            case let .file(file):
-                let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
-                let displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
-
-                var convertedRepresentations: [ImageRepresentationWithReference] = []
-                for representation in file.file.previewRepresentations {
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: MediaResourceReference.media(media: .standalone(media: file.file), resource: representation.resource)))
-                }
-                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
-                
-                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-                let fileReference = FileMediaReference.standalone(media: file.file)
-                if file.isPattern {
-                    signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                } else {
-                    signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
-                        |> afterNext { next in
-                            if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
-                            } else if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
-                            }
-                    }
-                }
-                strongSelf.remoteChatBackgroundNode.setSignal(signal)
-
-                strongSelf.fetchDisposable.set(freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file.file)).start())
-                
-                let account = strongSelf.context.account
-                let statusSignal = strongSelf.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
-                |> take(1)
-                |> mapToSignal { status -> Signal<MediaResourceStatus, NoError> in
-                    if case .Local = status {
-                        return .single(status)
-                    } else {
-                        return account.postbox.mediaBox.resourceStatus(file.file.resource)
-                    }
-                }
-                
-                strongSelf.statusDisposable = (statusSignal
-                |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self, case .Local = status {
-                        strongSelf.toolbarNode.setDoneEnabled(true)
-                    }
-                })
-                
-                var patternColor: UIColor?
-                var patternIntensity: CGFloat = 0.5
-                if let color = file.settings.color {
-                    if let intensity = file.settings.intensity {
-                        patternIntensity = CGFloat(intensity) / 100.0
-                    }
-                    patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
-                }
-
-                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
-            default:
-                break
-            }
-        }
-        applyWallpaper(self.presentationData.chatWallpaper)
-    }
-    
-    deinit {
-        self.colorDisposable?.dispose()
-        self.wallpaperDisposable?.dispose()
-        self.statusDisposable?.dispose()
-        self.fetchDisposable.dispose()
     }
     
     override func didLoad() {
@@ -360,8 +232,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer6.id, namespace: 0, id: 0), timestamp: timestamp - 360)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer6.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 360, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer6, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_6_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer6), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 1, markedUnread: false))]), notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
         
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer7.id, namespace: 0, id: 0), timestamp: timestamp - 420)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer7.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 420, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer6, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer7), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
         let width: CGFloat
         if case .regular = layout.metrics.widthClass {
             width = layout.size.width / 2.0
@@ -429,20 +299,20 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
         
         let message1 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
         let message2 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
         let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: MemoryBuffer(data: Data(base64Encoded: waveformBase64)!))]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: voiceAttributes)
         
         let message3 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message3, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local)))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message3, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local)))
         
         let message4 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
         let width: CGFloat
         if case .regular = layout.metrics.widthClass {
@@ -500,7 +370,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         } else {
             dateHeaderNode = headerItem.node()
             dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-            //self.messagesContainerNode.addSubnode(dateHeaderNode)
+            self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode
         }
         
@@ -534,12 +404,12 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         let toolbarHeight = self.toolbarNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, layout: layout, transition: transition)
         
         self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-        self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        var chatFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
         
         let bottomInset: CGFloat
         if case .regular = layout.metrics.widthClass {
             self.chatListBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
-            self.chatContainerNode.frame = CGRect(x: bounds.width / 2.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
+            chatFrame = CGRect(x: bounds.width / 2.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
             self.scrollNode.view.contentSize = CGSize(width: bounds.width, height: bounds.height)
             
             self.pageControlNode.isHidden = true
@@ -551,20 +421,19 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             bottomInset = 0.0
         } else {
             self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-            self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+            chatFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
             self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
             
             self.pageControlNode.isHidden = false
             self.pageControlBackgroundNode.isHidden = false
             self.separatorNode.isHidden = true
             
-            bottomInset = 66.0
+            bottomInset = 37.0
         }
         
-        self.messagesContainerNode.frame = self.chatContainerNode.bounds
-        self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
-        self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
-        self.blurredNode.frame = self.chatContainerNode.bounds
+        self.chatBackgroundNode.frame = chatFrame
+        self.chatBackgroundNode.updateLayout(size: chatFrame.size, transition: transition)
+        self.messagesContainerNode.frame = chatFrame
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
         
@@ -572,9 +441,10 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.updateMessagesLayout(layout: layout, bottomInset: toolbarHeight + bottomInset, transition: transition)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)
+        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 28.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
+        
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))
     }
 }
