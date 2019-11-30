@@ -163,7 +163,7 @@ elif [ "$BUILD_MACHINE" == "macOS" ]; then
 		echo "Getting VM IP"
 
 		while [ 1 ]; do
-			TEST_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'" || echo "")
+			TEST_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'" 2>/dev/null || echo "")
 			if [ ! -z "$TEST_IP" ]; then
 				RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
 				if [ "$RESPONSE" == "1" ]; then
