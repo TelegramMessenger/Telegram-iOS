@@ -495,6 +495,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if item is InstantPageWebEmbedItem {
                 embedIndex += 1
             }
+            if let imageItem = item as? InstantPageImageItem, imageItem.media.media is TelegramMediaWebpage {
+                embedIndex += 1
+            }
             if item is InstantPageDetailsItem {
                 detailsIndex += 1
             }
