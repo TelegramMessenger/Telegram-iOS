@@ -760,7 +760,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         }
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + 140.0 + floor((layout.size.height - headerHeight - 140.0 - 50.0) / 2.0)), size: indicatorSize))
+        let actionsInset: CGFloat = 148.0
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - indicatorSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: indicatorSize))
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
