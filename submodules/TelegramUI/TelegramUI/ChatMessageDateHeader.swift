@@ -187,6 +187,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+        let previousPresentationData = self.presentationData
+        self.presentationData = presentationData
+        
         let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
         
         self.backgroundNode.image = graphics.dateStaticBackground
@@ -199,6 +202,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
+        
+        if presentationData.fontSize != previousPresentationData.fontSize {
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
+        }
 
         self.setNeedsLayout()
     }
