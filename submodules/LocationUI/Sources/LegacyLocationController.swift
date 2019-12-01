@@ -201,6 +201,9 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
                 controller.setLiveLocationsSignal(.single(freezeLocations))
             } else {
                 controller.setLiveLocationsSignal(updatedLocations)
+                if message.flags.contains(.Incoming) {
+                    context.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: Set([message.id]))
+                }
             }
         } else {
             controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor, color: venueColor)!

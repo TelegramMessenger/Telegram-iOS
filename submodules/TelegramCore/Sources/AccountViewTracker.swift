@@ -253,6 +253,10 @@ public final class AccountViewTracker {
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
+    private var updatedSeenLiveLocationMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextSeenLiveLocationDisposableId: Int32 = 0
+    private var seenLiveLocationDisposables = DisposableDict<Int32>()
+    
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
@@ -578,6 +582,61 @@ public final class AccountViewTracker {
                             }
                         }
                         self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedSeenLiveLocationMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 1 * 60 {
+                    self.updatedSeenLiveLocationMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextSeenLiveLocationDisposableId
+                    self.nextSeenLiveLocationDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                let request: Signal<Bool, MTRpcError>
+                                switch inputPeer {
+                                case .inputPeerChat, .inputPeerSelf, .inputPeerUser:
+                                    request = account.network.request(Api.functions.messages.readMessageContents(id: messageIds.map { $0.id }))
+                                    |> map { _ in true }
+                                case let .inputPeerChannel(channelId, accessHash):
+                                    request = account.network.request(Api.functions.channels.readMessageContents(channel: .inputChannel(channelId: channelId, accessHash: accessHash), id: messageIds.map { $0.id }))
+                                    |> map { _ in true }
+                                default:
+                                    return .complete()
+                                }
+                                
+                                return request
+                                |> `catch` { _ -> Signal<Bool, NoError> in
+                                    return .single(false)
+                                }
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> switchToLatest)
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.seenLiveLocationDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.seenLiveLocationDisposables.set(signal.start(), forKey: disposableId)
                     }
                 }
             }

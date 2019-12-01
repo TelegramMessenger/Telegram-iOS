@@ -134,7 +134,7 @@ public final class CallListController: ViewController {
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
-            self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, disableAnimations: self.presentationData.disableAnimations)
+            self.controllerNode.updateThemeAndStrings(presentationData: self.presentationData)
         }
         
     }
