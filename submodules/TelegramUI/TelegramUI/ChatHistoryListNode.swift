@@ -398,6 +398,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     let prefetchManager: InChatPrefetchManager
@@ -470,6 +471,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds)
+        }
+        self.seenLiveLocationProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: messageIds)
         }
         self.unsupportedMessageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
@@ -898,6 +902,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
+            var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
@@ -931,6 +936,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         for media in message.media {
                             if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
+                            } else if message.flags.contains(.Incoming), let media = media as? TelegramMediaMap, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
+                                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                if message.timestamp + liveBroadcastingTimeout > timestamp {
+                                    messageIdsWithLiveLocation.append(message.id)
+                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -1034,6 +1044,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !messageIdsWithViewCount.isEmpty {
                 self.messageProcessingManager.add(messageIdsWithViewCount)
+            }
+            if !messageIdsWithLiveLocation.isEmpty {
+                self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)
             }
             if !messageIdsWithUnsupportedMedia.isEmpty {
                 self.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
