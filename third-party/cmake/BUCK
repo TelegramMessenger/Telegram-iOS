@@ -1,0 +1,21 @@
+
+genrule(
+    name = "cmake",
+    srcs = [
+        "cmake-3.16.0.tar.gz",
+    ],
+    bash =
+"""
+    core_count="`sysctl -n hw.logicalcpu`"
+    mkdir -p "$OUT"
+    tar -xzf "$SRCDIR/cmake-3.16.0.tar.gz" --directory "$OUT"
+    pushd "$OUT/cmake-3.16.0"
+    ./bootstrap --parallel=$core_count -- -DCMAKE_BUILD_TYPE:STRING=Release
+    make -j $core_count
+    popd
+""",
+    out = "cmake",
+    visibility = [
+        "PUBLIC",
+    ]
+)
