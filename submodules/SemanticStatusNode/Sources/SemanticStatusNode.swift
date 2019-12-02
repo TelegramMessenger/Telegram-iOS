@@ -13,7 +13,7 @@ public enum SemanticStatusNodeState: Equatable {
 }
 
 private protocol SemanticStatusNodeStateDrawingState: NSObjectProtocol {
-    func draw(context: CGContext, size: CGSize)
+    func draw(context: CGContext, size: CGSize, foregroundColor: UIColor)
 }
 
 private protocol SemanticStatusNodeStateContext: class {
@@ -75,15 +75,21 @@ private final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContex
             super.init()
         }
         
-        func draw(context: CGContext, size: CGSize) {
+        func draw(context: CGContext, size: CGSize, foregroundColor: UIColor) {
             context.saveGState()
             context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
             context.scaleBy(x: max(0.01, self.transitionFraction), y: max(0.01, self.transitionFraction))
             context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
             
-            context.setBlendMode(.destinationOut)
-            context.setFillColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
-            context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+            if foregroundColor.alpha.isZero {
+                context.setBlendMode(.destinationOut)
+                context.setFillColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+                context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+            } else {
+                context.setBlendMode(.normal)
+                context.setFillColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+                context.setStrokeColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+            }
             
             switch self.icon {
             case .none:
@@ -229,14 +235,22 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
             super.init()
         }
         
-        func draw(context: CGContext, size: CGSize) {
+        func draw(context: CGContext, size: CGSize, foregroundColor: UIColor) {
             let diameter = size.width
             
             let factor = diameter / 50.0
             
             context.saveGState()
-            context.setBlendMode(.destinationOut)
-            context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+            
+            if foregroundColor.alpha.isZero {
+                context.setBlendMode(.destinationOut)
+                context.setFillColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+                context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+            } else {
+                context.setBlendMode(.normal)
+                context.setFillColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+                context.setStrokeColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+            }
             
             var progress = self.value ?? 0.1
             var startAngle = -CGFloat.pi / 2.0
@@ -270,8 +284,15 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
             context.restoreGState()
             
             if self.displayCancel {
-                context.setBlendMode(.destinationOut)
-                context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+                if foregroundColor.alpha.isZero {
+                    context.setBlendMode(.destinationOut)
+                    context.setFillColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+                    context.setStrokeColor(UIColor(white: 0.0, alpha: self.transitionFraction).cgColor)
+                } else {
+                    context.setBlendMode(.normal)
+                    context.setFillColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+                    context.setStrokeColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
+                }
                 
                 context.saveGState()
                 context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
@@ -388,11 +409,13 @@ private final class SemanticStatusNodeTransitionDrawingState {
 
 private final class SemanticStatusNodeDrawingState: NSObject {
     let background: UIColor
+    let foreground: UIColor
     let transitionState: SemanticStatusNodeTransitionDrawingState?
     let drawingState: SemanticStatusNodeStateDrawingState
     
-    init(background: UIColor, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState) {
+    init(background: UIColor, foreground: UIColor, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState) {
         self.background = background
+        self.foreground = foreground
         self.transitionState = transitionState
         self.drawingState = drawingState
         
@@ -421,14 +444,21 @@ public final class SemanticStatusNode: ASControlNode {
         }
     }
     
+    public var foregroundNodeColor: UIColor {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
     private var animator: ConstantDisplayLinkAnimator?
     
     public private(set) var state: SemanticStatusNodeState
     private var transtionContext: SemanticStatusNodeTransitionContext?
     private var stateContext: SemanticStatusNodeStateContext
     
-    public init(backgroundNodeColor: UIColor) {
+    public init(backgroundNodeColor: UIColor, foregroundNodeColor: UIColor) {
         self.backgroundNodeColor = backgroundNodeColor
+        self.foregroundNodeColor = foregroundNodeColor
         self.state = .none
         self.stateContext = self.state.context(current: nil)
         
@@ -505,7 +535,7 @@ public final class SemanticStatusNode: ASControlNode {
             transitionState = SemanticStatusNodeTransitionDrawingState(transition: t, drawingState: transitionContext.previousStateContext.drawingState(transitionFraction: 1.0 - t))
         }
         
-        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction))
+        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, foreground: self.foregroundNodeColor, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction))
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -524,8 +554,8 @@ public final class SemanticStatusNode: ASControlNode {
         context.setFillColor(parameters.background.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: bounds.size))
         if let transitionState = parameters.transitionState {
-            transitionState.drawingState.draw(context: context, size: bounds.size)
+            transitionState.drawingState.draw(context: context, size: bounds.size, foregroundColor: parameters.foreground)
         }
-        parameters.drawingState.draw(context: context, size: bounds.size)
+        parameters.drawingState.draw(context: context, size: bounds.size, foregroundColor: parameters.foreground)
     }
 }
