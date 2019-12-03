@@ -79,7 +79,15 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         self.statusBar.statusBarStyle = .Ignore
         
+        #if false && DEBUG
+        self.stickerPackContents.set(.single(.fetching)
+        |> then(
+            loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true)
+            |> delay(1.0, queue: .mainQueue())
+        ))
+        #else
         self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
+        #endif
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in

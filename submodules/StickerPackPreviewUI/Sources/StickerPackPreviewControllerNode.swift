@@ -416,7 +416,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if let activityIndicator = self.activityIndicator {
             let indicatorSize = activityIndicator.calculateSizeThatFits(layout.size)
             
-            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 30.0), size: indicatorSize))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 54.0), size: indicatorSize))
         }
         
         var actionsOffset: CGFloat = layout.size.height - bottomInset
@@ -436,10 +436,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         if animateIn {
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.installActionButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.shareActionButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.actionsSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            //self.shareActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            //self.shareActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.actionsBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         
         if let _ = self.stickerPack, self.stickerPackUpdated {
@@ -473,7 +473,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             let maximumContentHeight = layout.size.height - insets.top
             let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
              
-            var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY - presentationLayout.contentOffset.y), size: CGSize(width: contentFrame.size.width, height: contentFrame.size.height + 100.0))
+            var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY - presentationLayout.contentOffset.y), size: CGSize(width: contentFrame.size.width, height: contentFrame.size.height + 500.0))
             if backgroundFrame.minY < contentFrame.minY {
                 backgroundFrame.origin.y = contentFrame.minY
             }
@@ -489,7 +489,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 compactFrame = false
             }
             if compactFrame {
-                backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.maxY - buttonHeight - 32.0), size: CGSize(width: contentFrame.size.width, height: buttonHeight + 32.0))
+                backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.maxY - buttonHeight - 64.0), size: CGSize(width: contentFrame.size.width, height: buttonHeight + 64.0))
             }
             let backgroundDeltaY = backgroundFrame.minY - self.contentBackgroundNode.frame.minY
             transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
@@ -603,6 +603,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             case .none, .fetching:
                 self.actionsSeparatorNode.alpha = 0.0
                 self.shareActionButtonNode.alpha = 0.0
+                self.actionsBackgroundNode.alpha = 0.0
                 self.installActionButtonNode.alpha = 0.0
                 self.installActionButtonNode.setTitle("", with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
                 self.installActionButtonIsRemove = true
@@ -612,6 +613,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     self.stickerPackInitiallyInstalled = installed
                 }
                 self.actionsSeparatorNode.alpha = 1.0
+                self.actionsBackgroundNode.alpha = 1.0
                 self.shareActionButtonNode.alpha = 1.0
                 self.installActionButtonNode.alpha = 1.0
                 if installed {
@@ -674,7 +676,32 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 return self.dimNode.view
             }
         }
-        return super.hitTest(point, with: event)
+        
+        let result = super.hitTest(point, with: event)
+        
+        var currentParent: UIView? = result
+        var enableScrolling = true
+        while true {
+            if currentParent == nil {
+                break
+            }
+            if let scrollView = currentParent as? UIScrollView {
+                if scrollView === self.wrappingScrollNode.view {
+                    break
+                }
+                if scrollView.disablesInteractiveModalDismiss {
+                    enableScrolling = false
+                    break
+                } else {
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.wrappingScrollNode.view
+                    }
+                }
+            }
+            currentParent = currentParent?.superview
+        }
+        
+        return result
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
