@@ -19,16 +19,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        if #available(iOSApplicationExtension 13.0, *) {
-            switch self.traitCollection.userInterfaceStyle {
-            case .dark:
-                self.primaryColor = .white
-            default:
-                break
-            }
-        }
-        
+                
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
