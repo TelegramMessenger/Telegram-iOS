@@ -19,16 +19,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        if #available(iOSApplicationExtension 13.0, *) {
-            switch self.traitCollection.userInterfaceStyle {
-            case .dark:
-                self.primaryColor = .white
-            default:
-                break
-            }
-        }
-        
+                
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
@@ -58,7 +49,11 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             let appLockedLabel = UILabel()
-            appLockedLabel.textColor = self.primaryColor
+            if #available(iOSApplicationExtension 13.0, *) {
+                appLockedLabel.textColor = UIColor.label
+            } else {
+                appLockedLabel.textColor = self.primaryColor
+            }
             appLockedLabel.font = UIFont.systemFont(ofSize: fontSize)
             appLockedLabel.text = presentationData.applicationLockedString
             appLockedLabel.sizeToFit()
@@ -76,21 +71,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
             self.setWidgetData(widgetData: widgetData)
-        }
-    }
-    
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        if #available(iOSApplicationExtension 13.0, *) {
-            switch self.traitCollection.userInterfaceStyle {
-            case .dark:
-                self.primaryColor = .white
-            default:
-                self.primaryColor = .black
-            }
-        }
-        self.appLockedLabel?.textColor = self.primaryColor
-        for view in self.peerViews {
-            view.primaryColor = self.primaryColor
         }
     }
     
