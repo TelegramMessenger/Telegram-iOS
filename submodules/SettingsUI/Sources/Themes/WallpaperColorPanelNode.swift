@@ -680,6 +680,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     @objc private func addPressed() {
         self.colorSelected?()
         
+        self.firstColorFieldNode.setSkipEndEditingIfNeeded()
+        
         self.updateState({ current in
             var updated = current
             updated.selection = .second

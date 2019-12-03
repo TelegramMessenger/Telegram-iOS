@@ -80,6 +80,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     let smallIconNode: TransformImageNode
     let dotNode: ASImageNode
     var avatarNode: AvatarNode?
+    var strokeLabelNode: ImmediateTextNode?
     var labelNode: ImmediateTextNode?
     
     var appeared = false
@@ -236,14 +237,26 @@ class LocationPinAnnotationView: MKAnnotationView {
                 self.dotNode.alpha = 1.0
                 self.dotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 
-                
                 if let annotation = self.annotation as? LocationPinAnnotation, let venue = annotation.location?.venue {
                     var textColor = UIColor.black
+                    var strokeTextColor = UIColor.white
                     if #available(iOS 13.0, *) {
                         if self.traitCollection.userInterfaceStyle == .dark {
                             textColor = .white
+                            strokeTextColor = .black
                         }
                     }
+                    let strokeLabelNode = ImmediateTextNode()
+                    strokeLabelNode.displaysAsynchronously = false
+                    strokeLabelNode.isUserInteractionEnabled = false
+                    strokeLabelNode.attributedText = NSAttributedString(string: venue.title, font: Font.medium(10), textColor: strokeTextColor)
+                    strokeLabelNode.maximumNumberOfLines = 2
+                    strokeLabelNode.textAlignment = .center
+                    strokeLabelNode.truncationType = .end
+                    strokeLabelNode.textStroke = (strokeTextColor, 2.0 - UIScreenPixel)
+                    self.strokeLabelNode = strokeLabelNode
+                    self.addSubnode(strokeLabelNode)
+                    
                     let labelNode = ImmediateTextNode()
                     labelNode.displaysAsynchronously = false
                     labelNode.isUserInteractionEnabled = false
@@ -251,7 +264,6 @@ class LocationPinAnnotationView: MKAnnotationView {
                     labelNode.maximumNumberOfLines = 2
                     labelNode.textAlignment = .center
                     labelNode.truncationType = .end
-                    labelNode.textStroke = (UIColor.white, 1.0)
                     self.labelNode = labelNode
                     self.addSubnode(labelNode)
                     
@@ -260,8 +272,16 @@ class LocationPinAnnotationView: MKAnnotationView {
                     labelNode.bounds = CGRect(origin: CGPoint(), size: size)
                     labelNode.position = CGPoint(x: 0.0, y: 10.0 + floor(size.height / 2.0))
                     
+                    var strokeSize = strokeLabelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+                    strokeSize.height += 2.0
+                    strokeLabelNode.bounds = CGRect(origin: CGPoint(), size: strokeSize)
+                    strokeLabelNode.position = CGPoint(x: 0.0, y: 10.0 + floor(strokeSize.height / 2.0))
+                    
+                    strokeLabelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 } else {
+                    self.strokeLabelNode?.removeFromSupernode()
+                    self.strokeLabelNode = nil
                     self.labelNode?.removeFromSupernode()
                     self.labelNode = nil
                 }
@@ -313,6 +333,13 @@ class LocationPinAnnotationView: MKAnnotationView {
                     labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
                         labelNode.removeFromSupernode()
                     })
+                    
+                    if let strokeLabelNode = self.strokeLabelNode {
+                        self.strokeLabelNode = nil
+                        strokeLabelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                            strokeLabelNode.removeFromSupernode()
+                        })
+                    }
                 }
             }
         } else {
@@ -320,6 +347,13 @@ class LocationPinAnnotationView: MKAnnotationView {
             self.shadowNode.isHidden = !selected
             self.dotNode.alpha = selected ? 1.0 : 0.0
             self.smallNode.alpha = 1.0
+            
+            if !selected {
+                self.labelNode?.removeFromSupernode()
+                self.labelNode = nil
+                self.strokeLabelNode?.removeFromSupernode()
+                self.strokeLabelNode = nil
+            }
             
             self.layoutSubviews()
         }
@@ -346,13 +380,20 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if let labelNode = self.labelNode {
             var textColor = UIColor.black
+            var strokeTextColor = UIColor.white
             if #available(iOS 13.0, *) {
                 if self.traitCollection.userInterfaceStyle == .dark {
                     textColor = .white
+                    strokeTextColor = .black
                 }
             }
             labelNode.attributedText = NSAttributedString(string: labelNode.attributedText?.string ?? "", font: Font.medium(10), textColor: textColor)
             let _ = labelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            if let strokeLabelNode = self.strokeLabelNode {
+                strokeLabelNode.attributedText = NSAttributedString(string: labelNode.attributedText?.string ?? "", font: Font.bold(10), textColor: strokeTextColor)
+                let _ = strokeLabelNode.updateLayout(CGSize(width: 120.0, height: CGFloat.greatestFiniteMagnitude))
+            }
         }
     }
     
