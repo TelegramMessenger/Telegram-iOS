@@ -230,7 +230,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return
             }
             strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode, mediaBox: item.context.account.postbox.mediaBox)
-            strongSelf.backgroundNode.setMaskMode(isExtractedToContextPreview)
+            strongSelf.backgroundNode.setMaskMode(strongSelf.backgroundMaskMode)
             if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
             }
@@ -1640,7 +1640,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         } else {
             backgroundType = .incoming(mergeType)
         }
-        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.contextSourceNode.isExtractedToContextPreview, transition: transition)
+        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, transition: transition)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
         
         strongSelf.backgroundType = backgroundType
@@ -2862,6 +2862,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     private var backgroundMaskMode: Bool {
-        return self.contextSourceNode.isExtractedToContextPreview || (self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false)
+        let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
+        let isPreview = self.item?.presentationData.isPreview ?? false
+        return self.contextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
 }

@@ -504,7 +504,7 @@ public func gradientImage(_ colors: [UIColor]) -> Signal<(TransformImageArgument
     return .single({ arguments in
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         
-        context.withFlippedContext { c in
+        context.withContext { c in
             let gradientColors = colors.map { $0.cgColor } as CFArray
             let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
             
@@ -1001,25 +1001,32 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         let backgroundColor: UIColor
         let incomingColor: UIColor
         let outgoingColor: (UIColor, UIColor)
+        var accentColor = accentColor
         switch theme {
-            case .dayClassic:
-                backgroundColor = UIColor(rgb: 0xd6e2ee)
-                incomingColor = UIColor(rgb: 0xffffff)
-                outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
-            case .day:
-                backgroundColor = UIColor(rgb: 0xffffff)
-                incomingColor = UIColor(rgb: 0xd5dde6)
-                outgoingColor = bubbleColors ?? (UIColor(rgb: 0x007aff), UIColor(rgb: 0x007aff))
-            case .night:
-                backgroundColor = UIColor(rgb: 0x000000)
-                incomingColor = UIColor(rgb: 0x1f1f1f)
-                outgoingColor = bubbleColors ?? (UIColor(rgb: 0x313131), UIColor(rgb: 0x313131))
-            case .nightAccent:
-                let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
-                backgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                incomingColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
-                let accentBubbleColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
-                outgoingColor = bubbleColors ?? (accentBubbleColor, accentBubbleColor)
+        case .dayClassic:
+            backgroundColor = UIColor(rgb: 0xd6e2ee)
+            incomingColor = UIColor(rgb: 0xffffff)
+            outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
+        case .day:
+            backgroundColor = UIColor(rgb: 0xffffff)
+            incomingColor = UIColor(rgb: 0xd5dde6)
+            if accentColor == nil {
+                accentColor = UIColor(rgb: 0x007aff)
+            }
+            outgoingColor = bubbleColors ?? (accentColor!, accentColor!)
+        case .night:
+            backgroundColor = UIColor(rgb: 0x000000)
+            incomingColor = UIColor(rgb: 0x1f1f1f)
+            if accentColor == nil {
+                accentColor = UIColor(rgb: 0x313131)
+            }
+            outgoingColor = bubbleColors ?? (accentColor!, accentColor!)
+        case .nightAccent:
+            let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
+            backgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+            incomingColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+            let accentBubbleColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+            outgoingColor = bubbleColors ?? (accentBubbleColor, accentBubbleColor)
         }
         colorsSignal = .single(((backgroundColor, nil), (incomingColor, incomingColor), outgoingColor, nil))
     } else {
