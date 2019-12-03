@@ -79,7 +79,9 @@ public final class HashtagSearchController: TelegramBaseController {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil, toggleExpandLocalResults: {
+                }, toggleExpandGlobalResults: {
+                })
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })
