@@ -311,7 +311,6 @@ public class WallpaperGalleryController: ViewController {
         self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
         
-        self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         self.galleryNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -607,8 +606,6 @@ public class WallpaperGalleryController: ViewController {
         if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry {
             currentWallpaper = wallpaper
         }
-        
-        //let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: currentWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
         
         var topMessageText: String
         var bottomMessageText: String

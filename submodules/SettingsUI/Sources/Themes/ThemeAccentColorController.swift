@@ -80,7 +80,11 @@ final class ThemeAccentColorController: ViewController {
             }
         }
         
-        self.navigationItem.titleView = self.segmentedTitleView
+        if case let .builtin(theme) = themeReference, theme != .dayClassic {
+            self.navigationItem.titleView = self.segmentedTitleView
+        } else {
+             self.title = self.presentationData.strings.Wallpaper_Title
+        }
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
     }
     
