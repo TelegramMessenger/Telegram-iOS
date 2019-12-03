@@ -451,6 +451,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var topVisibleOverlayContainerWithStatusBar: NavigationOverlayContainer?
         
+        var modalStyleOverlayTransitionFactor: CGFloat = 0.0
         var previousGlobalOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.globalOverlayContainers.count).reversed() {
             let overlayContainer = self.globalOverlayContainers[i]
@@ -464,6 +465,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: overlayLayout.size))
             overlayContainer.update(layout: overlayLayout, transition: containerTransition)
+            
+            modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
             if overlayContainer.supernode == nil && overlayContainer.isReady {
                 if let previousGlobalOverlayContainer = previousGlobalOverlayContainer {
@@ -506,6 +509,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
             overlayContainer.update(layout: layout, transition: containerTransition)
+            
+            modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
             if overlayContainer.supernode == nil && overlayContainer.isReady {
                 if let previousOverlayContainer = previousOverlayContainer {
@@ -743,12 +748,14 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        topModalDismissProgress = max(topModalDismissProgress, modalStyleOverlayTransitionFactor)
+        
         switch layout.metrics.widthClass {
         case .compact:
-            if visibleModalCount != 0 {
+            if visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero {
                 let effectiveRootModalDismissProgress: CGFloat
                 let visibleRootModalDismissProgress: CGFloat
-                let additionalModalFrameProgress: CGFloat
+                var additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
                     effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
@@ -758,9 +765,13 @@ open class NavigationController: UINavigationController, ContainableController, 
                     visibleRootModalDismissProgress = topModalDismissProgress
                     additionalModalFrameProgress = 1.0 - topModalDismissProgress
                 } else {
-                    effectiveRootModalDismissProgress = 0.0
+                    effectiveRootModalDismissProgress = 1.0 - modalStyleOverlayTransitionFactor
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
-                    additionalModalFrameProgress = 1.0
+                    if visibleModalCount == 0 {
+                        additionalModalFrameProgress = 0.0
+                    } else {
+                        additionalModalFrameProgress = 1.0
+                    }
                 }
                 
                 let rootModalFrame: NavigationModalFrame
@@ -1135,6 +1146,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             strongSelf.updateContainersNonReentrant(transition: .immediate)
         }, statusBarUpdated: { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateContainersNonReentrant(transition: transition)
+        }, modalStyleOverlayTransitionFactorUpdated: { [weak self] transition in
             guard let strongSelf = self else {
                 return
             }

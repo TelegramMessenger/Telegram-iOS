@@ -131,6 +131,15 @@ public enum ViewControllerNavigationPresentation {
     
     public var tabBarItemDebugTapAction: (() -> Void)?
     
+    public private(set) var modalStyleOverlayTransitionFactor: CGFloat = 0.0
+    public var modalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public func updateModalStyleOverlayTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.modalStyleOverlayTransitionFactor != value {
+            self.modalStyleOverlayTransitionFactor = value
+            self.modalStyleOverlayTransitionFactorUpdated?(transition)
+        }
+    }
+    
     private var _displayNode: ASDisplayNode?
     public final var displayNode: ASDisplayNode {
         get {

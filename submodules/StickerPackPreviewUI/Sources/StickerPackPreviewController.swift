@@ -26,6 +26,11 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     private var animatedIn = false
     private var dismissed = false
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     private let context: AccountContext
     private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
@@ -109,7 +114,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
             }
         }
-        self.displayNode = StickerPackPreviewControllerNode(context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
+        self.displayNode = StickerPackPreviewControllerNode(controller: self, context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
             }
