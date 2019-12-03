@@ -9,6 +9,7 @@ private let actionFont = Font.medium(13.0)
 
 public final class ListSectionHeaderNode: ASDisplayNode {
     private let label: ImmediateTextNode
+    private var actionButtonLabel: ImmediateTextNode?
     private var actionButton: HighlightableButtonNode?
     private var theme: PresentationTheme
     
@@ -28,17 +29,26 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         didSet {
             if (self.action != nil) != (self.actionButton != nil) {
                 if let _ = self.action {
+                    let actionButtonLabel = ImmediateTextNode()
+                    self.addSubnode(actionButtonLabel)
+                    self.actionButtonLabel = actionButtonLabel
                     let actionButton = HighlightableButtonNode()
                     self.addSubnode(actionButton)
                     self.actionButton = actionButton
                     actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
-                } else if let actionButton = self.actionButton {
-                    self.actionButton = nil
-                    actionButton.removeFromSupernode()
+                } else {
+                    if let actionButtonLabel = self.actionButtonLabel {
+                        self.actionButtonLabel = nil
+                        actionButtonLabel.removeFromSupernode()
+                    }
+                    if let actionButton = self.actionButton {
+                        self.actionButton = nil
+                        actionButton.removeFromSupernode()
+                    }
                 }
             }
             if let action = self.action {
-                self.actionButton?.setAttributedTitle(NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor), for: [])
+                self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor)
             }
             
             if let (size, leftInset, rightInset) = self.validLayout {
@@ -70,7 +80,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
             
             self.backgroundColor = theme.chatList.sectionHeaderFillColor
             if let action = self.action {
-                self.actionButton?.setAttributedTitle(NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor), for: [])
+                self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor)
             }
             
             if let (size, leftInset, rightInset) = self.validLayout {
@@ -84,8 +94,9 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         let labelSize = self.label.updateLayout(CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 6.0 + UIScreenPixel), size: labelSize)
         
-        if let actionButton = self.actionButton {
-            let buttonSize = actionButton.measure(CGSize(width: size.width, height: size.height))
+        if let actionButton = self.actionButton, let actionButtonLabel = self.actionButtonLabel {
+            let buttonSize = actionButtonLabel.updateLayout(CGSize(width: size.width, height: size.height))
+            actionButtonLabel.frame = CGRect(origin: CGPoint(x: size.width - rightInset - 16.0 - buttonSize.width, y: 6.0 + UIScreenPixel), size: buttonSize)
             actionButton.frame = CGRect(origin: CGPoint(x: size.width - rightInset - 16.0 - buttonSize.width, y: 6.0 + UIScreenPixel), size: buttonSize)
         }
     }

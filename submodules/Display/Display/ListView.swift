@@ -3041,6 +3041,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }
                 }
                 
+                if headerNode.item !== item {
+                    item.updateNode(headerNode, previous: nil, next: nil)
+                    headerNode.item = item
+                }
                 headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)
                 headerNode.updateInternalStickLocationDistanceFactor(stickLocationDistanceFactor, animated: true)
                 headerNode.internalStickLocationDistance = stickLocationDistance
@@ -3058,6 +3062,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: transition.0)
             } else {
                 let headerNode = item.node()
+                if headerNode.item !== item {
+                    item.updateNode(headerNode, previous: nil, next: nil)
+                    headerNode.item = item
+                }
                 headerNode.updateFlashingOnScrolling(flashing, animated: false)
                 headerNode.frame = headerFrame
                 headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)

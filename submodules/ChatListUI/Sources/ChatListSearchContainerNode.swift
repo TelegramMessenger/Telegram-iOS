@@ -228,17 +228,23 @@ public enum ChatListSearchEntryStableId: Hashable {
     }
 }
 
+public enum ChatListSearchSectionExpandType {
+    case none
+    case expand
+    case collapse
+}
+
 public enum ChatListSearchEntry: Comparable, Identifiable {
-    case localPeer(Peer, Peer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
-    case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
+    case localPeer(Peer, Peer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, ChatListSearchSectionExpandType)
+    case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, ChatListSearchSectionExpandType)
     case message(Message, RenderedPeer, CombinedPeerReadState?, ChatListPresentationData)
     case addContact(String, PresentationTheme, PresentationStrings)
     
     public var stableId: ChatListSearchEntryStableId {
         switch self {
-            case let .localPeer(peer, _, _, _, _, _, _, _):
+            case let .localPeer(peer, _, _, _, _, _, _, _, _):
                 return .localPeerId(peer.id)
-            case let .globalPeer(peer, _, _, _, _, _, _):
+            case let .globalPeer(peer, _, _, _, _, _, _, _):
                 return .globalPeerId(peer.peer.id)
             case let .message(message, _, _, _):
                 return .messageId(message.id)
@@ -249,14 +255,14 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
     
     public static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
-                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 {
+            case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder, lhsExpandType):
+                if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder, rhsExpandType) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 && lhsExpandType == rhsExpandType {
                     return true
                 } else {
                     return false
                 }
-            case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
-                if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 {
+            case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder, lhsExpandType):
+                if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder, rhsExpandType) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 && lhsExpandType == rhsExpandType {
                     return true
                 } else {
                     return false
@@ -302,17 +308,17 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         
     public static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
-            case let .localPeer(_, _, _, lhsIndex, _, _, _, _):
-                if case let .localPeer(_, _, _, rhsIndex, _, _, _, _) = rhs {
+            case let .localPeer(_, _, _, lhsIndex, _, _, _, _, _):
+                if case let .localPeer(_, _, _, rhsIndex, _, _, _, _, _) = rhs {
                     return lhsIndex <= rhsIndex
                 } else {
                     return true
                 }
-            case let .globalPeer(_, _, lhsIndex, _, _, _, _):
+            case let .globalPeer(_, _, lhsIndex, _, _, _, _, _):
                 switch rhs {
                     case .localPeer:
                         return false
-                    case let .globalPeer(_, _, rhsIndex, _, _, _, _):
+                    case let .globalPeer(_, _, rhsIndex, _, _, _, _, _):
                         return lhsIndex <= rhsIndex
                     case .message, .addContact:
                         return true
@@ -330,9 +336,9 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
+    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void) -> ListViewItem {
         switch self {
-            case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder):
+            case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType):
                 let primaryPeer: Peer
                 var chatPeer: Peer?
                 if let associatedPeer = associatedPeer {
@@ -377,11 +383,22 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: unreadBadge.0, type: unreadBadge.1 ? .inactive : .active)
                 }
                 
-                let header:ChatListSearchItemHeader?
+                let header: ChatListSearchItemHeader?
                 if filter.contains(.removeSearchHeader) {
                     header = nil
                 } else {
-                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                    let actionTitle: String?
+                    switch expandType {
+                    case .none:
+                        actionTitle = nil
+                    case .expand:
+                        actionTitle = strings.ChatList_Search_ShowMore
+                    case .collapse:
+                        actionTitle = strings.ChatList_Search_ShowLess
+                    }
+                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
+                        toggleExpandLocalResults()
+                    })
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
@@ -395,7 +412,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         }
                     }
                 })
-            case let .globalPeer(peer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder):
+            case let .globalPeer(peer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType):
                 var enabled = true
                 if filter.contains(.onlyWriteable) {
                     enabled = canSendMessagesToPeer(peer.peer)
@@ -429,11 +446,22 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: unreadBadge.0, type: unreadBadge.1 ? .inactive : .active)
                 }
                 
-                let header:ChatListSearchItemHeader?
+                let header: ChatListSearchItemHeader?
                 if filter.contains(.removeSearchHeader) {
                     header = nil
                 } else {
-                    header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                    let actionTitle: String?
+                    switch expandType {
+                    case .none:
+                        actionTitle = nil
+                    case .expand:
+                        actionTitle = strings.ChatList_Search_ShowMore
+                    case .collapse:
+                        actionTitle = strings.ChatList_Search_ShowLess
+                    }
+                    header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
+                        toggleExpandGlobalResults()
+                    })
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
@@ -483,12 +511,12 @@ private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?) -> ChatListSearchContainerTransition {
+public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
 }
@@ -510,6 +538,11 @@ private struct ChatListSearchContainerNodeState: Equatable {
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ChatListSearchContainerNodeState {
         return ChatListSearchContainerNodeState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
     }
+}
+
+private struct ChatListSearchContainerNodeSearchState: Equatable {
+    var expandLocalSearch: Bool = false
+    var expandGlobalSearch: Bool = false
 }
 
 private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) -> Bool {
@@ -572,6 +605,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let presentationDataPromise: Promise<ChatListPresentationData>
     private var stateValue = ChatListSearchContainerNodeState()
     private let statePromise: ValuePromise<ChatListSearchContainerNodeState>
+    private var searchStateValue = ChatListSearchContainerNodeSearchState()
+    private let searchStatePromise: ValuePromise<ChatListSearchContainerNodeSearchState>
     
     private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
     override public var isSearching: Signal<Bool, NoError> {
@@ -610,6 +645,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.statePromise = ValuePromise(self.stateValue, ignoreRepeated: true)
+        self.searchStatePromise = ValuePromise(self.searchStateValue, ignoreRepeated: true)
         
         super.init()
         
@@ -662,6 +698,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let currentRemotePeers = Atomic<([FoundPeer], [FoundPeer])?>(value: nil)
         
         let presentationDataPromise = self.presentationDataPromise
+        let searchStatePromise = self.searchStatePromise
         let foundItems = self.searchQuery.get()
         |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
             guard let query = query, !query.isEmpty else {
@@ -767,8 +804,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 )
             }
             
-            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get())
-            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> ([ChatListSearchEntry], Bool)? in
+            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get())
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData, searchState -> ([ChatListSearchEntry], Bool)? in
                 var entries: [ChatListSearchEntry] = []
                 let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                 var index = 0
@@ -805,16 +842,54 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
                 var existingPeerIds = Set<PeerId>()
                 
+                var totalNumberOfLocalPeers = 0
+                for renderedPeer in foundLocalPeers.peers {
+                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
+                        if !existingPeerIds.contains(peer.id) {
+                            existingPeerIds.insert(peer.id)
+                            totalNumberOfLocalPeers += 1
+                        }
+                    }
+                }
+                for peer in foundRemotePeers.0 {
+                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                        existingPeerIds.insert(peer.peer.id)
+                        totalNumberOfLocalPeers += 1
+                    }
+                }
+                
+                var totalNumberOfGlobalPeers = 0
+                for peer in foundRemotePeers.1 {
+                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                        totalNumberOfGlobalPeers += 1
+                    }
+                }
+                
+                existingPeerIds.removeAll()
+                
+                let localExpandType: ChatListSearchSectionExpandType = .none
+                let globalExpandType: ChatListSearchSectionExpandType
+                if totalNumberOfGlobalPeers > 3 {
+                    globalExpandType = searchState.expandGlobalSearch ? .collapse : .expand
+                } else {
+                    globalExpandType = .none
+                }
+                
                 let lowercasedQuery = query.lowercased()
                 if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                     if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
                         existingPeerIds.insert(accountPeer.id)
-                        entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
                         index += 1
                     }
                 }
                 
+                var numberOfLocalPeers = 0
                 for renderedPeer in foundLocalPeers.peers {
+                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                        break
+                    }
+                    
                     if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
                         if !existingPeerIds.contains(peer.id) {
                             existingPeerIds.insert(peer.id)
@@ -822,26 +897,38 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             if let associatedPeerId = peer.associatedPeerId {
                                 associatedPeer = renderedPeer.peers[associatedPeerId]
                             }
-                            entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                            entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
                             index += 1
+                            numberOfLocalPeers += 1
                         }
                     }
                 }
                 
                 for peer in foundRemotePeers.0 {
+                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                        break
+                    }
+                    
                     if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
                         existingPeerIds.insert(peer.peer.id)
-                        entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
                         index += 1
+                        numberOfLocalPeers += 1
                     }
                 }
 
+                var numberOfGlobalPeers = 0
                 index = 0
                 for peer in foundRemotePeers.1 {
+                    if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
+                        break
+                    }
+                    
                     if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
                         existingPeerIds.insert(peer.peer.id)
-                        entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType))
                         index += 1
+                        numberOfGlobalPeers += 1
                     }
                 }
                 
@@ -1026,7 +1113,26 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: filter, interaction: interaction, peerContextAction: peerContextAction)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: filter, interaction: interaction, peerContextAction: peerContextAction,
+                toggleExpandLocalResults: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateSearchState { state in
+                        var state = state
+                        state.expandLocalSearch = !state.expandLocalSearch
+                        return state
+                    }
+                }, toggleExpandGlobalResults: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateSearchState { state in
+                        var state = state
+                        state.expandGlobalSearch = !state.expandGlobalSearch
+                        return state
+                    }
+                })
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -1084,6 +1190,14 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if state != self.stateValue {
             self.stateValue = state
             self.statePromise.set(state)
+        }
+    }
+    
+    private func updateSearchState(_ f: (ChatListSearchContainerNodeSearchState) -> ChatListSearchContainerNodeSearchState) {
+        let state = f(self.searchStateValue)
+        if state != self.searchStateValue {
+            self.searchStateValue = state
+            self.searchStatePromise.set(state)
         }
     }
     
