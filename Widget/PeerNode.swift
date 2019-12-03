@@ -118,7 +118,6 @@ final class PeerView: UIView {
     private let tapped: () -> Void
     
     init(primaryColor: UIColor, accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
-        self.primaryColor = primaryColor
         self.peer = peer
         self.tapped = tapped
         self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
