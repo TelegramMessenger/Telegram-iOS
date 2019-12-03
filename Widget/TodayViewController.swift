@@ -19,7 +19,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-                
+        
         let appBundleIdentifier = Bundle.main.bundleIdentifier!
         guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
