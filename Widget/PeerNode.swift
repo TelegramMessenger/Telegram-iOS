@@ -117,12 +117,6 @@ final class PeerView: UIView {
     
     private let tapped: () -> Void
     
-    var primaryColor: UIColor {
-        didSet {
-            self.titleLabel.textColor = self.primaryColor
-        }
-    }
-    
     init(primaryColor: UIColor, accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
         self.primaryColor = primaryColor
         self.peer = peer
@@ -140,7 +134,11 @@ final class PeerView: UIView {
         let fontSize = floor(systemFontSize * 11.0 / 17.0)
         
         self.titleLabel.text = title
-        self.titleLabel.textColor = primaryColor
+        if #available(iOSApplicationExtension 13.0, *) {
+            self.titleLabel.textColor = UIColor.label
+        } else {
+            self.titleLabel.textColor = primaryColor
+        }
         self.titleLabel.font = UIFont.systemFont(ofSize: fontSize)
         self.titleLabel.lineBreakMode = .byTruncatingTail
         self.titleLabel.numberOfLines = 2
