@@ -277,10 +277,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
-        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, interaction: interaction)
+        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation)
         self.headerNode.mapNode.isRotateEnabled = false
         
-        self.optionsNode = LocationOptionsNode(presentationData: presentationData, interaction: interaction)
+        self.optionsNode = LocationOptionsNode(presentationData: presentationData, updateMapMode: interaction.updateMapMode)
         
         self.activityIndicator = ActivityIndicator(type: .custom(self.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
         
@@ -302,28 +302,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.shadeNode)
         
         let userLocation: Signal<CLLocation?, NoError> = self.headerNode.mapNode.userLocation
-        let filteredUserLocation: Signal<CLLocation?, NoError> = userLocation
-        |> reduceLeft(value: nil) { current, updated, emit -> CLLocation? in
-            if let current = current {
-                if let updated = updated {
-                    if updated.distance(from: current) > 250 || (updated.horizontalAccuracy < 50.0 && updated.horizontalAccuracy < current.horizontalAccuracy) {
-                        emit(updated)
-                        return updated
-                    } else {
-                        return current
-                    }
-                } else {
-                    return current
-                }
-            } else {
-                if let updated = updated, updated.horizontalAccuracy > 0.0 {
-                    emit(updated)
-                    return updated
-                } else {
-                    return nil
-                }
-            }
-        }
         
         let personalAddresses = self.context.account.postbox.peerView(id: self.context.account.peerId)
         |> mapToSignal { view -> Signal<(DeviceContactAddressData?, DeviceContactAddressData?)?, NoError> in
@@ -407,7 +385,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         
         let venues: Signal<[TelegramMediaMap]?, NoError> = .single(nil)
         |> then(
-            filteredUserLocation
+            throttledUserLocation(userLocation)
             |> mapToSignal { location -> Signal<[TelegramMediaMap]?, NoError> in
                 if let location = location, location.horizontalAccuracy > 0 {
                     return combineLatest(nearbyVenues(account: context.account, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
@@ -505,7 +483,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: venues == nil, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                 
-                strongSelf.headerNode.updateState(state)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions)
                 
                 let previousUserLocation = previousUserLocation.swap(userLocation)
                 switch state.selectedLocation {
@@ -760,7 +738,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         }
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + 140.0 + floor((layout.size.height - headerHeight - 140.0 - 50.0) / 2.0)), size: indicatorSize))
+        let actionsInset: CGFloat = 148.0
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - indicatorSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: indicatorSize))
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

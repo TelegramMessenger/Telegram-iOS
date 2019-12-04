@@ -34,6 +34,7 @@ static_library(
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

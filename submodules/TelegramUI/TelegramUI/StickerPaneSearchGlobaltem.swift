@@ -81,7 +81,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
 
 private let titleFont = Font.bold(16.0)
 private let statusFont = Font.regular(15.0)
-private let buttonFont = Font.medium(13.0)
+private let buttonFont = Font.semibold(13.0)
 
 class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let titleNode: TextNode
@@ -210,7 +210,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         let rightInset: CGFloat = 16.0
         let topOffset: CGFloat = 12.0
         
-        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - installLayout.size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
@@ -226,8 +226,8 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
             strongSelf.installBackgroundNode.image = updateButtonBackgroundImage
         }
     
-        let installWidth: CGFloat = installLayout.size.width + 20.0
-        let buttonFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - installWidth, y: 4.0 + topOffset), size: CGSize(width: installWidth, height: 26.0))
+        let installWidth: CGFloat = installLayout.size.width + 32.0
+        let buttonFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - installWidth, y: 4.0 + topOffset), size: CGSize(width: installWidth, height: 28.0))
         strongSelf.installBackgroundNode.frame = buttonFrame
         strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
         strongSelf.installButtonNode.frame = buttonFrame

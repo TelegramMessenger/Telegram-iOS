@@ -799,14 +799,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         
         let backgroundNodeColor: UIColor
+        let foregroundNodeColor: UIColor
         if self.iconNode != nil {
             backgroundNodeColor = presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor
+            foregroundNodeColor = .white
         } else {
             backgroundNodeColor = messageTheme.mediaActiveControlColor
+            foregroundNodeColor = .clear
         }
 
         if state != .none && self.statusNode == nil {
-            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor)
+            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor)
             self.statusNode = statusNode
             statusNode.frame = progressFrame
             self.addSubnode(statusNode)

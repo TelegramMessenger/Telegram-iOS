@@ -230,7 +230,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return
             }
             strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode, mediaBox: item.context.account.postbox.mediaBox)
-            strongSelf.backgroundNode.setMaskMode(isExtractedToContextPreview)
+            strongSelf.backgroundNode.setMaskMode(strongSelf.backgroundMaskMode)
             if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
             }
@@ -1646,7 +1646,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         } else {
             backgroundType = .incoming(mergeType)
         }
-        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.contextSourceNode.isExtractedToContextPreview, transition: transition)
+        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, transition: transition)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
         
         strongSelf.backgroundType = backgroundType
@@ -1930,7 +1930,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
-        strongSelf.selectionNode?.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.size.height))
+        let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
+        strongSelf.selectionNode?.frame = selectionFrame
+        strongSelf.selectionNode?.updateLayout(size: selectionFrame.size)
         
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
             var animated = false
@@ -2650,7 +2652,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             
             if let selectionNode = self.selectionNode {
                 selectionNode.updateSelected(selected, animated: animated)
-                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
+                let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
+                selectionNode.frame = selectionFrame
+                selectionNode.updateLayout(size: selectionFrame.size)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
                 let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { [weak self] value in
@@ -2664,7 +2668,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 })
                 
-                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
+                let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
+                selectionNode.frame = selectionFrame
+                selectionNode.updateLayout(size: selectionFrame.size)
                 self.insertSubnode(selectionNode, belowSubnode: self.messageAccessibilityArea)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)
@@ -2870,6 +2876,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     private var backgroundMaskMode: Bool {
-        return self.contextSourceNode.isExtractedToContextPreview || (self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false)
+        let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
+        let isPreview = self.item?.presentationData.isPreview ?? false
+        return self.contextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
 }

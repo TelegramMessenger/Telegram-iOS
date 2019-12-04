@@ -46,7 +46,11 @@ genrule(
         "tonlib-src",
         "iOS.cmake"
     ],
-    bash = "sh $SRCDIR/build-ton.sh $OUT $SRCDIR $(location //submodules/openssl:openssl_build_merged)",
+    bash =
+"""
+    export PATH=\"$PATH:$(location //third-party/cmake:cmake)/cmake-3.16.0/bin\"
+    sh $SRCDIR/build-ton.sh $OUT $SRCDIR $(location //submodules/openssl:openssl_build_merged)
+""",
     out = "ton",
     visibility = [
         "//submodules/ton:...",

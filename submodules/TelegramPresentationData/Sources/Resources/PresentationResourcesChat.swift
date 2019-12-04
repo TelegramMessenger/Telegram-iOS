@@ -251,7 +251,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelAddPackButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelAddPackButtonImage.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 8.0, color: nil, strokeColor: theme.chat.inputPanel.panelControlAccentColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 28.0, color: theme.chat.inputPanel.panelControlAccentColor, strokeColor: nil, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     

@@ -1054,13 +1054,15 @@ public class TextNode: ASDisplayNode {
                 context.setShadow(offset: CGSize(width: 0.0, height: 1.0), blur: 0.0, color: textShadowColor.cgColor)
             }
             
-//            if let (textStrokeColor, textStrokeWidth) = layout.textStroke {
-//                context.setBlendMode(.normal)
-//                context.setLineCap(.round)
-//                context.setLineJoin(.round)
-//                context.setStrokeColor(textStrokeColor.cgColor)
-//                context.setLineWidth(textStrokeWidth)
-//            }
+            if let (textStrokeColor, textStrokeWidth) = layout.textStroke {
+                context.setBlendMode(.normal)
+                context.setLineCap(.round)
+                context.setLineJoin(.round)
+                context.setStrokeColor(textStrokeColor.cgColor)
+                context.setFillColor(textStrokeColor.cgColor)
+                context.setLineWidth(textStrokeWidth)
+                context.setTextDrawingMode(.fillStroke)
+            }
             
             let textMatrix = context.textMatrix
             let textPosition = context.textPosition

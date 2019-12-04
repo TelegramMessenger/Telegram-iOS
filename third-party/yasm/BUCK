@@ -1,0 +1,24 @@
+
+genrule(
+    name = "yasm",
+    srcs = [
+        "yasm-1.3.0.tar.gz",
+    ],
+    bash =
+"""
+    core_count="`sysctl -n hw.logicalcpu`"
+    mkdir -p "$OUT"
+    tar -xzf "$SRCDIR/yasm-1.3.0.tar.gz" --directory "$OUT"
+    pushd "$OUT/yasm-1.3.0"
+    mkdir build
+    cd build
+    export PATH=\"$PATH:$(location //third-party/cmake:cmake)/cmake-3.16.0/bin\"
+    cmake .. -DYASM_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+    make -j $core_count
+    popd
+""",
+    out = "yasm",
+    visibility = [
+        "PUBLIC",
+    ]
+)

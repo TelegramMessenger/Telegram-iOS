@@ -36,7 +36,8 @@ private func generateShadowImage(theme: PresentationTheme, highlighted: Bool) ->
 
 final class LocationMapHeaderNode: ASDisplayNode {
     private var presentationData: PresentationData
-    private let interaction: LocationPickerInteraction
+    private let toggleMapModeSelection: () -> Void
+    private let goToUserLocation: () -> Void
     
     let mapNode: LocationMapNode
     private let optionsBackgroundNode: ASImageNode
@@ -44,9 +45,10 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let locationButtonNode: HighlightableButtonNode
     private let shadowNode: ASImageNode
     
-    init(presentationData: PresentationData, interaction: LocationPickerInteraction) {
+    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void) {
         self.presentationData = presentationData
-        self.interaction = interaction
+        self.toggleMapModeSelection = toggleMapModeSelection
+        self.goToUserLocation = goToUserLocation
         
         self.mapNode = LocationMapNode()
         
@@ -84,9 +86,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.locationButtonNode.addTarget(self, action: #selector(self.locationPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateState(_ state: LocationPickerState) {
-        self.mapNode.mapMode = state.mapMode
-        self.infoButtonNode.isSelected = state.displayingMapModeOptions
+    func updateState(mapMode: LocationMapMode, displayingMapModeOptions: Bool) {
+        self.mapNode.mapMode = mapMode
+        self.infoButtonNode.isSelected = displayingMapModeOptions
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -123,10 +125,10 @@ final class LocationMapHeaderNode: ASDisplayNode {
     }
     
     @objc private func infoPressed() {
-        self.interaction.toggleMapModeSelection()
+        self.toggleMapModeSelection()
     }
     
     @objc private func locationPressed() {
-        self.interaction.goToUserLocation()
+        self.goToUserLocation()
     }
 }

@@ -103,7 +103,7 @@ public final class LocationPickerController: ViewController {
         let locationWithTimeout: (CLLocationCoordinate2D, Int32?) -> TelegramMediaMap = { coordinate, timeout in
             return TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: timeout)
         }
-        
+                
         self.interaction = LocationPickerInteraction(sendLocation: { [weak self] coordinate in
             guard let strongSelf = self else {
                 return
@@ -133,21 +133,21 @@ public final class LocationPickerController: ViewController {
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 15 * 60), nil)
                                 strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 60 * 60 - 1), nil)
                                 strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 8 * 60 * 60), nil)
                                 strongSelf.dismiss()
                             }
                         })

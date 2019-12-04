@@ -283,15 +283,15 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .map(mapMedia):
                 params.dismissInput()
                 
-                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
-                    params.openPeer(peer, .info)
-                }, sendLiveLocation: { coordinate, period in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
+                let controllerParams = LocationViewParams(sendLiveLocation: { location in
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
                     params.enqueueMessage(outMessage)
                 }, stopLiveLocation: {
                     params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
-                }, openUrl: params.openUrl)
-                controller.navigationPresentation = .modal
+                }, openUrl: params.openUrl, openPeer: { peer in
+                    params.openPeer(peer, .info)
+                })
+                let controller = LocationViewController(context: params.context, mapMedia: mapMedia, params: controllerParams)
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):

@@ -113,7 +113,9 @@ genrule(
     srcs = glob([
         "FFMpeg/**/*",
     ], exclude = ["FFMpeg/**/.*"]),
-    bash = "$SRCDIR/FFMpeg/build-ffmpeg.sh release \"" + library_archs + "\" $OUT $SRCDIR/FFMpeg",
+    bash =
+        "PATH=\"$PATH:$(location //third-party/yasm:yasm)/yasm-1.3.0/build\" " +
+        "$SRCDIR/FFMpeg/build-ffmpeg.sh release \"" + library_archs + "\" $OUT $SRCDIR/FFMpeg",
     out = "libffmpeg",
     visibility = [
         "//submodules/ffmpeg:FFMpeg",

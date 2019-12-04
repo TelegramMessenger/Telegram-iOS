@@ -14,11 +14,9 @@ final class LocationOptionsNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let segmentedControlNode: SegmentedControlNode
-    private let interaction: LocationPickerInteraction
     
-    init(presentationData: PresentationData, interaction: LocationPickerInteraction) {
+    init(presentationData: PresentationData, updateMapMode: @escaping (LocationMapMode) -> Void) {
         self.presentationData = presentationData
-        self.interaction = interaction
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
@@ -39,11 +37,11 @@ final class LocationOptionsNode: ASDisplayNode {
             }
             switch index {
                 case 0:
-                    strongSelf.interaction.updateMapMode(.map)
+                    updateMapMode(.map)
                 case 1:
-                    strongSelf.interaction.updateMapMode(.sattelite)
+                    updateMapMode(.sattelite)
                 case 2:
-                    strongSelf.interaction.updateMapMode(.hybrid)
+                    updateMapMode(.hybrid)
                 default:
                     break
             }
