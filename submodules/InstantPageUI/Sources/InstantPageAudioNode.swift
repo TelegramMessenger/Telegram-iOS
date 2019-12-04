@@ -35,13 +35,13 @@ private func generatePauseButton(color: UIColor) -> UIImage? {
     })
 }
 
-private func titleString(media: InstantPageMedia, theme: InstantPageTheme) -> NSAttributedString {
+private func titleString(media: InstantPageMedia, theme: InstantPageTheme, strings: PresentationStrings) -> NSAttributedString {
     let string = NSMutableAttributedString()
     if let file = media.media as? TelegramMediaFile {
         loop: for attribute in file.attributes {
             if case let .Audio(isVoice, _, title, performer, _) = attribute, !isVoice {
-                let titleText: String = title ?? "Unknown Track"
-                let subtitleText: String = performer ?? "Unknown Artist"
+                let titleText: String = title ?? strings.MediaPlayer_UnknownTrack
+                let subtitleText: String = performer ?? strings.MediaPlayer_UnknownArtist
                 
                 let titleString = NSAttributedString(string: titleText, font: Font.semibold(17.0), textColor: theme.textCategories.paragraph.color)
                 let subtitleString = NSAttributedString(string: " — \(subtitleText)", font: Font.regular(17.0), textColor: theme.textCategories.paragraph.color)
@@ -111,7 +111,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         
         super.init()
         
-        self.titleNode.attributedText = titleString(media: media, theme: theme)
+        self.titleNode.attributedText = titleString(media: media, theme: theme, strings: strings)
         
         self.addSubnode(self.statusNode)
         self.addSubnode(self.buttonNode)
@@ -226,7 +226,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                 self.playImage = generatePlayButton(color: theme.textCategories.paragraph.color)!
                 self.pauseImage = generatePauseButton(color: theme.textCategories.paragraph.color)!
                 
-                self.titleNode.attributedText = titleString(media: self.media, theme: theme)
+                self.titleNode.attributedText = titleString(media: self.media, theme: theme, strings: strings)
                 
                 var brightness: CGFloat = 0.0
                 theme.textCategories.paragraph.color.getHue(nil, saturation: nil, brightness: &brightness, alpha: nil)

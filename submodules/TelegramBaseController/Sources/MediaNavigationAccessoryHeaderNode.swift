@@ -42,8 +42,8 @@ private class MediaHeaderItemNode: ASDisplayNode {
             switch displayData {
                 case let .music(title, performer, _, long):
                     rateButtonHidden = !long
-                    let titleText: String = title ?? "Unknown Track"
-                    let subtitleText: String = performer ?? "Unknown Artist"
+                    let titleText: String = title ?? strings.MediaPlayer_UnknownTrack
+                    let subtitleText: String = performer ?? strings.MediaPlayer_UnknownArtist
                     
                     titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)

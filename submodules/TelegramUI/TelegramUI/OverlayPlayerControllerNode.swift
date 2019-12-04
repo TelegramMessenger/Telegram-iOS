@@ -127,7 +127,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayPlayerControlsNode(account: context.account, accountManager: context.sharedContext.accountManager, theme: self.presentationData.theme, status: context.sharedContext.mediaManager.musicMediaPlayerState)
+        self.controlsNode = OverlayPlayerControlsNode(account: context.account, accountManager: context.sharedContext.accountManager, presentationData: self.presentationData, status: context.sharedContext.mediaManager.musicMediaPlayerState)
         
         self.historyBackgroundNode = ASDisplayNode()
         self.historyBackgroundNode.isLayerBacked = true
@@ -249,7 +249,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         self.presentationData = presentationData
         
         self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-        self.controlsNode.updateTheme(self.presentationData.theme)
+        self.controlsNode.updatePresentationData(self.presentationData)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
