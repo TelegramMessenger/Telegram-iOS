@@ -29,6 +29,7 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -247,7 +247,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         didSet {
             if self.selectionState != oldValue {
                 self.selectionStatePromise.set(.single(self.selectionState))
-                self.countPanelNode.badge = "\(self.selectionState.selectedContactIndices.count)"
+                self.countPanelNode.count = self.selectionState.selectedContactIndices.count
                 if oldValue.selectedContactIndices.isEmpty != self.selectionState.selectedContactIndices.isEmpty {
                     if let (layout, navigationHeight, actualNavigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .animated(duration: 0.3, curve: .spring))
