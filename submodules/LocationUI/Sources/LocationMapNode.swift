@@ -4,6 +4,7 @@ import SwiftSignalKit
 import MapKit
 
 let defaultMapSpan = MKCoordinateSpan(latitudeDelta: 0.016, longitudeDelta: 0.016)
+let viewMapSpan = MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
 private let pinOffset = CGPoint(x: 0.0, y: 33.0)
 
 public enum LocationMapMode {
@@ -331,9 +332,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             
             var dict: [String: LocationPinAnnotation] = [:]
             for annotation in self.annotations {
-                if let identifier = annotation.location?.venue?.id {
-                    dict[identifier] = annotation
-                }
+                dict[annotation.id] = annotation
             }
             
             var annotationsToRemove = Set<LocationPinAnnotation>()
@@ -342,9 +341,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                     continue
                 }
                 
-                if let identifier = annotation.location?.venue?.id, let updatedAnnotation = dict[identifier] {
+                if let updatedAnnotation = dict[annotation.id] {
                     annotation.coordinate = updatedAnnotation.coordinate
-                    dict[identifier] = nil
+                    dict[annotation.id] = nil
                 } else {
                     annotationsToRemove.insert(annotation)
                 }

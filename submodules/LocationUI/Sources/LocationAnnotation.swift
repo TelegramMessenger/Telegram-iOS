@@ -33,6 +33,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     var coordinate: CLLocationCoordinate2D
     let location: TelegramMediaMap?
     let peer: Peer?
+    let forcedSelection: Bool
     
     var title: String? = ""
     var subtitle: String? = ""
@@ -43,16 +44,28 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         self.location = nil
         self.peer = peer
         self.coordinate = kCLLocationCoordinate2DInvalid
+        self.forcedSelection = false
         super.init()
     }
     
-    init(account: Account, theme: PresentationTheme, location: TelegramMediaMap) {
+    init(account: Account, theme: PresentationTheme, location: TelegramMediaMap, forcedSelection: Bool = false) {
         self.account = account
         self.theme = theme
         self.location = location
         self.peer = nil
         self.coordinate = location.coordinate
+        self.forcedSelection = forcedSelection
         super.init()
+    }
+    
+    var id: String {
+        if let peer = self.peer {
+            return "\(peer.id.toInt64())"
+        } else if let venueId = self.location?.venue?.id {
+            return venueId
+        } else {
+            return String(format: "%.5f_%.5f", self.coordinate.latitude, self.coordinate.longitude)
+        }
     }
 }
 
@@ -142,8 +155,14 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     var defaultZPosition: CGFloat {
-        if let annotation = self.annotation as? LocationPinAnnotation, let venueType = annotation.location?.venue?.type, ["home", "work"].contains(venueType) {
-            return -0.5
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            if annotation.forcedSelection {
+                return 0.0
+            } else if let venueType = annotation.location?.venue?.type, ["home", "work"].contains(venueType) {
+                return -0.5
+            } else {
+                return -1.0
+            }
         } else {
             return -1.0
         }
@@ -179,6 +198,10 @@ class LocationPinAnnotationView: MKAnnotationView {
                         self.shadowNode.isHidden = true
                         self.smallNode.isHidden = false
                     }
+                    
+                    if annotation.forcedSelection {
+                        self.setSelected(true, animated: false)
+                    }
                 }
             }
         }
@@ -191,6 +214,12 @@ class LocationPinAnnotationView: MKAnnotationView {
     
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
+        
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            if annotation.forcedSelection && !selected {
+                return
+            }
+        }
         
         if animated {
             self.layoutSubviews()
@@ -529,7 +558,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         if !self.appeared {
             self.appeared = true
             
-            if let annotation = annotation as? LocationPinAnnotation, annotation.location != nil {
+            if let annotation = annotation as? LocationPinAnnotation, annotation.location != nil && !annotation.forcedSelection {
                 self.animateAppearance()
             }
         }
