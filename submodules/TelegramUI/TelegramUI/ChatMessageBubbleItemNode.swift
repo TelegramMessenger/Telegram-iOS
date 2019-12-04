@@ -868,8 +868,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var backgroundHiding: ChatMessageBubbleContentBackgroundHiding?
         var hasSolidWallpaper = false
-        if case .color = item.presentationData.theme.wallpaper {
+        switch item.presentationData.theme.wallpaper {
+        case .color, .gradient:
             hasSolidWallpaper = true
+        default:
+            break
         }
         var alignment: ChatMessageBubbleContentAlignment = .none
         
