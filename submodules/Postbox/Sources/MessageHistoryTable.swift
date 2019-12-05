@@ -207,6 +207,46 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    private func updateGlobalTags(_ message: IntermediateMessage, outputOperations: inout [MessageHistoryOperation], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
+        if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
+            self.unsentTable.add(message.id, operations: &unsentMessageOperations)
+        }
+        let tags = message.tags.rawValue
+        if tags != 0 {
+            for i in 0 ..< 32 {
+                let currentTags = tags >> UInt32(i)
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    let tag = MessageTags(rawValue: 1 << UInt32(i))
+                    self.tagsTable.add(tags: tag, index: message.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                }
+            }
+        }
+        let globalTags = message.globalTags.rawValue
+        if globalTags != 0 {
+            for i in 0 ..< 32 {
+                let currentTags = globalTags >> UInt32(i)
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
+                    if self.globalTagsTable.addMessage(tag, index: message.index) {
+                        globalTagsOperations.append(.insertMessage(tag, message))
+                    }
+                }
+            }
+        }
+        if !message.localTags.isEmpty {
+            self.localTagsTable.set(id: message.id, tags: message.localTags, previousTags: [], operations: &localTagsOperations)
+        }
+        
+    }
+    
     private func processIndexOperations(_ peerId: PeerId, operations: [MessageHistoryIndexOperation], processedOperationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
         let sharedKey = self.key(MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0))
         let sharedBuffer = WriteBuffer()
@@ -245,46 +285,11 @@ final class MessageHistoryTable: Table {
                     if !updatedGroupInfos.isEmpty {
                         outputOperations.append(.UpdateGroupInfos(updatedGroupInfos))
                     }
-                    
-                    if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
-                        self.unsentTable.add(message.id, operations: &unsentMessageOperations)
-                    }
-                    let tags = message.tags.rawValue
-                    if tags != 0 {
-                        for i in 0 ..< 32 {
-                            let currentTags = tags >> UInt32(i)
-                            if currentTags == 0 {
-                                break
-                            }
-                            
-                            if (currentTags & 1) != 0 {
-                                let tag = MessageTags(rawValue: 1 << UInt32(i))
-                                self.tagsTable.add(tags: tag, index: message.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
-                            }
-                        }
-                    }
-                    let globalTags = message.globalTags.rawValue
-                    if globalTags != 0 {
-                        for i in 0 ..< 32 {
-                            let currentTags = globalTags >> UInt32(i)
-                            if currentTags == 0 {
-                                break
-                            }
-                            
-                            if (currentTags & 1) != 0 {
-                                let tag = GlobalMessageTags(rawValue: 1 << UInt32(i))
-                                if self.globalTagsTable.addMessage(tag, index: message.index) {
-                                    globalTagsOperations.append(.insertMessage(tag, message))
-                                }
-                            }
-                        }
-                    }
-                    if !message.localTags.isEmpty {
-                        self.localTagsTable.set(id: message.id, tags: message.localTags, previousTags: [], operations: &localTagsOperations)
-                    }
+                    updateGlobalTags(message, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations, unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations)
                     if !message.flags.intersection(.IsIncomingMask).isEmpty {
                         accumulatedAddedIncomingMessageIndices.insert(message.index)
                     }
+                
                 case let .InsertExistingMessage(storeMessage):
                     commitAccumulatedAddedIndices()
                     processIndexOperationsCommitAccumulatedRemoveIndices(peerId: peerId, accumulatedRemoveIndices: &accumulatedRemoveIndices, updatedCombinedState: &updatedCombinedState, invalidateReadState: &invalidateReadState, unsentMessageOperations: &unsentMessageOperations, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations)
@@ -296,7 +301,8 @@ final class MessageHistoryTable: Table {
                         if !updatedGroupInfos.isEmpty {
                             outputOperations.append(.UpdateGroupInfos(updatedGroupInfos))
                         }
-                }
+                        updateGlobalTags(message, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations, unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations)
+                    }
                 case let .Remove(index):
                     commitAccumulatedAddedIndices()
                     accumulatedRemoveIndices.append(index)
@@ -311,7 +317,7 @@ final class MessageHistoryTable: Table {
                         if !updatedGroupInfos.isEmpty {
                             outputOperations.append(.UpdateGroupInfos(updatedGroupInfos))
                         }
-                        
+                        updateGlobalTags(message, outputOperations: &outputOperations, globalTagsOperations: &globalTagsOperations, unsentMessageOperations: &unsentMessageOperations, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, localTagsOperations: &localTagsOperations)
                         if !message.flags.intersection(.IsIncomingMask).isEmpty {
                             if index != message.index {
                                 accumulatedRemoveIndices.append(index)
