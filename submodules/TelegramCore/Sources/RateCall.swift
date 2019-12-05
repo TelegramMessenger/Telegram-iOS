@@ -14,8 +14,8 @@ public func rateCall(account: Account, callId: CallId, starsCount: Int32, commen
     |> map { _ in }
 }
 
-public func saveCallDebugLog(account: Account, callId: CallId, log: String) -> Signal<Void, NoError> {
-    return account.network.request(Api.functions.phone.saveCallDebug(peer: Api.InputPhoneCall.inputPhoneCall(id: callId.id, accessHash: callId.accessHash), debug: .dataJSON(data: log)))
+public func saveCallDebugLog(network: Network, callId: CallId, log: String) -> Signal<Void, NoError> {
+    return network.request(Api.functions.phone.saveCallDebug(peer: Api.InputPhoneCall.inputPhoneCall(id: callId.id, accessHash: callId.accessHash), debug: .dataJSON(data: log)))
     |> retryRequest
     |> map { _ in }
 }
