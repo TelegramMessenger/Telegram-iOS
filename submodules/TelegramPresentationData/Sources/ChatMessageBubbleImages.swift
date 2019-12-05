@@ -64,7 +64,7 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
         context.scaleBy(x: incoming ? 1.0 : -1.0, y: -1.0)
         context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
         
-        context.translateBy(x: additionalOffset, y: 0.0)
+        context.translateBy(x: additionalOffset + 0.5, y: 0.5)
         
         let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
         context.translateBy(x: inset, y: inset)
