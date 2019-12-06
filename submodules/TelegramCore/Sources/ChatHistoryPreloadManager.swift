@@ -99,7 +99,7 @@ private final class HistoryPreloadEntry: Comparable {
                 |> mapToSignal { download -> Signal<Never, NoError> in
                     switch hole.hole {
                         case let .peer(peerHole):
-                            return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, limit: 60)
+                            return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, count: 60)
                     }
                 }
             )
@@ -320,10 +320,9 @@ final class ChatHistoryPreloadManager {
                 return
             }
             #if DEBUG
-            if true {
-                //return
-            }
+            return
             #endif
+            
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {
                 if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
@@ -396,7 +395,7 @@ final class ChatHistoryPreloadManager {
                     let key: PostboxViewKey
                     switch index.entity {
                         case let .peer(peerId):
-                            key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 60)
+                            key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 70)
                     }
                     view.disposable.set((self.postbox.combinedView(keys: [key])
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
