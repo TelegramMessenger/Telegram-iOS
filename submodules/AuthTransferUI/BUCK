@@ -23,6 +23,7 @@ static_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/Markdown:Markdown",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
