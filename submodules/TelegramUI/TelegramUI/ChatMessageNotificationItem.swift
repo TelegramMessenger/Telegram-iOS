@@ -142,6 +142,8 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 } else {
                     isScheduled = true
                 }
+            } else {
+                self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
             }
         }
         
