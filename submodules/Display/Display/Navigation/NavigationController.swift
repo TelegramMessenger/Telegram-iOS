@@ -827,7 +827,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if topModalIsFlat {
                         maxScale = 1.0
                         maxOffset = 0.0
-                    } else if visibleModalCount == 1 {
+                    } else if visibleModalCount <= 1 {
                         maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
                         maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
                     } else {
@@ -837,7 +837,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     
                     let scale = 1.0 * visibleRootModalDismissProgress + (1.0 - visibleRootModalDismissProgress) * maxScale
                     let offset = (1.0 - visibleRootModalDismissProgress) * maxOffset
-                    transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset))
+                    transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset), beginWithCurrentState: true)
                 }
             } else {
                 if let rootModalFrame = self.rootModalFrame {

@@ -300,7 +300,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                 case .none, .ignore:
                                     break
                                 case let .url(url, concealed):
-                                    self.item?.controllerInteraction.openUrl(url, concealed, nil)
+                                    self.item?.controllerInteraction.openUrl(url, concealed, nil, nil)
                                 case let .peerMention(peerId, _):
                                     self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
                                 case let .textMention(name):

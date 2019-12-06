@@ -295,6 +295,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
+                if true {
+                    let controller = StickerPackScreen(context: params.context, stickerPacks: [reference], selectedStickerPackIndex: 0, sendSticker: params.sendSticker)
+                    params.dismissInput()
+                    params.present(controller, nil)
+                    return true
+                }
                 let controller = StickerPackPreviewController(context: params.context, stickerPack: reference, parentNavigationController: params.navigationController)
                 controller.sendSticker = params.sendSticker
                 params.dismissInput()

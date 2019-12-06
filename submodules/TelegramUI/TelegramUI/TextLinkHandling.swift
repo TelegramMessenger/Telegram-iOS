@@ -42,7 +42,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
             }
         }, sendFile: nil,
         sendSticker: nil,
-        present: presentImpl, dismissInput: {})
+        present: presentImpl, dismissInput: {}, contentContext: nil)
     }
     
     let openLinkImpl: (String) -> Void = { [weak controller] url in

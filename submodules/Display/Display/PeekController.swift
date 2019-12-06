@@ -37,6 +37,8 @@ public final class PeekController: ViewController {
         self.sourceNode = sourceNode
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -328,7 +328,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             }, requestMessageActionCallback: { _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
-            }, openUrl: { [weak self] url, _, external in
+            }, openUrl: { [weak self] url, _, external, _ in
                 self?.openUrl(url, external: external ?? false)
             }, shareCurrentLocation: {
             }, shareAccountContact: {
@@ -774,7 +774,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     self?.present(c, in: .window(.root), with: a)
                 }, dismissInput: {
                     self?.view.endEditing(true)
-                })
+                }, contentContext: nil)
             }
         }))
     }

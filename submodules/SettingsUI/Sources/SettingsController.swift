@@ -824,7 +824,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
-                }, dismissInput: {})
+                }, dismissInput: {}, contentContext: nil)
             })
         })
     }

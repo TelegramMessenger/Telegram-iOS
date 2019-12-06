@@ -195,7 +195,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, openMessageContextActions: { _, _, _, _ in
-        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
+        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -800,7 +800,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             self?.presentController(c, a)
                         }, dismissInput: {
                             self?.view.endEditing(true)
-                        })
+                        }, contentContext: nil)
                     case .wallpaper:
                         break
                     case .theme:

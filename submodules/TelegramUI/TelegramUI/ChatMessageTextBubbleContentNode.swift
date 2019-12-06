@@ -64,7 +64,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.textAccessibilityOverlayNode)
         
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
-            self?.item?.controllerInteraction.openUrl(url, false, false)
+            self?.item?.controllerInteraction.openUrl(url, false, false, nil)
         }
         
         self.statusNode.openReactions = { [weak self] in

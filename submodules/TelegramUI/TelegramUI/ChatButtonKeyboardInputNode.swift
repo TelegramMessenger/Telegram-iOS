@@ -166,7 +166,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                 case .text:
                     self.controllerInteraction.sendMessage(markupButton.title)
                 case let .url(url):
-                    self.controllerInteraction.openUrl(url, true, nil)
+                    self.controllerInteraction.openUrl(url, true, nil, nil)
                 case .requestMap:
                     self.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

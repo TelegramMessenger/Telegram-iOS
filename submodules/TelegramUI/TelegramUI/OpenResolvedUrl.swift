@@ -17,6 +17,7 @@ import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
 import SettingsUI
+import UrlHandling
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -34,7 +35,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
@@ -88,9 +89,47 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
-            let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-            controller.sendSticker = sendSticker
-            present(controller, nil)
+            if true {
+                var stickerPacks: [StickerPackReference] = []
+                var initialIndex: Int = 0
+                if let message = contentContext as? Message {
+                    let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
+                    var foundMain = false
+                    if let matches = dataDetector?.matches(in: message.text, options: [], range: NSRange(message.text.startIndex ..< message.text.endIndex, in: message.text)) {
+                        for match in matches {
+                            guard let stringRange = Range(match.range, in: message.text) else {
+                                continue
+                            }
+                            let urlText = String(message.text[stringRange])
+                            if let resultName = parseStickerPackUrl(urlText) {
+                                stickerPacks.append(.name(resultName))
+                                if resultName == name {
+                                    foundMain = true
+                                    initialIndex = stickerPacks.count - 1
+                                }
+                            }
+                        }
+                        if !foundMain {
+                            stickerPacks.insert(.name(name), at: 0)
+                            initialIndex = 0
+                        }
+                    } else {
+                        stickerPacks = [.name(name)]
+                        initialIndex = 0
+                    }
+                } else {
+                    stickerPacks = [.name(name)]
+                    initialIndex = 0
+                }
+                if !stickerPacks.isEmpty {
+                    let controller = StickerPackScreen(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: initialIndex, sendSticker: sendSticker)
+                    present(controller, nil)
+                }
+            } else {
+                let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
+                controller.sendSticker = sendSticker
+                present(controller, nil)
+            }
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):

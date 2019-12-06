@@ -237,7 +237,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     context.sharedContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
                 }, dismissInput: {
                     dismissInput()
-                })
+                }, contentContext: nil)
             }
         }
         

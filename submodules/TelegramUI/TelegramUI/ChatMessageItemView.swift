@@ -763,7 +763,7 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil)
+                    item.controllerInteraction.openUrl(url, true, nil, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

@@ -208,7 +208,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return false
             }
             if let singleUrl = accessibilityData.singleUrl {
-                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false)
+                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false, strongSelf.item?.content.firstMessage)
             }
             return false
         }
@@ -2304,7 +2304,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             break
                         case let .url(url, concealed):
                             foundTapAction = true
-                            self.item?.controllerInteraction.openUrl(url, concealed, nil)
+                            self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
                             break loop
                         case let .peerMention(peerId, _):
                             foundTapAction = true

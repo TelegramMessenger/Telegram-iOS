@@ -501,12 +501,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                 } else {
                     if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .link) {
-                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                     }
                 }
             } else {
                 if !item.controllerInteraction.openMessage(item.message, .default) {
-                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                 }
             }
         }
@@ -556,10 +556,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url), item.message)
                                 } else if url == self.currentPrimaryUrl {
                                     if !item.controllerInteraction.openMessage(item.message, .default) {
-                                        item.controllerInteraction.openUrl(url, false, false)
+                                        item.controllerInteraction.openUrl(url, false, false, nil)
                                     }
                                 } else {
-                                    item.controllerInteraction.openUrl(url, false, true)
+                                    item.controllerInteraction.openUrl(url, false, true, nil)
                                 }
                             }
                         case .hold, .doubleTap:

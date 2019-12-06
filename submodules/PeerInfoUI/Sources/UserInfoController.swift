@@ -1450,7 +1450,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
             presentControllerImpl?(c, a)
         }, dismissInput: {
             dismissInputImpl?()
-        })
+        }, contentContext: nil)
     }
     shareBotImpl = { [weak controller] in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)

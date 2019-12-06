@@ -225,6 +225,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
     public var scrollingInitiated: (() -> Void)?
     public var scrollingCompleted: (() -> Void)?
+    public var interactiveScrollingEnded: (() -> Void)?
     public var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     
     public final var floatingSections = false
@@ -374,6 +375,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        self.interactiveScrollingEnded?()
         if !decelerate {
             self.updateItemNodeVisibilititesAndScrolling()
             self.updateVisibleContentOffset()
@@ -478,7 +480,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         } else if let fillWidth = fillWidth, fillWidth {
                             let nextItemOriginX = nextItemOrigin.x + itemSize.width + itemSpacing
                             let remainingWidth = remainingWidth - CGFloat(itemsInRow - 1) * itemSpacing
-                            if nextItemOriginX + itemSize.width > self.gridLayout.size.width && remainingWidth > 0.0 {
+                            if nextItemOriginX + itemSize.width > self.gridLayout.size.width - itemInsets.right && remainingWidth > 0.0 {
                                 itemSize.width += remainingWidth
                             }
                         }
@@ -492,7 +494,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         index += 1
                         
                         nextItemOrigin.x += itemSize.width + itemSpacing
-                        if nextItemOrigin.x + itemSize.width > gridLayout.size.width {
+                        if nextItemOrigin.x + itemSize.width > gridLayout.size.width - itemInsets.right {
                             nextItemOrigin.x = initialSpacing + itemInsets.left
                             nextItemOrigin.y += itemSize.height + lineSpacing
                             incrementedCurrentRow = false

@@ -455,7 +455,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
             }, openUrl: { url in
-                self?.openUrl(url, concealed: false)
+                self?.openUrl(url, concealed: false, message: nil)
             }, openPeer: { peer, navigation in
                 self?.openPeer(peerId: peer.id, navigation: navigation, fromMessage: nil)
             }, callPeer: { peerId in
@@ -506,7 +506,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openUrl(url, concealed, nil)
+                    strongSelf.controllerInteraction?.openUrl(url, concealed, nil, nil)
                 }
             }, openUrlIn: { [weak self] url in
                 if let strongSelf = self {
@@ -928,9 +928,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 strongSelf.openPeer(peerId: peerId, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil), fromMessage: nil)
             }
-        }, openUrl: { [weak self] url, concealed, _ in
+        }, openUrl: { [weak self] url, concealed, _, message in
             if let strongSelf = self {
-                strongSelf.openUrl(url, concealed: concealed)
+                strongSelf.openUrl(url, concealed: concealed, message: message)
             }
         }, shareCurrentLocation: { [weak self] in
             if let strongSelf = self {
@@ -7220,7 +7220,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func openResolved(_ result: ResolvedUrl) {        
+    private func openResolved(_ result: ResolvedUrl, message: Message? = nil) {
         self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
@@ -7262,10 +7262,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
             self?.chatDisplayNode.dismissInput()
-        })
+        }, contentContext: message)
     }
     
-    private func openUrl(_ url: String, concealed: Bool) {
+    private func openUrl(_ url: String, concealed: Bool, message: Message? = nil) {
         self.commitPurposefulAction()
         
         let openImpl: () -> Void = { [weak self] in
@@ -7308,7 +7308,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
-                    strongSelf.openResolved(result)
+                    strongSelf.openResolved(result, message: message)
                 }
             }))
         }
