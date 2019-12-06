@@ -22,6 +22,7 @@ static_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/Markdown:Markdown",
+        "//submodules/AnimationUI:AnimationUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
