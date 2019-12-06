@@ -645,27 +645,27 @@ final class MutableMessageHistoryView {
         }
     }
     
-    func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {
+    func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection, Int)? {
         switch self.sampledState {
-            case let .loading(loadingSample):
-                switch loadingSample {
-                    case .ready:
-                        return nil
-                    case let .loadHole(peerId, namespace, _, id):
-                        return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)))
-                }
-            case let .loaded(loadedSample):
-                if let hole = loadedSample.hole {
-                    let direction: MessageHistoryViewRelativeHoleDirection
-                    if let endId = hole.endId {
-                        direction = .range(start: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId), end: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: endId))
-                    } else {
-                        direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
-                    }
-                    return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace)), direction)
+        case let .loading(loadingSample):
+            switch loadingSample {
+            case .ready:
+                return nil
+            case let .loadHole(peerId, namespace, _, id):
+                return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)), self.fillCount * 2)
+            }
+        case let .loaded(loadedSample):
+            if let hole = loadedSample.hole {
+                let direction: MessageHistoryViewRelativeHoleDirection
+                if let endId = hole.endId {
+                    direction = .range(start: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId), end: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: endId))
                 } else {
-                    return nil
+                    direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
                 }
+                return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace)), direction, self.fillCount * 2)
+            } else {
+                return nil
+            }
         }
     }
 }

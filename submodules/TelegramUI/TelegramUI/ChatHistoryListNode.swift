@@ -63,7 +63,7 @@ private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     }
 }
 
-private let historyMessageCount: Int = 100
+private let historyMessageCount: Int = 90
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
