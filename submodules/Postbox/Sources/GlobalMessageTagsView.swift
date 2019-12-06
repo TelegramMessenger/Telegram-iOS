@@ -82,6 +82,7 @@ final class MutableGlobalMessageTagsViewReplayContext {
 
 final class MutableGlobalMessageTagsView: MutablePostboxView {
     private let globalTag: GlobalMessageTags
+    private let position: MessageIndex
     private let count: Int
     private let groupingPredicate: ((Message, Message) -> Bool)?
     
@@ -91,6 +92,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
     
     init(postbox: Postbox, globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?) {
         self.globalTag = globalTag
+        self.position = position
         self.count = count
         self.groupingPredicate = groupingPredicate
         
@@ -115,63 +117,83 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         
         let context = MutableGlobalMessageTagsViewReplayContext()
         
+        var wasSingleHole = false
+        if self.entries.count == 1, case .hole = self.entries[0] {
+            wasSingleHole = true
+        }
+        
         for operation in transaction.currentGlobalTagsOperations {
             switch operation {
-                case let .insertMessage(tags, message):
+            case let .insertMessage(tags, message):
+                if (self.globalTag.rawValue & tags.rawValue) != 0 {
+                    if self.add(.intermediateMessage(message)) {
+                        hasChanges = true
+                    }
+                }
+            case let .insertHole(tags, index):
+                if (self.globalTag.rawValue & tags.rawValue) != 0 {
+                    if self.add(.hole(index)) {
+                        hasChanges = true
+                    }
+                }
+            case let .remove(tagsAndIndices):
+                var indices = Set<MessageIndex>()
+                for (tags, index) in tagsAndIndices {
                     if (self.globalTag.rawValue & tags.rawValue) != 0 {
-                        if self.add(.intermediateMessage(message)) {
-                            hasChanges = true
-                        }
+                        indices.insert(index)
                     }
-                case let .insertHole(tags, index):
-                    if (self.globalTag.rawValue & tags.rawValue) != 0 {
-                        if self.add(.hole(index)) {
-                            hasChanges = true
-                        }
+                }
+                if !indices.isEmpty {
+                    if self.remove(indices, context: context) {
+                        hasChanges = true
                     }
-                case let .remove(tagsAndIndices):
-                    var indices = Set<MessageIndex>()
-                    for (tags, index) in tagsAndIndices {
-                        if (self.globalTag.rawValue & tags.rawValue) != 0 {
-                            indices.insert(index)
-                        }
-                    }
-                    if !indices.isEmpty {
-                        if self.remove(indices, context: context) {
-                            hasChanges = true
-                        }
-                    }
-                case let .updateTimestamp(tags, previousIndex, updatedTimestamp):
-                    if (self.globalTag.rawValue & tags.rawValue) != 0 {
-                        inner: for i in 0 ..< self.entries.count {
-                            let entry = self.entries[i]
-                            if entry.index == previousIndex {
-                                let updatedIndex = MessageIndex(id: entry.index.id, timestamp: updatedTimestamp)
-                                if self.remove(Set([entry.index]), context: context) {
+                }
+            case let .updateTimestamp(tags, previousIndex, updatedTimestamp):
+                if (self.globalTag.rawValue & tags.rawValue) != 0 {
+                    inner: for i in 0 ..< self.entries.count {
+                        let entry = self.entries[i]
+                        if entry.index == previousIndex {
+                            let updatedIndex = MessageIndex(id: entry.index.id, timestamp: updatedTimestamp)
+                            if self.remove(Set([entry.index]), context: context) {
+                                hasChanges = true
+                            }
+                            switch entry {
+                            case .hole:
+                                if self.add(.hole(updatedIndex)) {
                                     hasChanges = true
                                 }
-                                switch entry {
-                                    case .hole:
-                                        if self.add(.hole(updatedIndex)) {
-                                            hasChanges = true
-                                        }
-                                    case let .intermediateMessage(message):
-                                        if self.add(.intermediateMessage(IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: updatedTimestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia))) {
-                                                hasChanges = true
-                                            }
-                                    case let .message(message):
-                                        if self.add(.message(Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: updatedTimestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds))) {
-                                                hasChanges = true
-                                            }
+                            case let .intermediateMessage(message):
+                                if self.add(.intermediateMessage(IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: updatedTimestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia))) {
+                                    hasChanges = true
                                 }
-                                break inner
+                            case let .message(message):
+                                if self.add(.message(Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: updatedTimestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds))) {
+                                    hasChanges = true
+                                }
                             }
+                            break inner
                         }
                     }
+                }
             }
         }
         
         if hasChanges || !context.empty() {
+            if wasSingleHole {
+                let (entries, lower, upper) = postbox.messageHistoryTable.entriesAround(globalTagMask: self.globalTag, index: self.position, count: self.count)
+                
+                self.entries = entries.map { entry -> InternalGlobalMessageTagsEntry in
+                    switch entry {
+                    case let .message(message):
+                        return .intermediateMessage(message)
+                    case let .hole(index):
+                        return .hole(index)
+                    }
+                }
+                self.earlier = lower
+                self.later = upper
+            }
+            
             self.complete(postbox: postbox, context: context)
             self.render(postbox: postbox)
             
