@@ -104,7 +104,7 @@ class CallListCallItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        nodeApply().1(false)
+                        nodeApply(synchronousLoads).1(false)
                     })
                 })
             }
@@ -124,7 +124,7 @@ class CallListCallItem: ListViewItem {
                     }
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
-                            apply().1(animated)
+                            apply(false).1(animated)
                         })
                     }
                 }
@@ -250,7 +250,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, topItem: previousItem, bottomItem: nextItem))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
-            let _ = nodeApply()
+            let _ = nodeApply(false)
         }
     }
     
@@ -284,7 +284,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: CallListCallItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
+    func asyncLayout() -> (_ item: CallListCallItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> (Signal<Void, NoError>?, (Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeDateLayout = TextNode.asyncLayout(self.dateNode)
@@ -445,14 +445,14 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let contentSize = nodeLayout.contentSize
             
-            return (nodeLayout, { [weak self] in
+            return (nodeLayout, { [weak self] synchronousLoads in
                 if let strongSelf = self {
                     if let peer = item.topMessage.peers[item.topMessage.id.peerId] {
                         var overrideImage: AvatarNodeImageOverride?
                         if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
