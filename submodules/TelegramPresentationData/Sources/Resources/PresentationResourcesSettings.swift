@@ -59,4 +59,6 @@ public struct PresentationResourcesSettings {
     public static let setPasscode = renderIcon(name: "Settings/MenuIcons/SetPasscode")
     public static let clearCache = renderIcon(name: "Settings/MenuIcons/ClearCache")
     public static let changePhoneNumber = renderIcon(name: "Settings/MenuIcons/ChangePhoneNumber")
+    
+    public static let websites = renderIcon(name: "Settings/MenuIcons/Websites")
 }

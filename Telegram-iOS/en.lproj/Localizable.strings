@@ -5143,11 +5143,15 @@ Any member of this group will be able to see messages in the channel.";
 "Settings.Devices" = "Devices";
 "Settings.AddDevice" = "Scan QR";
 "AuthSessions.DevicesTitle" = "Devices";
-"AuthSessions.AddDevice" = "Scan QR";
+"AuthSessions.AddDevice" = "Add Device";
 "AuthSessions.AddDevice.ScanInfo" = "Scan a QR code to log into\nthis account on another device.";
 "AuthSessions.AddDevice.ScanTitle" = "Scan QR Code";
-"AuthSessions.AddDevice.ScanApps" = "Telegram is available for\niPhone, iPad, macOS, Windows and Linux";
-"AuthSessions.AddDevice.ConfirmDevice" = "Confirm Log In";
+"AuthSessions.AddDevice.InvalidQRCode" = "Invalid QR Code";
+"AuthSessions.AddDeviceIntro.Title" = "Log in by QR Code";
+"AuthSessions.AddDeviceIntro.Text1" = "[Download Telegram]() on your computer";
+"AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
+"AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
+"AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
 
 "Map.SendThisPlace" = "Send This Place";
 "Map.SetThisPlace" = "Set This Place";
@@ -5161,3 +5165,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.Search.ShowMore" = "Show more";
 "ChatList.Search.ShowLess" = "Show less";
+
+"AuthSessions.OtherDevices" = "The official Telegram App is available for iPhone, iPad, Android, macOS, Windows and Linux. [Learn More]()";

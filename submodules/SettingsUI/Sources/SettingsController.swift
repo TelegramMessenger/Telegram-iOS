@@ -213,6 +213,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
     case savedMessages(PresentationTheme, UIImage?, String)
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
+    case contentStickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
     case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?, Bool)
     case privacyAndSecurity(PresentationTheme, UIImage?, String, AccountPrivacySettings?)
@@ -240,7 +241,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return SettingsSection.media.rawValue
         case .savedMessages, .recentCalls, .stickers:
             return SettingsSection.media.rawValue
-        case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
+        case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language, .contentStickers:
             return SettingsSection.generalSettings.rawValue
         case .passport, .wallet, .watch :
             return SettingsSection.advanced.rawValue
@@ -287,16 +288,18 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
             return 1011
         case .language:
             return 1012
-        case .wallet:
+        case .contentStickers:
             return 1013
-        case .passport:
+        case .wallet:
             return 1014
-        case .watch:
+        case .passport:
             return 1015
-        case .askAQuestion:
+        case .watch:
             return 1016
-        case .faq:
+        case .askAQuestion:
             return 1017
+        case .faq:
+            return 1018
         }
     }
     
@@ -408,6 +411,12 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 }
             case let .stickers(lhsTheme, lhsImage, lhsText, lhsValue, _):
                 if case let .stickers(rhsTheme, rhsImage, rhsText, rhsValue, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .contentStickers(lhsTheme, lhsImage, lhsText, lhsValue, _):
+                if case let .contentStickers(rhsTheme, rhsImage, rhsText, rhsValue, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -559,6 +568,10 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openStickerPacks(archivedPacks)
                 }, clearHighlightAutomatically: false)
+            case let .contentStickers(theme, image, text, value, archivedPacks):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openStickerPacks(archivedPacks)
+                }, clearHighlightAutomatically: false)
             case let .notificationsAndSounds(theme, image, text, exceptionsList, warning):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openNotificationsAndSounds(exceptionsList)
@@ -657,9 +670,10 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         if enableQRLogin {
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount)"))
+        } else {
+            entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
@@ -669,6 +683,9 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
         entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
+        if enableQRLogin {
+            entries.append(.contentStickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
+        }
         
         if hasWallet {
             entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.wallet, "Gram Wallet", ""))
@@ -1093,7 +1110,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue
         |> take(1)).start(next: { activeSessionsContext, count in
             if count == 0 {
-                pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
+                pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
             } else {
                 pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext))
             }

@@ -152,6 +152,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     override func didLoad() {
         super.didLoad()
         
+        self.gridNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.gridNode.view.disablesInteractiveKeyboardGestureRecognizer = true
+        
         self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
             if let strongSelf = self {
                 let convertedPoint = strongSelf.gridNode.view.convert(point, from: strongSelf.view)
