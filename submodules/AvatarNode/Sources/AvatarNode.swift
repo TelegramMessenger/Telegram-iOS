@@ -559,7 +559,7 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     if peerId.namespace == -1 {
         colorIndex = -1
     } else {
-        colorIndex = abs(Int(clamping: accountPeerId.id &+ peerId.id))
+        colorIndex = Int(abs(peerId.id))
     }
     
     let colorsArray: NSArray
