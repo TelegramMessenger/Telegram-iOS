@@ -167,9 +167,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
-        
-        self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground)
-        
+                
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
             self.contactDataManager = DeviceContactDataManagerImpl()
@@ -183,10 +181,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
-        self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
+        let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
         |> then(
             updatedPresentationData(accountManager: self.accountManager, applicationInForeground: self.applicationBindings.applicationInForeground, systemUserInterfaceStyle: mainWindow?.systemUserInterfaceStyle ?? .single(.light))
-        ))
+        )
+        self._presentationData.set(presentationData)
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
             |> map { sharedData in
@@ -195,6 +194,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
             }
         ))
+        
+        self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData)
         
         self.presentationDataDisposable.set((self.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] next in

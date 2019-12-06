@@ -233,13 +233,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(topColor, bottomColor):
+                        case let .gradient(topColor, bottomColor, _):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))])
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
+                            actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
                         case let .file(file):
@@ -724,9 +725,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
                         case .gradient:
-                            blurAlpha = 0.0
-                            patternAlpha = 0.0
-                            motionAlpha = 0.0
+                            motionAlpha = 1.0
                         case let .file(file):
                             if file.isPattern {
                                 motionAlpha = 1.0

@@ -203,7 +203,7 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
         }
     }
     private var progress: CGFloat = 0.0
-    private var displayLink: CADisplayLink?
+    private var animator: ConstantDisplayLinkAnimator?
     private let buttonCornerRadius: CGFloat
     private var gradientColors: NSArray?
     
@@ -216,26 +216,31 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
         self.isOpaque = false
         self.isLayerBacked = true
         
-        class DisplayLinkProxy: NSObject {
-            weak var target: SolidRoundedButtonGlossNode?
-            init(target: SolidRoundedButtonGlossNode) {
-                self.target = target
+        var previousTime: CFAbsoluteTime?
+        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+            guard let strongSelf = self else {
+                return
             }
-            
-            @objc func displayLinkEvent() {
-                self.target?.displayLinkEvent()
+            let currentTime = CFAbsoluteTimeGetCurrent()
+            if let previousTime = previousTime {
+                var delta: CGFloat
+                if strongSelf.progress < 0.05 || strongSelf.progress > 0.95 {
+                    delta = 0.001
+                } else {
+                    delta = 0.009
+                }
+                delta *= CGFloat(currentTime - previousTime) * 60.0
+                var newProgress = strongSelf.progress + delta
+                if newProgress > 1.0 {
+                    newProgress = 0.0
+                }
+                strongSelf.progress = newProgress
+                strongSelf.setNeedsDisplay()
             }
-        }
-        
-        self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink?.isPaused = true
-        self.displayLink?.add(to: RunLoop.main, forMode: .common)
+            previousTime = currentTime
+        })
         
         self.updateGradientColors()
-    }
-    
-    deinit {
-        self.displayLink?.invalidate()
     }
     
     private func updateGradientColors() {
@@ -245,27 +250,12 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
     
     override public func willEnterHierarchy() {
         super.willEnterHierarchy()
-        self.displayLink?.isPaused = false
+        self.animator?.isPaused = false
     }
     
     override public func didExitHierarchy() {
         super.didExitHierarchy()
-        self.displayLink?.isPaused = true
-    }
-    
-    private func displayLinkEvent() {
-        let delta: CGFloat
-        if self.progress < 0.05 || self.progress > 0.95 {
-            delta = 0.001
-        } else {
-            delta = 0.009
-        }
-        var newProgress = self.progress + delta
-        if newProgress > 1.0 {
-            newProgress = 0.0
-        }
-        self.progress = newProgress
-        self.setNeedsDisplay()
+        self.animator?.isPaused = true
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {

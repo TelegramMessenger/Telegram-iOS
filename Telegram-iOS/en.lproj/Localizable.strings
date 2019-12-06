@@ -5167,3 +5167,17 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.ShowLess" = "Show less";
 
 "AuthSessions.OtherDevices" = "The official Telegram App is available for iPhone, iPad, Android, macOS, Windows and Linux. [Learn More]()";
+
+"MediaPlayer.UnknownArtist" = "Unknown Artist";
+"MediaPlayer.UnknownTrack" = "Unknown Track";
+
+"Contacts.InviteContacts_1" = "Invite %@ Contact";
+"Contacts.InviteContacts_2" = "Invite %@ Contacts";
+"Contacts.InviteContacts_3_10" = "Invite %@ Contacts";
+"Contacts.InviteContacts_any" = "Invite %@ Contacts";
+"Contacts.InviteContacts_many" = "Invite %@ Contacts";
+"Contacts.InviteContacts_0" = "Invite %@ Contacts";
+
+"Theme.Context.ChangeColors" = "Change Colors";
+
+"EditTheme.ChangeColors" = "Change Colors";

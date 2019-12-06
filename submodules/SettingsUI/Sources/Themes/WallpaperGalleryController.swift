@@ -391,7 +391,7 @@ public class WallpaperGalleryController: ViewController {
                                         } else {
                                             themeSpecificChatWallpapers[current.theme.index] = wallpaper
                                         }
-                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
                                     })
@@ -810,6 +810,8 @@ public class WallpaperGalleryController: ViewController {
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
             case let .color(color):
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"))
+            case let .gradient(topColor, bottomColor, _):
+                controller = ShareController(context: context, subject:. url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: topColor)).hexString)-\(UIColor(rgb: UInt32(bitPattern: bottomColor)).hexString)"))
             default:
                 break
         }

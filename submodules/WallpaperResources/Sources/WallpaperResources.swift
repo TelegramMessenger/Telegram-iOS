@@ -693,7 +693,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         case let .color(color):
             c.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
             c.fill(drawingRect)
-        case let .gradient(topColor, bottomColor):
+        case let .gradient(topColor, bottomColor, _):
             let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))].map { $0.cgColor } as CFArray
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -1049,7 +1049,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                         case let .color(color):
                             backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-                        case let .gradient(topColor, bottomColor):
+                        case let .gradient(topColor, bottomColor, _):
                             backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
                         case .image:
                             backgroundColor = (.black, nil)

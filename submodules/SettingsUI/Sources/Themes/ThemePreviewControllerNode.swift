@@ -508,7 +508,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             dateHeaderNode = headerItem.node()
             dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-            //self.messagesContainerNode.addSubnode(dateHeaderNode)
+            self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode
         }
         

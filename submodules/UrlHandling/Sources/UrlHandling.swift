@@ -176,6 +176,13 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     let parameter: WallpaperUrlParameter
                     if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
+                    } else if component.count == 13, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                        let components = component.components(separatedBy: "-")
+                        if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
+                            parameter = .gradient(topColor, bottomColor)
+                        } else {
+                            return nil
+                        }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?

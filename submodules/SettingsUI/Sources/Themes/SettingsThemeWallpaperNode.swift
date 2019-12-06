@@ -99,7 +99,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         self.backgroundNode.isHidden = false
                         self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                     }
-                case let .gradient(topColor, bottomColor):
+                case let .gradient(topColor, bottomColor, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
                     self.imageNode.setSignal(gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))]))

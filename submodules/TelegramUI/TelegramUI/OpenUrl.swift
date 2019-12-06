@@ -543,6 +543,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     parameter = value
                                 } else if queryItem.name == "color" {
                                     parameter = value
+                                } else if queryItem.name == "gradient" {
+                                    parameter = value
                                 } else if queryItem.name == "mode" {
                                     mode = "?mode=\(value)"
                                 }
