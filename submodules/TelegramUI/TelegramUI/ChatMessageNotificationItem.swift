@@ -108,9 +108,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         }
         let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
         
+        var isReminder = false
+        var isScheduled = false
         var title: String?
         if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-            var overrideImage: AvatarNodeImageOverride?
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author {
@@ -137,14 +138,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             
             if let text = title, firstMessage.flags.contains(.WasScheduled) {
                 if let author = firstMessage.author, author.id == peer.id, author.id == item.context.account.peerId {
-                    title = presentationData.strings.ScheduledMessages_ReminderNotification
-                    overrideImage = .savedMessagesIcon
+                    isReminder = true
                 } else {
-                    title = "📅 \(text)"
+                    isScheduled = true
                 }
             }
-            
-            self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var titleIcon: UIImage?
@@ -194,7 +192,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if let author = item.messages[0].author, displayAuthor {
                     let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), author.compactDisplayTitle, Int32(item.messages.count))
                     if let index = rawText.firstIndex(of: "|") {
-                        title = String(rawText[rawText.startIndex ..< index])
+                        if !isReminder {
+                            title = String(rawText[rawText.startIndex ..< index])
+                        }
                         messageText = String(rawText[rawText.index(after: index)...])
                     } else {
                         title = nil
@@ -302,6 +302,15 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         } else {
             messageText = ""
+        }
+        
+        if isReminder {
+            title = presentationData.strings.ScheduledMessages_ReminderNotification
+            if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
+                self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, overrideImage: .savedMessagesIcon, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            }
+        } else if isScheduled, let currentTitle = title {
+            title = "📅 \(currentTitle)"
         }
         
         messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")

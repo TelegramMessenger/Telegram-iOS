@@ -225,6 +225,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller!, nil)
                 case let .color(color):
                     signal = .single(.color(Int32(color.rgb)))
+                case let .gradient(topColor, bottomColor):
+                    signal = .single(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings()))
             }
             
             let _ = (signal

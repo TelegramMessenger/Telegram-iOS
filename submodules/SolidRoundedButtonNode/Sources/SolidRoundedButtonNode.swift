@@ -21,7 +21,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private let buttonBackgroundNode: ASImageNode
     private let buttonGlossNode: SolidRoundedButtonGlossNode
     private let buttonNode: HighlightTrackingButtonNode
-    private let labelNode: ImmediateTextNode
+    private let titleNode: ImmediateTextNode
+    private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     
     private let buttonHeight: CGFloat
@@ -34,6 +35,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         didSet {
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
+    public var subtitle: String? {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, previousSubtitle: oldValue, transition: .immediate)
             }
         }
     }
@@ -54,8 +63,11 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonNode = HighlightTrackingButtonNode()
         
-        self.labelNode = ImmediateTextNode()
-        self.labelNode.isUserInteractionEnabled = false
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.isUserInteractionEnabled = false
+        
+        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
         self.iconNode.displayWithoutProcessing = true
@@ -69,7 +81,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             self.addSubnode(self.buttonGlossNode)
         }
         self.addSubnode(self.buttonNode)
-        self.addSubnode(self.labelNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.iconNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
@@ -78,15 +91,19 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 if highlighted {
                     strongSelf.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonBackgroundNode.alpha = 0.55
-                    strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.labelNode.alpha = 0.55
+                    strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleNode.alpha = 0.55
+                    strongSelf.subtitleNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.subtitleNode.alpha = 0.55
                     strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.iconNode.alpha = 0.55
                 } else {
                     strongSelf.buttonBackgroundNode.alpha = 1.0
                     strongSelf.buttonBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
-                    strongSelf.labelNode.alpha = 1.0
-                    strongSelf.labelNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    strongSelf.titleNode.alpha = 1.0
+                    strongSelf.titleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    strongSelf.subtitleNode.alpha = 1.0
+                    strongSelf.subtitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     strongSelf.iconNode.alpha = 1.0
                     strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                 }
@@ -102,10 +119,15 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: self.buttonCornerRadius, color: theme.backgroundColor)
         self.buttonGlossNode.color = theme.foregroundColor
-        self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: theme.foregroundColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: theme.foregroundColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
     }
     
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        return self.updateLayout(width: width, previousSubtitle: nil, transition: transition)
+    }
+    
+    private func updateLayout(width: CGFloat, previousSubtitle: String?, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
         
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
@@ -114,16 +136,16 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonGlossNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
-        if self.title != self.labelNode.attributedText?.string {
-            self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: self.theme.foregroundColor)
+        if self.title != self.titleNode.attributedText?.string {
+            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: self.theme.foregroundColor)
         }
         
         let iconSize = self.iconNode.image?.size ?? CGSize()
-        let labelSize = self.labelNode.updateLayout(buttonSize)
+        let titleSize = self.titleNode.updateLayout(buttonSize)
         
         let iconSpacing: CGFloat = 8.0
         
-        var contentWidth: CGFloat = labelSize.width
+        var contentWidth: CGFloat = titleSize.width
         if !iconSize.width.isZero {
             contentWidth += iconSize.width + iconSpacing
         }
@@ -133,8 +155,25 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             nextContentOrigin += iconSize.width + iconSpacing
         }
         
-        let labelFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + floor((buttonFrame.height - labelSize.height) / 2.0)), size: labelSize)
-        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        let spacingOffset: CGFloat = 9.0
+        var verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
+        
+        let titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        if self.subtitle != self.subtitleNode.attributedText?.string {
+            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)
+        }
+        
+        let subtitleSize = self.subtitleNode.updateLayout(buttonSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - subtitleSize.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - titleSize.height) / 2.0) + spacingOffset + 2.0), size: subtitleSize)
+        transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
+        
+        if previousSubtitle == nil && self.subtitle != nil {
+            self.titleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: spacingOffset / 2.0), to: CGPoint(), duration: 0.3, additive: true)
+            self.subtitleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -spacingOffset / 2.0), to: CGPoint(), duration: 0.3, additive: true)
+            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
         
         return buttonSize.height
     }
@@ -164,7 +203,7 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
         }
     }
     private var progress: CGFloat = 0.0
-    private var displayLink: CADisplayLink?
+    private var animator: ConstantDisplayLinkAnimator?
     private let buttonCornerRadius: CGFloat
     private var gradientColors: NSArray?
     
@@ -177,26 +216,31 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
         self.isOpaque = false
         self.isLayerBacked = true
         
-        class DisplayLinkProxy: NSObject {
-            weak var target: SolidRoundedButtonGlossNode?
-            init(target: SolidRoundedButtonGlossNode) {
-                self.target = target
+        var previousTime: CFAbsoluteTime?
+        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+            guard let strongSelf = self else {
+                return
             }
-            
-            @objc func displayLinkEvent() {
-                self.target?.displayLinkEvent()
+            let currentTime = CFAbsoluteTimeGetCurrent()
+            if let previousTime = previousTime {
+                var delta: CGFloat
+                if strongSelf.progress < 0.05 || strongSelf.progress > 0.95 {
+                    delta = 0.001
+                } else {
+                    delta = 0.009
+                }
+                delta *= CGFloat(currentTime - previousTime) * 60.0
+                var newProgress = strongSelf.progress + delta
+                if newProgress > 1.0 {
+                    newProgress = 0.0
+                }
+                strongSelf.progress = newProgress
+                strongSelf.setNeedsDisplay()
             }
-        }
-        
-        self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink?.isPaused = true
-        self.displayLink?.add(to: RunLoop.main, forMode: .common)
+            previousTime = currentTime
+        })
         
         self.updateGradientColors()
-    }
-    
-    deinit {
-        self.displayLink?.invalidate()
     }
     
     private func updateGradientColors() {
@@ -206,27 +250,12 @@ public final class SolidRoundedButtonGlossNode: ASDisplayNode {
     
     override public func willEnterHierarchy() {
         super.willEnterHierarchy()
-        self.displayLink?.isPaused = false
+        self.animator?.isPaused = false
     }
     
     override public func didExitHierarchy() {
         super.didExitHierarchy()
-        self.displayLink?.isPaused = true
-    }
-    
-    private func displayLinkEvent() {
-        let delta: CGFloat
-        if self.progress < 0.05 || self.progress > 0.95 {
-            delta = 0.001
-        } else {
-            delta = 0.009
-        }
-        var newProgress = self.progress + delta
-        if newProgress > 1.0 {
-            newProgress = 0.0
-        }
-        self.progress = newProgress
-        self.setNeedsDisplay()
+        self.animator?.isPaused = true
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {

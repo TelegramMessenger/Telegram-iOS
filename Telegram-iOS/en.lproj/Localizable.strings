@@ -5158,3 +5158,7 @@ Any member of this group will be able to see messages in the channel.";
 "Map.HomeAndWorkTitle" = "Home & Work Addresses";
 "Map.HomeAndWorkInfo" = "Telegram uses the Home and Work addresses from your Contact Card.\n\nKeep your Contact Card up to date for quick access to sending Home and Work addresses.";
 "Map.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"Theme.Context.ChangeColors" = "Change Colors";
+
+"EditTheme.ChangeColors" = "Change Colors";

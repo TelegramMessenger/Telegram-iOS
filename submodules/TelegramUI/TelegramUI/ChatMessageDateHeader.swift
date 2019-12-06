@@ -210,6 +210,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
+    func updateBackgroundColor(_ color: UIColor) {
+        let chatDateSize: CGFloat = 20.0
+        self.backgroundNode.image = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(color.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
+    }
+    
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let chatDateSize: CGFloat = 20.0
         let chatDateInset: CGFloat = 6.0

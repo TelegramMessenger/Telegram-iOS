@@ -18,11 +18,13 @@ import AccountContext
 private final class EditThemeControllerArguments {
     let context: AccountContext
     let updateState: ((EditThemeControllerState) -> EditThemeControllerState) -> Void
+    let openColors: () -> Void
     let openFile: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openFile: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openColors: @escaping () -> Void, openFile: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
+        self.openColors = openColors
         self.openFile = openFile
     }
 }
@@ -51,6 +53,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     case slugInfo(PresentationTheme, String)
     case chatPreviewHeader(PresentationTheme, String)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
+    case changeColors(PresentationTheme, String)
     case uploadTheme(PresentationTheme, String)
     case uploadInfo(PresentationTheme, String)
     
@@ -58,7 +61,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
         switch self {
             case .title, .slug, .slugInfo:
                 return EditThemeControllerSection.info.rawValue
-            case .chatPreviewHeader, .chatPreview, .uploadTheme, .uploadInfo:
+            case .chatPreviewHeader, .chatPreview, .changeColors, .uploadTheme, .uploadInfo:
                 return EditThemeControllerSection.chatPreview.rawValue
         }
     }
@@ -75,10 +78,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 return 3
             case .chatPreview:
                 return 4
-            case .uploadTheme:
+            case .changeColors:
                 return 5
-            case .uploadInfo:
+            case .uploadTheme:
                 return 6
+            case .uploadInfo:
+                return 7
         }
     }
     
@@ -110,6 +115,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 }
             case let .chatPreview(lhsTheme, lhsComponentTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder, lhsItems):
                 if case let .chatPreview(rhsTheme, rhsComponentTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder, rhsItems) = rhs, lhsComponentTheme === rhsComponentTheme, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder, lhsItems == rhsItems {
+                    return true
+                } else {
+                    return false
+                }
+            case let .changeColors(lhsTheme, lhsText):
+                if case let .changeColors(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -162,6 +173,10 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder, items):
                 return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
+            case let .changeColors(theme, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.openColors()
+                })
             case let .uploadTheme(theme, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openFile()
@@ -173,7 +188,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
 }
 
 public enum EditThemeControllerMode: Equatable {
-    case create
+    case create(PresentationTheme?)
     case edit(PresentationCloudTheme)
 }
 
@@ -239,6 +254,7 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.EditTheme_Preview.uppercased()))
     entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (previewIncomingReplyName, previewIncomingReplyText), text: previewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: previewOutgoingText)]))
     
+    entries.append(.changeColors(presentationData.theme, presentationData.strings.EditTheme_ChangeColors))
     entries.append(.uploadTheme(presentationData.theme, uploadText))
     entries.append(.uploadInfo(presentationData.theme, uploadInfo))
     
@@ -249,10 +265,19 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     let initialState: EditThemeControllerState
     let previewThemePromise = Promise<PresentationTheme>()
     switch mode {
-        case .create:
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: presentationData.theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
-            previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
+        case let .create(existingTheme):
+            let theme: PresentationTheme
+            let wallpaper: TelegramWallpaper
+            if let existingTheme = existingTheme {
+                theme = existingTheme
+                wallpaper = theme.chat.defaultWallpaper
+            } else {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                theme = presentationData.theme
+                wallpaper = presentationData.chatWallpaper
+            }
+            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
+            previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
         case let .edit(info):
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
@@ -279,12 +304,27 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     }
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var errorImpl: ((EditThemeEntryTag) -> Void)?
     
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in
         updateState(f)
+    }, openColors: {
+        let _ = (previewThemePromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { theme in
+            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, completion: { updatedTheme in
+                updateState { current in
+                    var state = current
+                    previewThemePromise.set(.single(updatedTheme))
+                    state.updatedTheme = updatedTheme
+                    return state
+                }
+            }))
+            pushControllerImpl?(controller)
+        })
     }, openFile: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["org.telegram.Telegram-iOS.theme"], completion: { urls in
@@ -468,7 +508,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                                 themeSpecificChatWallpapers[themeReference.index] = nil
 
-                                                return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                                return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                             })
                                         } |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
@@ -509,7 +549,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             themeSpecificChatWallpapers[themeReference.index] = nil
                                             
-                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificBubbleColors: current.themeSpecificBubbleColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         })
                                     } |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {
@@ -568,6 +608,9 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
