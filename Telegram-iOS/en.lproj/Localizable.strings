@@ -5171,3 +5171,7 @@ Any member of this group will be able to see messages in the channel.";
 "Contacts.InviteContacts_any" = "Invite %@ Contacts";
 "Contacts.InviteContacts_many" = "Invite %@ Contacts";
 "Contacts.InviteContacts_0" = "Invite %@ Contacts";
+
+"Theme.Context.ChangeColors" = "Change Colors";
+
+"EditTheme.ChangeColors" = "Change Colors";

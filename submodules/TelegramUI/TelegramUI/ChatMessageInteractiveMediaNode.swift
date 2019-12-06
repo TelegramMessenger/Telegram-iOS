@@ -322,7 +322,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else {
                             unboundSize = CGSize(width: 54.0, height: 54.0)
                         }
-                    case .color:
+                    case .color, .gradient:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
                 }
             } else {
@@ -585,6 +585,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         }
                                     case let .color(color):
                                         return solidColorImage(color)
+                                    case let .gradient(topColor, bottomColor):
+                                        return gradientImage([topColor, bottomColor])
                                 }
                             }
                             
@@ -637,7 +639,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
                                     }
-                                case .color:
+                                case .color, .gradient:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
                         }

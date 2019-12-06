@@ -37,6 +37,7 @@ struct ThemeColorState {
     fileprivate var colorPanelCollapsed: Bool
     var accentColor: UIColor
     var backgroundColors: (UIColor, UIColor?)?
+    var defaultMessagesColor: UIColor?
     var messagesColors: (UIColor, UIColor?)?
     
     init() {
@@ -47,11 +48,12 @@ struct ThemeColorState {
         self.messagesColors = nil
     }
     
-    init(section: ThemeColorSection, accentColor: UIColor, backgroundColors: (UIColor, UIColor?)?, messagesColors: (UIColor, UIColor?)?) {
+    init(section: ThemeColorSection, accentColor: UIColor, backgroundColors: (UIColor, UIColor?)?, defaultMessagesColor: UIColor?, messagesColors: (UIColor, UIColor?)?) {
         self.section = section
         self.colorPanelCollapsed = false
         self.accentColor = accentColor
         self.backgroundColors = backgroundColors
+        self.defaultMessagesColor = defaultMessagesColor
         self.messagesColors = messagesColors
     }
     
@@ -94,7 +96,7 @@ struct ThemeColorState {
 final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
-    private let themeReference: PresentationThemeReference
+    private let mode: ThemeAccentColorControllerMode
     private var presentationData: PresentationData
     
     private var state: ThemeColorState
@@ -118,6 +120,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let colors = Promise<(UIColor, (UIColor, UIColor?)?, (UIColor, UIColor?)?)>()
     private let themePromise = Promise<PresentationTheme>()
     private var wallpaper: TelegramWallpaper
+    private var serviceBackgroundColor: UIColor?
     
     private var tapGestureRecognizer: UITapGestureRecognizer?
     
@@ -129,9 +132,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         return self.state.backgroundColors == nil && self.chatBackgroundNode.image != nil
     }
     
-    init(context: AccountContext, themeReference: PresentationThemeReference, theme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState) -> Void) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void) {
         self.context = context
-        self.themeReference = themeReference
+        self.mode = mode
         self.state = ThemeColorState()
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -160,10 +163,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        if case .color = self.presentationData.chatWallpaper {
+        if case .color = wallpaper {
         } else {
-            self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
-            self.chatBackgroundNode.motionEnabled = self.presentationData.chatWallpaper.settings?.motion ?? false
+            self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: theme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+            self.chatBackgroundNode.motionEnabled = wallpaper.settings?.motion ?? false
         }
         
         self.colorPanelNode = WallpaperColorPanelNode(theme: self.theme, strings: self.presentationData.strings)
@@ -221,6 +224,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                             var updated = current
                             if let firstColor = firstColor {
                                 updated.messagesColors = (firstColor, secondColor)
+                            } else {
+                                updated.messagesColors = nil
                             }
                             return updated
                         })
@@ -243,18 +248,18 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         self.toolbarNode.done = { [weak self] in
             if let strongSelf = self {
-                apply(strongSelf.state)
+                apply(strongSelf.state, strongSelf.serviceBackgroundColor)
             }
         }
         
         self.colorsDisposable = (self.colors.get()
         |> deliverOn(Queue.concurrentDefaultQueue())
-        |> map { accentColor, backgroundColors, messagesColors -> (PresentationTheme, (TelegramWallpaper, UIImage?)) in
+        |> map { accentColor, backgroundColors, messagesColors -> (PresentationTheme, (TelegramWallpaper, UIImage?), UIColor) in
             var wallpaper = context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
             var wallpaperImage: UIImage?
             if let backgroundColors = backgroundColors {
                 if let bottomColor = backgroundColors.1 {
-                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb))
+                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
                     wallpaperImage = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
                 } else {
                     wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
@@ -262,13 +267,20 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
             
             let serviceBackgroundColor = serviceColor(for: (wallpaper, wallpaperImage))
-            let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+            let updatedTheme: PresentationTheme
+            if let themeReference = mode.themeReference {
+                updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+            } else if case let .edit(theme, _, _, _) = mode {
+                updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors)
+            } else {
+                updatedTheme = theme
+            }
+        
+            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: updatedTheme, wallpaper: wallpaper)
             
-            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper)
-            
-            return (theme, (wallpaper, wallpaperImage))
+            return (updatedTheme, (wallpaper, wallpaperImage), serviceBackgroundColor)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaperAndImage in
+        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaperAndImage, serviceBackgroundColor in
             guard let strongSelf = self else {
                 return
             }
@@ -277,6 +289,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.theme = theme
             strongSelf.themeUpdated?(theme)
             strongSelf.themePromise.set(.single(theme))
+            strongSelf.serviceBackgroundColor = serviceBackgroundColor
             
             strongSelf.colorPanelNode.updateTheme(theme)
             strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
@@ -302,7 +315,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.serviceColorDisposable = (self.themePromise.get()
         |> mapToSignal { theme -> Signal<UIColor, NoError> in
-            return chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
+            return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
         }
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
@@ -377,7 +390,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         secondColor = nil
                     }
                 case .messages:
-                    defaultColor = self.state.accentColor ?? .blue
+                    defaultColor = self.state.defaultMessagesColor ?? (self.state.accentColor ?? UIColor(rgb: 0x007e55))
                     if let messagesColors = self.state.messagesColors {
                         firstColor = messagesColors.0
                         secondColor = messagesColors.1

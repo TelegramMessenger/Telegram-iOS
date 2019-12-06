@@ -7,6 +7,7 @@ import SyncCore
 enum WallpaperPreviewMediaContent: Equatable {
     case file(TelegramMediaFile, UIColor?, Bool, Bool)
     case color(UIColor)
+    case gradient(UIColor, UIColor)
 }
 
 final class WallpaperPreviewMedia: Media {

@@ -278,12 +278,22 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (image, flags)
                     }
                 } else if let type = webpage.type {
-                    if type == "telegram_backgroud" {
-                        if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
-                            let colorCode = String(text[colorCodeRange.upperBound...])
-                            if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
-                                let media = WallpaperPreviewMedia(content: .color(color))
-                                mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                    if type == "telegram_background" {
+                        if let text = webpage.text {
+                            let colorCodeRange = text.range(of: "#")
+                            if colorCodeRange != nil {
+                                let components = text.replacingOccurrences(of: "#", with: "").components(separatedBy: "-")
+                                if components.count == 2, let topColorCode = components.first, let bottomColorCode = components.last {
+                                    if let topColor = UIColor(hexString: topColorCode), let bottomColor = UIColor(hexString: bottomColorCode) {
+                                        let media = WallpaperPreviewMedia(content: .gradient(topColor, bottomColor))
+                                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                                    }
+                                } else if components.count == 1, let colorCode = components.first {
+                                    if let color = UIColor(hexString: colorCode) {
+                                        let media = WallpaperPreviewMedia(content: .color(color))
+                                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                                    }
+                                }
                             }
                         }
                     } else if type == "telegram_theme" {

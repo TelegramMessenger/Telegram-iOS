@@ -39,7 +39,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     case builtin(WallpaperSettings)
     case color(Int32)
-    case gradient(Int32, Int32)
+    case gradient(Int32, Int32, WallpaperSettings)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(id: Int64, accessHash: Int64, isCreator: Bool, isDefault: Bool, isPattern: Bool, isDark: Bool, slug: String, file: TelegramMediaFile, settings: WallpaperSettings)
     
@@ -61,7 +61,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                     self = .color(0xffffff)
                 }
             case 4:
-                self = .gradient(decoder.decodeInt32ForKey("c1", orElse: 0), decoder.decodeInt32ForKey("c2", orElse: 0))
+                 let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
+                self = .gradient(decoder.decodeInt32ForKey("c1", orElse: 0), decoder.decodeInt32ForKey("c2", orElse: 0), settings)
             default:
                 assertionFailure()
                 self = .color(0xffffff)
@@ -85,10 +86,11 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
             case let .color(color):
                 encoder.encodeInt32(1, forKey: "v")
                 encoder.encodeInt32(color, forKey: "c")
-            case let .gradient(topColor, bottomColor):
+            case let .gradient(topColor, bottomColor, settings):
                 encoder.encodeInt32(4, forKey: "v")
                 encoder.encodeInt32(topColor, forKey: "c1")
                 encoder.encodeInt32(bottomColor, forKey: "c2")
+                encoder.encodeObject(settings, forKey: "settings")
             case let .image(representations, settings):
                 encoder.encodeInt32(2, forKey: "v")
                 encoder.encodeObjectArray(representations, forKey: "i")
@@ -121,8 +123,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 } else {
                     return false
                 }
-            case let .gradient(topColor, bottomColor):
-                if case .gradient(topColor, bottomColor) = rhs {
+            case let .gradient(topColor, bottomColor, settings):
+                if case .gradient(topColor, bottomColor, settings) = rhs {
                     return true
                 } else {
                     return false
@@ -144,7 +146,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public var settings: WallpaperSettings? {
         switch self {
-            case let .builtin(settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
+            case let .builtin(settings), let .gradient(_, _, settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
                 return settings
             default:
                 return nil
@@ -157,8 +159,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 return .builtin(settings)
             case .color:
                 return self
-            case .gradient:
-                return self
+            case let .gradient(topColor, bottomColor, _):
+                return .gradient(topColor, bottomColor, settings)
             case let .image(representations, _):
                 return .image(representations, settings)
             case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):

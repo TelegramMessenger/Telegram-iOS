@@ -646,7 +646,7 @@ private func preparedContactListNodeTransition(account: Account, presentationDat
     
     var scrollToItem: ListViewScrollToItem?
     if firstTime && shouldFixScroll && toEntries.count >= 1 {
-        scrollToItem = ListViewScrollToItem(index: 0, position: .top(-50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+        scrollToItem = ListViewScrollToItem(index: 0, position: .top(-46.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
     }
     
     return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, scrollToItem: scrollToItem, animation: animation)

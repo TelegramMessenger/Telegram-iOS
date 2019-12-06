@@ -240,9 +240,9 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-        let effectiveBubbleColors = themeSettings.themeSpecificBubbleColors[effectiveTheme.index]?.colors
+        let effectiveBubbleColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.customBubbleColors
         
-        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors) ?? defaultPresentationTheme
         let effectiveChatWallpaper: TelegramWallpaper = themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] ?? theme.chat.defaultWallpaper
         
         let dateTimeFormat = currentDateTimeFormat()
@@ -387,7 +387,7 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
             return serviceColor(with: UIColor(rgb: UInt32(bitPattern: color)))
-        case let .gradient(topColor, bottomColor):
+        case let .gradient(topColor, bottomColor, _):
             let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
             return serviceColor(with: mixedColor)
         case .image:
@@ -432,7 +432,7 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
             return .single(UIColor(rgb: 0x748391, alpha: 0.45))
         case let .color(color):
             return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
-        case let .gradient(topColor, bottomColor):
+        case let .gradient(topColor, bottomColor, _):
             let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
             return .single(serviceColor(with: mixedColor))
         case let .image(representations, _):
@@ -497,7 +497,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index] {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, bubbleColors: nil) ?? defaultPresentationTheme
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
@@ -524,7 +524,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         }
                         
                         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-                        let effectiveBubbleColors = themeSettings.themeSpecificBubbleColors[effectiveTheme.index]?.colors
+                        let effectiveBubbleColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.customBubbleColors
                         
                         let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         

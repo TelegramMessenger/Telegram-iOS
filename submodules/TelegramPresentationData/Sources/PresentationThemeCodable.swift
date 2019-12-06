@@ -43,14 +43,22 @@ extension TelegramWallpaper: Codable {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
                         let components = value.components(separatedBy: " ")
-                        if components.count == 2 && [6,7].contains(components[0].count) && [6,7].contains(components[1].count), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
-                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb))
+                        var blur = false
+                        var motion = false
+                        if components.contains("motion") {
+                            motion = true
+                        }
+                        if components.contains("blur") {
+                            blur = true
+                        }
+                        
+                        if components.count >= 2 && components.count <= 4 && [6,7].contains(components[0].count) && !["motion", "blur"].contains(components[0]) && [6,7].contains(components[1].count) && !["motion", "blur"].contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
                         } else {
                             var slug: String?
                             var color: Int32?
                             var intensity: Int32?
-                            var blur = false
-                            var motion = false
+
                             if !components.isEmpty {
                                 slug = components[0]
                             }
@@ -63,12 +71,6 @@ extension TelegramWallpaper: Codable {
                                 } else {
                                     intensity = 50
                                 }
-                            }
-                            if components.contains("motion") {
-                                motion = true
-                            }
-                            if components.contains("blur") {
-                                blur = true
                             }
                             if let slug = slug {
                                 self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
@@ -90,8 +92,17 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(topColor, bottomColor):
-                try container.encode(String(format: "%06x", topColor) + " " + String(format: "%06x", bottomColor))
+            case let .gradient(topColor, bottomColor, settings):
+                var components: [String] = []
+                components.append(String(format: "%06x", topColor))
+                components.append(String(format: "%06x", bottomColor))
+                if settings.motion {
+                    components.append("motion")
+                }
+                if settings.blur {
+                    components.append("blur")
+                }
+                try container.encode(components.joined(separator: " "))
             case let .file(file):
                 var components: [String] = []
                 components.append(file.slug)
@@ -1622,7 +1633,7 @@ extension PresentationBuiltinThemeReference: Codable {
                     self = .day
                 case "classic":
                     self = .dayClassic
-                case "nightTinted":
+                case "nighttinted":
                     self = .nightAccent
                 case "night":
                     self = .night
@@ -1642,7 +1653,7 @@ extension PresentationBuiltinThemeReference: Codable {
             case .dayClassic:
                 try container.encode("classic")
             case .nightAccent:
-                try container.encode("nightTinted")
+                try container.encode("nighttinted")
             case .night:
                 try container.encode("night")
         }
@@ -1675,8 +1686,8 @@ extension PresentationTheme: Codable {
         }
         
         if let decoder = decoder as? PresentationThemeDecoding {
-            let serviceBackgroundColor = decoder.serviceBackgroundColor ?? .black
-            decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: serviceBackgroundColor)
+            let serviceBackgroundColor = decoder.serviceBackgroundColor ?? defaultServiceBackgroundColor
+            decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, serviceBackgroundColor: serviceBackgroundColor)
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),

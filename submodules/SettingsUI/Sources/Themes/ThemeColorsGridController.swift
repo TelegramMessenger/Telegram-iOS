@@ -143,7 +143,8 @@ final class ThemeColorsGridController: ViewController {
                         themeReference = settings.theme
                     }
                     
-                    let controller = ThemeAccentColorController(context: strongSelf.context, themeReference: themeReference, section: .background)
+                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
+                    controller.navigationPresentation = .modalInLargeLayout
                     controller.completion = { [weak self] in
                         if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                             let _ = navigationController.popViewController(animated: true)

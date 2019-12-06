@@ -347,82 +347,91 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     }
 }
 
-public struct PresentationThemeColorPair: PostboxCoding, Equatable {
-    public var color: Int32
-    public var optionalColor: Int32?
-    
-    public init(color: Int32, optionalColor: Int32?) {
-         self.color = color
-         self.optionalColor = optionalColor
-     }
-     
-     public init(decoder: PostboxDecoder) {
-        self.color = decoder.decodeInt32ForKey("t", orElse: 0)
-        self.optionalColor = decoder.decodeOptionalInt32ForKey("b")
-     }
-     
-     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.color, forKey: "t")
-        if let bottomColor = self.optionalColor {
-            encoder.encodeInt32(bottomColor, forKey: "b")
-        } else {
-            encoder.encodeNil(forKey: "b")
-        }
-     }
-     
-     public var colors: (UIColor, UIColor?) {
-        if let bottomColor = self.optionalColor {
-            return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
-        } else {
-            return (UIColor(rgb: UInt32(bitPattern: self.color)), nil)
-        }
-     }
-    
-    public var plainColors: (UIColor, UIColor) {
-       if let bottomColor = self.optionalColor {
-           return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
-       } else {
-           return (UIColor(rgb: UInt32(bitPattern: self.color)), UIColor(rgb: UInt32(bitPattern: self.color)))
-       }
-    }
-}
-
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
-    public var baseColor: PresentationThemeBaseColor
-    public var value: Int32?
+    public static func == (lhs: PresentationThemeAccentColor, rhs: PresentationThemeAccentColor) -> Bool {
+        return lhs.baseColor == rhs.baseColor && lhs.accentColor == rhs.accentColor && lhs.bubbleColors?.0 == rhs.bubbleColors?.0 && lhs.bubbleColors?.1 == rhs.bubbleColors?.1
+    }
     
-    public init(baseColor: PresentationThemeBaseColor, value: Int32? = nil) {
+    public var baseColor: PresentationThemeBaseColor
+    public var accentColor: Int32?
+    public var bubbleColors: (Int32, Int32?)?
+    
+    public init(baseColor: PresentationThemeBaseColor, accentColor: Int32? = nil, bubbleColors: (Int32, Int32?)? = nil) {
         self.baseColor = baseColor
-        self.value = value
+        self.accentColor = accentColor
+        self.bubbleColors = bubbleColors
     }
     
     public init(decoder: PostboxDecoder) {
         self.baseColor = PresentationThemeBaseColor(rawValue: decoder.decodeInt32ForKey("b", orElse: 0)) ?? .blue
-        self.value = decoder.decodeOptionalInt32ForKey("c")
+        self.accentColor = decoder.decodeOptionalInt32ForKey("c")
+        if let bubbleTopColor = decoder.decodeOptionalInt32ForKey("bt") {
+            if let bubbleBottomColor = decoder.decodeOptionalInt32ForKey("bb") {
+                self.bubbleColors = (bubbleTopColor, bubbleBottomColor)
+            } else {
+                self.bubbleColors = (bubbleTopColor, nil)
+            }
+        } else {
+            self.bubbleColors = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.baseColor.rawValue, forKey: "b")
-        if let value = self.value {
+        if let value = self.accentColor {
             encoder.encodeInt32(value, forKey: "c")
         } else {
             encoder.encodeNil(forKey: "c")
         }
+        if let bubbleColors = self.bubbleColors {
+            encoder.encodeInt32(bubbleColors.0, forKey: "bt")
+            if let bubbleBottomColor = bubbleColors.1 {
+                encoder.encodeInt32(bubbleBottomColor, forKey: "bb")
+            } else {
+                encoder.encodeNil(forKey: "bb")
+            }
+        } else {
+            encoder.encodeNil(forKey: "bt")
+            encoder.encodeNil(forKey: "bb")
+        }
     }
     
     public var color: UIColor {
-        if let value = self.value {
+        if let value = self.accentColor {
             return UIColor(rgb: UInt32(bitPattern: value))
         } else {
             return self.baseColor.color
         }
+    }
+    
+    public var customBubbleColors: (UIColor, UIColor?)? {
+        if let bubbleColors = self.bubbleColors {
+            if let bottomColor = bubbleColors.1 {
+                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+            } else {
+                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), nil)
+            }
+       } else {
+            return nil
+       }
+    }
+    
+    public var plainBubbleColors: (UIColor, UIColor)? {
+        if let bubbleColors = self.bubbleColors {
+            if let bottomColor = bubbleColors.1 {
+                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+            } else {
+                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bubbleColors.0)))
+            }
+       } else {
+            return nil
+       }
     }
 }
 
 public struct PresentationThemeSettings: PreferencesEntry {
     public var theme: PresentationThemeReference
     public var themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
-    public var themeSpecificBubbleColors: [Int64: PresentationThemeColorPair]
     public var themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
     public var useSystemFont: Bool
     public var fontSize: PresentationFontSize
@@ -466,13 +475,12 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificBubbleColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, disableAnimations: true)
+        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, disableAnimations: true)
     }
     
-    public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificBubbleColors: [Int64: PresentationThemeColorPair], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
+    public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
         self.theme = theme
         self.themeSpecificAccentColors = themeSpecificAccentColors
-        self.themeSpecificBubbleColors = themeSpecificBubbleColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
         self.useSystemFont = useSystemFont
         self.fontSize = fontSize
@@ -496,12 +504,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
             return PresentationThemeAccentColor(decoder: decoder)
         })
         
-        self.themeSpecificBubbleColors = decoder.decodeObjectDictionaryForKey("themeSpecificBubbleColors", keyDecoder: { decoder in
-            return decoder.decodeInt64ForKey("k", orElse: 0)
-        }, valueDecoder: { decoder in
-            return PresentationThemeColorPair(decoder: decoder)
-        })
-                
         self.useSystemFont = decoder.decodeInt32ForKey("useSystemFont", orElse: 1) != 0
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night))
@@ -512,9 +514,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.theme, forKey: "t")
         encoder.encodeObjectDictionary(self.themeSpecificAccentColors, forKey: "themeSpecificAccentColors", keyEncoder: { key, encoder in
-            encoder.encodeInt64(key, forKey: "k")
-        })
-        encoder.encodeObjectDictionary(self.themeSpecificBubbleColors, forKey: "themeSpecificBubbleColors", keyEncoder: { key, encoder in
             encoder.encodeInt64(key, forKey: "k")
         })
         encoder.encodeObjectDictionary(self.themeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers", keyEncoder: { key, encoder in
@@ -536,7 +535,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificBubbleColors == rhs.themeSpecificBubbleColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

@@ -241,9 +241,10 @@ public final class OngoingCallContext {
         }))
     }
     
-    public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false) {
+    public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
         self.withContext { context in
             context.stop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+                debugLogValue.set(.single(debugLog))
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
                         incoming: bytesReceivedMobile,
@@ -254,7 +255,7 @@ public final class OngoingCallContext {
                 updateAccountNetworkUsageStats(account: self.account, category: .call, delta: delta)
                 
                 if let callId = callId, let debugLog = debugLog, sendDebugLogs {
-                    let _ = saveCallDebugLog(account: self.account, callId: callId, log: debugLog).start()
+                    let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: debugLog).start()
                 }
             }
             let derivedState = context.getDerivedState()

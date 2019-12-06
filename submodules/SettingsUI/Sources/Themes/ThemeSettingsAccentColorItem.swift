@@ -10,7 +10,7 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 
-private func generateSwatchImage(theme: PresentationTheme, color: PresentationThemeAccentColor, selected: Bool) -> UIImage? {
+private func generateSwatchImage(theme: PresentationTheme, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
@@ -33,8 +33,33 @@ private func generateSwatchImage(theme: PresentationTheme, color: PresentationTh
         context.setLineWidth(2.0)
         
         if selected {
-            context.fillEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
+            context.saveGState()
+            context.addEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
+            context.clip()
+    
+            if let colors = bubbles {
+                var colors: (UIColor, UIColor) = (colors.0, colors.1 ?? colors.0)
+                
+                let gradientColors = [colors.0.cgColor, colors.1.cgColor] as CFArray
+                var locations: [CGFloat] = [0.0, 1.0]
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                
+                context.fill(CGRect(x: 0.0, y: 0.0, width: size.width / 2.0, height: size.height))
+            } else {
+                context.fill(bounds)
+            }
+            
+            context.restoreGState()
             context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
+            
+            context.setFillColor(UIColor.white.cgColor)
+            let dotSize = CGSize(width: 4.0, height: 4.0)
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 11.0, y: 18.0), size: dotSize))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 18.0, y: 18.0), size: dotSize))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 25.0, y: 18.0), size: dotSize))
         } else {
             context.fillEllipse(in: bounds)
         }
@@ -139,8 +164,8 @@ private final class ThemeSettingsAccentColorNode : ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    func setup(theme: PresentationTheme, color: PresentationThemeAccentColor, selected: Bool, action: @escaping () -> Void) {
-        self.iconNode.image = generateSwatchImage(theme: theme, color: color, selected: selected)
+    func setup(theme: PresentationTheme, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool, action: @escaping () -> Void) {
+        self.iconNode.image = generateSwatchImage(theme: theme, color: color, bubbles: bubbles, selected: selected)
         self.action = {
             action()
         }
@@ -331,9 +356,13 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             accentColor = PresentationThemeAccentColor(baseColor: color)
                         }
-                        
-                        imageNode.setup(theme: item.theme, color: accentColor, selected: selected, action: { [weak self, weak imageNode] in
-                            item.updated(accentColor)
+                                                
+                        imageNode.setup(theme: item.theme, color: accentColor, bubbles: accentColor.customBubbleColors, selected: selected, action: { [weak self, weak imageNode] in
+                            if selected {
+                                item.openColorPicker()
+                            } else {
+                                item.updated(accentColor)
+                            }
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
                             }

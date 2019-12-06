@@ -502,6 +502,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     }
     
     func updateState(_ f: (WallpaperColorPanelNodeState) -> WallpaperColorPanelNodeState, updateLayout: Bool = true, animated: Bool = true) {
+        var updateLayout = updateLayout
         let previousFirstColor = self.state.firstColor
         let previousSecondColor = self.state.secondColor
         self.state = f(self.state)
@@ -525,6 +526,12 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.firstColorFieldNode.setColor(firstColor, isDefault: self.state.firstColor == nil, update: false)
         if let secondColor = secondColor {
             self.secondColorFieldNode.setColor(secondColor, update: false)
+        }
+        
+        var firstColorWasRemovable = self.firstColorFieldNode.isRemovable
+        self.firstColorFieldNode.isRemovable = self.state.secondColor != nil || (self.state.defaultColor != nil && self.state.firstColor != nil)
+        if firstColorWasRemovable != self.firstColorFieldNode.isRemovable {
+            updateLayout = true
         }
         
         if updateLayout, let size = self.validLayout {
