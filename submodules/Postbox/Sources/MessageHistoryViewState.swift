@@ -321,17 +321,6 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
             }
         }
         
-        for item in items.lowerOrAtAnchor {
-            if item.index.id.id == 76891 {
-                assert(true)
-            }
-        }
-        for item in items.higherThanAnchor {
-            if item.index.id.id == 76891 {
-                assert(true)
-            }
-        }
-        
         var lowerOrAtAnchorHole: (distanceFromAnchor: Int, hole: SampledHistoryViewHole)?
         
         for i in (-1 ..< items.lowerOrAtAnchor.count).reversed() {
@@ -500,103 +489,6 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                 sampledHole = (chosenHole.distanceFromAnchor, chosenHole.hole)
             }
         }
-        
-        /*let anchorIndex = binaryIndexOrLower(items.entries, anchor)
-        let anchorStartingMessageId: MessageId.Id
-        if anchorIndex == -1 {
-            anchorStartingMessageId = 1
-        } else {
-            anchorStartingMessageId = items.entries[anchorIndex].index.id.id
-        }
-        
-        let startingLowerDirectionIndex = anchorIndex
-        let startingHigherDirectionIndex = anchorIndex + 1
-        
-        var lowerDirectionIndex = startingLowerDirectionIndex
-        var higherDirectionIndex = startingHigherDirectionIndex
-        while lowerDirectionIndex >= 0 || higherDirectionIndex < items.entries.count {
-            if lowerDirectionIndex >= 0 {
-                let itemIndex = items.entries[lowerDirectionIndex].index
-                var itemBoundaryMessageId: MessageId.Id = itemIndex.id.id
-                if lowerDirectionIndex == 0 && itemBoundaryMessageId == bounds.lower.id.id {
-                    itemBoundaryMessageId = 1
-                }
-                let previousBoundaryIndex: MessageIndex
-                if lowerDirectionIndex == startingLowerDirectionIndex {
-                    previousBoundaryIndex = itemIndex
-                } else {
-                    previousBoundaryIndex = items.entries[lowerDirectionIndex + 1].index
-                }
-                let toLowerRange: ClosedRange<Int> = min(Int(anchorStartingMessageId), Int(itemBoundaryMessageId)) ... max(Int(anchorStartingMessageId), Int(itemBoundaryMessageId))
-                if indices.intersects(integersIn: toLowerRange) {
-                    var itemClipIndex: MessageIndex
-                    if indices.contains(Int(previousBoundaryIndex.id.id)) {
-                        itemClipIndex = previousBoundaryIndex
-                    } else {
-                        itemClipIndex = previousBoundaryIndex.predecessor()
-                    }
-                    clipRanges.append(MessageIndex.absoluteLowerBound() ... itemClipIndex)
-                    var replaceHole = false
-                    if let (currentItemIndex, _) = sampledHole {
-                        if let currentItemIndex = currentItemIndex, abs(lowerDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
-                            replaceHole = true
-                        }
-                    } else {
-                        replaceHole = true
-                    }
-                    
-                    if replaceHole {
-                        if let idInHole = indices.integerLessThanOrEqualTo(toLowerRange.upperBound) {
-                            sampledHole = (lowerDirectionIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: 1))
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                    lowerDirectionIndex = -1
-                }
-            }
-            lowerDirectionIndex -= 1
-            
-            if higherDirectionIndex < items.entries.count {
-                let itemIndex = items.entries[higherDirectionIndex].index
-                var itemBoundaryMessageId: MessageId.Id = itemIndex.id.id
-                if higherDirectionIndex == items.entries.count - 1 && itemBoundaryMessageId == bounds.upper.id.id {
-                    itemBoundaryMessageId = Int32.max - 1
-                }
-                let previousBoundaryIndex: MessageIndex
-                if higherDirectionIndex == startingHigherDirectionIndex {
-                    previousBoundaryIndex = itemIndex
-                } else {
-                    previousBoundaryIndex = items.entries[higherDirectionIndex - 1].index
-                }
-                let toHigherRange: ClosedRange<Int> = min(Int(anchorStartingMessageId), Int(itemBoundaryMessageId)) ... max(Int(anchorStartingMessageId), Int(itemBoundaryMessageId))
-                if indices.intersects(integersIn: toHigherRange) {
-                    var itemClipIndex: MessageIndex
-                    if indices.contains(Int(previousBoundaryIndex.id.id)) {
-                        itemClipIndex = previousBoundaryIndex
-                    } else {
-                        itemClipIndex = previousBoundaryIndex.successor()
-                    }
-                    clipRanges.append(itemClipIndex ... MessageIndex.absoluteUpperBound())
-                    var replaceHole = false
-                    if let (currentItemIndex, _) = sampledHole {
-                        if let currentItemIndex = currentItemIndex, abs(higherDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
-                            replaceHole = true
-                        }
-                    } else {
-                        replaceHole = true
-                    }
-                    
-                    if replaceHole {
-                        if let idInHole = indices.integerGreaterThanOrEqualTo(toHigherRange.lowerBound) {
-                            sampledHole = (higherDirectionIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: Int32.max - 1))
-                        }
-                    }
-                    higherDirectionIndex = items.entries.count
-                }
-            }
-            higherDirectionIndex += 1
-        }*/
     }
     return (clipRanges, sampledHole?.hole)
 }

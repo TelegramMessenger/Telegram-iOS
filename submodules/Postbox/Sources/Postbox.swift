@@ -2231,7 +2231,7 @@ public final class Postbox {
         }
     }
     
-    private func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewPeerIds {
+    func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewPeerIds {
         var peerIds: MessageHistoryViewPeerIds
         switch chatLocation {
             case let .peer(peerId):

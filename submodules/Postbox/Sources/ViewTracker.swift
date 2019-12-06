@@ -458,14 +458,14 @@ final class ViewTracker {
     private func updateTrackedHoles() {
         var firstHolesAndTags = Set<MessageHistoryHolesViewEntry>()
         for (view, _) in self.messageHistoryViews.copyItems() {
-            if let (hole, direction) = view.firstHole() {
+            if let (hole, direction, count) = view.firstHole() {
                 let space: MessageHistoryHoleSpace
                 if let tag = view.tag {
                     space = .tag(tag)
                 } else {
                     space = .everywhere
                 }
-                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space))
+                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space, count: count))
             }
         }
         

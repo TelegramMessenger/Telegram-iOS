@@ -14,7 +14,7 @@ import TemporaryCachedPeerDataManager
 import ChatListSearchItemNode
 import Emoji
 
-private let historyMessageCount: Int = 100
+private let historyMessageCount: Int = 90
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
