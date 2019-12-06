@@ -1387,7 +1387,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            if previousMessage.globalTags != message.globalTags || (previousMessage.index != message.index && (!previousMessage.globalTags.isEmpty || !message.globalTags.isEmpty)) {
+            if !previousMessage.globalTags.isEmpty || !message.globalTags.isEmpty {
                 if !previousMessage.globalTags.isEmpty {
                     for tag in previousMessage.globalTags {
                         self.globalTagsTable.remove(tag, index: index)
