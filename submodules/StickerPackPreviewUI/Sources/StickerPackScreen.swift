@@ -639,8 +639,12 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             }
         case .ended, .cancelled:
             let translation = recognizer.translation(in: self.view)
+            let velocity = recognizer.velocity(in: self.view)
             if abs(translation.x) > 30.0 {
                 let deltaIndex = translation.x > 0 ? -1 : 1
+                self.selectedStickerPackIndex = max(0, min(self.containers.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
+            } else if abs(velocity.x) > 100.0 {
+                let deltaIndex = velocity.x > 0 ? -1 : 1
                 self.selectedStickerPackIndex = max(0, min(self.containers.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
             }
             self.relativeToSelectedStickerPackTransition = 0.0
