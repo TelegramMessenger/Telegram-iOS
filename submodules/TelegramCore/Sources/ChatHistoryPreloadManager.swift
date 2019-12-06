@@ -319,9 +319,9 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self else {
                 return
             }
-            #if DEBUG
+            /*#if DEBUG
             return
-            #endif
+            #endif*/
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for entry in view.0.entries {

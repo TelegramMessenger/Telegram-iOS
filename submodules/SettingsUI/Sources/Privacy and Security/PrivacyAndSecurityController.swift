@@ -293,7 +293,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openTwoStepVerification(data)
                 })
             case let .activeSessions(theme, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
                 })
             case let .accountHeader(theme, text):
