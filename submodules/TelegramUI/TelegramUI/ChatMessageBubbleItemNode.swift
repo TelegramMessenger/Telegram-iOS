@@ -31,7 +31,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     
     outer: for message in item.content {
         for attribute in message.attributes {
-            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios") != nil {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                 result.append((message, ChatMessageRestrictedBubbleContentNode.self))
                 break outer
             }
@@ -375,7 +375,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.view.addGestureRecognizer(recognizer)
         self.view.isExclusiveTouch = true
         
-        if false {
+        if true {
             let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
             replyRecognizer.shouldBegin = { [weak self] in
                 if let strongSelf = self, let item = strongSelf.item {

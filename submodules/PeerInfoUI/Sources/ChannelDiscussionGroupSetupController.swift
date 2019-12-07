@@ -17,13 +17,13 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
-    let account: Account
+    let context: AccountContext
     let createGroup: () -> Void
     let selectGroup: (PeerId) -> Void
     let unlinkGroup: () -> Void
     
-    init(account: Account, createGroup: @escaping () -> Void, selectGroup: @escaping (PeerId) -> Void, unlinkGroup: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, createGroup: @escaping () -> Void, selectGroup: @escaping (PeerId) -> Void, unlinkGroup: @escaping () -> Void) {
+        self.context = context
         self.createGroup = createGroup
         self.selectGroup = selectGroup
         self.unlinkGroup = unlinkGroup
@@ -144,7 +144,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = strings.Channel_DiscussionGroup_PrivateGroup
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, account: arguments.account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .groupsInfo(theme, title):
@@ -237,7 +237,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     let applyGroupDisposable = MetaDisposable()
     actionsDisposable.add(applyGroupDisposable)
     
-    let arguments = ChannelDiscussionGroupSetupControllerArguments(account: context.account, createGroup: {
+    let arguments = ChannelDiscussionGroupSetupControllerArguments(context: context, createGroup: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             transaction.getPeer(peerId)
         }

@@ -15,6 +15,7 @@ static_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/LocationResources:LocationResources",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

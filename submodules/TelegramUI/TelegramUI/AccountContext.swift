@@ -127,10 +127,17 @@ public final class AccountContextImpl: AccountContext {
         return self._limitsConfiguration.get()
     }
     
+    public var currentContentSettings: Atomic<ContentSettings>
+    private let _contentSettings = Promise<ContentSettings>()
+    public var contentSettings: Signal<ContentSettings, NoError> {
+        return self._contentSettings.get()
+    }
+    
     public var watchManager: WatchManager?
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     private var limitsConfigurationDisposable: Disposable?
+    private var contentSettingsDisposable: Disposable?
     
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
@@ -158,7 +165,7 @@ public final class AccountContextImpl: AccountContext {
         |> distinctUntilChanged
     }
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration) {
+    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings) {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.tonContext = tonContext
@@ -195,6 +202,16 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentLimitsConfiguration.swap(value)
         })
         
+        let updatedContentSettings = getContentSettings(postbox: account.postbox)
+        self.currentContentSettings = Atomic(value: contentSettings)
+        self._contentSettings.set(.single(contentSettings) |> then(updatedContentSettings))
+        
+        let currentContentSettings = self.currentContentSettings
+        self.contentSettingsDisposable = (self._contentSettings.get()
+        |> deliverOnMainQueue).start(next: { value in
+            let _ = currentContentSettings.swap(value)
+        })
+        
         let queue = Queue()
         self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {
             return DeviceSpecificContactImportContexts(queue: queue)
@@ -214,6 +231,7 @@ public final class AccountContextImpl: AccountContext {
     deinit {
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()
+        self.contentSettingsDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

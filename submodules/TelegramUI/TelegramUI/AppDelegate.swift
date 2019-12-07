@@ -961,7 +961,7 @@ final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
                 }
@@ -974,11 +974,12 @@ final class SharedApplicationContext {
                     }
                     return result
                 }
-                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
                     if let account = account {
-                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings)? in
+                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings, ContentSettings)? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings)
+                            let contentSettings = getContentSettings(transaction: transaction)
+                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings, contentSettings)
                         }
                     } else {
                         return .single(nil)
@@ -987,9 +988,9 @@ final class SharedApplicationContext {
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings in
                     let tonContext = StoredTonContext(basePath: account.basePath, postbox: account.postbox, network: account.network, keychain: tonKeychain)
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)

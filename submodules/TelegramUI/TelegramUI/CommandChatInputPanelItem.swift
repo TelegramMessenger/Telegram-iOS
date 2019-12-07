@@ -8,17 +8,18 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AvatarNode
+import AccountContext
 
 final class CommandChatInputPanelItem: ListViewItem {
-    fileprivate let account: Account
+    fileprivate let context: AccountContext
     fileprivate let theme: PresentationTheme
     fileprivate let command: PeerCommand
     fileprivate let commandSelected: (PeerCommand, Bool) -> Void
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
+        self.context = context
         self.theme = theme
         self.command = command
         self.commandSelected = commandSelected
@@ -160,7 +161,7 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.arrowNode.setImage(iconImage, for: [])
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

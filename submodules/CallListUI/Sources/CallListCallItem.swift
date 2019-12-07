@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
+import AccountContext
 
 private func callDurationString(strings: PresentationStrings, duration: Int32) -> String {
     if duration < 60 {
@@ -65,7 +66,7 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
 class CallListCallItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
-    let account: Account
+    let context: AccountContext
     let style: ItemListStyle
     let topMessage: Message
     let messages: [Message]
@@ -77,10 +78,10 @@ class CallListCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, account: Account, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: Message, messages: [Message], editing: Bool, revealed: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
-        self.account = account
+        self.context = context
         self.style = style
         self.topMessage = topMessage
         self.messages = messages
@@ -187,7 +188,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     
     private let accessibilityArea: AccessibilityAreaNode
     
-    private var avatarState: (Account, Peer?)?
     private var layoutParams: (CallListCallItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     
     required init() {
@@ -452,7 +452,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                         if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in

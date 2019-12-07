@@ -34,8 +34,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> ListViewItem {
-        return CommandChatInputPanelItem(account: account, theme: self.theme, command: self.command, commandSelected: commandSelected)
+    func item(context: AccountContext, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> ListViewItem {
+        return CommandChatInputPanelItem(context: context, theme: self.theme, command: self.command, commandSelected: commandSelected)
     }
 }
 
@@ -45,12 +45,12 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], account: Account, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], context: AccountContext, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, commandSelected: commandSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, commandSelected: commandSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, commandSelected: commandSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, commandSelected: commandSelected), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -96,7 +96,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func prepareTransition(from: [CommandChatInputContextPanelEntry]? , to: [CommandChatInputContextPanelEntry]) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, commandSelected: { [weak self] command, sendImmediately in
+        let transition = preparedTransition(from: from ?? [], to: to, context: self.context, commandSelected: { [weak self] command, sendImmediately in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 if sendImmediately {
                     interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)

@@ -21,6 +21,7 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -11,6 +11,7 @@ import MergeLists
 import HorizontalPeerItem
 import ListSectionHeaderNode
 import ContextUI
+import AccountContext
 
 private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
     let itemInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 6.0)
@@ -78,8 +79,8 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool) -> ListViewItem {
-        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, account: account, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, contextAction: { peer, node, gesture in
+    func item(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool) -> ListViewItem {
+        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, context: context, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, contextAction: { peer, node, gesture in
             peerContextAction(peer, node, gesture)
         }, isPeerSelected: isPeerSelected, customWidth: self.itemCustomWidth)
     }
@@ -93,12 +94,12 @@ private struct ChatListSearchRecentNodeTransition {
     let animated: Bool
 }
 
-private func preparedRecentPeersTransition(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
+private func preparedRecentPeersTransition(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: .Down) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: .Down) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: nil) }
     
     return ChatListSearchRecentNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, animated: animated)
 }
@@ -122,7 +123,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var items: [ListViewItem] = []
     private var queuedTransitions: [ChatListSearchRecentNodeTransition] = []
     
-    public init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
+    public init(context: AccountContext, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
         self.themeAndStringsPromise = Promise((self.theme, self.strings))
@@ -145,7 +146,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let peersDisposable = DisposableSet()
         
-        let recent: Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId : PeerPresence]), NoError> = recentPeers(account: account)
+        let recent: Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId : PeerPresence]), NoError> = recentPeers(account: context.account)
         |> filter { value -> Bool in
             switch value {
                 case .disabled:
@@ -159,8 +160,8 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 case .disabled:
                     return .single(([], [:], [:]))
                 case let .peers(peers):
-                    return combineLatest(queue: .mainQueue(), peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId: PeerPresence]), NoError> in
-                        return account.postbox.unreadMessageCountsView(items: peerViews.map {
+                    return combineLatest(queue: .mainQueue(), peers.filter { !$0.isDeleted }.map {context.account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId: PeerPresence]), NoError> in
+                        return context.account.postbox.unreadMessageCountsView(items: peerViews.map {
                             .peer($0.peerId)
                         })
                         |> map { values in
@@ -208,13 +209,13 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 
                 let animated = !firstTime.swap(false)
                 
-                let transition = preparedRecentPeersTransition(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected, from: previous.swap(entries), to: entries, firstTime: !animated, animated: animated)
+                let transition = preparedRecentPeersTransition(context: context, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected, from: previous.swap(entries), to: entries, firstTime: !animated, animated: animated)
 
                 strongSelf.enqueueTransition(transition)
             }
         }))
         if case .actionSheet = mode {
-            peersDisposable.add(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())
+            peersDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
         }
         self.disposable.set(peersDisposable)
     }

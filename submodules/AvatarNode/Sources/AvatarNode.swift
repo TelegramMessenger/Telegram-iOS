@@ -9,6 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AnimationUI
 import AppBundle
+import AccountContext
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
@@ -282,7 +283,7 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false) {
+    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -306,7 +307,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .deletedIcon
             }
-        } else if peer?.restrictionText(platform: "ios") == nil {
+        } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
@@ -317,7 +318,7 @@ public final class AvatarNode: ASDisplayNode {
             
             let parameters: AvatarNodeParameters
             
-            if let peer = peer, let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
+            if let peer = peer, let signal = peerAvatarImage(account: context.account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.ready)
@@ -336,7 +337,7 @@ public final class AvatarNode: ASDisplayNode {
                     self.editOverlayNode?.isHidden = true
                 }
                 
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
@@ -345,7 +346,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
@@ -520,10 +521,10 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: AvatarNode?) -> (_ account: Account, _ peer: Peer, _ font: UIFont) -> () -> AvatarNode? {
+    static func asyncLayout(_ node: AvatarNode?) -> (_ context: AccountContext, _ peer: Peer, _ font: UIFont) -> () -> AvatarNode? {
         let currentState = node?.state
         let createNode = node == nil
-        return { [weak node] account, peer, font in
+        return { [weak node] context, peer, font in
             let state: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
             if currentState != state {
                 

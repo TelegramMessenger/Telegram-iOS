@@ -14,15 +14,15 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private final class BlockedPeersControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let addPeer: () -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (Peer) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void) {
-        self.account = account
+    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void) {
+        self.context = context
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.addPeer = addPeer
         self.removePeer = removePeer
@@ -129,7 +129,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
                     arguments.addPeer()
                 })
             case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -217,7 +217,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     
     let peersPromise = Promise<[Peer]?>(nil)
     
-    let arguments = BlockedPeersControllerArguments(account: context.account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+    let arguments = BlockedPeersControllerArguments(context: context, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
                 return state.withUpdatedPeerIdWithRevealedOptions(peerId)

@@ -8,9 +8,10 @@ import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
 import ChatListSearchRecentPeersNode
+import AccountContext
 
 final class ShareControllerRecentPeersGridItem: GridItem {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let controllerInteraction: ShareControllerInteraction
@@ -18,8 +19,8 @@ final class ShareControllerRecentPeersGridItem: GridItem {
     let section: GridSection? = nil
     let fillsRowWithHeight: CGFloat? = 130.0
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
@@ -28,7 +29,7 @@ final class ShareControllerRecentPeersGridItem: GridItem {
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ShareControllerRecentPeersGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings)
+        node.setup(context: self.context, theme: self.theme, strings: self.strings)
         return node
     }
     
@@ -38,12 +39,12 @@ final class ShareControllerRecentPeersGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings)
+        node.setup(context: self.context, theme: self.theme, strings: self.strings)
     }
 }
 
 final class ShareControllerRecentPeersGridItemNode: GridItemNode {
-    private var currentState: (Account, PresentationTheme, PresentationStrings)?
+    private var currentState: (AccountContext, PresentationTheme, PresentationStrings)?
     
     var controllerInteraction: ShareControllerInteraction?
     
@@ -53,14 +54,14 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
         super.init()
     }
     
-    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        if self.currentState == nil || self.currentState!.0 !== account {
+    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        if self.currentState == nil || self.currentState!.0 !== context {
             let peersNode: ChatListSearchRecentPeersNode
             if let currentPeersNode = self.peersNode {
                 peersNode = currentPeersNode
                 peersNode.updateThemeAndStrings(theme: theme, strings: strings)
             } else {
-                peersNode = ChatListSearchRecentPeersNode(account: account, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
+                peersNode = ChatListSearchRecentPeersNode(context: context, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
                     self?.controllerInteraction?.togglePeer(RenderedPeer(peer: peer), true)
                 }, peerContextAction: { _, _, gesture in gesture?.cancel() }, isPeerSelected: { [weak self] peerId in
                     return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false
@@ -69,7 +70,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
                 self.addSubnode(peersNode)
             }
             
-            self.currentState = (account, theme, strings)
+            self.currentState = (context, theme, strings)
         }
         self.updateSelection(animated: false)
     }

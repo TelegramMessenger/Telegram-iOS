@@ -728,7 +728,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
-                            let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
+                            let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
                             if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                                 generalMessageContentKind = currentKind
                             } else {
@@ -856,7 +856,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var generalMessageContentKind: MessageContentKind?
                     for message in messages {
-                        let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
+                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
                         if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                             generalMessageContentKind = currentKind
                         } else {

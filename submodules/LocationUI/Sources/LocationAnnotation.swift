@@ -10,6 +10,7 @@ import AvatarNode
 import AppBundle
 import TelegramPresentationData
 import LocationResources
+import AccountContext
 
 let locationPinReuseIdentifier = "locationPin"
 
@@ -28,7 +29,7 @@ private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
 }
 
 class LocationPinAnnotation: NSObject, MKAnnotation {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     var coordinate: CLLocationCoordinate2D
     let location: TelegramMediaMap?
@@ -38,8 +39,8 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     var title: String? = ""
     var subtitle: String? = ""
     
-    init(account: Account, theme: PresentationTheme, peer: Peer) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, peer: Peer) {
+        self.context = context
         self.theme = theme
         self.location = nil
         self.peer = peer
@@ -48,8 +49,8 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(account: Account, theme: PresentationTheme, location: TelegramMediaMap, forcedSelection: Bool = false) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, location: TelegramMediaMap, forcedSelection: Bool = false) {
+        self.context = context
         self.theme = theme
         self.location = location
         self.peer = nil
@@ -180,14 +181,14 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.dotNode.isHidden = true
                     self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
                     
-                    self.setPeer(account: annotation.account, theme: annotation.theme, peer: peer)
+                    self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
                     self.setSelected(true, animated: false)
                 } else if let location = annotation.location {
                     let venueType = annotation.location?.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
                     self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
-                    self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
-                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
+                    self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
+                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
                     self.smallNode.image = generateSmallBackgroundImage(color: color)
                     self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
                     
@@ -388,7 +389,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
     }
     
-    func setPeer(account: Account, theme: PresentationTheme, peer: Peer) {
+    func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer) {
         let avatarNode: AvatarNode
         if let currentAvatarNode = self.avatarNode {
             avatarNode = currentAvatarNode
@@ -401,7 +402,7 @@ class LocationPinAnnotationView: MKAnnotationView {
             self.addSubnode(avatarNode)
         }
         
-        avatarNode.setPeer(account: account, theme: theme, peer: peer)
+        avatarNode.setPeer(context: context, theme: theme, peer: peer)
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -465,7 +466,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     
     func setCustom(_ custom: Bool, animated: Bool) {
         if let annotation = self.annotation as? LocationPinAnnotation {
-            self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: "", background: false))
+            self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: "", background: false))
         }
         
         if let avatarNode = self.avatarNode {

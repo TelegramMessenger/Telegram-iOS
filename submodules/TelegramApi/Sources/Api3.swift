@@ -674,6 +674,40 @@ public struct account {
         }
     
     }
+    public enum ContentSettings: TypeConstructorDescription {
+        case contentSettings(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .contentSettings(let flags):
+                    if boxed {
+                        buffer.appendInt32(1474462241)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contentSettings(let flags):
+                return ("contentSettings", [("flags", flags)])
+    }
+    }
+    
+        public static func parse_contentSettings(_ reader: BufferReader) -> ContentSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.account.ContentSettings.contentSettings(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
@@ -3157,61 +3191,6 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(627641572)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reaction!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.sendReaction", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("reaction", reaction)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getMessagesReactions(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1950707482)
-                    peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(id.count))
-                    for item in id {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "messages.getMessagesReactions", parameters: [("peer", peer), ("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getMessageReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: String?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageReactionsList>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(363935594)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reaction!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(offset!, buffer: buffer, boxed: false)}
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getMessageReactionsList", parameters: [("flags", flags), ("peer", peer), ("id", id), ("reaction", reaction), ("offset", offset), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageReactionsList? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.MessageReactionsList?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.MessageReactionsList
                         }
                         return result
                     })
@@ -5948,6 +5927,34 @@ public extension Api {
                         var result: Api.account.Themes?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.Themes
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setContentSettings(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1250643605)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.setContentSettings", parameters: [("flags", flags)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getContentSettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ContentSettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1952756306)
+                    
+                    return (FunctionDescription(name: "account.getContentSettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ContentSettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.ContentSettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.ContentSettings
                         }
                         return result
                     })

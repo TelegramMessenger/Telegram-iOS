@@ -259,16 +259,19 @@ public class ShareRootControllerImpl {
             
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
-                let limitsConfiguration = account.postbox.transaction { transaction -> LimitsConfiguration in
-                    return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings) in
+                    return (
+                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
+                        getContentSettings(transaction: transaction)
+                    )
                 }
-                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfiguration, sharedContext.accountManager.accessChallengeData())
+                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfigurationAndContentSettings, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
                 |> castError(ShareAuthorizationError.self)
-                |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
+                |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, tonContext: nil, limitsConfiguration: limitsConfiguration)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, tonContext: nil, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1)
                     return (context, data.data, otherAccounts)
                 }
             }

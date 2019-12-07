@@ -278,7 +278,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                         break
                 }
                 
-                let annotations: [LocationPinAnnotation] = [LocationPinAnnotation(account: context.account, theme: presentationData.theme, location: mapMedia, forcedSelection: true)]
+                let annotations: [LocationPinAnnotation] = [LocationPinAnnotation(context: context, theme: presentationData.theme, location: mapMedia, forcedSelection: true)]
 
                 let previousAnnotations = previousAnnotations.swap(annotations)
                 if annotations != previousAnnotations {

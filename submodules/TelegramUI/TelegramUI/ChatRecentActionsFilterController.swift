@@ -13,15 +13,15 @@ import AccountContext
 import ItemListPeerItem
 
 private final class ChatRecentActionsFilterControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let toggleAllActions: (Bool) -> Void
     let toggleAction: ([AdminLogEventsFlags]) -> Void
     let toggleAllAdmins: (Bool) -> Void
     let toggleAdmin: (PeerId) -> Void
     
-    init(account: Account, toggleAllActions: @escaping (Bool) -> Void, toggleAction: @escaping ([AdminLogEventsFlags]) -> Void, toggleAllAdmins: @escaping (Bool) -> Void, toggleAdmin: @escaping (PeerId) -> Void) {
-        self.account = account
+    init(context: AccountContext, toggleAllActions: @escaping (Bool) -> Void, toggleAction: @escaping ([AdminLogEventsFlags]) -> Void, toggleAllAdmins: @escaping (Bool) -> Void, toggleAdmin: @escaping (PeerId) -> Void) {
+        self.context = context
         self.toggleAllActions = toggleAllActions
         self.toggleAction = toggleAction
         self.toggleAllAdmins = toggleAllAdmins
@@ -233,7 +233,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     case .member:
                         peerText = strings.ChatAdmins_AdminLabel.capitalized
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.toggleAdmin(participant.peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in })
@@ -380,7 +380,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     let actionsDisposable = DisposableSet()
     
-    let arguments = ChatRecentActionsFilterControllerArguments(account: context.account, toggleAllActions: { value in
+    let arguments = ChatRecentActionsFilterControllerArguments(context: context, toggleAllActions: { value in
         updateState { current in
             if value {
                 return current.withUpdatedEvents(.all)

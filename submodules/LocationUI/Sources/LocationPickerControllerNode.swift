@@ -516,7 +516,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 let annotations: [LocationPinAnnotation]
                 if let venues = venues {
-                    annotations = venues.compactMap { LocationPinAnnotation(account: context.account, theme: presentationData.theme, location: $0) }
+                    annotations = venues.compactMap { LocationPinAnnotation(context: context, theme: presentationData.theme, location: $0) }
                 } else {
                     annotations = []
                 }
@@ -562,7 +562,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         })
         
         if case let .share(_, selfPeer, _) = self.mode, let peer = selfPeer {
-            self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(account: context.account, theme: self.presentationData.theme, peer: peer)
+            self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(context: context, theme: self.presentationData.theme, peer: peer)
             self.headerNode.mapNode.hasPickerAnnotation = true
         }
         

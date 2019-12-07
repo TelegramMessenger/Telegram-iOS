@@ -93,7 +93,7 @@ private final class AddAccountItemNode: ASDisplayNode, AbstractSwitchAccountItem
 }
 
 private final class SwitchAccountItemNode: ASDisplayNode, AbstractSwitchAccountItemNode {
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer
     private let isCurrent: Bool
     private let unreadCount: Int32
@@ -110,8 +110,8 @@ private final class SwitchAccountItemNode: ASDisplayNode, AbstractSwitchAccountI
     private let badgeBackgroundNode: ASImageNode
     private let badgeTitleNode: ImmediateTextNode
     
-    init(account: Account, peer: Peer, isCurrent: Bool, unreadCount: Int32, displaySeparator: Bool, presentationData: PresentationData, action: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, peer: Peer, isCurrent: Bool, unreadCount: Int32, displaySeparator: Bool, presentationData: PresentationData, action: @escaping () -> Void) {
+        self.context = context
         self.peer = peer
         self.isCurrent = isCurrent
         self.unreadCount = unreadCount
@@ -190,7 +190,7 @@ private final class SwitchAccountItemNode: ASDisplayNode, AbstractSwitchAccountI
         return (titleSize.width + leftInset + rightInset, height, { width in
             let avatarSize = CGSize(width: 30.0, height: 30.0)
             self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((leftInset - avatarSize.width) / 2.0), y: floor((height - avatarSize.height) / 2.0)), size: avatarSize)
-            self.avatarNode.setPeer(account: self.account, theme: self.presentationData.theme, peer: self.peer)
+            self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme, peer: self.peer)
             
             self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
             
@@ -266,13 +266,13 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                 cancel()
             }))
         }
-        contentNodes.append(SwitchAccountItemNode(account: accounts.primary.0, peer: accounts.primary.1, isCurrent: true, unreadCount: 0, displaySeparator: !accounts.other.isEmpty, presentationData: presentationData, action: {
+        contentNodes.append(SwitchAccountItemNode(context: sharedContext.makeTempAccountContext(account: accounts.primary.0), peer: accounts.primary.1, isCurrent: true, unreadCount: 0, displaySeparator: !accounts.other.isEmpty, presentationData: presentationData, action: {
             cancel()
         }))
         for i in 0 ..< accounts.other.count {
             let (account, peer, count) = accounts.other[i]
             let id = account.id
-            contentNodes.append(SwitchAccountItemNode(account: account, peer: peer, isCurrent: false, unreadCount: count, displaySeparator: i != accounts.other.count - 1, presentationData: presentationData, action: {
+            contentNodes.append(SwitchAccountItemNode(context: sharedContext.makeTempAccountContext(account: account), peer: peer, isCurrent: false, unreadCount: count, displaySeparator: i != accounts.other.count - 1, presentationData: presentationData, action: {
                 switchToAccount(id)
             }))
         }

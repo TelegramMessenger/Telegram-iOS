@@ -56,7 +56,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let textFont = Font.regular(fontSize)
             
             let titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
-            let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
+            let (textString, isMedia) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: context.account.peerId)
             
             let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor

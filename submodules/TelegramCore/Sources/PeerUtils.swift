@@ -1,6 +1,5 @@
 import Foundation
 import Postbox
-
 import SyncCore
 
 public extension Peer {
@@ -17,7 +16,7 @@ public extension Peer {
         }
     }
     
-    func restrictionText(platform: String) -> String? {
+    func restrictionText(platform: String, contentSettings: ContentSettings) -> String? {
         var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
         case let user as TelegramUser:
@@ -31,7 +30,9 @@ public extension Peer {
         if let restrictionInfo = restrictionInfo {
             for rule in restrictionInfo.rules {
                 if rule.platform == "all" || rule.platform == platform {
-                    return rule.text
+                    if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
+                        return rule.text
+                    }
                 }
             }
             return nil

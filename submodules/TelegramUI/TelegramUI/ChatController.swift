@@ -1871,7 +1871,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : .none)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : .none)
                             }
                             
                             if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
@@ -5142,7 +5142,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.navigationActionDisposable.set((peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios") == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
+                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
                             if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
@@ -7238,7 +7238,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            if let strongSelf = self, peer.restrictionText(platform: "ios") == nil {
+                            if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
                                 if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }

@@ -76,13 +76,13 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.accessibilityArea)
         
         if chatPeer.id == context.account.peerId {
-            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
         } else {
             var overrideImage: AvatarNodeImageOverride?
             if chatPeer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
+            self.avatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: overrideImage)
         }
         
         var attributedText: NSAttributedString?

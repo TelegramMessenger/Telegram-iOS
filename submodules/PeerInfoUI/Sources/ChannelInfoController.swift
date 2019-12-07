@@ -28,7 +28,7 @@ import NotificationSoundSelectionUI
 import Markdown
 
 private final class ChannelInfoControllerArguments {
-    let account: Account
+    let context: AccountContext
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     let tapAvatarAction: () -> Void
     let changeProfilePhoto: () -> Void
@@ -48,9 +48,10 @@ private final class ChannelInfoControllerArguments {
     let displayAddressNameContextMenu: (String) -> Void
     let displayContextMenu: (ChannelInfoEntryTag, String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
-    let toggleSignatures:(Bool) -> Void
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, openDiscussionGroupSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openStats: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
-        self.account = account
+    let toggleSignatures: (Bool) -> Void
+    
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, openDiscussionGroupSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openStats: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
+        self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
         self.changeProfilePhoto = changeProfilePhoto
@@ -326,7 +327,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelInfoControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -686,7 +687,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     var displayContextMenuImpl: ((ChannelInfoEntryTag, String) -> Void)?
     var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
-    let arguments = ChannelInfoControllerArguments(account: context.account, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
+    let arguments = ChannelInfoControllerArguments(context: context, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
         let _ = (context.account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
             if peer.profileImageRepresentations.isEmpty {
                 return

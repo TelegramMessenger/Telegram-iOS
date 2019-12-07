@@ -16,9 +16,10 @@ import AlertUI
 import PresentationDataUtils
 import TelegramNotices
 import ItemListPeerItem
+import AccountContext
 
 private final class ChannelVisibilityControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateCurrentType: (CurrentChannelType) -> Void
     let updatePublicLinkText: (String?, String) -> Void
@@ -30,8 +31,8 @@ private final class ChannelVisibilityControllerArguments {
     let revokePrivateLink: () -> Void
     let sharePrivateLink: () -> Void
     
-    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
+        self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
         self.scrollToPublicLinkText = scrollToPublicLinkText
@@ -342,7 +343,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -848,7 +849,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
     }).start())
     
-    let arguments = ChannelVisibilityControllerArguments(account: context.account, updateCurrentType: { type in
+    let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)
         }
