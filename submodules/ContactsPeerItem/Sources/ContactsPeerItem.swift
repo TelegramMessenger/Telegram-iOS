@@ -17,6 +17,7 @@ import AccountContext
 import PeerPresenceStatusManager
 import ItemListPeerItem
 import ContextUI
+import AccountContext
 
 public final class ContactItemHighlighting {
     public var chatLocation: ChatLocation?
@@ -108,7 +109,7 @@ public class ContactsPeerItem: ListViewItem, ListViewItemWithHeader {
     let presentationData: ItemListPresentationData
     let sortOrder: PresentationPersonNameOrder
     let displayOrder: PresentationPersonNameOrder
-    let account: Account
+    let context: AccountContext
     let peerMode: ContactsPeerItemPeerMode
     public let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
@@ -130,11 +131,11 @@ public class ContactsPeerItem: ListViewItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.sortOrder = sortOrder
         self.displayOrder = displayOrder
-        self.account = account
+        self.context = context
         self.peerMode = peerMode
         self.peer = peer
         self.status = status
@@ -291,8 +292,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
     private var actionIconNode: ASImageNode?
-    
-    private var avatarState: (Account, Peer?)?
     
     private var isHighlighted: Bool = false
 
@@ -496,7 +495,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         textColor = item.presentationData.theme.list.itemPrimaryTextColor
                     }
                     if let user = peer as? TelegramUser {
-                        if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
+                        if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                         } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                             let string = NSMutableAttributedString()
@@ -673,12 +672,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 case let .peer(peer, _):
                                     if let peer = peer {
                                         var overrideImage: AvatarNodeImageOverride?
-                                        if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
+                                        if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                                             overrideImage = .savedMessagesIcon
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }
-                                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                                     }
                                 case let .deviceContact(_, contact):
                                     let letters: [String]

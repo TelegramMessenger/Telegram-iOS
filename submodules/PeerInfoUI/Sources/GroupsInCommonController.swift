@@ -14,13 +14,13 @@ import ItemListPeerItem
 import ContextUI
 
 private final class GroupsInCommonControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openPeer: (PeerId) -> Void
     let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     
-    init(account: Account, openPeer: @escaping (PeerId) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
-        self.account = account
+    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
+        self.context = context
         self.openPeer = openPeer
         self.contextAction = contextAction
     }
@@ -94,7 +94,7 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
         let arguments = arguments as! GroupsInCommonControllerArguments
         switch self {
         case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                 arguments.openPeer(peer.id)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
@@ -141,7 +141,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     
     var contextActionImpl: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     
-    let arguments = GroupsInCommonControllerArguments(account: context.account, openPeer: { memberId in
+    let arguments = GroupsInCommonControllerArguments(context: context, openPeer: { memberId in
         guard let navigationController = getNavigationControllerImpl?() else {
             return
         }

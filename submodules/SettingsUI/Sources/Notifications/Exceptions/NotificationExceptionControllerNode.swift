@@ -425,7 +425,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
 }
 
 private final class NotificationExceptionArguments {
-    let account: Account
+    let context: AccountContext
     let activateSearch:()->Void
     let openPeer: (Peer) -> Void
     let selectPeer: ()->Void
@@ -433,8 +433,8 @@ private final class NotificationExceptionArguments {
     let deletePeer:(Peer) -> Void
     let removeAll:() -> Void
     
-    init(account: Account, activateSearch:@escaping() -> Void, openPeer: @escaping(Peer) -> Void, selectPeer: @escaping()->Void, updateRevealedPeerId:@escaping(PeerId?)->Void, deletePeer: @escaping(Peer) -> Void, removeAll:@escaping() -> Void) {
-        self.account = account
+    init(context: AccountContext, activateSearch:@escaping() -> Void, openPeer: @escaping(Peer) -> Void, selectPeer: @escaping()->Void, updateRevealedPeerId:@escaping(PeerId?)->Void, deletePeer: @escaping(Peer) -> Void, removeAll:@escaping() -> Void) {
+        self.context = context
         self.activateSearch = activateSearch
         self.openPeer = openPeer
         self.selectPeer = selectPeer
@@ -531,7 +531,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -539,7 +539,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.deletePeer(peer)
                 }, hasTopStripe: false, hasTopGroupInset: false, noInsets: isSearching)
             case let .addPeer(_, peer, theme, strings, _, nameDisplayOrder):
-                return ContactsPeerItem(presentationData: presentationData, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, account: arguments.account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(presentationData: presentationData, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, context: arguments.context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 })
@@ -860,7 +860,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             })
         }
         
-        let arguments = NotificationExceptionArguments(account: context.account, activateSearch: {
+        let arguments = NotificationExceptionArguments(context: context, activateSearch: {
             openSearch()
         }, openPeer: { peer in
             presentPeerSettings(peer.id, {})

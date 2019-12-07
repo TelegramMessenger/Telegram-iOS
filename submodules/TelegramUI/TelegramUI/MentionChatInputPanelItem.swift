@@ -8,9 +8,10 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AvatarNode
+import AccountContext
 
 final class MentionChatInputPanelItem: ListViewItem {
-    fileprivate let account: Account
+    fileprivate let context: AccountContext
     fileprivate let theme: PresentationTheme
     fileprivate let inverted: Bool
     fileprivate let peer: Peer
@@ -18,8 +19,8 @@ final class MentionChatInputPanelItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme, inverted: Bool, peer: Peer, peerSelected: @escaping (Peer) -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, inverted: Bool, peer: Peer, peerSelected: @escaping (Peer) -> Void) {
+        self.context = context
         self.theme = theme
         self.inverted = inverted
         self.peer = peer
@@ -167,7 +168,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

@@ -144,7 +144,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 }
             }
             
-            self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var titleIcon: UIImage?
@@ -176,7 +176,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.context.account.peerId).0
+            messageText = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.context.account.peerId).0
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -211,9 +211,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                 }
             } else if item.messages[0].groupingKey != nil {
-                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId).key
+                var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId).key
                 for i in 1 ..< item.messages.count {
-                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                    let nextKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                     if kind != nextKind.key {
                         kind = .text
                         break

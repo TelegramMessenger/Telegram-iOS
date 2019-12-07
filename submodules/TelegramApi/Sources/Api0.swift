@@ -488,6 +488,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1141711456] = { return Api.SecurePasswordKdfAlgo.parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000($0) }
     dict[-2042159726] = { return Api.SecurePasswordKdfAlgo.parse_securePasswordKdfAlgoSHA512($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
+    dict[1474462241] = { return Api.account.ContentSettings.parse_contentSettings($0) }
     dict[-2066640507] = { return Api.messages.AffectedMessages.parse_affectedMessages($0) }
     dict[-402498398] = { return Api.messages.SavedGifs.parse_savedGifsNotModified($0) }
     dict[772213157] = { return Api.messages.SavedGifs.parse_savedGifs($0) }
@@ -1146,6 +1147,8 @@ public struct Api {
             case let _1 as Api.SecurePasswordKdfAlgo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommand:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.ContentSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedMessages:
                 _1.serialize(buffer, boxed)

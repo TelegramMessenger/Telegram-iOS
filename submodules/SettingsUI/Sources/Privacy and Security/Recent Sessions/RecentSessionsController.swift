@@ -13,7 +13,7 @@ import AccountContext
 import AuthTransferUI
 
 private final class RecentSessionsControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
@@ -26,8 +26,8 @@ private final class RecentSessionsControllerArguments {
     
     let openOtherAppsUrl: () -> Void
     
-    init(account: Account, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
+        self.context = context
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
         self.terminateOtherSessions = terminateOtherSessions
@@ -296,7 +296,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 arguments.removeSession(id)
             })
         case let .website(_, theme, strings, dateTimeFormat, nameDisplayOrder, website, peer, enabled, editing, revealed):
-            return ItemListWebsiteItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+            return ItemListWebsiteItem(context: arguments.context, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                 arguments.setSessionIdWithRevealedOptions(previousId, id)
             }, removeSession: { id in
                 arguments.removeWebSession(id)
@@ -470,7 +470,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     let mode = ValuePromise<RecentSessionsMode>(.sessions)
     let websitesPromise = Promise<([WebAuthorization], [PeerId : Peer])?>(nil)
     
-    let arguments = RecentSessionsControllerArguments(account: context.account, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
+    let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
             if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
                 return state.withUpdatedSessionIdWithRevealedOptions(sessionId)

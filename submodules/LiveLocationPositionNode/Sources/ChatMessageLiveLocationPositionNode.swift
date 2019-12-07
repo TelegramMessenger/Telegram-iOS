@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AvatarNode
 import LocationResources
 import AppBundle
+import AccountContext
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let avatarBackgroundImage = UIImage(bundleImageName: "Chat/Message/LocationPin")?.precomposed()
@@ -93,13 +94,13 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         self.addSubnode(self.avatarNode)
     }
     
-    public func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ mode: Mode) -> (CGSize, () -> Void) {
+    public func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ mode: Mode) -> (CGSize, () -> Void) {
         let iconLayout = self.iconNode.asyncLayout()
         
         let currentPulseImage = self.pulseImage
         let currentVenueType = self.venueType
         
-        return { [weak self] account, theme, mode in
+        return { [weak self] context, theme, mode in
             var updatedVenueType: String?
             
             let backgroundImage: UIImage?
@@ -133,7 +134,7 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                     switch mode {
                         case let .liveLocation(peer, active):
-                            strongSelf.avatarNode.setPeer(account: account, theme: theme, peer: peer)
+                            strongSelf.avatarNode.setPeer(context: context, theme: theme, peer: peer)
                             strongSelf.avatarNode.isHidden = false
                             strongSelf.iconNode.isHidden = true
                             strongSelf.avatarNode.alpha = active ? 1.0 : 0.6
@@ -144,7 +145,7 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     
                     if let updatedVenueType = updatedVenueType {
                         strongSelf.venueType = updatedVenueType
-                        strongSelf.iconNode.setSignal(venueIcon(postbox: account.postbox, type: updatedVenueType, background: false))
+                        strongSelf.iconNode.setSignal(venueIcon(postbox: context.account.postbox, type: updatedVenueType, background: false))
                     }
 
                     let iconSize = CGSize(width: 44.0, height: 44.0)

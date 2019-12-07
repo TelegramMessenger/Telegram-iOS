@@ -674,6 +674,40 @@ public struct account {
         }
     
     }
+    public enum ContentSettings: TypeConstructorDescription {
+        case contentSettings(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .contentSettings(let flags):
+                    if boxed {
+                        buffer.appendInt32(1474462241)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .contentSettings(let flags):
+                return ("contentSettings", [("flags", flags)])
+    }
+    }
+    
+        public static func parse_contentSettings(_ reader: BufferReader) -> ContentSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.account.ContentSettings.contentSettings(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
@@ -5893,6 +5927,34 @@ public extension Api {
                         var result: Api.account.Themes?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.Themes
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setContentSettings(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1250643605)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.setContentSettings", parameters: [("flags", flags)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getContentSettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ContentSettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1952756306)
+                    
+                    return (FunctionDescription(name: "account.getContentSettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ContentSettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.ContentSettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.ContentSettings
                         }
                         return result
                     })

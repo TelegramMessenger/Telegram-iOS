@@ -30,7 +30,7 @@ import PhoneNumberFormat
 import TelegramIntents
 
 private final class UserInfoControllerArguments {
-    let account: Account
+    let context: AccountContext
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let tapAvatarAction: () -> Void
@@ -59,8 +59,8 @@ private final class UserInfoControllerArguments {
     let botPrivacy: () -> Void
     let report: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, requestPhoneNumber: @escaping () -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, requestPhoneNumber: @escaping () -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
+        self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
         self.tapAvatarAction = tapAvatarAction
@@ -398,7 +398,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! UserInfoControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence, cachedData, state, displayCall):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -893,7 +893,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
         })
     }
     
-    let arguments = UserInfoControllerArguments(account: context.account, avatarAndNameInfoContext: avatarAndNameInfoContext, updateEditingName: { editingName in
+    let arguments = UserInfoControllerArguments(context: context, avatarAndNameInfoContext: avatarAndNameInfoContext, updateEditingName: { editingName in
         updateState { state in
             if let _ = state.editingState {
                 return state.withUpdatedEditingState(UserInfoEditingState(editingName: editingName))

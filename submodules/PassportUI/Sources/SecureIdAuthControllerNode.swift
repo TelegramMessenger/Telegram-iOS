@@ -45,7 +45,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()
-        self.headerNode = SecureIdAuthHeaderNode(account: context.account, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
+        self.headerNode = SecureIdAuthHeaderNode(context: context, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
         self.acceptNode = SecureIdAuthAcceptNode(title: presentationData.strings.Passport_Authorize, theme: presentationData.theme)
         
         super.init()

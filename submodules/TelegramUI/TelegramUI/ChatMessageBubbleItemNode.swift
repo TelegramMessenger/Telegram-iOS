@@ -31,7 +31,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     
     outer: for message in item.content {
         for attribute in message.attributes {
-            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios") != nil {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                 result.append((message, ChatMessageRestrictedBubbleContentNode.self))
                 break outer
             }

@@ -27,8 +27,9 @@ private final class DataAndStorageControllerArguments {
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
+    let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -42,6 +43,7 @@ private final class DataAndStorageControllerArguments {
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
+        self.toggleEnableSensitiveContent = toggleEnableSensitiveContent
     }
 }
 
@@ -52,6 +54,7 @@ private enum DataAndStorageSection: Int32 {
     case voiceCalls
     case other
     case connection
+    case enableSensitiveContent
 }
 
 enum DataAndStorageEntryTag: ItemListItemTag {
@@ -91,6 +94,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case downloadInBackgroundInfo(PresentationTheme, String)
     case connectionHeader(PresentationTheme, String)
     case connectionProxy(PresentationTheme, String, String)
+    case enableSensitiveContent(String, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -106,6 +110,8 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
+            case .enableSensitiveContent:
+                return DataAndStorageSection.enableSensitiveContent.rawValue
         }
     }
     
@@ -151,6 +157,8 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 18
             case .connectionProxy:
                 return 19
+            case .enableSensitiveContent:
+                return 20
         }
     }
     
@@ -276,6 +284,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .enableSensitiveContent(text, value):
+                if case .enableSensitiveContent(text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -356,6 +370,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openProxy()
                 })
+            case let .enableSensitiveContent(text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleEnableSensitiveContent(value)
+                }, tag: nil)
         }
     }
 }
@@ -446,7 +464,7 @@ private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalS
     }
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache))
@@ -491,6 +509,12 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
     
+    #if DEBUG
+    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
+        entries.append(.enableSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
+    }
+    #endif
+    
     return entries
 }
 
@@ -505,6 +529,15 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     
     let cacheUsagePromise = Promise<CacheUsageStatsResult?>()
     cacheUsagePromise.set(cacheUsageStats(context: context))
+    
+    let updateSensitiveContentDisposable = MetaDisposable()
+    actionsDisposable.add(updateSensitiveContentDisposable)
+    
+    let updatedContentSettingsConfiguration = contentSettingsConfiguration(network: context.account.network)
+    |> map(Optional.init)
+    let contentSettingsConfiguration = Promise<ContentSettingsConfiguration?>()
+    contentSettingsConfiguration.set(.single(nil)
+    |> then(updatedContentSettingsConfiguration))
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
@@ -608,10 +641,26 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
           pushControllerImpl?(controller)
+    }, toggleEnableSensitiveContent: { value in
+        let _ = (contentSettingsConfiguration.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak contentSettingsConfiguration] settings in
+            if var settings = settings {
+                settings.sensitiveContentEnabled = value
+                contentSettingsConfiguration?.set(.single(settings))
+            }
+        })
+        updateSensitiveContentDisposable.set(updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: value).start())
     })
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])) |> deliverOnMainQueue
-    |> map { presentationData, state, dataAndStorageData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(),
+        context.sharedContext.presentationData,
+        statePromise.get(),
+        dataAndStorageDataPromise.get(),
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings]),
+        contentSettingsConfiguration.get()
+    )
+    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let webBrowserSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
@@ -622,7 +671,7 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

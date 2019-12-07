@@ -81,10 +81,10 @@ public enum MessageContentKind: Equatable {
     }
 }
 
-public func messageContentKind(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
+public func messageContentKind(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
     for attribute in message.attributes {
         if let attribute = attribute as? RestrictedContentMessageAttribute {
-            if let text = attribute.platformText(platform: "ios") {
+            if let text = attribute.platformText(platform: "ios", contentSettings: contentSettings) {
                 return .restricted(text)
             }
             break
@@ -215,9 +215,9 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     }
 }
 
-public func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
     if !message.text.isEmpty {
         return (message.text, false)
     }
-    return stringForMediaKind(messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId), strings: strings)
+    return stringForMediaKind(messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId), strings: strings)
 }

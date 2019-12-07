@@ -18,7 +18,7 @@ import LocalizedPeerData
 private let rankMaxLength: Int32 = 16
 
 private final class ChannelAdminControllerArguments {
-    let account: Account
+    let context: AccountContext
     let toggleRight: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
     let toggleRightWhileDisabled: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
     let transferOwnership: () -> Void
@@ -28,8 +28,8 @@ private final class ChannelAdminControllerArguments {
     let dismissInput: () -> Void
     let animateError: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
+        self.context = context
         self.toggleRight = toggleRight
         self.toggleRightWhileDisabled = toggleRightWhileDisabled
         self.transferOwnership = transferOwnership
@@ -369,7 +369,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rankTitle(theme, text, count, limit):
@@ -800,7 +800,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         upgradedToSupergroup(peerId, completion)
     }
     
-    let arguments = ChannelAdminControllerArguments(account: context.account, toggleRight: { right, flags in
+    let arguments = ChannelAdminControllerArguments(context: context, toggleRight: { right, flags in
         updateState { current in
             var updated = flags
             if flags.contains(right) {

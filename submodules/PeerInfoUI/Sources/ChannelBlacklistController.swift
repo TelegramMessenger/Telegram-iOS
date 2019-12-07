@@ -16,15 +16,15 @@ import PresentationDataUtils
 import ItemListPeerItem
 
 private final class ChannelBlacklistControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let addPeer: () -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (RenderedChannelParticipant) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (RenderedChannelParticipant) -> Void) {
-        self.account = account
+    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (RenderedChannelParticipant) -> Void) {
+        self.context = context
         self.addPeer = addPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
@@ -169,7 +169,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                     default:
                         break
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(participant)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -291,7 +291,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
     peerView.set(context.account.viewTracker.peerView(peerId))
     let blacklistPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let arguments = ChannelBlacklistControllerArguments(account: context.account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+    let arguments = ChannelBlacklistControllerArguments(context: context, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
                 return state.withUpdatedPeerIdWithRevealedOptions(peerId)

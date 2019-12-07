@@ -302,7 +302,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
-                                strongSelf.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor, synchronousLoad: synchronousLoads)
+                                strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor, synchronousLoad: synchronousLoads)
                             } else {
                                 strongSelf.avatarNode.setCustomLetters(customLetters)
                             }

@@ -69,10 +69,10 @@ private final class ChannelDiscussionGroupSearchEntry: Comparable, Identifiable 
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                     interaction.peerSelected(peer)
                 })
         }
@@ -86,12 +86,12 @@ struct ChannelDiscussionGroupSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func channelDiscussionGroupSearchContainerPreparedRecentTransition(from fromEntries: [ChannelDiscussionGroupSearchEntry], to toEntries: [ChannelDiscussionGroupSearchEntry], isSearching: Bool, account: Account, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ChannelDiscussionGroupSearchContainerTransition {
+private func channelDiscussionGroupSearchContainerPreparedRecentTransition(from fromEntries: [ChannelDiscussionGroupSearchEntry], to toEntries: [ChannelDiscussionGroupSearchEntry], isSearching: Bool, context: AccountContext, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ChannelDiscussionGroupSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
     return ChannelDiscussionGroupSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -192,7 +192,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 let firstTime = previousEntries == nil
-                let transition = channelDiscussionGroupSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, presentationData: presentationData, interaction: interaction)
+                let transition = channelDiscussionGroupSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, context: context, presentationData: presentationData, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))

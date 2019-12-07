@@ -19,7 +19,7 @@ import TelegramPermissionsUI
 import ItemListPeerActionItem
 
 private final class ChannelPermissionsControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let updatePermission: (TelegramChatBannedRightsFlags, Bool) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -31,8 +31,8 @@ private final class ChannelPermissionsControllerArguments {
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
     let updateSlowmode: (Int32) -> Void
     
-    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
-        self.account = account
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
+        self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -270,7 +270,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     default:
                         break
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: canOpen ? {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
                 } : {
                     arguments.openPeerInfo(participant.peer)
@@ -524,7 +524,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
-    let arguments = ChannelPermissionsControllerArguments(account: context.account, updatePermission: { rights, value in
+    let arguments = ChannelPermissionsControllerArguments(context: context, updatePermission: { rights, value in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { view in

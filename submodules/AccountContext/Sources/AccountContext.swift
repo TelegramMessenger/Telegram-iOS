@@ -542,6 +542,7 @@ public protocol AccountContext: class {
     var hasWalletAccess: Signal<Bool, NoError> { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
+    var currentContentSettings: Atomic<ContentSettings> { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?

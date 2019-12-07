@@ -19,7 +19,7 @@ import PeerInfoUI
 import MapResourceToAvatarSizes
 
 private struct CreateChannelArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
@@ -139,7 +139,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateChannelArguments
         switch self {
             case let .channelInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
@@ -214,7 +214,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
-    let arguments = CreateChannelArguments(account: context.account, updateEditingName: { editingName in
+    let arguments = CreateChannelArguments(context: context, updateEditingName: { editingName in
         updateState { current in
             var current = current
             switch editingName {

@@ -13,6 +13,7 @@ static_library(
         "//submodules/Display:Display#shared",
     	"//submodules/AvatarNode:AvatarNode",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

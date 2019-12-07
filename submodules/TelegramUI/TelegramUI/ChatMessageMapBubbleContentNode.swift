@@ -148,7 +148,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     mode = .liveLocation(peer, activeLiveBroadcastingTimeout != nil)
                 }
             }
-            let (pinSize, pinApply) = makePinLayout(item.context.account, item.presentationData.theme.theme, mode)
+            let (pinSize, pinApply) = makePinLayout(item.context, item.presentationData.theme.theme, mode)
             
             return (contentProperties, nil, maximumWidth, { constrainedSize, position in
                 let imageCorners: ImageCorners

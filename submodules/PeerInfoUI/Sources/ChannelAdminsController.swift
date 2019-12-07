@@ -18,7 +18,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private final class ChannelAdminsControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openRecentActions: () -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -26,8 +26,8 @@ private final class ChannelAdminsControllerArguments {
     let addAdmin: () -> Void
     let openAdmin: (ChannelParticipant) -> Void
     
-    init(account: Account, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
-        self.account = account
+    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
+        self.context = context
         self.openRecentActions = openRecentActions
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removeAdmin = removeAdmin
@@ -236,7 +236,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         arguments.openAdmin(participant.participant)
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
@@ -536,7 +536,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
     let peerView = Promise<PeerView>()
     peerView.set(context.account.viewTracker.peerView(peerId))
     
-    let arguments = ChannelAdminsControllerArguments(account: context.account, openRecentActions: {
+    let arguments = ChannelAdminsControllerArguments(context: context, openRecentActions: {
         let _ = (context.account.postbox.loadedPeerWithId(peerId)
         |> deliverOnMainQueue).start(next: { peer in
             if peer is TelegramGroup {

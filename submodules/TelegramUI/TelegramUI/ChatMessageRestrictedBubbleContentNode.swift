@@ -56,7 +56,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? RestrictedContentMessageAttribute {
-                        rawText = attribute.platformText(platform: "ios") ?? ""
+                        rawText = attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) ?? ""
                     }
                 }
                 

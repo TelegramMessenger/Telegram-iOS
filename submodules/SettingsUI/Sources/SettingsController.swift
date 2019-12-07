@@ -81,7 +81,7 @@ private indirect enum SettingsEntryTag: Equatable, ItemListItemTag {
 }
 
 private final class SettingsItemArguments {
-    let accountManager: AccountManager
+    let sharedContext: SharedAccountContext
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
     let avatarTapAction: () -> Void
@@ -115,7 +115,7 @@ private final class SettingsItemArguments {
     let openDevices: () -> Void
     
     init(
-        accountManager: AccountManager,
+        sharedContext: SharedAccountContext,
         avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext,
     
         avatarTapAction: @escaping () -> Void,
@@ -148,7 +148,7 @@ private final class SettingsItemArguments {
         accountContextAction: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
         openDevices: @escaping () -> Void
     ) {
-        self.accountManager = accountManager
+        self.sharedContext = sharedContext
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         
         self.avatarTapAction = avatarTapAction
@@ -492,7 +492,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
         let arguments = arguments as! SettingsItemArguments
         switch self {
             case let .userInfo(account, theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.sharedContext.makeTempAccountContext(account: account), presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage, action: {
@@ -527,7 +527,7 @@ private indirect enum SettingsEntry: ItemListNodeEntry {
                 if badgeCount > 0 {
                     label = .badge(compactNumericCountString(Int(badgeCount), decimalSeparator: dateTimeFormat.decimalSeparator))
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.sharedContext.makeTempAccountContext(account: account), peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -874,7 +874,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int)>()
     activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
     
-    let arguments = SettingsItemArguments(accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
+    let arguments = SettingsItemArguments(sharedContext: context.sharedContext, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
             updating = $0.updatingAvatar != nil

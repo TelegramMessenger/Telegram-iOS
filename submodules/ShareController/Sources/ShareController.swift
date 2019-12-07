@@ -691,7 +691,7 @@ public final class ShareController: ViewController {
             }
             var items: [ActionSheetItem] = []
             for info in strongSelf.switchableAccounts {
-                items.append(ActionSheetPeerItem(account: info.account, peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
+                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
                     dismissAction()
                     self?.switchToAccount(account: info.account, animateIn: true)
                 }))
@@ -707,7 +707,7 @@ public final class ShareController: ViewController {
         self.peersDisposable.set((self.peers.get()
         |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                strongSelf.controllerNode.updatePeers(context: strongSelf.sharedContext.makeTempAccountContext(account: strongSelf.currentAccount), switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
             }
         }))
         self._ready.set(self.controllerNode.ready.get())
@@ -827,7 +827,7 @@ public final class ShareController: ViewController {
         self.peersDisposable.set((self.peers.get()
         |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                strongSelf.controllerNode.updatePeers(context: strongSelf.sharedContext.makeTempAccountContext(account: strongSelf.currentAccount), switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
                 
                 if animateIn {
                     strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()

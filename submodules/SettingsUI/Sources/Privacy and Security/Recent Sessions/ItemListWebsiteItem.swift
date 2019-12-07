@@ -13,6 +13,7 @@ import PresentationDataUtils
 import AvatarNode
 import TelegramStringFormatting
 import LocalizedPeerData
+import AccountContext
 
 struct ItemListWebsiteItemEditing: Equatable {
     let editing: Bool
@@ -30,7 +31,7 @@ struct ItemListWebsiteItemEditing: Equatable {
 }
 
 final class ItemListWebsiteItem: ListViewItem, ItemListItem {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
@@ -44,8 +45,8 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -270,7 +271,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let peer = item.peer {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false)
                     }
                     
                     let revealOffset = strongSelf.revealOffset

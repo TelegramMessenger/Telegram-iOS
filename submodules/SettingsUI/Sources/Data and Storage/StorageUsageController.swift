@@ -35,15 +35,15 @@ private func freeDiskSpace() -> Int64 {
 }
 
 private final class StorageUsageControllerArguments {
-    let account: Account
+    let context: AccountContext
     let updateKeepMediaTimeout: (Int32) -> Void
     let openClearAll: () -> Void
     let openPeerMedia: (PeerId) -> Void
     let clearPeerMedia: (PeerId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     
-    init(account: Account, updateKeepMediaTimeout: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
-        self.account = account
+    init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+        self.context = context
         self.updateKeepMediaTimeout = updateKeepMediaTimeout
         self.openClearAll = openClearAll
         self.openPeerMedia = openPeerMedia
@@ -224,7 +224,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 var options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
                     arguments.clearPeerMedia(peer.id)
                 })]
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     let resolvedPeer = chatPeer ?? peer
                     arguments.openPeerMedia(resolvedPeer.id)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -392,7 +392,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     let clearDisposable = MetaDisposable()
     actionDisposables.add(clearDisposable)
     
-    let arguments = StorageUsageControllerArguments(account: context.account, updateKeepMediaTimeout: { value in
+    let arguments = StorageUsageControllerArguments(context: context, updateKeepMediaTimeout: { value in
         let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedDefaultCacheStorageTimeout(value)
         }).start()
