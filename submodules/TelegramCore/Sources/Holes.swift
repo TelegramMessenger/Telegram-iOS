@@ -121,7 +121,9 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
     |> switchToLatest
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count: Int) -> Signal<Never, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<Never, NoError> {
+    let count = min(100, rawCount)
+    
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
