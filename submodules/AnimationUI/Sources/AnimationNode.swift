@@ -46,6 +46,35 @@ public final class AnimationNode : ASDisplayNode {
         })
     }
     
+    public init(animationData: Data, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
+        self.scale = scale
+        
+        super.init()
+        
+        self.setViewBlock({
+            if let json = try? JSONSerialization.jsonObject(with: animationData, options: []) as? [AnyHashable: Any] {
+                let composition = LOTComposition(json: json)
+                
+                let view = LOTAnimationView(model: composition, in: getAppBundle())
+                view.animationSpeed = self.speed
+                view.backgroundColor = .clear
+                view.isOpaque = false
+                                
+                if let colors = colors {
+                    for (key, value) in colors {
+                        let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                        self.colorCallbacks.append(colorCallback)
+                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                    }
+                }
+                
+                return view
+            } else {
+                return LOTAnimationView()
+            }
+        })
+    }
+    
     public func setAnimation(name: String) {
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             self.animationView()?.sceneModel = composition
