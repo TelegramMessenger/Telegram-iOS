@@ -15,9 +15,13 @@ public struct HolesViewMedia: Comparable {
     }
 }
 
-public struct MessageOfInterestHole: Hashable, Equatable {
+public struct MessageOfInterestHole: Hashable, Equatable, CustomStringConvertible {
     public let hole: MessageHistoryViewHole
     public let direction: MessageHistoryViewRelativeHoleDirection
+    
+    public var description: String {
+        return "hole: \(self.hole), direction: \(self.direction)"
+    }
 }
 
 public enum MessageOfInterestViewLocation: Hashable {
@@ -29,6 +33,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     private let count: Int
     private var anchor: HistoryViewInputAnchor
     private var wrappedView: MutableMessageHistoryView
+    private var peerIds: MessageHistoryViewPeerIds
     
     fileprivate var closestHole: MessageOfInterestHole?
     fileprivate var closestLaterMedia: [HolesViewMedia] = []
@@ -44,6 +49,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             mainPeerId = id
             peerIds = postbox.peerIdsForLocation(.peer(id), tagMask: nil)
         }
+        self.peerIds = peerIds
         var anchor: HistoryViewInputAnchor = .upperBound
         if let combinedState = postbox.readStateTable.getCombinedState(mainPeerId), let state = combinedState.states.first, state.1.count != 0 {
             switch state.1 {
@@ -107,7 +113,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
         var anchor: HistoryViewInputAnchor = self.anchor
         if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
-            var anchor: HistoryViewInputAnchor = .upperBound
+            var updatedAnchor: HistoryViewInputAnchor = .upperBound
             if let combinedState = postbox.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
                 switch state.1 {
                 case let .idBased(maxIncomingReadId, _, _, _, _):
@@ -116,6 +122,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     anchor = .index(maxIncomingReadIndex)
                 }
             }
+            anchor = updatedAnchor
         }
         
         if self.anchor != anchor {
@@ -128,6 +135,34 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], peerIds: peerIds, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [], getMessageCountInRange: { _, _ in return 0})
             return self.updateFromView()
         } else if self.wrappedView.replay(postbox: postbox, transaction: transaction) {
+            var reloadView = false
+            if !transaction.currentPeerHoleOperations.isEmpty {
+                var allPeerIds: [PeerId]
+                switch peerIds {
+                case let .single(peerId):
+                    allPeerIds = [peerId]
+                case let .associated(peerId, attachedMessageId):
+                    allPeerIds = [peerId]
+                    if let attachedMessageId = attachedMessageId {
+                        allPeerIds.append(attachedMessageId.peerId)
+                    }
+                }
+                for (key, _) in transaction.currentPeerHoleOperations {
+                    if allPeerIds.contains(key.peerId) {
+                        reloadView = true
+                        break
+                    }
+                }
+            }
+            if reloadView {
+                let peerIds: MessageHistoryViewPeerIds
+                switch self.location {
+                case let .peer(id):
+                    peerIds = postbox.peerIdsForLocation(.peer(id), tagMask: nil)
+                }
+                self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], peerIds: peerIds, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [], getMessageCountInRange: { _, _ in return 0})
+            }
+            
             return self.updateFromView()
         } else {
             return false
