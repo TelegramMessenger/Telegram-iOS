@@ -90,8 +90,8 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let buttonText: String
         
-        let badgeFont = Font.with(size: 14.0, design: .round, traits: [.bold])
-        let textFont = Font.regular(18.0)
+        let badgeFont = Font.with(size: 13.0, design: .round, traits: [.bold])
+        let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         
         var badgeBackgroundNodes: [ASImageNode] = []
@@ -147,7 +147,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_AddDeviceIntro_Title, font: Font.bold(28.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_AddDeviceIntro_Title, font: Font.bold(24.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
@@ -198,14 +198,14 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let sideInset: CGFloat = 22.0
         let textSideInset: CGFloat = 54.0
-        let buttonSideInset: CGFloat = 48.0
-        let titleSpacing: CGFloat = 30.0
+        let buttonSideInset: CGFloat = 16.0
+        let titleSpacing: CGFloat = 25.0
         let buttonHeight: CGFloat = 50.0
-        let buttonSpacing: CGFloat = 10.0
-        let textSpacing: CGFloat = 26.0
+        let buttonSpacing: CGFloat = 16.0
+        let textSpacing: CGFloat = 25.0
         let badgeSize: CGFloat = 20.0
         
-        let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset), height: 500.0)
+        let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset + 20.0), height: 500.0)
         let animationSize = self.animationNode.preferredSize()?.fitted(animationFitSize) ?? animationFitSize
         let iconSize: CGSize = animationSize
         var iconOffset = CGPoint()
@@ -233,7 +233,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         let contentTopInset = navigationHeight
         let contentBottomInset = bottomInset + buttonHeight + buttonSpacing
         
-        let iconSpacing: CGFloat = max(20.0, min(64.0, layout.size.height - contentTopInset - contentBottomInset - contentHeight - 40.0))
+        let iconSpacing: CGFloat = max(20.0, min(61.0, layout.size.height - contentTopInset - contentBottomInset - contentHeight - 40.0))
         
         contentHeight += iconSpacing
         
@@ -269,10 +269,17 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
             let textFrame = CGRect(origin: CGPoint(x: textSideInset, y: contentY), size: textSize)
             transition.updateFrameAdditive(node: self.textNodes[i], frame: textFrame)
             
-            let badgeFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.minY + floor((textFrame.height - badgeSize) / 2.0)), size: CGSize(width: badgeSize, height: badgeSize))
+            let badgeFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.minY), size: CGSize(width: badgeSize, height: badgeSize))
             transition.updateFrameAdditive(node: self.badgeBackgroundNodes[i], frame: badgeFrame)
             
-            transition.updateFrameAdditive(node: self.badgeTextNodes[i], frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeFrame.width - badgeTextSize.width) / 2.0) + 0.5, y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0) + 0.5), size: badgeTextSize))
+            let badgeTextOffsetX: CGFloat
+            if i == 0 {
+                badgeTextOffsetX = 0.5
+            } else {
+                badgeTextOffsetX = 1.0
+            }
+            
+            transition.updateFrameAdditive(node: self.badgeTextNodes[i], frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeFrame.width - badgeTextSize.width) / 2.0) + badgeTextOffsetX, y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0) + 0.5), size: badgeTextSize))
             
             contentY += textSize.height
         }
