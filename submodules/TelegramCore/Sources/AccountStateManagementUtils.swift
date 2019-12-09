@@ -1761,7 +1761,13 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
 
 private func pollChannel(network: Network, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
-        let limit: Int32 = 20
+        let limit: Int32
+        #if DEBUG
+        limit = 1
+        #else
+        limit = 20
+        #endif
+        
         let pollPts: Int32
         if let channelState = state.chatStates[peer.id] as? ChannelState {
             pollPts = channelState.pts

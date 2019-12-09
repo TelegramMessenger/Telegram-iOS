@@ -274,7 +274,7 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.errorTextNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_InvalidQRCode, font: Font.medium(16.0), textColor: .white)
         self.errorTextNode.maximumNumberOfLines = 0
         self.errorTextNode.textAlignment = .center
-        //self.errorTextNode.isHidden = true
+        self.errorTextNode.isHidden = true
         
         self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false))
         
@@ -409,19 +409,28 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateFrame(node: self.centerDimNode, frame: dimRect)
         
         let buttonSize = CGSize(width: 72.0, height: 72.0)
-        transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 98.0), size: buttonSize))
+        var torchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 98.0), size: buttonSize)
+        let updatedTorchY = min(torchFrame.minY, layout.size.height - torchFrame.height - 10.0)
+        let additionalTorchOffset: CGFloat = updatedTorchY - torchFrame.minY
+        torchFrame.origin.y = updatedTorchY
+        transition.updateFrame(node: self.torchButtonNode, frame: torchFrame)
         
-        transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.errorTextNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
+        let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: dimHeight - textSize.height - titleSpacing), size: textSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
-        let errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
+        if titleFrame.minY < navigationHeight {
+            transition.updateAlpha(node: self.titleNode, alpha: 0.0)
+        } else {
+            transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
+        }
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
         transition.updateFrameAdditive(node: self.errorTextNode, frame: errorTextFrame)
