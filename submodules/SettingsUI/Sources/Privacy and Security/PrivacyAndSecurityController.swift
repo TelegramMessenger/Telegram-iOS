@@ -427,7 +427,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -451,6 +451,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let blockedPeersContext = BlockedPeersContext(account: context.account)
     let activeSessionsContext = activeSessionsContext ?? ActiveSessionsContext(account: context.account)
+    let webSessionsContext = webSessionsContext ?? WebSessionsContext(account: context.account)
     
     let updateTwoStepAuthDisposable = MetaDisposable()
     actionsDisposable.add(updateTwoStepAuthDisposable)
@@ -669,7 +670,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             pushControllerImpl?(controller, true)
         }
     }, openActiveSessions: {
-        pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext), true)
+        pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext), true)
     }, setupAccountAutoremove: {
         let signal = privacySettingsPromise.get()
         |> take(1)
