@@ -1004,9 +1004,21 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         var accentColor = accentColor
         switch theme {
         case .dayClassic:
-            backgroundColor = UIColor(rgb: 0xd6e2ee)
             incomingColor = UIColor(rgb: 0xffffff)
-            outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
+            if let accentColor = accentColor {
+                if let bubbleColors = bubbleColors {
+                    backgroundColor = UIColor(rgb: 0xffffff)
+                    outgoingColor = bubbleColors
+                } else  {
+                    backgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                    let hsb = accentColor.hsb
+                    let bubbleColor = UIColor(hue: hsb.0, saturation: hsb.2 > 0.0 ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0)
+                    outgoingColor = (bubbleColor, bubbleColor)
+                }
+            } else {
+                backgroundColor = UIColor(rgb: 0xd6e2ee)
+                outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
+            }
         case .day:
             backgroundColor = UIColor(rgb: 0xffffff)
             incomingColor = UIColor(rgb: 0xd5dde6)

@@ -386,6 +386,7 @@ public class WallpaperGalleryController: ViewController {
                                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                        var wallpaper = wallpaper.isBasicallyEqual(to: strongSelf.presentationData.theme.chat.defaultWallpaper) ? nil : wallpaper
                                         if autoNightModeTriggered {
                                             themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
                                         } else {

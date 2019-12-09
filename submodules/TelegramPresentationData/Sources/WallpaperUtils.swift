@@ -20,6 +20,15 @@ public extension TelegramWallpaper {
         }
     }
     
+    var isColorOrGradient: Bool {
+        switch self {
+            case .color, .gradient:
+            return true
+        default:
+            return false
+        }
+    }
+    
     var isBuiltin: Bool {
         switch self {
         case .builtin:

@@ -497,7 +497,9 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index] {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, bubbleColors: nil) ?? defaultPresentationTheme
+            let effectiveAccentColor = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]?.color
+            let effectiveBubbleColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]?.customBubbleColors
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors) ?? defaultPresentationTheme
             currentWallpaper = theme.chat.defaultWallpaper
         }
         

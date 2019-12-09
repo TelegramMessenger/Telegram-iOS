@@ -22,12 +22,29 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var actionSheet = theme.actionSheet
     
     var bubbleColors = bubbleColors
+    var outgoingAccent: UIColor?
+    var suggestedWallpaper: TelegramWallpaper?
     if bubbleColors == nil, editing {
         if day {
             let accentColor = accentColor ?? defaultDayAccentColor
             bubbleColors = (accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98), accentColor)
         } else {
-            bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
+            if let accentColor = accentColor {
+                let hsb = accentColor.hsb
+                bubbleColors = (UIColor(hue: hsb.0, saturation: hsb.2 > 0.0 ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
+                if accentColor.lightness > 0.705 {
+                    outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
+                } else {
+                    outgoingAccent = accentColor
+                }
+                
+                let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
+                let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                suggestedWallpaper = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
+            } else {
+                bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
+                suggestedWallpaper = .builtin(WallpaperSettings())
+            }
         }
     }
     
@@ -97,39 +114,36 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
             let saturationFactor: CGFloat = 1.1
             outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
             outgoingSecondaryTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
-            outgoingAccentTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.302 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.655)
-            outgoingLinkTextColor = UIColor(rgb: 0x004bad)
-            outgoingScamColor = UIColor(rgb: 0xff3b30)
-            outgoingControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
-            outgoingInactiveControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
-            outgoingPendingActivityColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.342 * hueFactor, saturation: 2.902, brightness: 0.714)
-            outgoingFileTitleColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.285 * hueFactor, saturation: 2.946, brightness: 0.667)
+            
+            if let outgoingAccent = outgoingAccent {
+                outgoingAccentTextColor = outgoingAccent
+                outgoingLinkTextColor = outgoingAccent
+                outgoingScamColor = UIColor(rgb: 0xff3b30)
+                outgoingControlColor = outgoingAccent
+                outgoingInactiveControlColor = outgoingAccent //1111
+                outgoingFileTitleColor = outgoingAccent
+                outgoingPollsProgressColor = accentColor
+                outgoingSelectionColor = outgoingAccent.withMultiplied(hue: 1.0, saturation: 1.292, brightness: 0.871)
+                outgoingSelectionBaseColor = outgoingControlColor
+                outgoingCheckColor = outgoingAccent
+            } else {
+                outgoingAccentTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.302 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.655)
+                outgoingLinkTextColor = UIColor(rgb: 0x004bad)
+                outgoingScamColor = UIColor(rgb: 0xff3b30)
+                outgoingControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
+                outgoingInactiveControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
+                outgoingFileTitleColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.285 * hueFactor, saturation: 2.946, brightness: 0.667)
+                outgoingPollsProgressColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
+                outgoingSelectionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.013 * hueFactor, saturation: 1.292, brightness: 0.871)
+                outgoingSelectionBaseColor = outgoingControlColor
+                outgoingCheckColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
+            }
+            outgoingPendingActivityColor = outgoingCheckColor
+            
             outgoingFileDescriptionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.257 * hueFactor, saturation: 1.842, brightness: 0.698)
             outgoingFileDurationColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554, brightness: 0.549).withAlphaComponent(0.8)
             outgoingMediaPlaceholderColor = outgoingBubbleFillColor?.withMultiplied(hue: 0.998, saturation: 1.129, brightness: 0.949)
             outgoingPollsButtonColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
-            outgoingPollsProgressColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
-            outgoingSelectionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.013 * hueFactor, saturation: 1.292, brightness: 0.871)
-            outgoingSelectionBaseColor = outgoingControlColor
-            outgoingCheckColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
-            
-//            outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
-//            outgoingSecondaryTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.008, saturation: 5.667, brightness: 0.898)
-//            outgoingAccentTextColor = outgoingSecondaryTextColor
-//            outgoingLinkTextColor = UIColor(rgb: 0x004bad)
-//            outgoingScamColor = UIColor(rgb: 0xff3b30)
-//            outgoingControlColor = outgoingSecondaryTextColor
-//            outgoingInactiveControlColor = outgoingSecondaryTextColor
-//            outgoingPendingActivityColor = outgoingSecondaryTextColor
-//            outgoingFileTitleColor = outgoingSecondaryTextColor
-//            outgoingFileDescriptionColor = outgoingSecondaryTextColor
-//            outgoingFileDurationColor = outgoingSecondaryTextColor
-//            outgoingMediaPlaceholderColor = outgoingBubbleFillColor?.withMultiplied(hue: 0.998, saturation: 1.129, brightness: 0.949)
-//            outgoingPollsButtonColor = outgoingSecondaryTextColor?.withAlphaComponent(0.38)
-//            outgoingPollsProgressColor = outgoingSecondaryTextColor
-//            outgoingSelectionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.013, saturation: 1.292, brightness: 0.871)
-//            outgoingSelectionBaseColor = outgoingControlColor
-//            outgoingCheckColor = outgoingSecondaryTextColor
 
             if day {
                 if let distance = outgoingBubbleFillColor?.distance(to: UIColor(rgb: 0xffffff)), distance < 200 {
@@ -164,6 +178,8 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         } else {
             defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
         }
+    } else if let forcedWallpaper = suggestedWallpaper {
+        defaultWallpaper = forcedWallpaper
     }
     
     chat = chat.withUpdated(

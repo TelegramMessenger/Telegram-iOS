@@ -71,7 +71,7 @@ private final class ThemeSettingsControllerArguments {
     let selectTheme: (PresentationThemeReference) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
-    let selectAccentColor: (PresentationThemeAccentColor) -> Void
+    let selectAccentColor: (PresentationThemeAccentColor?) -> Void
     let openAccentColorPicker: (PresentationThemeReference) -> Void
     let openAutoNightTheme: () -> Void
     let openTextSize: () -> Void
@@ -81,7 +81,7 @@ private final class ThemeSettingsControllerArguments {
     let editTheme: (PresentationCloudTheme) -> Void
     let contextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, contextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, contextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
@@ -306,10 +306,15 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     arguments.openWallpaperSettings()
                 })
             case let .accentColor(theme, currentTheme, color):
-                var defaultColor = PresentationThemeAccentColor(baseColor: .blue)
+                var colorItems: [ThemeSettingsAccentColor] = []
+                var defaultColor: PresentationThemeAccentColor? = PresentationThemeAccentColor(baseColor: .blue)
                 var colors = PresentationThemeBaseColor.allCases
                 if case let .builtin(name) = currentTheme {
-                    if name == .night || name == .nightAccent {
+                    if name == .dayClassic {
+                        colorItems.append(.default)
+                        defaultColor = nil
+                    }
+                    if name != .day {
                         colors = colors.filter { $0 != .black }
                     }
                     if name == .night {
@@ -320,10 +325,13 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                 }
                 let currentColor = color ?? defaultColor
-                if currentColor.baseColor != .custom {
+                if currentColor?.baseColor != .custom {
                     colors = colors.filter { $0 != .custom }
                 }
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: currentColor, updated: { color in
+                
+                colorItems.append(contentsOf: colors.map { .color($0) })
+                
+                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colorItems, currentColor: currentColor, updated: { color in
                     arguments.selectAccentColor(color)
                 }, openColorPicker: {
                     arguments.openAccentColorPicker(currentTheme)
@@ -381,7 +389,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
     
-    if case let .builtin(theme) = themeReference, theme != .dayClassic {
+    if case let .builtin(theme) = themeReference {
         entries.append(.accentColor(presentationData.theme, themeReference, themeSpecificAccentColors[themeReference.index]))
     }
     
@@ -469,17 +477,18 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 currentTheme = current.automaticThemeSwitchSetting.theme
             }
 
-            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color.color, bubbleColors: nil) else {
+            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color?.color, bubbleColors: nil) else {
                 return current
             }
             
             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
             var themeSpecificAccentColors = current.themeSpecificAccentColors
             themeSpecificAccentColors[currentTheme.index] = color
-
-            if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
-            } else {
-                themeSpecificChatWallpapers[currentTheme.index] = theme.chat.defaultWallpaper
+            
+            if case let .builtin(theme) = currentTheme, theme == .dayClassic || theme == .nightAccent {
+                if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.isColorOrGradient {
+                    themeSpecificChatWallpapers[currentTheme.index] = nil
+                }
             }
             
             return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)

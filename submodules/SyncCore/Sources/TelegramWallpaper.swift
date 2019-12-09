@@ -144,6 +144,41 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
         }
     }
     
+    public func isBasicallyEqual(to wallpaper: TelegramWallpaper) -> Bool {
+        switch self {
+            case .builtin:
+                if case .builtin = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            case let .color(color):
+                if case .color(color) = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            case let .gradient(topColor, bottomColor, _):
+                if case .gradient(topColor, bottomColor, _) = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            case let .image(representations, _):
+                if case .image(representations, _) = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            case let .file(_, _, _, _, _, _, lhsSlug, _, lhsSettings):
+                if case let .file(_, _, _, _, _, _, rhsSlug, _, rhsSettings) = wallpaper, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
     public var settings: WallpaperSettings? {
         switch self {
             case let .builtin(settings), let .gradient(_, _, settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
