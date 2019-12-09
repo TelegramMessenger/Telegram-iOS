@@ -545,7 +545,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             present(.push, twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
         }),
         SettingsSearchableItem(id: .privacy(9), title: strings.PrivacySettings_AuthSessions, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, recentSessionsController(context: context, activeSessionsContext: ActiveSessionsContext(account: context.account)))
+            present(.push, recentSessionsController(context: context, activeSessionsContext: ActiveSessionsContext(account: context.account), webSessionsContext: WebSessionsContext(account: context.account)))
         }),
         SettingsSearchableItem(id: .privacy(10), title: strings.PrivacySettings_DeleteAccountTitle, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_DeleteAccountIfAwayFor), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentPrivacySettings(context, present, .accountTimeout)
