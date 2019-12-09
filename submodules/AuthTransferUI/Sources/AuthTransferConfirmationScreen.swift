@@ -284,6 +284,8 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         updateInHierarchy = { [weak self] value in
             if value {
                 self?.animationNode?.play()
+            } else {
+                self?.animationNode?.reset()
             }
         }
     }
@@ -354,6 +356,11 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         contentY += iconSize.height + iconSpacing
         if let animationNode = self.animationNode {
             transition.updateFrameAdditive(node: animationNode, frame: iconFrame)
+            if iconFrame.minY < 0.0 {
+                transition.updateAlpha(node: animationNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: animationNode, alpha: 1.0)
+            }
         }
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: contentY), size: titleSize)
