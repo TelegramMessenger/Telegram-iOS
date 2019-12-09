@@ -132,6 +132,22 @@ public func arePeerDictionariesEqual(_ lhs: SimpleDictionary<PeerId, Peer>, _ rh
     return true
 }
 
+public func arePeerDictionariesEqual(_ lhs: [PeerId: Peer], _ rhs: [PeerId: Peer]) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for (id, lhsPeer) in lhs {
+        if let rhsPeer = rhs[id] {
+            if !lhsPeer.isEqual(rhsPeer) {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    return true
+}
+
 public struct PeerSummaryCounterTags: OptionSet, Sequence, Hashable {
     public var rawValue: Int32
     

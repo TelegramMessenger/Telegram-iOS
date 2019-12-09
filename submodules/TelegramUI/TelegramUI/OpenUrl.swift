@@ -500,6 +500,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             } else if parsedUrl.host == "login" {
                 if let components = URLComponents(string: "/?" + query) {
                     var code: String?
+                    var isToken: Bool = false
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -507,7 +508,17 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     code = value
                                 }
                             }
+                            if queryItem.name == "token" {
+                                isToken = true
+                            }
                         }
+                    }
+                    if isToken {
+                        context.sharedContext.presentGlobalController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.AuthSessions_AddDevice_UrlLoginHint, actions: [
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            }),
+                        ], parseMarkdown: true), nil)
+                        return
                     }
                     if let code = code {
                         convertedUrl = "https://t.me/login/\(code)"

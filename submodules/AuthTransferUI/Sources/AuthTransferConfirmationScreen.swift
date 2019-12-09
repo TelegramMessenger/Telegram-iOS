@@ -12,6 +12,68 @@ import TelegramPresentationData
 import PresentationDataUtils
 import TelegramCore
 import Markdown
+import DeviceAccess
+
+private let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\]")
+
+private func transformedWithTheme(data: Data, theme: PresentationTheme) -> Data {
+    if var string = String(data: data, encoding: .utf8) {
+        var colors: [UIColor] = [0x333333, 0xFFFFFF, 0x50A7EA, 0x212121].map { UIColor(rgb: $0) }
+        let replacementColors: [UIColor] = [theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.2), theme.list.plainBackgroundColor, theme.list.itemAccentColor, theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.12)]
+        
+        func colorToString(_ color: UIColor) -> String {
+            var r: CGFloat = 0.0
+            var g: CGFloat = 0.0
+            var b: CGFloat = 0.0
+            if color.getRed(&r, green: &g, blue: &b, alpha: nil) {
+                return "\"k\":[\(r),\(g),\(b),1]"
+            }
+            return ""
+        }
+        
+        func match(_ a: Double, _ b: Double, eps: Double) -> Bool {
+            return abs(a - b) < eps
+        }
+        
+        var replacements: [(NSTextCheckingResult, String)] = []
+        
+        if let colorKeyRegex = colorKeyRegex {
+            let results = colorKeyRegex.matches(in: string, range: NSRange(string.startIndex..., in: string))
+            for result in results.reversed()  {
+                if let range = Range(result.range, in: string) {
+                    let substring = String(string[range])
+                    let color = substring[substring.index(string.startIndex, offsetBy: "\"k\":[".count) ..< substring.index(before: substring.endIndex)]
+                    let components = color.split(separator: ",")
+                    if components.count == 4, let r = Double(components[0]), let g = Double(components[1]), let b = Double(components[2]), let a = Double(components[3]) {
+                        if match(a, 1.0, eps: 0.01) {
+                            for i in 0 ..< colors.count {
+                                let color = colors[i]
+                                var cr: CGFloat = 0.0
+                                var cg: CGFloat = 0.0
+                                var cb: CGFloat = 0.0
+                                if color.getRed(&cr, green: &cg, blue: &cb, alpha: nil) {
+                                    if match(r, Double(cr), eps: 0.01) && match(g, Double(cg), eps: 0.01) && match(b, Double(cb), eps: 0.01) {
+                                        replacements.append((result, colorToString(replacementColors[i])))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        for (result, text) in replacements {
+            if let range = Range(result.range, in: string) {
+                string = string.replacingCharacters(in: range, with: text)
+            }
+        }
+        
+        return string.data(using: .utf8) ?? data
+    } else {
+        return data
+    }
+}
 
 public final class AuthDataTransferSplashScreen: ViewController {
     private let context: AccountContext
@@ -49,7 +111,24 @@ public final class AuthDataTransferSplashScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: AuthTransferScanScreen(context: strongSelf.context, activeSessionsContext: strongSelf.activeSessionsContext), animated: true)
+            
+            DeviceAccess.authorizeAccess(to: .camera, presentationData: strongSelf.presentationData, present: { c, a in
+                guard let strongSelf = self else {
+                    return
+                }
+                c.presentationArguments = a
+                strongSelf.context.sharedContext.mainWindow?.present(c, on: .root)
+            }, openSettings: {
+                self?.context.sharedContext.applicationBindings.openSettings()
+            }, { granted in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard granted else {
+                    return
+                }
+                (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: AuthTransferScanScreen(context: strongSelf.context, activeSessionsContext: strongSelf.activeSessionsContext), animated: true)
+            })
         })
         
         self.displayNodeDidLoad()
@@ -67,12 +146,14 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
     
     private var animationSize: CGSize = CGSize()
     private var animationOffset: CGPoint = CGPoint()
-    private let animationNode: AnimationNode
+    private let animationNode: AnimationNode?
     private let titleNode: ImmediateTextNode
     private let badgeBackgroundNodes: [ASImageNode]
     private let badgeTextNodes: [ImmediateTextNode]
     private let textNodes: [ImmediateTextNode]
     let buttonNode: SolidRoundedButtonNode
+    
+    private let hierarchyTrackingNode: HierarchyTrackingNode
     
     var inProgress: Bool = false {
         didSet {
@@ -86,12 +167,16 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
     init(context: AccountContext, presentationData: PresentationData, action: @escaping () -> Void) {
         self.presentationData = presentationData
         
-        self.animationNode = AnimationNode(animation: "anim_qr", colors: nil, scale: UIScreenScale)
+        if let url = getAppBundle().url(forResource: "anim_qr", withExtension: "json"), let data = try? Data(contentsOf: url) {
+            self.animationNode = AnimationNode(animationData: transformedWithTheme(data: data, theme: presentationData.theme))
+        } else {
+            self.animationNode = nil
+        }
         
         let buttonText: String
         
-        let badgeFont = Font.with(size: 14.0, design: .round, traits: [.bold])
-        let textFont = Font.regular(18.0)
+        let badgeFont = Font.with(size: 13.0, design: .round, traits: [.bold])
+        let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         
         var badgeBackgroundNodes: [ASImageNode] = []
@@ -147,18 +232,27 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_AddDeviceIntro_Title, font: Font.bold(28.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_AddDeviceIntro_Title, font: Font.bold(24.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.buttonNode.isHidden = buttonText.isEmpty
         
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+        
         super.init()
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
-        self.addSubnode(self.animationNode)
+        self.addSubnode(self.hierarchyTrackingNode)
+        
+        if let animationNode = self.animationNode {
+            self.addSubnode(animationNode)
+        }
         self.addSubnode(self.titleNode)
         
         self.badgeBackgroundNodes.forEach(self.addSubnode)
@@ -182,8 +276,14 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
             }
             textNode.tapAttributeAction = { attributes in
                 if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
-                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://telegram.org/desktop", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
                 }
+            }
+        }
+        
+        updateInHierarchy = { [weak self] value in
+            if value {
+                self?.animationNode?.play()
             }
         }
     }
@@ -198,15 +298,15 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let sideInset: CGFloat = 22.0
         let textSideInset: CGFloat = 54.0
-        let buttonSideInset: CGFloat = 48.0
-        let titleSpacing: CGFloat = 30.0
+        let buttonSideInset: CGFloat = 16.0
+        let titleSpacing: CGFloat = 25.0
         let buttonHeight: CGFloat = 50.0
-        let buttonSpacing: CGFloat = 10.0
-        let textSpacing: CGFloat = 26.0
+        let buttonSpacing: CGFloat = 16.0
+        let textSpacing: CGFloat = 25.0
         let badgeSize: CGFloat = 20.0
         
-        let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset), height: 500.0)
-        let animationSize = self.animationNode.preferredSize()?.fitted(animationFitSize) ?? animationFitSize
+        let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset + 20.0), height: 500.0)
+        let animationSize = self.animationNode?.preferredSize()?.fitted(animationFitSize) ?? animationFitSize
         let iconSize: CGSize = animationSize
         var iconOffset = CGPoint()
         
@@ -233,7 +333,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         let contentTopInset = navigationHeight
         let contentBottomInset = bottomInset + buttonHeight + buttonSpacing
         
-        let iconSpacing: CGFloat = max(20.0, min(64.0, layout.size.height - contentTopInset - contentBottomInset - contentHeight - 40.0))
+        let iconSpacing: CGFloat = max(20.0, min(61.0, layout.size.height - contentTopInset - contentBottomInset - contentHeight - 40.0))
         
         contentHeight += iconSpacing
         
@@ -252,7 +352,9 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         var contentY = contentVerticalOrigin
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + self.animationOffset.x, y: contentY), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
         contentY += iconSize.height + iconSpacing
-        transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
+        if let animationNode = self.animationNode {
+            transition.updateFrameAdditive(node: animationNode, frame: iconFrame)
+        }
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: contentY), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
@@ -269,16 +371,23 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
             let textFrame = CGRect(origin: CGPoint(x: textSideInset, y: contentY), size: textSize)
             transition.updateFrameAdditive(node: self.textNodes[i], frame: textFrame)
             
-            let badgeFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.minY + floor((textFrame.height - badgeSize) / 2.0)), size: CGSize(width: badgeSize, height: badgeSize))
+            let badgeFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.minY), size: CGSize(width: badgeSize, height: badgeSize))
             transition.updateFrameAdditive(node: self.badgeBackgroundNodes[i], frame: badgeFrame)
             
-            transition.updateFrameAdditive(node: self.badgeTextNodes[i], frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeFrame.width - badgeTextSize.width) / 2.0) + 0.5, y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0) + 0.5), size: badgeTextSize))
+            let badgeTextOffsetX: CGFloat
+            if i == 0 {
+                badgeTextOffsetX = 0.5
+            } else {
+                badgeTextOffsetX = 1.0
+            }
+            
+            transition.updateFrameAdditive(node: self.badgeTextNodes[i], frame: CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeFrame.width - badgeTextSize.width) / 2.0) + badgeTextOffsetX, y: badgeFrame.minY + floor((badgeFrame.height - badgeTextSize.height) / 2.0) + 0.5), size: badgeTextSize))
             
             contentY += textSize.height
         }
         
         if firstTime {
-            self.animationNode.play()
+            self.animationNode?.play()
         }
     }
 }

@@ -447,7 +447,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController {
+public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext, webSessionsContext: WebSessionsContext) -> ViewController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
     let updateState: ((RecentSessionsControllerState) -> RecentSessionsControllerState) -> Void = { f in
@@ -455,6 +455,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     }
     
     activeSessionsContext.loadMore()
+    webSessionsContext.loadMore()
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -545,33 +546,11 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             return $0.withUpdatedRemovingSessionId(sessionId)
         }
         
-        let applySessions: Signal<Void, NoError> = websitesPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { websitesAndPeers -> Signal<Void, NoError> in
-                if let websites = websitesAndPeers?.0, let peers = websitesAndPeers?.1 {
-                    var updatedWebsites = websites
-                    for i in 0 ..< updatedWebsites.count {
-                        if updatedWebsites[i].hash == sessionId {
-                            updatedWebsites.remove(at: i)
-                            break
-                        }
-                    }
-                    
-                    if updatedWebsites.isEmpty {
-                        mode.set(.sessions)
-                    }
-                    websitesPromise.set(.single((updatedWebsites, peers)))
-                }
-                
-                return .complete()
-        }
-        
-        removeSessionDisposable.set(((terminateWebSession(network: context.account.network, hash: sessionId)
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }) |> then(applySessions) |> deliverOnMainQueue).start(error: { _ in
+        removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        })
+        |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingSessionId(nil)
             }
@@ -595,7 +574,8 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
                         return $0.withUpdatedTerminatingOtherSessions(true)
                     }
                     
-                    terminateOtherSessionsDisposable.set((terminateAllWebSessions(network: context.account.network) |> deliverOnMainQueue).start(error: { _ in
+                    terminateOtherSessionsDisposable.set((webSessionsContext.removeAll()
+                    |> deliverOnMainQueue).start(error: { _ in
                         updateState {
                             return $0.withUpdatedTerminatingOtherSessions(false)
                         }
@@ -604,21 +584,17 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
                             return $0.withUpdatedTerminatingOtherSessions(false)
                         }
                         mode.set(.sessions)
-                        websitesPromise.set(.single(([], [:])))
                     }))
                 })
-                ]),
+            ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, addDevice: {
         pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
     }, openOtherAppsUrl: {
-        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://telegram.org/desktop", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
     })
-    
-    let websitesSignal: Signal<([WebAuthorization], [PeerId : Peer])?, NoError> = .single(nil) |> then(webSessions(network: context.account.network) |> map(Optional.init))
-    websitesPromise.set(websitesSignal)
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
@@ -634,12 +610,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     }
     |> distinctUntilChanged
     
-    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, websitesPromise.get(), enableQRLogin)
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin)
     |> deliverOnMainQueue
     |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
-        let websites = websitesAndPeers?.0
-        let peers = websitesAndPeers?.1
+        let websites = websitesAndPeers.sessions
+        let peers = websitesAndPeers.peers
         
         if sessionsState.sessions.count > 1 {
             if state.terminatingOtherSessions {
@@ -659,16 +635,16 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }
         }
         
-        var emptyStateItem: ItemListControllerEmptyStateItem?
-        if sessionsState.sessions.isEmpty {
+        let emptyStateItem: ItemListControllerEmptyStateItem? = nil
+        /*if sessionsState.sessions.isEmpty {
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         } else if sessionsState.sessions.count == 1 && mode == .sessions {
             emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-        }
+        }*/
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]
-        if let websites = websites, !websites.isEmpty {
+        if !websites.isEmpty {
             title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
         } else {
             title = .text(presentationData.strings.AuthSessions_DevicesTitle)

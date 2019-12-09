@@ -671,7 +671,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         if enableQRLogin {
-            entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount)"))
+            entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount + 1)"))
         } else {
             entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         }
@@ -859,8 +859,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let activeSessionsContextAndCountSignal = contextValue.get()
     |> deliverOnMainQueue
-    |> mapToSignal { context -> Signal<(ActiveSessionsContext, Int), NoError> in
+    |> mapToSignal { context -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
         let activeSessionsContext = ActiveSessionsContext(account: context.account)
+        let webSessionsContext = WebSessionsContext(account: context.account)
         let otherSessionCount = activeSessionsContext.state
         |> map { state -> Int in
             return state.sessions.filter({ !$0.isCurrent }).count
@@ -868,10 +869,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> distinctUntilChanged
         return otherSessionCount
         |> map { value in
-            return (activeSessionsContext, value)
+            return (activeSessionsContext, value, webSessionsContext)
         }
     }
-    let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int)>()
+    let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)>()
     activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
     
     let arguments = SettingsItemArguments(sharedContext: context.sharedContext, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
@@ -933,10 +934,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)).start(next: { context in
             let _ = (activeSessionsContextAndCount.get()
             |> deliverOnMainQueue
-            |> take(1)).start(next: { activeSessionsContext, _ in
+            |> take(1)).start(next: { activeSessionsContext, _, webSessionsContext in
                 pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
                     privacySettings.set(.single(settings))
-                }, activeSessionsContext: activeSessionsContext))
+                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
             })
         })
     }, openDataAndStorage: {
@@ -1108,11 +1109,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }, openDevices: {
         let _ = (activeSessionsContextAndCount.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { activeSessionsContext, count in
+        |> take(1)).start(next: { activeSessionsContext, count, webSessionsContext in
             if count == 0 {
                 pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
             } else {
-                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext))
+                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
             }
         })
     })
