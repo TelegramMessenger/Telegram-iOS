@@ -259,7 +259,11 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc func textFieldDidEndEditing(_ textField: UITextField) {
         if !self.skipEndEditing {
-            self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+            if let color = self.colorFromCurrentText() {
+                self.setColor(color)
+            } else {
+                self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+            }
         }
     }
     

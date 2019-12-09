@@ -315,7 +315,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
         let _ = (previewThemePromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { theme in
-            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, completion: { updatedTheme in
+            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme in
                 updateState { current in
                     var state = current
                     previewThemePromise.set(.single(updatedTheme))
@@ -341,7 +341,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                     guard complete, let fullSizeData = fullSizeData else {
                                         return .complete()
                                     }
-                                    context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                                    context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData, synchronous: true)
                                     return .single(wallpaper.wallpaper)
                                 }
                             } else {
@@ -454,8 +454,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     let themeThumbnailData: Data?
                     if let theme = theme, let themeString = encodePresentationTheme(theme), let data = themeString.data(using: .utf8) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
-                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                         themeResource = resource
                         themeData = data
                         
@@ -501,7 +501,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                     current = PresentationThemeSettings.defaultSettings
                                                 }
                                                 if let resource = resultTheme.file?.resource, let data = themeData {
-                                                    context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                    context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                                 }
                                                 let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
                                                 
@@ -542,7 +542,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                 current = PresentationThemeSettings.defaultSettings
                                             }
                                             if let resource = resultTheme.file?.resource, let data = themeData {
-                                                context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             }
                                             let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
                                             

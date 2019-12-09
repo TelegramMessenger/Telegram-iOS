@@ -170,7 +170,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         
         self.colorPanelNode = WallpaperColorPanelNode(theme: self.theme, strings: self.presentationData.strings)
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings)
+        
+        let doneButtonType: WallpaperGalleryToolbarDoneButtonType
+        if case .edit(_, _, _, true, _) = self.mode {
+            doneButtonType = .proceed
+        } else {
+            doneButtonType = .set
+        }
+        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
         
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
@@ -270,7 +277,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let updatedTheme: PresentationTheme
             if let themeReference = mode.themeReference {
                 updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
-            } else if case let .edit(theme, _, _, _) = mode {
+            } else if case let .edit(theme, _, _, _, _) = mode {
                 updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors)
             } else {
                 updatedTheme = theme

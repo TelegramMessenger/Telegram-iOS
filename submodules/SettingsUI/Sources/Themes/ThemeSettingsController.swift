@@ -412,9 +412,6 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
     
-    //entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
-    //entries.append(.fontSize(presentationData.theme, fontSize))
-    
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
         entries.append(.iconItem(presentationData.theme, presentationData.strings, availableAppIcons, currentAppIconName))
@@ -431,6 +428,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var updateControllersImpl: ((([UIViewController]) -> [UIViewController]) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
@@ -552,13 +550,23 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             return
                         }
                         
-                        let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, completion: { result in
+                        let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: true, completion: { result in
                             let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
                                 if let navigationController = getNavigationControllerImpl?() {
                                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                                 }
                             })
-                            pushControllerImpl?(controller)
+                            updateControllersImpl?({ controllers in
+                                var controllers = controllers
+                                controllers = controllers.filter { controller in
+                                    if controller is ThemeAccentColorController {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                controllers.append(controller)
+                                return controllers
+                            })
                         }))
                         
                         c.dismiss(completion: {
@@ -671,6 +679,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
     }
+    updateControllersImpl = { [weak controller] f in
+        if let navigationController = controller?.navigationController as? NavigationController {
+            navigationController.setViewControllers(f(navigationController.viewControllers), animated: true)
+        }
+    }
     presentInGlobalOverlayImpl = { [weak controller] c, a in
         controller?.presentInGlobalOverlay(c, with: a)
     }
@@ -753,13 +766,23 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 return themeReference
             }
             |> deliverOnMainQueue).start(next: { themeReference in
-                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, defaultThemeReference: themeReference, completion: { result in
+                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, defaultThemeReference: themeReference, create: true, completion: { result in
                     let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
                         if let navigationController = getNavigationControllerImpl?() {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                         }
                     })
-                    pushControllerImpl?(controller)
+                    updateControllersImpl?({ controllers in
+                        var controllers = controllers
+                        controllers = controllers.filter { controller in
+                            if controller is ThemeAccentColorController {
+                                return false
+                            }
+                            return true
+                        }
+                        controllers.append(controller)
+                        return controllers
+                    })
                 }))
                 pushControllerImpl?(controller)
                 

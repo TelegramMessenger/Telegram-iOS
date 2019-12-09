@@ -112,7 +112,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.blurredNode = BlurredImageNode()
         self.blurredNode.blurView.contentMode = .scaleAspectFill
         
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
+        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         
         if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
             self.remoteChatBackgroundNode.isHidden = false

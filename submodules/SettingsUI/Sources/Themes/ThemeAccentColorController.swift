@@ -16,13 +16,13 @@ private let colors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200,
 enum ThemeAccentColorControllerMode {
     case colors(themeReference: PresentationThemeReference)
     case background(themeReference: PresentationThemeReference)
-    case edit(theme: PresentationTheme, wallpaper: TelegramWallpaper?, defaultThemeReference: PresentationThemeReference?, completion: (PresentationTheme) -> Void)
+    case edit(theme: PresentationTheme, wallpaper: TelegramWallpaper?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme) -> Void)
     
     var themeReference: PresentationThemeReference? {
         switch self {
             case let .colors(themeReference), let .background(themeReference):
                 return themeReference
-            case let .edit(_, _, defaultThemeReference, _):
+            case let .edit(_, _, defaultThemeReference, _, _):
                 return defaultThemeReference
             default:
                 return nil
@@ -121,7 +121,7 @@ final class ThemeAccentColorController: ViewController {
         
         let theme: PresentationTheme
         let wallpaper: TelegramWallpaper
-        if case let .edit(editedTheme, walpaper, _, _) = self.mode {
+        if case let .edit(editedTheme, walpaper, _, _, _) = self.mode {
             theme = editedTheme
             wallpaper = walpaper ?? editedTheme.chat.defaultWallpaper
         } else {
@@ -136,7 +136,7 @@ final class ThemeAccentColorController: ViewController {
         }, apply: { [weak self] state, serviceBackgroundColor in
             if let strongSelf = self {
                 let context = strongSelf.context
-                if case let .edit(theme, _, themeReference, completion) = strongSelf.mode {
+                if case let .edit(theme, _, themeReference, _, completion) = strongSelf.mode {
                     let updatedTheme: PresentationTheme
                     if let themeReference = themeReference {
                         updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor, bubbleColors: state.messagesColors, backgroundColors: state.backgroundColors, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
@@ -145,8 +145,6 @@ final class ThemeAccentColorController: ViewController {
                     }
                     
                     completion(updatedTheme)
-                    
-                    strongSelf.dismiss()
                 } else {
                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                         let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
@@ -244,7 +242,7 @@ final class ThemeAccentColorController: ViewController {
                 if strongSelf.mode.themeReference == .builtin(.dayClassic) {
                     defaultMessagesColor = UIColor(rgb: 0xe1ffc7)
                 }
-            } else if case let .edit(theme, wallpaper, _, _) = strongSelf.mode {
+            } else if case let .edit(theme, wallpaper, _, _, _) = strongSelf.mode {
                 accentColor = theme.rootController.navigationBar.accentTextColor
                 if case let .color(color) = theme.chat.defaultWallpaper {
                     backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)

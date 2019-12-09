@@ -55,10 +55,20 @@ public final class ThemePreviewController: ViewController {
         self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .modal
         
+        var hasInstallsCount = false
         let themeName: String
         if case let .theme(theme) = source {
             themeName = theme.title
-            self.theme.set(.single(theme))
+            self.theme.set(.single(theme)
+            |> then(
+                getTheme(account: context.account, slug: theme.slug)
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                    return .single(nil)
+                }
+                |> filter { $0 != nil }
+            ))
+            hasInstallsCount = true
         } else if case let .slug(slug, _) = source {
             self.theme.set(getTheme(account: context.account, slug: slug)
             |> map(Optional.init)
@@ -84,6 +94,15 @@ public final class ThemePreviewController: ViewController {
                     }
                 }
             ))
+            hasInstallsCount = true
+        } else if case let .settings(themeReference) = source, case let .cloud(theme) = themeReference {
+            self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                return .single(nil)
+            })
+            themeName = previewTheme.name.string
+            hasInstallsCount = true
         } else {
             self.theme.set(.single(nil))
             themeName = previewTheme.name.string
@@ -95,7 +114,7 @@ public final class ThemePreviewController: ViewController {
         }
         
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        titleView.title = CounterContollerTitle(title: themeName, counter: isPreview ? "" : " ")
+        titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? " " : "")
         self.navigationItem.titleView = titleView
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         

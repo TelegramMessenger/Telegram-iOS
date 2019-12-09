@@ -4,8 +4,14 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
+enum WallpaperGalleryToolbarDoneButtonType {
+    case set
+    case proceed
+}
+
 final class WallpaperGalleryToolbarNode: ASDisplayNode {
     private var theme: PresentationTheme
+    private let doneButtonType: WallpaperGalleryToolbarDoneButtonType
     
     private let cancelButton = HighlightableButtonNode()
     private let doneButton = HighlightableButtonNode()
@@ -15,8 +21,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var done: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(theme: PresentationTheme, strings: PresentationStrings, doneButtonType: WallpaperGalleryToolbarDoneButtonType) {
         self.theme = theme
+        self.doneButtonType = doneButtonType
         
         super.init()
         
@@ -67,7 +74,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         
         self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
-        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
+        self.doneButton.setTitle(self.doneButtonType == .set ? strings.Wallpaper_Set : strings.Theme_Colors_Proceed, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
     }
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

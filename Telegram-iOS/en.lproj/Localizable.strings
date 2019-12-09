@@ -5181,3 +5181,5 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.Context.ChangeColors" = "Change Colors";
 
 "EditTheme.ChangeColors" = "Change Colors";
+
+"Theme.Colors.Proceed" = "Proceed";
