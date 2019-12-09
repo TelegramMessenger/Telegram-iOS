@@ -349,7 +349,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let titleAreaInset: CGFloat = 50.0
         
         var actionAreaHeight: CGFloat = 0.0
-        actionAreaHeight += insets.bottom
+        actionAreaHeight += insets.bottom + 12.0
         
         transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: layout.size.height - actionAreaHeight - buttonHeight), size: CGSize(width: layout.size.width - buttonSideInset * 2.0, height: buttonHeight)))
         actionAreaHeight += buttonHeight
