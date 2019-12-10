@@ -32,8 +32,9 @@ class LocationPickerInteraction {
     let dismissInput: () -> Void
     let updateSendActionHighlight: (Bool) -> Void
     let openHomeWorkInfo: () -> Void
+    let showPlacesInThisArea: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void) {
+    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
@@ -47,6 +48,7 @@ class LocationPickerInteraction {
         self.dismissInput = dismissInput
         self.updateSendActionHighlight = updateSendActionHighlight
         self.openHomeWorkInfo = openHomeWorkInfo
+        self.showPlacesInThisArea = showPlacesInThisArea
     }
 }
 
@@ -198,6 +200,7 @@ public final class LocationPickerController: ViewController {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .none
+                state.searchingVenuesAround = false
                 return state
             }
         }, goToCoordinate: { [weak self] coordinate in
@@ -208,6 +211,7 @@ public final class LocationPickerController: ViewController {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .location(coordinate, nil)
+                state.searchingVenuesAround = false
                 return state
             }
         }, openSearch: { [weak self] in
@@ -259,9 +263,13 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            
             let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
             strongSelf.present(controller, in: .window(.root))
+        }, showPlacesInThisArea: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.requestPlacesAtSelectedLocation()
         })
         
         self.scrollToTop = { [weak self] in

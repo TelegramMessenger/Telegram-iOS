@@ -258,7 +258,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                 let transition = preparedTransition(from: previousEntries ?? [], to: entries, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                 
-                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, animated: false)
                 
                 switch state.selectedLocation {
                     case .initial:
