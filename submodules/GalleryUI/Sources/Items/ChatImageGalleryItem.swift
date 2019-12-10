@@ -12,6 +12,8 @@ import RadialStatusNode
 import PhotoResources
 import AppBundle
 import StickerPackPreviewUI
+import OverlayStatusController
+import PresentationDataUtils
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -245,7 +247,30 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let (context, media) = self.contextAndMedia else {
             return
         }
-        let _ = (stickerPacksAttachedToMedia(postbox: context.account.postbox, network: context.account.network, media: media)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            guard let strongSelf = self else {
+                return EmptyDisposable
+            }
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            (strongSelf.baseNavigationController()?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let signal = stickerPacksAttachedToMedia(account: context.account, media: media)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        let _ = (signal
         |> deliverOnMainQueue).start(next: { [weak self] packs in
             guard let strongSelf = self, !packs.isEmpty else {
                 return

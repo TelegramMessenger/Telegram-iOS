@@ -550,7 +550,9 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                     return
                 }
                 if index == strongSelf.selectedStickerPackIndex {
-                    strongSelf.containerLayoutUpdated(layout, transition: transition)
+                    let modalProgress = strongSelf.containers[strongSelf.selectedStickerPackIndex].modalProgress
+                    strongSelf.modalProgressUpdated(modalProgress, transition)
+                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                 }
             }, presentInGlobalOverlay: presentInGlobalOverlay,
             sendSticker: sendSticker)
@@ -610,15 +612,12 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             var scaledOffset: CGFloat = 0.0
             scaledOffset = -CGFloat(indexOffset) * (1.0 - expandProgress) * (scaledInset * 2.0) + CGFloat(indexOffset) * scaledDistance
             
-            transition.updateFrame(node: container, frame: CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size))
-            transition.updateSublayerTransformScale(node: container, scale: containerScale)
+            transition.updateFrame(node: container, frame: CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size), beginWithCurrentState: true)
+            transition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
             if container.validLayout?.0 != layout {
                 container.updateLayout(layout: layout, transition: transition)
             }
         }
-        
-        let modalProgress = self.containers[self.selectedStickerPackIndex].modalProgress
-        self.modalProgressUpdated(modalProgress, transition)
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
