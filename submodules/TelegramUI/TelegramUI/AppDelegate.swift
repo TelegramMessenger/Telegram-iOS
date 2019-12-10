@@ -35,6 +35,7 @@ import AppLock
 import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
+import CoreSpotlight
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -1826,6 +1827,53 @@ final class SharedApplicationContext {
         
         if userActivity.activityType == NSUserActivityTypeBrowsingWeb, let url = userActivity.webpageURL {
             self.openUrl(url: url)
+        }
+        
+        if userActivity.activityType == CSSearchableItemActionType {
+            if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String, uniqueIdentifier.hasPrefix("contact-") {
+                if let peerIdValue = Int64(String(uniqueIdentifier[uniqueIdentifier.index(uniqueIdentifier.startIndex, offsetBy: "contact-".count)...])) {
+                    let peerId = PeerId(peerIdValue)
+                
+                    let signal = self.sharedContextPromise.get()
+                    |> take(1)
+                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                        return sharedApplicationContext.sharedContext.activeAccounts
+                        |> take(1)
+                        |> mapToSignal { primary, accounts, _ -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                            return combineLatest(accounts.map { _, account, _ -> Signal<Account?, NoError> in
+                                return account.postbox.transaction { transaction -> Account? in
+                                    if transaction.getPeer(peerId) != nil {
+                                        return account
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            })
+                            |> map { accounts -> (AccountRecordId?, [Account?]) in
+                                return (primary?.id, accounts)
+                            }
+                        }
+                    }
+                    let _ = (signal
+                    |> deliverOnMainQueue).start(next: { primary, accounts in
+                        if let primary = primary {
+                            for account in accounts {
+                                if let account = account, account.id == primary {
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId)
+                                    return
+                                }
+                            }
+                        }
+                        
+                        for account in accounts {
+                            if let account = account {
+                                self.openChatWhenReady(accountId: account.id, peerId: peerId)
+                                return
+                            }
+                        }
+                    })
+                }
+            }
         }
         
         return true

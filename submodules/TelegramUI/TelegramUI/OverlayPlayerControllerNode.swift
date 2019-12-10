@@ -161,6 +161,20 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             }
         }
         
+        self.historyNode.endedInteractiveDragging = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            switch strongSelf.historyNode.visibleContentOffset() {
+            case let .known(value):
+                if value <= -10.0 {
+                    strongSelf.requestDismiss()
+                }
+            default:
+                break
+            }
+        }
+        
         self.controlsNode.updateIsExpanded = { [weak self] in
             if let strongSelf = self, let validLayout = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(validLayout, transition: .animated(duration: 0.3, curve: .spring))
@@ -242,7 +256,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
-        self.view.addGestureRecognizer(panRecognizer)
+        //self.view.addGestureRecognizer(panRecognizer)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -305,17 +319,18 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if self.controlsNode.bounds.contains(self.view.convert(point, to: self.controlsNode.view)) {
+            if result == nil {
+                return self.historyNode.view
+            }
+        }
+        
         if !self.bounds.contains(point) {
             return nil
         }
         if point.y < self.controlsNode.frame.minY {
             return self.dimNode.view
-        }
-        let result = super.hitTest(point, with: event)
-        if self.controlsNode.frame.contains(point) {
-//            if result == self.historyNode.view {
-//                return self.view
-//            }
         }
         return result
     }
@@ -529,6 +544,20 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             self.historyNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
                 if let strongSelf = self {
                     strongSelf.updateFloatingHeaderOffset(offset: offset, transition: transition)
+                }
+            }
+            
+            self.historyNode.endedInteractiveDragging = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch strongSelf.historyNode.visibleContentOffset() {
+                case let .known(value):
+                    if value <= -10.0 {
+                        strongSelf.requestDismiss()
+                    }
+                default:
+                    break
                 }
             }
             
