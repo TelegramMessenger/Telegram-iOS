@@ -10,6 +10,8 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import AppBundle
+import StickerPackPreviewUI
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -156,6 +158,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>()
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
@@ -230,8 +233,28 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 self._ready.set(.single(Void()))
             }
+            if imageReference.media.flags.contains(.hasStickers) {
+                let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                self._rightBarButtonItem.set(.single(rightBarButtonItem))
+            }
         }
         self.contextAndMedia = (self.context, imageReference.abstract)
+    }
+    
+    @objc func openStickersButtonPressed() {
+        guard let (context, media) = self.contextAndMedia else {
+            return
+        }
+        let _ = (stickerPacksAttachedToMedia(postbox: context.account.postbox, network: context.account.network, media: media)
+        |> deliverOnMainQueue).start(next: { [weak self] packs in
+            guard let strongSelf = self, !packs.isEmpty else {
+                return
+            }
+            let baseNavigationController = strongSelf.baseNavigationController()
+            baseNavigationController?.view.endEditing(true)
+            let controller = StickerPackScreen(context: context, stickerPacks: packs, sendSticker: nil)
+            (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+        })
     }
     
     func setFile(context: AccountContext, fileReference: FileMediaReference) {
@@ -445,6 +468,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    override func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
+        return self._rightBarButtonItem.get()
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {

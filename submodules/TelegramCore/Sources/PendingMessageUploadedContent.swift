@@ -350,6 +350,22 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                 flags |= 1 << 1
                                 ttlSeconds = autoremoveAttribute.timeout
                             }
+                            var stickers: [Api.InputDocument]?
+                            for attribute in attributes {
+                                if let attribute = attribute as? EmbeddedMediaStickersMessageAttribute {
+                                    var stickersValue: [Api.InputDocument] = []
+                                    for file in attribute.files {
+                                        if let resource = file.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
+                                            stickersValue.append(Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)))
+                                        }
+                                    }
+                                    if !stickersValue.isEmpty {
+                                        stickers = stickersValue
+                                        flags |= 1 << 0
+                                    }
+                                    break
+                                }
+                            }
                             return postbox.transaction { transaction -> Api.InputPeer? in
                                 return transaction.getPeer(peerId).flatMap(apiInputPeer)
                             }
@@ -357,10 +373,10 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                 if let inputPeer = inputPeer {
                                     if autoremoveAttribute != nil {
-                                        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds), text), reuploadInfo: nil)))
+                                        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds), text), reuploadInfo: nil)))
                                     }
                                     
-                                    return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: flags, file: file, stickers: nil, ttlSeconds: ttlSeconds)))
+                                    return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds)))
                                     |> mapError { _ -> PendingMessageUploadError in return .generic }
                                     |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                         switch result {
