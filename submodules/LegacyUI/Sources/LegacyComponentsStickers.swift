@@ -8,7 +8,7 @@ import SwiftSignalKit
 import Display
 import StickerResources
 
-func stickerFromLegacyDocument(_ documentAttachment: TGDocumentMediaAttachment) -> TelegramMediaFile? {
+public func stickerFromLegacyDocument(_ documentAttachment: TGDocumentMediaAttachment) -> TelegramMediaFile? {
     if documentAttachment.isSticker() {
         for case let sticker as TGDocumentAttributeSticker in documentAttachment.attributes {
             var attributes: [TelegramMediaFileAttribute] = []

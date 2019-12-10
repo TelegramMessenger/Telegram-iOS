@@ -19,7 +19,7 @@ private let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]
 private func transformedWithTheme(data: Data, theme: PresentationTheme) -> Data {
     if var string = String(data: data, encoding: .utf8) {
         var colors: [UIColor] = [0x333333, 0xFFFFFF, 0x50A7EA, 0x212121].map { UIColor(rgb: $0) }
-        let replacementColors: [UIColor] = [theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.2), theme.list.plainBackgroundColor, theme.list.itemAccentColor, theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.12)]
+        let replacementColors: [UIColor] = [theme.list.itemPrimaryTextColor.mixedWith(.white, alpha: 0.2), theme.list.plainBackgroundColor, theme.list.itemAccentColor, theme.list.plainBackgroundColor]
         
         func colorToString(_ color: UIColor) -> String {
             var r: CGFloat = 0.0
@@ -284,6 +284,8 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         updateInHierarchy = { [weak self] value in
             if value {
                 self?.animationNode?.play()
+            } else {
+                self?.animationNode?.reset()
             }
         }
     }
@@ -354,6 +356,11 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         contentY += iconSize.height + iconSpacing
         if let animationNode = self.animationNode {
             transition.updateFrameAdditive(node: animationNode, frame: iconFrame)
+            if iconFrame.minY < 0.0 {
+                transition.updateAlpha(node: animationNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: animationNode, alpha: 1.0)
+            }
         }
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: contentY), size: titleSize)

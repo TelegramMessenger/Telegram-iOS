@@ -145,6 +145,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let displayUpgradeProgress: (Float?) -> Void
     
+    private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
@@ -634,10 +635,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.updateNotificationTokensRegistration()
         
-        self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
-        |> map { primary, _, _ in
-            return primary
-        }, presentationData: self.presentationData)
+        if applicationBindings.isMainApp {
+            self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
+            |> map { primary, _, _ in
+                return primary
+            }, presentationData: self.presentationData)
+            self.spotlightDataContext = SpotlightDataContext(accounts: self.activeAccounts |> map { _, accounts, _ in
+                return accounts.map { _, account, _ in
+                    return account
+                }
+            })
+        }
     }
     
     deinit {

@@ -32,9 +32,14 @@ func telegramMediaImageRepresentationsFromApiSizes(datacenterId: Int32, photoId:
 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
-        case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
+        case let .photo(flags, id, accessHash, fileReference, _, sizes, dcId):
             let (immediateThumbnailData, representations) = telegramMediaImageRepresentationsFromApiSizes(datacenterId: dcId, photoId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: sizes)
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
+            var imageFlags: TelegramMediaImageFlags = []
+            let hasStickers = (flags & (1 << 0)) != 0
+            if hasStickers {
+                imageFlags.insert(.hasStickers)
+            }
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil, flags: imageFlags)
         case .photoEmpty:
             return nil
     }
