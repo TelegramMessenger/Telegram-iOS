@@ -203,9 +203,12 @@ final class ThemeAccentColorController: ViewController {
             let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
                 
             let accentColor: UIColor
+            var initialWallpaper: TelegramWallpaper?
             let backgroundColors: (UIColor, UIColor?)?
             let messageColors: (UIColor, UIColor?)?
             var defaultMessagesColor: UIColor?
+            
+            var ignoreDefaultWallpaper = false
             
             if let themeReference = strongSelf.mode.themeReference {
                 accentColor = settings.themeSpecificAccentColors[themeReference.index]?.color ?? defaultDayAccentColor
@@ -214,12 +217,24 @@ final class ThemeAccentColorController: ViewController {
                     wallpaper = customWallpaper
                 } else {
                     let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil, bubbleColors: nil) ?? defaultPresentationTheme
+                    if case let .builtin(themeName) = themeReference {
+                        if case .dayClassic = themeName, settings.themeSpecificAccentColors[themeReference.index] != nil {
+                            ignoreDefaultWallpaper = true
+                        } else if case .nightAccent = themeName {
+                            ignoreDefaultWallpaper = true
+                        }
+                    }
+                    
                     wallpaper = theme.chat.defaultWallpaper
+                }
+                
+                if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
+                    initialWallpaper = wallpaper
                 }
                 
                 if let initialBackgroundColor = strongSelf.initialBackgroundColor {
                     backgroundColors = (initialBackgroundColor, nil)
-                } else {
+                } else if !ignoreDefaultWallpaper {
                     if case let .color(color) = wallpaper {
                         backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
                     } else if case let .gradient(topColor, bottomColor, _) = wallpaper {
@@ -227,6 +242,8 @@ final class ThemeAccentColorController: ViewController {
                     } else {
                         backgroundColors = nil
                     }
+                } else {
+                    backgroundColors = nil
                 }
                 
                 if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
@@ -236,11 +253,11 @@ final class ThemeAccentColorController: ViewController {
                         messageColors = (bubbleColors.0, nil)
                     }
                 } else {
-                    messageColors = nil
-                }
-                
-                if strongSelf.mode.themeReference == .builtin(.dayClassic) {
-                    defaultMessagesColor = UIColor(rgb: 0xe1ffc7)
+                    if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
+                        messageColors = (UIColor(rgb: 0xe1ffc7), nil)
+                    } else {
+                        messageColors = nil
+                    }
                 }
             } else if case let .edit(theme, wallpaper, _, _, _) = strongSelf.mode {
                 accentColor = theme.rootController.navigationBar.accentTextColor
@@ -265,7 +282,7 @@ final class ThemeAccentColorController: ViewController {
                 messageColors = nil
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, backgroundColors: backgroundColors, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState

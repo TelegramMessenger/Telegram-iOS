@@ -486,7 +486,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             themeSpecificAccentColors[currentTheme.index] = color
             
             if case let .builtin(theme) = currentTheme, theme == .dayClassic || theme == .nightAccent {
-                if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.isColorOrGradient {
+                if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.isColorOrGradient || wallpaper.isBuiltin {
                     themeSpecificChatWallpapers[currentTheme.index] = nil
                 }
             }

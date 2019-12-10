@@ -344,6 +344,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
 
     var colorsChanged: ((UIColor?, UIColor?, Bool) -> Void)?
     var colorSelected: (() -> Void)?
+    var rotate: (() -> Void)?
     
     private var validLayout: CGSize?
 

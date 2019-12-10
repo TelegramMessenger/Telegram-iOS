@@ -33,26 +33,7 @@ private func generateSwatchImage(theme: PresentationTheme, color: PresentationTh
         context.setLineWidth(2.0)
         
         if selected {
-            context.saveGState()
-            context.addEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
-            context.clip()
-    
-            if let colors = bubbles {
-                var colors: (UIColor, UIColor) = (colors.0, colors.1 ?? colors.0)
-                
-                let gradientColors = [colors.0.cgColor, colors.1.cgColor] as CFArray
-                var locations: [CGFloat] = [0.0, 1.0]
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                
-                context.fill(CGRect(x: 0.0, y: 0.0, width: size.width / 2.0, height: size.height))
-            } else {
-                context.fill(bounds)
-            }
-            
-            context.restoreGState()
+            context.fillEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
             context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
             
             if more {
@@ -63,8 +44,10 @@ private func generateSwatchImage(theme: PresentationTheme, color: PresentationTh
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 25.0, y: 18.0), size: dotSize))
             }
         } else {
+            context.fillEllipse(in: bounds)
+            
             context.saveGState()
-            context.addEllipse(in: bounds)
+            context.addEllipse(in: bounds.insetBy(dx: 10.0, dy: 10.0))
             context.clip()
             
             if let colors = bubbles {
@@ -75,11 +58,7 @@ private func generateSwatchImage(theme: PresentationTheme, color: PresentationTh
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
                 
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                
-                context.fill(CGRect(x: 0.0, y: 0.0, width: size.width / 2.0, height: size.height))
-            } else {
-                context.fill(bounds)
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 10.0), end: CGPoint(x: 0.0, y: size.height - 10.0), options: CGGradientDrawingOptions())
             }
             
             context.restoreGState()
@@ -362,6 +341,9 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     var updated = false
                     var selectedNode: ThemeSettingsAccentColorNode?
                     
+                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
+                    nodeOffset += nodeSize.width + 18.0
+                    
                     var i = 0
                     for color in item.colors {
                         let imageNode: ThemeSettingsAccentColorNode
@@ -395,11 +377,9 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             selectedNode = imageNode
                         }
                                           
-                        imageNode.setup(theme: item.theme, color: accentColor, bubbles: accentColor.customBubbleColors, selected: selected, more: itemColor != nil, action: { [weak self, weak imageNode] in
+                        imageNode.setup(theme: item.theme, color: accentColor, bubbles: accentColor.customBubbleColors, selected: selected, more: true, action: { [weak self, weak imageNode] in
                             if selected {
-                                if itemColor != nil {
-                                    item.openColorPicker()
-                                }
+                                item.openColorPicker()
                             } else {
                                 item.updated(itemColor)
                             }
@@ -414,7 +394,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         i += 1
                     }
                     
-                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
+//                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                     
                     for k in (i ..< strongSelf.colorNodes.count).reversed() {
                         let node = strongSelf.colorNodes[k]
@@ -422,7 +402,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         node.removeFromSupernode()
                     }
                 
-                    let contentSize = CGSize(width: strongSelf.customNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
+                    let contentSize = CGSize(width: strongSelf.colorNodes.last!.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
                     if strongSelf.scrollNode.view.contentSize != contentSize {
                         strongSelf.scrollNode.view.contentSize = contentSize
                     }

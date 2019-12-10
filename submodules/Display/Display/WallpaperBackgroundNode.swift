@@ -33,10 +33,22 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
     }
-    
+        
     public var image: UIImage? {
         didSet {
             self.contentNode.contents = self.image?.cgImage
+        }
+    }
+    
+    public var rotation: CGFloat = 0.0 {
+        didSet {
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            var fromValue: CGFloat = 0.0
+            if let value = (self.layer.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
+                fromValue = CGFloat(value)
+            }
+            self.contentNode.layer.transform = CATransform3DMakeRotation(self.rotation, 0.0, 0.0, 1.0)
+            self.contentNode.layer.animateRotation(from: fromValue, to: self.rotation, duration: 0.3)
         }
     }
     

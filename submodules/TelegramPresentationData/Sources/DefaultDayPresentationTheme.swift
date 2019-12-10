@@ -31,7 +31,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         } else {
             if let accentColor = accentColor {
                 let hsb = accentColor.hsb
-                bubbleColors = (UIColor(hue: hsb.0, saturation: hsb.2 > 0.0 ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
+                bubbleColors = (UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
                 if accentColor.lightness > 0.705 {
                     outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
                 } else {

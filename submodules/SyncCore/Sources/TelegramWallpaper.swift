@@ -5,12 +5,14 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
     public let motion: Bool
     public let color: Int32?
     public let intensity: Int32?
+    public let rotation: Int32?
     
-    public init(blur: Bool = false, motion: Bool = false, color: Int32? = nil, intensity: Int32? = nil) {
+    public init(blur: Bool = false, motion: Bool = false, color: Int32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
         self.blur = blur
         self.motion = motion
         self.color = color
         self.intensity = intensity
+        self.rotation = rotation
     }
     
     public init(decoder: PostboxDecoder) {
@@ -18,6 +20,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         self.motion = decoder.decodeInt32ForKey("m", orElse: 0) != 0
         self.color = decoder.decodeOptionalInt32ForKey("c")
         self.intensity = decoder.decodeOptionalInt32ForKey("i")
+        self.rotation = decoder.decodeOptionalInt32ForKey("r")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -32,6 +35,11 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
             encoder.encodeInt32(intensity, forKey: "i")
         } else {
             encoder.encodeNil(forKey: "i")
+        }
+        if let rotation = self.rotation {
+            encoder.encodeInt32(rotation, forKey: "r")
+        } else {
+            encoder.encodeNil(forKey: "r")
         }
     }
 }
