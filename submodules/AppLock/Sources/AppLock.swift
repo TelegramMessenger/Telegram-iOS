@@ -188,7 +188,10 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.presentedOverCoveringView = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
-                            rootViewController.dismiss(animated: false, completion: nil)
+                            if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                            } else {
+                                rootViewController.dismiss(animated: false, completion: nil)
+                            }
                         }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
@@ -209,7 +212,10 @@ public final class AppLockContextImpl: AppLockContext {
                     window.coveringView = coveringView
                     
                     if let rootViewController = strongSelf.rootController {
-                        rootViewController.dismiss(animated: false, completion: nil)
+                        if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                        } else {
+                            rootViewController.dismiss(animated: false, completion: nil)
+                        }
                     }
                 }
             } else {
