@@ -1872,6 +1872,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages)
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : .none)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
                             }
                             
                             if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
