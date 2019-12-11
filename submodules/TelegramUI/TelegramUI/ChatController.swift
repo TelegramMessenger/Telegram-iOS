@@ -7015,16 +7015,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             ])])
             
             self.present(actionSheet, in: .window(.root))
-            
-            /*self.present(peerReportOptionsController(context: self.context, subject: .peer(peer.id), present: { [weak self] c, a in
-                self?.present(c, in: .window(.root))
-            }, completion: { [weak self] success in
-                guard let strongSelf = self, success else {
-                    return
-                }
-                let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: false).start()
-                (strongSelf.navigationController as? NavigationController)?.filterController(strongSelf, animated: true)
-            }), in: .window(.root))*/
         } else if let _ = peer as? TelegramUser {
             let presentationData = self.presentationData
             let controller = ActionSheetController(presentationData: presentationData)
@@ -7033,46 +7023,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             var reportSpam = true
             var deleteChat = true
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0),
-                    ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
-                        reportSpam = checkValue
-                        controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
-                            if let item = item as? ActionSheetCheckboxItem {
-                                return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
-                            }
-                            return item
-                        })
-                    }),
-                    ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: deleteChat, action: { [weak controller] checkValue in
-                        deleteChat = checkValue
-                        controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
-                            if let item = item as? ActionSheetCheckboxItem {
-                                return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
-                            }
-                            return item
-                        })
-                    }),
-                    ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: { [weak self] in
-                        dismissAction()
-                        guard let strongSelf = self else {
-                            return
+            var items: [ActionSheetItem] = []
+            if !peer.isDeleted {
+                items.append(ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0))
+            }
+            items.append(contentsOf: [
+                ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
+                    reportSpam = checkValue
+                    controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
+                        if let item = item as? ActionSheetCheckboxItem {
+                            return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
                         }
-                        let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
-                        if let _ = chatPeer as? TelegramSecretChat {
-                            let _ = (strongSelf.context.account.postbox.transaction { transaction in
-                                terminateSecretChat(transaction: transaction, peerId: chatPeer.id)
-                            }).start()
-                        }
-                        if deleteChat {
-                            let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: reportSpam).start()
-                            strongSelf.effectiveNavigationController?.filterController(strongSelf, animated: true)
-                        } else if reportSpam {
-                            let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
-                        }
+                        return item
                     })
-                ]),
+                }),
+                ActionSheetCheckboxItem(title: presentationData.strings.ReportSpam_DeleteThisChat, label: "", value: deleteChat, action: { [weak controller] checkValue in
+                    deleteChat = checkValue
+                    controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
+                        if let item = item as? ActionSheetCheckboxItem {
+                            return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                        }
+                        return item
+                    })
+                }),
+                ActionSheetButtonItem(title: presentationData.strings.UserInfo_BlockActionTitle(peer.compactDisplayTitle).0, color: .destructive, action: { [weak self] in
+                    dismissAction()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
+                    if let _ = chatPeer as? TelegramSecretChat {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction in
+                            terminateSecretChat(transaction: transaction, peerId: chatPeer.id)
+                        }).start()
+                    }
+                    if deleteChat {
+                        let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: reportSpam).start()
+                        strongSelf.effectiveNavigationController?.filterController(strongSelf, animated: true)
+                    } else if reportSpam {
+                        let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
+                    }
+                })
+            ] as [ActionSheetItem])
+            
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: items),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
             self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
