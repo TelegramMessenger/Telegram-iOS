@@ -310,14 +310,14 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if let statusApply = statusApply {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
-                                    strongSelf.imageNode.addSubnode(strongSelf.dateAndStatusNode)
+                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                 }
                                 var hasAnimation = true
                                 if case .None = animation {
                                     hasAnimation = false
                                 }
                                 statusApply(hasAnimation)
-                                strongSelf.dateAndStatusNode.frame = statusFrame
+                                strongSelf.dateAndStatusNode.frame = statusFrame.offsetBy(dx: imageFrame.minX, dy: imageFrame.minY)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
