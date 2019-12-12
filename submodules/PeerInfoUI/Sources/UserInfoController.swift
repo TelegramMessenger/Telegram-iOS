@@ -634,7 +634,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             }
         }
         if !found {
-            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, "home", formattedNumber, false))
+            entries.append(UserInfoEntry.phoneNumber(presentationData.theme, index, presentationData.strings.ContactInfo_PhoneLabelMobile, formattedNumber, false))
             index += 1
         } else {
             for (label, number, isMain) in phoneNumbers {
