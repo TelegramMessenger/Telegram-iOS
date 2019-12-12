@@ -2250,6 +2250,18 @@ final class MessageHistoryTable: Table {
         return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds)
     }
     
+    func renderAssociatedMessages(associatedMessageIds: [MessageId], peerTable: PeerTable) -> SimpleDictionary<MessageId, Message> {
+        var associatedMessages = SimpleDictionary<MessageId, Message>()
+        for messageId in associatedMessageIds {
+            if let index = self.messageHistoryIndexTable.getIndex(messageId) {
+                if let message = self.getMessage(index) {
+                    associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, addAssociatedMessages: false)
+                }
+            }
+        }
+        return associatedMessages
+    }
+    
     private func globalTagsIntermediateEntry(_ entry: IntermediateMessageHistoryEntry) -> IntermediateGlobalMessageTagsEntry? {
         return .message(entry.message)
     }
