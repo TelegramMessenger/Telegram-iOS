@@ -83,6 +83,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
     private var sliderView: TGPhotoEditorSliderView?
     private let leftIconNode: ASImageNode
     private let rightIconNode: ASImageNode
+    private let disabledOverlayNode: ASDisplayNode
     
     private var item: ThemeSettingsFontSizeItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -111,10 +112,14 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         self.rightIconNode.displaysAsynchronously = false
         self.rightIconNode.displayWithoutProcessing = true
         
+        self.disabledOverlayNode = ASDisplayNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.leftIconNode)
         self.addSubnode(self.rightIconNode)
+        
+        self.addSubnode(self.disabledOverlayNode)
     }
     
     override func didLoad() {
@@ -159,7 +164,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
         }
-        self.view.addSubview(sliderView)
+        self.view.insertSubview(sliderView, belowSubview: self.disabledOverlayNode.view)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
         self.sliderView = sliderView
     }
@@ -203,6 +208,10 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                    
+                    strongSelf.disabledOverlayNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4)
+                    strongSelf.disabledOverlayNode.isHidden = item.enabled
+                    strongSelf.disabledOverlayNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: 44.0))
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)

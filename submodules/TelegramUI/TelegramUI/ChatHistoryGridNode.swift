@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 
 private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
@@ -73,11 +74,11 @@ struct ChatHistoryGridViewTransition {
     let stationaryItems: GridNodeStationaryItems
 }
 
-private func mappedInsertEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeInsertItem] {
+private func mappedInsertEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionInsertEntry], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) -> [GridNodeInsertItem] {
     return entries.map { entry -> GridNodeInsertItem in
         switch entry.entry {
             case let .MessageEntry(message, _, _, _, _, _):
-                return GridNodeInsertItem(index: entry.index, item: GridMessageItem(theme: theme, strings: strings, context: context, message: message, controllerInteraction: controllerInteraction), previousIndex: entry.previousIndex)
+                return GridNodeInsertItem(index: entry.index, item: GridMessageItem(theme: theme, strings: strings, fontSize: fontSize, context: context, message: message, controllerInteraction: controllerInteraction), previousIndex: entry.previousIndex)
             case .MessageGroupEntry:
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
             case .UnreadEntry:
@@ -90,11 +91,11 @@ private func mappedInsertEntries(context: AccountContext, peerId: PeerId, contro
     }
 }
 
-private func mappedUpdateEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry], theme: PresentationTheme, strings: PresentationStrings) -> [GridNodeUpdateItem] {
+private func mappedUpdateEntries(context: AccountContext, peerId: PeerId, controllerInteraction: ChatControllerInteraction, entries: [ChatHistoryViewTransitionUpdateEntry], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) -> [GridNodeUpdateItem] {
     return entries.map { entry -> GridNodeUpdateItem in
         switch entry.entry {
             case let .MessageEntry(message, _, _, _, _, _):
-                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridMessageItem(theme: theme, strings: strings, context: context, message: message, controllerInteraction: controllerInteraction))
+                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridMessageItem(theme: theme, strings: strings, fontSize: fontSize, context: context, message: message, controllerInteraction: controllerInteraction))
             case .MessageGroupEntry:
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
             case .UnreadEntry:
@@ -189,7 +190,7 @@ private func mappedChatHistoryViewListTransition(context: AccountContext, peerId
         }
     }
     
-    return ChatHistoryGridViewTransition(historyView: transition.historyView, topOffsetWithinMonth: topOffsetWithinMonth, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(context: context, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries, theme: presentationData.theme.theme, strings: presentationData.strings), updateItems: mappedUpdateEntries(context: context, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries, theme: presentationData.theme.theme, strings: presentationData.strings), scrollToItem: mappedScrollToItem, stationaryItems: stationaryItems)
+    return ChatHistoryGridViewTransition(historyView: transition.historyView, topOffsetWithinMonth: topOffsetWithinMonth, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(context: context, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries, theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize), updateItems: mappedUpdateEntries(context: context, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries, theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize), scrollToItem: mappedScrollToItem, stationaryItems: stationaryItems)
 }
 
 private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutType {

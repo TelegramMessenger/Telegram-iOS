@@ -19,8 +19,7 @@ struct UserInfoEditingPhoneItemEditing {
 }
 
 class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ItemListPresentationData
     let id: Int64
     let label: String
     let value: String
@@ -32,9 +31,8 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
     let delete: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: (() -> Void)?, delete: @escaping () -> Void, tag: ItemListItemTag?) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ItemListPresentationData, id: Int64, label: String, value: String, editing: UserInfoEditingPhoneItemEditing, sectionId: ItemListSectionId, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, updated: @escaping (String) -> Void, selectLabel: (() -> Void)?, delete: @escaping () -> Void, tag: ItemListItemTag?) {
+        self.presentationData = presentationData
         self.id = id
         self.label = label
         self.value = value
@@ -82,8 +80,6 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
     
     var selectable: Bool = false
 }
-
-private let titleFont = Font.regular(15.0)
 
 class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
@@ -184,9 +180,11 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         super.didLoad()
         
         if let item = self.item {
-            self.phoneNode.numberField?.textField.textColor = item.theme.list.itemPrimaryTextColor
-            self.phoneNode.numberField?.textField.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
-            self.phoneNode.numberField?.textField.tintColor = item.theme.list.itemAccentColor
+            self.phoneNode.numberField?.textField.textColor = item.presentationData.theme.list.itemPrimaryTextColor
+            self.phoneNode.numberField?.textField.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
+            self.phoneNode.numberField?.textField.tintColor = item.presentationData.theme.list.itemAccentColor
+            let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            self.phoneNode.numberField?.textField.font = titleFont
         }
     }
     
@@ -197,15 +195,17 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         let currentItem = self.item
         
         return { item, params, neighbors in
+            let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
-            let controlSizeAndApply = editableControlLayout(item.theme, false)
+            let controlSizeAndApply = editableControlLayout(item.presentationData.theme, false)
             
-            let textColor = item.theme.list.itemAccentColor
+            let textColor = item.presentationData.theme.list.itemAccentColor
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -216,9 +216,9 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            itemBackgroundColor = item.theme.list.plainBackgroundColor
-            itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-            contentSize = CGSize(width: params.width, height: 44.0)
+            itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+            itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+            contentSize = CGSize(width: params.width, height: 22.0 + labelLayout.size.height)
             insets = itemListNeighborsPlainInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -236,7 +236,8 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         
                         strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
                         strongSelf.phoneNode.numberField?.textField.keyboardAppearance = updatedTheme.rootController.keyboardColor.keyboardAppearance
-                        strongSelf.phoneNode.numberField?.textField.tintColor = item.theme.list.itemAccentColor
+                        strongSelf.phoneNode.numberField?.textField.tintColor = item.presentationData.theme.list.itemAccentColor
+                        strongSelf.phoneNode.numberField?.textField.font = titleFont
                         
                         strongSelf.clearButton.setImage(generateClearIcon(color: updatedTheme.list.inputClearButtonColor), for: [])
                     }
@@ -283,7 +284,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                 }
             })
         }

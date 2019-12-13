@@ -6,6 +6,7 @@ import TelegramCore
 import SyncCore
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import AccountContext
@@ -35,8 +36,8 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return HashtagChatInputPanelItem(theme: self.theme, text: self.text, hashtagSelected: hashtagSelected)
+    func item(account: Account, fontSize: PresentationFontSize, hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
+        return HashtagChatInputPanelItem(theme: self.theme, fontSize: fontSize, text: self.text, hashtagSelected: hashtagSelected)
     }
 }
 
@@ -46,12 +47,12 @@ private struct HashtagChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], account: Account, hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], account: Account, fontSize: PresentationFontSize, hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, fontSize: fontSize, hashtagSelected: hashtagSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, fontSize: fontSize, hashtagSelected: hashtagSelected), directionHint: nil) }
     
     return HashtagChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -63,7 +64,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -71,7 +72,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -97,7 +98,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {
         let firstTime = from == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, fontSize: self.fontSize, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?

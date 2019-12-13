@@ -6,6 +6,7 @@ import TelegramCore
 import SyncCore
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import Emoji
@@ -105,7 +106,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
@@ -130,7 +131,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.placement = .overTextInput
         self.isOpaque = false
