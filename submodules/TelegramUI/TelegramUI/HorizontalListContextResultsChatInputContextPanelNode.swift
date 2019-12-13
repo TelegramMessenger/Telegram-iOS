@@ -112,7 +112,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let state = opaqueTransactionState as? HorizontalListContextResultsOpaqueState {
                 if let visible = displayedRange.visibleRange {
-                    if state.hasMore && visible.lastIndex <= state.entryCount - 10 {
+                    if state.hasMore && visible.lastIndex >= state.entryCount - 10 {
                         strongSelf.loadMore()
                     }
                 }
