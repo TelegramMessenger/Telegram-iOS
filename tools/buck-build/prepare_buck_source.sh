@@ -12,6 +12,23 @@ fi
 
 mkdir -p "$target_directory"
 
+jdk_archive_name="jdk.tar.gz"
+jdk_archive_path="$target_directory/$jdk_archive_name"
+jdk_unpacked_path="$target_directory/jdk8u232-b09"
+jdk_url="https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u232-b09/OpenJDK8U-jdk_x64_mac_hotspot_8u232b09.tar.gz"
+
+if [ ! -f "$jdk_archive_path" ]; then
+	echo "Fetching JDK 8"
+	curl "$jdk_url" -L -o "$target_directory/jdk.tar.gz"
+fi
+
+if [ ! -d "$jdk_unpacked_path" ]; then
+	echo "Unpacking JDK 8"
+	pushd "$target_directory"
+	tar -xf "$jdk_archive_name"
+	popd
+fi
+
 patch_file="$(ls *.patch | head -1)"
 patch_path="$(pwd)/$patch_file"
 
@@ -39,10 +56,7 @@ git reset --hard "$commit_sha"
 git apply --check "$patch_path"
 git apply "$patch_path"
 
-ant
-
-./bin/buck build --show-output buck
-
-#result_path="$(pwd)/buck-out/gen/programs/buck.pex"
+PATH="$PATH:$jdk_unpacked_path/Contents/Home/bin" ant
+PATH="$PATH:$jdk_unpacked_path/Contents/Home/bin" ./bin/buck build --show-output buck
 
 cd "$dir"

@@ -525,8 +525,132 @@ struct HistoryViewHoles {
 }
 
 struct OrderedHistoryViewEntries {
-    var lowerOrAtAnchor: [MutableMessageHistoryEntry]
-    var higherThanAnchor: [MutableMessageHistoryEntry]
+    private(set) var lowerOrAtAnchor: [MutableMessageHistoryEntry]
+    private(set) var higherThanAnchor: [MutableMessageHistoryEntry]
+    
+    private(set) var reverseAssociatedIndices: [MessageId: [MessageIndex]] = [:]
+    
+    fileprivate init(lowerOrAtAnchor: [MutableMessageHistoryEntry], higherThanAnchor: [MutableMessageHistoryEntry]) {
+        self.lowerOrAtAnchor = lowerOrAtAnchor
+        self.higherThanAnchor = higherThanAnchor
+        
+        for entry in lowerOrAtAnchor {
+            for id in entry.getAssociatedMessageIds() {
+                if self.reverseAssociatedIndices[id] == nil {
+                    self.reverseAssociatedIndices[id] = [entry.index]
+                } else {
+                    self.reverseAssociatedIndices[id]!.append(entry.index)
+                }
+            }
+        }
+        for entry in higherThanAnchor {
+            for id in entry.getAssociatedMessageIds() {
+                if self.reverseAssociatedIndices[id] == nil {
+                    self.reverseAssociatedIndices[id] = [entry.index]
+                } else {
+                    self.reverseAssociatedIndices[id]!.append(entry.index)
+                }
+            }
+        }
+    }
+    
+    mutating func setLowerOrAtAnchorAtArrayIndex(_ index: Int, to value: MutableMessageHistoryEntry) {
+        let previousIndex = self.lowerOrAtAnchor[index].index
+        let updatedIndex = value.index
+        let previousAssociatedIds = self.lowerOrAtAnchor[index].getAssociatedMessageIds()
+        let updatedAssociatedIds = value.getAssociatedMessageIds()
+        
+        self.lowerOrAtAnchor[index] = value
+        
+        if previousAssociatedIds != updatedAssociatedIds {
+            for id in previousAssociatedIds {
+                self.reverseAssociatedIndices[id]?.removeAll(where: { $0 == previousIndex })
+                if let isEmpty = self.reverseAssociatedIndices[id]?.isEmpty, isEmpty {
+                    self.reverseAssociatedIndices.removeValue(forKey: id)
+                }
+            }
+            for id in updatedAssociatedIds {
+                if self.reverseAssociatedIndices[id] == nil {
+                    self.reverseAssociatedIndices[id] = [updatedIndex]
+                } else {
+                    self.reverseAssociatedIndices[id]!.append(updatedIndex)
+                }
+            }
+        }
+    }
+    
+    mutating func setHigherThanAnchorAtArrayIndex(_ index: Int, to value: MutableMessageHistoryEntry) {
+        let previousIndex = self.higherThanAnchor[index].index
+        let updatedIndex = value.index
+        let previousAssociatedIds = self.higherThanAnchor[index].getAssociatedMessageIds()
+        let updatedAssociatedIds = value.getAssociatedMessageIds()
+        
+        self.higherThanAnchor[index] = value
+        
+        if previousAssociatedIds != updatedAssociatedIds {
+            for id in previousAssociatedIds {
+                self.reverseAssociatedIndices[id]?.removeAll(where: { $0 == previousIndex })
+                if let isEmpty = self.reverseAssociatedIndices[id]?.isEmpty, isEmpty {
+                    self.reverseAssociatedIndices.removeValue(forKey: id)
+                }
+            }
+            for id in updatedAssociatedIds {
+                if self.reverseAssociatedIndices[id] == nil {
+                    self.reverseAssociatedIndices[id] = [updatedIndex]
+                } else {
+                    self.reverseAssociatedIndices[id]!.append(updatedIndex)
+                }
+            }
+        }
+    }
+    
+    mutating func insertLowerOrAtAnchorAtArrayIndex(_ index: Int, value: MutableMessageHistoryEntry) {
+        self.lowerOrAtAnchor.insert(value, at: index)
+        
+        for id in value.getAssociatedMessageIds() {
+            if self.reverseAssociatedIndices[id] == nil {
+                self.reverseAssociatedIndices[id] = [value.index]
+            } else {
+                self.reverseAssociatedIndices[id]!.append(value.index)
+            }
+        }
+    }
+    
+    mutating func insertHigherThanAnchorAtArrayIndex(_ index: Int, value: MutableMessageHistoryEntry) {
+        self.higherThanAnchor.insert(value, at: index)
+        
+        for id in value.getAssociatedMessageIds() {
+            if self.reverseAssociatedIndices[id] == nil {
+                self.reverseAssociatedIndices[id] = [value.index]
+            } else {
+                self.reverseAssociatedIndices[id]!.append(value.index)
+            }
+        }
+    }
+    
+    mutating func removeLowerOrAtAnchorAtArrayIndex(_ index: Int) {
+        let previousIndex = self.lowerOrAtAnchor[index].index
+        for id in self.lowerOrAtAnchor[index].getAssociatedMessageIds() {
+            self.reverseAssociatedIndices[id]?.removeAll(where: { $0 == previousIndex })
+            if let isEmpty = self.reverseAssociatedIndices[id]?.isEmpty, isEmpty {
+                self.reverseAssociatedIndices.removeValue(forKey: id)
+            }
+        }
+        
+        self.lowerOrAtAnchor.remove(at: index)
+    }
+    
+    mutating func removeHigherThanAnchorAtArrayIndex(_ index: Int) {
+        let previousIndex = self.higherThanAnchor[index].index
+        for id in self.higherThanAnchor[index].getAssociatedMessageIds() {
+            self.reverseAssociatedIndices[id]?.removeAll(where: { $0 == previousIndex })
+            if let isEmpty = self.reverseAssociatedIndices[id]?.isEmpty, isEmpty {
+                self.reverseAssociatedIndices.removeValue(forKey: id)
+            }
+        }
+        
+        self.higherThanAnchor.remove(at: index)
+    }
     
     mutating func fixMonotony() {
         if self.lowerOrAtAnchor.count > 1 {
@@ -580,6 +704,10 @@ struct OrderedHistoryViewEntries {
         }
     }
     
+    func indicesForAssociatedMessageId(_ id: MessageId) -> [MessageIndex]? {
+        return self.reverseAssociatedIndices[id]
+    }
+    
     var first: MutableMessageHistoryEntry? {
         return self.lowerOrAtAnchor.first ?? self.higherThanAnchor.first
     }
@@ -588,13 +716,13 @@ struct OrderedHistoryViewEntries {
         var anyUpdated = false
         for i in 0 ..< self.lowerOrAtAnchor.count {
             if let updated = f(self.lowerOrAtAnchor[i]) {
-                self.lowerOrAtAnchor[i] = updated
+                self.setLowerOrAtAnchorAtArrayIndex(i, to: updated)
                 anyUpdated = true
             }
         }
         for i in 0 ..< self.higherThanAnchor.count {
             if let updated = f(self.higherThanAnchor[i]) {
-                self.higherThanAnchor[i] = updated
+                self.setHigherThanAnchorAtArrayIndex(i, to: updated)
                 anyUpdated = true
             }
         }
@@ -604,12 +732,12 @@ struct OrderedHistoryViewEntries {
     mutating func update(index: MessageIndex, _ f: (MutableMessageHistoryEntry) -> MutableMessageHistoryEntry?) -> Bool {
         if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
             if let updated = f(self.lowerOrAtAnchor[entryIndex]) {
-                self.lowerOrAtAnchor[entryIndex] = updated
+                self.setLowerOrAtAnchorAtArrayIndex(entryIndex, to: updated)
                 return true
             }
         } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.index }, searchItem: index) {
             if let updated = f(self.higherThanAnchor[entryIndex]) {
-                self.higherThanAnchor[entryIndex] = updated
+                self.setHigherThanAnchorAtArrayIndex(entryIndex, to: updated)
                 return true
             }
         }
@@ -618,10 +746,10 @@ struct OrderedHistoryViewEntries {
     
     mutating func remove(index: MessageIndex) -> Bool {
         if let entryIndex = binarySearch(self.lowerOrAtAnchor, extract: { $0.index }, searchItem: index) {
-            self.lowerOrAtAnchor.remove(at: entryIndex)
+            self.removeLowerOrAtAnchorAtArrayIndex(entryIndex)
             return true
         } else if let entryIndex = binarySearch(self.higherThanAnchor, extract: { $0.index }, searchItem: index) {
-            self.higherThanAnchor.remove(at: entryIndex)
+            self.removeHigherThanAnchorAtArrayIndex(entryIndex)
             return true
         } else {
             return false
@@ -748,8 +876,8 @@ final class HistoryViewLoadedState {
                 switch entry {
                     case let .IntermediateMessageEntry(message, _, monthLocation):
                         return .IntermediateMessageEntry(message, currentLocation, monthLocation)
-                    case let .MessageEntry(entry):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: currentLocation, monthLocation: entry.monthLocation, attributes: entry.attributes))
+                    case let .MessageEntry(entry, reloadAssociatedMessages):
+                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: currentLocation, monthLocation: entry.monthLocation, attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 }
             }
         }
@@ -772,8 +900,8 @@ final class HistoryViewLoadedState {
                 switch entry {
                     case let .IntermediateMessageEntry(message, location, _):
                         return .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)))
-                    case let .MessageEntry(entry):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes))
+                    case let .MessageEntry(entry, reloadAssociatedMessages):
+                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 }
             }
         }
@@ -832,8 +960,8 @@ final class HistoryViewLoadedState {
                     switch entry {
                         case let .IntermediateMessageEntry(message, location, monthLocation):
                             return .IntermediateMessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation)
-                        case let .MessageEntry(messageEntry):
-                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
+                        case let .MessageEntry(messageEntry, reloadAssociatedMessages):
+                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                     }
                 }
                 return nil
@@ -855,8 +983,8 @@ final class HistoryViewLoadedState {
             switch entry {
                 case let .IntermediateMessageEntry(message, location, monthLocation):
                     return .IntermediateMessageEntry(message.withUpdatedEmbeddedMedia(buffer), location, monthLocation)
-                case let .MessageEntry(messageEntry):
-                    return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes))
+                case let .MessageEntry(messageEntry, reloadAssociatedMessages):
+                    return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
             }
         })
     }
@@ -866,7 +994,7 @@ final class HistoryViewLoadedState {
         for space in self.orderedEntriesBySpace.keys {
             let spaceUpdated = self.orderedEntriesBySpace[space]!.mutableScan({ entry in
                 switch entry {
-                    case let .MessageEntry(value):
+                    case let .MessageEntry(value, reloadAssociatedMessages):
                         let message = value.message
                         
                         var rebuild = false
@@ -889,7 +1017,7 @@ final class HistoryViewLoadedState {
                                 }
                             }
                             let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-                            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
+                            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                         }
                     case .IntermediateMessageEntry:
                         break
@@ -911,24 +1039,20 @@ final class HistoryViewLoadedState {
         }
 
         var updated = false
-        /*for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
-            switch self.orderedEntriesBySpace[space]!.entries[i] {
-                case .IntermediateMessageEntry:
-                    break
-                case let .MessageEntry(currentEntry):
-                    if !currentEntry.message.associatedMessageIds.isEmpty && currentEntry.message.associatedMessageIds.contains(entry.index.id) {
-                        var associatedMessages = currentEntry.message.associatedMessages
-                        switch entry {
-                            case let .IntermediateMessageEntry(message, _, _):
-                                associatedMessages[entry.index.id] = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
-                            case let .MessageEntry(message):
-                                associatedMessages[entry.index.id] = message.message
-                        }
-                        self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: currentEntry.message.withUpdatedAssociatedMessages(associatedMessages), location: currentEntry.location, monthLocation: currentEntry.monthLocation, attributes: currentEntry.attributes))
+        
+        if let associatedIndices = self.orderedEntriesBySpace[space]!.indicesForAssociatedMessageId(entry.index.id) {
+            for associatedIndex in associatedIndices {
+                self.orderedEntriesBySpace[space]!.update(index: associatedIndex, { current in
+                    switch current {
+                    case .IntermediateMessageEntry:
+                        return current
+                    case let .MessageEntry(messageEntry, _):
                         updated = true
+                        return .MessageEntry(messageEntry, reloadAssociatedMessages: true)
                     }
+                })
             }
-        }*/
+        }
         
         if self.anchor.isEqualOrGreater(than: entry.index) {
             let insertionIndex = binaryInsertionIndex(self.orderedEntriesBySpace[space]!.lowerOrAtAnchor, extract: { $0.index }, searchItem: entry.index)
@@ -936,7 +1060,7 @@ final class HistoryViewLoadedState {
             if insertionIndex < self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count {
                 if self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[insertionIndex].index == entry.index {
                     assertionFailure("Inserting an existing index is not allowed")
-                    self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[insertionIndex] = entry
+                    self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(insertionIndex, to: entry)
                     return true
                 }
             }
@@ -944,9 +1068,9 @@ final class HistoryViewLoadedState {
             if insertionIndex == 0 && self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count >= self.halfLimit {
                 return updated
             }
-            self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.insert(entry, at: insertionIndex)
+            self.orderedEntriesBySpace[space]!.insertLowerOrAtAnchorAtArrayIndex(insertionIndex, value: entry)
             if self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.count > self.halfLimit {
-                self.orderedEntriesBySpace[space]!.lowerOrAtAnchor.removeFirst()
+                self.orderedEntriesBySpace[space]!.removeLowerOrAtAnchorAtArrayIndex(0)
             }
             return true
         } else {
@@ -955,7 +1079,7 @@ final class HistoryViewLoadedState {
             if insertionIndex < self.orderedEntriesBySpace[space]!.higherThanAnchor.count {
                 if self.orderedEntriesBySpace[space]!.higherThanAnchor[insertionIndex].index == entry.index {
                     assertionFailure("Inserting an existing index is not allowed")
-                    self.orderedEntriesBySpace[space]!.higherThanAnchor[insertionIndex] = entry
+                    self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(insertionIndex, to: entry)
                     return true
                 }
             }
@@ -963,9 +1087,9 @@ final class HistoryViewLoadedState {
             if insertionIndex == self.orderedEntriesBySpace[space]!.higherThanAnchor.count && self.orderedEntriesBySpace[space]!.higherThanAnchor.count >= self.halfLimit {
                 return updated
             }
-            self.orderedEntriesBySpace[space]!.higherThanAnchor.insert(entry, at: insertionIndex)
+            self.orderedEntriesBySpace[space]!.insertHigherThanAnchorAtArrayIndex(insertionIndex, value: entry)
             if self.orderedEntriesBySpace[space]!.higherThanAnchor.count > self.halfLimit {
-                self.orderedEntriesBySpace[space]!.higherThanAnchor.removeLast()
+                self.orderedEntriesBySpace[space]!.removeHigherThanAnchorAtArrayIndex(self.orderedEntriesBySpace[space]!.higherThanAnchor.count - 1)
             }
             return true
         }
@@ -979,17 +1103,24 @@ final class HistoryViewLoadedState {
         
         var updated = false
         
-        /*for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
-            switch self.orderedEntriesBySpace[space]!.entries[i] {
-                case .IntermediateMessageEntry:
-                    break
-                case let .MessageEntry(entry):
-                    if let associatedMessages = entry.message.associatedMessages.filteredOut(keysIn: [index.id]) {
-                        self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: entry.message.withUpdatedAssociatedMessages(associatedMessages), location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
+        if let associatedIndices = self.orderedEntriesBySpace[space]!.indicesForAssociatedMessageId(index.id) {
+            for associatedIndex in associatedIndices {
+                self.orderedEntriesBySpace[space]!.update(index: associatedIndex, { current in
+                    switch current {
+                    case .IntermediateMessageEntry:
+                        return current
+                    case let .MessageEntry(messageEntry, reloadAssociatedMessages):
                         updated = true
+                        
+                        if let associatedMessages = messageEntry.message.associatedMessages.filteredOut(keysIn: [index.id]) {
+                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedAssociatedMessages(associatedMessages), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                        } else {
+                            return current
+                        }
                     }
+                })
             }
-        }*/
+        }
         
         if self.orderedEntriesBySpace[space]!.remove(index: index) {
             self.spacesWithRemovals.insert(space)
@@ -1046,8 +1177,19 @@ final class HistoryViewLoadedState {
                     }
                     
                     switch entry {
-                        case let .MessageEntry(value):
-                            result.append(value)
+                        case let .MessageEntry(value, reloadAssociatedMessages):
+                            if reloadAssociatedMessages {
+                                let associatedMessages = postbox.messageHistoryTable.renderAssociatedMessages(associatedMessageIds: value.message.associatedMessageIds, peerTable: postbox.peerTable)
+                                let updatedValue = MessageHistoryMessageEntry(message: value.message.withUpdatedAssociatedMessages(associatedMessages), location: value.location, monthLocation: value.monthLocation, attributes: value.attributes)
+                                if directionIndex == 0 {
+                                    self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false))
+                                } else {
+                                    self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false))
+                                }
+                                result.append(updatedValue)
+                            } else {
+                                result.append(value)
+                            }
                         case let .IntermediateMessageEntry(message, location, monthLocation):
                             let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
                             var authorIsContact = false
@@ -1056,9 +1198,9 @@ final class HistoryViewLoadedState {
                             }
                             let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
                             if directionIndex == 0 {
-                                self.orderedEntriesBySpace[space]!.lowerOrAtAnchor[index] = .MessageEntry(entry)
+                                self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false))
                             } else {
-                                self.orderedEntriesBySpace[space]!.higherThanAnchor[index] = .MessageEntry(entry)
+                                self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false))
                             }
                             result.append(entry)
                     }

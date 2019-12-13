@@ -1325,8 +1325,7 @@ public final class ContactListNode: ASDisplayNode {
             headerInsets.top -= navigationBarSearchContentHeight
         }
         
-        self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        transition.updateFrame(node: self.listNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)

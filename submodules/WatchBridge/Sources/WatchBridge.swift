@@ -319,7 +319,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
 }
 
 func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings) -> (TGBridgeChat, [Int64 : TGBridgeUser])? {
-    if case let .MessageEntry(index, message, readState, _, _, renderedPeer, _, _) = entry {
+    if case let .MessageEntry(index, message, readState, _, _, renderedPeer, _, _, hasFailed) = entry {
         guard index.messageIndex.id.peerId.namespace != Namespaces.Peer.SecretChat else {
             return nil
         }
@@ -332,7 +332,7 @@ func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings) -> (TG
             bridgeChat.text = message.text
             bridgeChat.outgoing = !message.flags.contains(.Incoming)
             bridgeChat.deliveryState = makeBridgeDeliveryState(message)
-            bridgeChat.deliveryError = message.flags.contains(.Failed)
+            bridgeChat.deliveryError = hasFailed
             bridgeChat.media = makeBridgeMedia(message: message, strings: strings, filterUnsupportedActions: false)
         }
         bridgeChat.unread = readState?.isUnread ?? false

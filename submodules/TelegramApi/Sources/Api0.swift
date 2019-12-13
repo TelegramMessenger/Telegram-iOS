@@ -128,6 +128,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1690108678] = { return Api.InputEncryptedFile.parse_inputEncryptedFileUploaded($0) }
     dict[1511503333] = { return Api.InputEncryptedFile.parse_inputEncryptedFile($0) }
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
+    dict[-1456996667] = { return Api.messages.InactiveChats.parse_inactiveChats($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
@@ -922,6 +923,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputEncryptedFile:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.InactiveChats:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
@@ -1479,6 +1482,66 @@ public struct messages {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.messages.ArchivedStickers.archivedStickers(count: _1!, sets: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum InactiveChats: TypeConstructorDescription {
+        case inactiveChats(dates: [Int32], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inactiveChats(let dates, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1456996667)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(dates.count))
+                    for item in dates {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inactiveChats(let dates, let chats, let users):
+                return ("inactiveChats", [("dates", dates), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_inactiveChats(_ reader: BufferReader) -> InactiveChats? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _2: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.InactiveChats.inactiveChats(dates: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil

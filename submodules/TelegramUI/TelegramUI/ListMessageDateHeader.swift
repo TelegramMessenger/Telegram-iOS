@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import TelegramStringFormatting
 
 private let timezoneOffset: Int32 = {
@@ -22,11 +23,13 @@ final class ListMessageDateHeader: ListViewItemHeader {
     let id: Int64
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let fontSize: PresentationFontSize
     
-    init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings) {
+    init(timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.timestamp = timestamp
         self.theme = theme
         self.strings = strings
+        self.fontSize = fontSize
         
         var time: time_t = time_t(timestamp + timezoneOffset)
         var timeinfo: tm = tm()
@@ -44,25 +47,24 @@ final class ListMessageDateHeader: ListViewItemHeader {
     let height: CGFloat = 36.0
     
     func node() -> ListViewItemHeaderNode {
-        return ListMessageDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
+        return ListMessageDateHeaderNode(theme: self.theme, strings: self.strings, fontSize: self.fontSize, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
     }
     
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        
     }
 }
-
-private let sectionTitleFont = Font.regular(14.0)
 
 final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
+    var fontSize: PresentationFontSize
     let titleNode: ASTextNode
     let backgroundNode: ASDisplayNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings, roundedTimestamp: Int32, month: Int32, year: Int32) {
+    init(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, roundedTimestamp: Int32, month: Int32, year: Int32) {
         self.theme = theme
         self.strings = strings
+        self.fontSize = fontSize
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -74,6 +76,8 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         super.init()
         
         let dateText = stringForMonth(strings: strings, month: month, ofYear: year)
+        
+        let sectionTitleFont = Font.regular(floor(fontSize.baseDisplaySize * 14.0 / 17.0))
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
@@ -97,7 +101,7 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 12.0, y: 8.0), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 12.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
     }
 }

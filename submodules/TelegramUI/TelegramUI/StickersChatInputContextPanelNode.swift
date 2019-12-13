@@ -7,6 +7,7 @@ import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
@@ -80,7 +81,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.strings = strings
         
         self.listView = ListView()
@@ -92,7 +93,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.stickersInteraction = StickersChatInputContextPanelInteraction()
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.isOpaque = false
         self.clipsToBounds = true

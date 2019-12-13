@@ -1053,7 +1053,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
             sourceRect.size.height -= UIScreenPixel
             switch item.content {
-                case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
+                case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
                         let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)

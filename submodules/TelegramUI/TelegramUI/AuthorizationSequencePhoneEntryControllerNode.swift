@@ -315,7 +315,9 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         super.didLoad()
         
         self.titleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTap(_:))))
-        //self.noticeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugQrTap(_:))))
+        #if DEBUG
+        self.noticeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugQrTap(_:))))
+        #endif
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -452,7 +454,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                     self?.refreshQrToken()
                 }))
                 strongSelf.refreshQrToken()
-            case .loggedIn:
+            case .loggedIn, .passwordRequested:
                 strongSelf.exportTokenDisposable.set(nil)
             }
         }))

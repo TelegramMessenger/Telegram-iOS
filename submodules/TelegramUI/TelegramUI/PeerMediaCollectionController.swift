@@ -423,6 +423,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
+        }, dismissReplyMarkupMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

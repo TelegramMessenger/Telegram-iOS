@@ -5191,3 +5191,5 @@ Any member of this group will be able to see messages in the channel.";
 "WallpaperPreview.PatternTitle" = "Choose Pattern";
 "WallpaperPreview.PatternPaternDiscard" = "Discard";
 "WallpaperPreview.PatternPaternApply" = "Apply";
+
+"ChatContextMenu.TextSelectionTip" = "Hold a word, then move cursor to select more| text to copy.";

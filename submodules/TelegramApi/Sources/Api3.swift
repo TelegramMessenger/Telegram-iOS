@@ -3761,6 +3761,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getInactiveChannels() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InactiveChats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(300429806)
+                    
+                    return (FunctionDescription(name: "channels.getInactiveChannels", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.InactiveChats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.InactiveChats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.InactiveChats
+                        }
+                        return result
+                    })
+                }
             }
             public struct payments {
                 public static func getPaymentForm(msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentForm>) {

@@ -13,6 +13,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case addContact(String?)
     case shareMyPhoneNumber
     case reportSpam
+    case reportUserSpam
     case reportIrrelevantGeoLocation
     
     func title(strings: PresentationStrings) -> String {
@@ -29,6 +30,8 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_ShareMyPhoneNumber
             case .reportSpam:
                 return strings.Conversation_ReportSpamAndLeave
+            case .reportUserSpam:
+                return strings.Conversation_ReportSpam
             case .reportIrrelevantGeoLocation:
                 return strings.Conversation_ReportGroupLocation
         }
@@ -48,6 +51,16 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
                 buttons.append(.addContact(peer.compactDisplayTitle))
             } else {
                 buttons.append(.addContact(nil))
+            }
+        } else {
+            if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
+                if peer.isDeleted {
+                    buttons.append(.reportUserSpam)
+                } else {
+                    if !state.peerIsBlocked {
+                        buttons.append(.block)
+                    }
+                }
             }
         }
         if buttons.isEmpty {
@@ -134,7 +147,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 view.setTitle(button.title(strings: interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(16.0)
                 switch button {
-                    case .block, .reportSpam:
+                    case .block, .reportSpam, .reportUserSpam:
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor, for: [])
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor.withAlphaComponent(0.7), for: [.highlighted])
                     default:
@@ -188,7 +201,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 switch button {
                     case .shareMyPhoneNumber:
                         self.interfaceInteraction?.shareAccountContact()
-                    case .block, .reportSpam:
+                    case .block, .reportSpam, .reportUserSpam:
                         self.interfaceInteraction?.reportPeer()
                     case .addContact:
                         self.interfaceInteraction?.presentPeerContact()

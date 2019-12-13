@@ -20,12 +20,12 @@ import ChatListSearchItemNode
 import ContextUI
 
 public enum ChatListItemContent {
-    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool, displayAsMessage: Bool)
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
     case groupReference(groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
                 return .peer(peer.peerId)
             case .groupReference:
                 return nil
@@ -38,7 +38,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let context: AccountContext
     let peerGroupId: PeerGroupId
     let index: ChatListIndex
-    let content: ChatListItemContent
+    public let content: ChatListItemContent
     let editing: Bool
     let hasActiveRevealControls: Bool
     let selected: Bool
@@ -122,7 +122,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     
     public func selected(listView: ListView) {
         switch self.content {
-            case let .peer(message, peer, _, _, _, _, _, _, isAd, _, _):
+            case let .peer(message, peer, _, _, _, _, _, _, isAd, _, _, _):
                 if let message = message, let peer = peer.peer {
                     self.interaction.messageSelected(peer, message, isAd)
                 } else if let peer = peer.peer {
@@ -522,7 +522,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         var displayAsMessage = false
         var enablePreview = true
         switch item.content {
-            case let .peer(message, peerValue, _, _, _, _, _, _, _, _, displayAsMessageValue):
+            case let .peer(message, peerValue, _, _, _, _, _, _, _, _, displayAsMessageValue, _):
                 displayAsMessage = displayAsMessageValue
                 if displayAsMessage, let author = message?.author as? TelegramUser {
                     peer = author
@@ -673,11 +673,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let isPeerGroup: Bool
             let isAd: Bool
             let displayAsMessage: Bool
+            let hasFailedMessages: Bool
             
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge, displayAsMessageValue):
+                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge, displayAsMessageValue, hasFailedMessagesValue):
                     message = messageValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -698,6 +699,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isPeerGroup = false
                     isAd = isAdValue
                     displayAsMessage = displayAsMessageValue
+                    hasFailedMessages = hasFailedMessagesValue
                 case let .groupReference(_, peers, messageValue, unreadState, hiddenByDefault):
                     if let _ = messageValue, !peers.isEmpty {
                         contentPeer = .chat(peers[0].peer)
@@ -717,6 +719,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     peerPresence = nil
                     isAd = false
                     displayAsMessage = false
+                    hasFailedMessages = false
             }
             
             if let messageValue = message {
@@ -975,7 +978,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if message.flags.isSending && !message.isSentOrAcknowledged {
                     statusState = .clock(PresentationResourcesChatList.clockFrameImage(item.presentationData.theme), PresentationResourcesChatList.clockMinImage(item.presentationData.theme))
                 } else if message.id.peerId != account.peerId {
-                    if message.flags.contains(.Failed) {
+                    if hasFailedMessages {
                         statusState = .failed(item.presentationData.theme.chatList.failedFillColor, item.presentationData.theme.chatList.failedForegroundColor)
                     } else {
                         if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
@@ -1061,7 +1064,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var credibilityIconOffset: CGFloat = 0.0
             if displayAsMessage {
                 switch item.content {
-                case let .peer(message, _, _, _, _, _, _, _, _, _, _):
+                case let .peer(message, _, _, _, _, _, _, _, _, _, _, _):
                     if let peer = message?.author {
                         if peer.isScam {
                             currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, type: .regular)
@@ -1153,7 +1156,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let peerRevealOptions: [ItemListRevealOption]
             let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
-                case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage):
+                case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
                     if !displayAsMessage, let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId  {
                         let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
                         if case .online = relativeStatus {

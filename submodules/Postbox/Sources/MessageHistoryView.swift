@@ -29,13 +29,13 @@ public struct MessageHistoryMessageEntry {
 
 enum MutableMessageHistoryEntry {
     case IntermediateMessageEntry(IntermediateMessage, MessageHistoryEntryLocation?, MessageHistoryEntryMonthLocation?)
-    case MessageEntry(MessageHistoryMessageEntry)
+    case MessageEntry(MessageHistoryMessageEntry, reloadAssociatedMessages: Bool)
     
     var index: MessageIndex {
         switch self {
         case let .IntermediateMessageEntry(message, _, _):
             return message.index
-        case let .MessageEntry(message):
+        case let .MessageEntry(message, _):
             return message.message.index
         }
     }
@@ -44,7 +44,7 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, _, _):
             return message.tags
-        case let .MessageEntry(message):
+        case let .MessageEntry(message, _):
             return message.message.tags
         }
     }
@@ -53,8 +53,8 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, _, monthLocation):
             return .IntermediateMessageEntry(message, location, monthLocation)
-        case let .MessageEntry(message):
-            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: location, monthLocation: message.monthLocation, attributes: message.attributes))
+        case let .MessageEntry(message, reloadAssociatedMessages):
+            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: location, monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
         }
     }
     
@@ -62,8 +62,8 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, location, _):
             return .IntermediateMessageEntry(message, location, monthLocation)
-        case let .MessageEntry(message):
-            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: message.location, monthLocation: monthLocation, attributes: message.attributes))
+        case let .MessageEntry(message, reloadAssociatedMessages):
+            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: message.location, monthLocation: monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
         }
     }
     
@@ -79,12 +79,12 @@ enum MutableMessageHistoryEntry {
             } else {
                 return self
             }
-        case let .MessageEntry(message):
+        case let .MessageEntry(message, reloadAssociatedMessages):
             if let location = message.location {
                 if message.message.index > index {
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index + 1, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes))
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index + 1, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 } else {
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes))
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 }
             } else {
                 return self
@@ -107,15 +107,15 @@ enum MutableMessageHistoryEntry {
             } else {
                 return self
             }
-        case let .MessageEntry(message):
+        case let .MessageEntry(message, reloadAssociatedMessages):
             if let location = message.location {
                 if message.message.index > index {
                     //assert(location.index > 0)
                     //assert(location.count != 0)
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes))
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 } else {
                     //assert(location.count != 0)
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes))
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
                 }
             } else {
                 return self
@@ -128,10 +128,19 @@ enum MutableMessageHistoryEntry {
         case let .IntermediateMessageEntry(message, location, monthLocation):
             let updatedMessage = IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia)
             return .IntermediateMessageEntry(updatedMessage, location, monthLocation)
-        case let .MessageEntry(value):
+        case let .MessageEntry(value, reloadAssociatedMessages):
             let message = value.message
             let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
+            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+        }
+    }
+    
+    func getAssociatedMessageIds() -> [MessageId] {
+        switch self {
+        case let .IntermediateMessageEntry(message, location, monthLocation):
+            return []
+        case let .MessageEntry(value, _):
+            return value.message.associatedMessageIds
         }
     }
 }
