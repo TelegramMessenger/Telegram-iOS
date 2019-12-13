@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
+import SwiftSignalKit
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action
@@ -122,11 +123,15 @@ private func preparedTransition(from fromEntries: [VerticalListContextResultsCha
 
 final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
-    private var currentResults: ChatContextResultCollection?
+    private var currentExternalResults: ChatContextResultCollection?
+    private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [VerticalListContextResultsChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
+    
+    private let loadMoreDisposable = MetaDisposable()
+    private var isLoadingMore: Bool = false
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.listView = ListView()
@@ -143,10 +148,33 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.clipsToBounds = true
         
         self.addSubnode(self.listView)
+        
+        self.listView.visibleBottomContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self, !strongSelf.isLoadingMore, case let .known(value) = offset, value < 40.0 else {
+                return
+            }
+            strongSelf.loadMore()
+        }
+    }
+    
+    deinit {
+        self.loadMoreDisposable.dispose()
     }
     
     func updateResults(_ results: ChatContextResultCollection) {
-        self.currentResults = results
+        if self.currentExternalResults == results {
+            return
+        }
+        self.currentExternalResults = results
+        self.currentProcessedResults = results
+        
+        self.isLoadingMore = false
+        self.loadMoreDisposable.set(nil)
+        
+        self.updateInternalResults(results)
+    }
+        
+    private func updateInternalResults(_ results: ChatContextResultCollection) {
         var entries: [VerticalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
         var resultIds = Set<VerticalChatContextResultsEntryStableId>()
@@ -203,15 +231,13 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             
             var options = ListViewDeleteAndInsertOptions()
             if firstTime {
-                //options.insert(.Synchronous)
-                //options.insert(.LowLatency)
             } else {
                 options.insert(.AnimateTopItemPosition)
                 options.insert(.AnimateCrossfade)
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: validLayout.0, hasSwitchPeer: self.currentResults?.switchPeer != nil)
+            insets.top = topInsetForLayout(size: validLayout.0, hasSwitchPeer: self.currentExternalResults?.switchPeer != nil)
             insets.left = validLayout.1
             insets.right = validLayout.2
             
@@ -251,7 +277,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         var insets = UIEdgeInsets()
-        insets.top = self.topInsetForLayout(size: size, hasSwitchPeer: self.currentResults?.switchPeer != nil)
+        insets.top = self.topInsetForLayout(size: size, hasSwitchPeer: self.currentExternalResults?.switchPeer != nil)
         insets.left = leftInset
         insets.right = rightInset
         
@@ -268,12 +294,12 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             }
         }
         
-        if self.theme !== interfaceState.theme, let currentResults = currentResults {
+        if self.theme !== interfaceState.theme, let currentProcessedResults = self.currentProcessedResults {
             self.theme = interfaceState.theme
             self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
             
             let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
-            prepareTransition(from: self.currentEntries, to: new, results: currentResults)
+            prepareTransition(from: self.currentEntries, to: new, results: currentProcessedResults)
         }
     }
     
@@ -298,5 +324,34 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let listViewFrame = self.listView.frame
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
+    }
+    
+    private func loadMore() {
+        guard !self.isLoadingMore, let currentProcessedResults = self.currentProcessedResults, let nextOffset = currentProcessedResults.nextOffset else {
+            return
+        }
+        self.isLoadingMore = true
+        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
+        |> deliverOnMainQueue).start(next: { [weak self] nextResults in
+            guard let strongSelf = self, let nextResults = nextResults else {
+                return
+            }
+            strongSelf.isLoadingMore = false
+            var results: [ChatContextResult] = []
+            var existingIds = Set<String>()
+            for result in currentProcessedResults.results {
+                results.append(result)
+                existingIds.insert(result.id)
+            }
+            for result in nextResults.results {
+                if !existingIds.contains(result.id) {
+                    results.append(result)
+                    existingIds.insert(result.id)
+                }
+            }
+            let mergedResults = ChatContextResultCollection(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, geoPoint: currentProcessedResults.geoPoint, queryId: nextResults.queryId, nextOffset: nextResults.nextOffset, presentation: currentProcessedResults.presentation, switchPeer: currentProcessedResults.switchPeer, results: results, cacheTimeout: currentProcessedResults.cacheTimeout)
+            strongSelf.currentProcessedResults = mergedResults
+            strongSelf.updateInternalResults(mergedResults)
+        }))
     }
 }

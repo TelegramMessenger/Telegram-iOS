@@ -24,20 +24,49 @@ public struct AuthTransferTokenInfo {
 
 public enum ExportAuthTransferTokenError {
     case generic
+    case limitExceeded
 }
 
 public enum ExportAuthTransferTokenResult {
     case displayToken(AuthTransferExportedToken)
     case changeAccountAndRetry(UnauthorizedAccount)
     case loggedIn
+    case passwordRequested
 }
 
 public func exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, otherAccountUserIds: [Int32], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
     return account.network.request(Api.functions.auth.exportLoginToken(apiId: account.networkArguments.apiId, apiHash: account.networkArguments.apiHash, exceptIds: otherAccountUserIds))
-    |> mapError { _ -> ExportAuthTransferTokenError in
-        return .generic
+    |> map(Optional.init)
+    |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+        if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
+            return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+            |> mapError { error -> ExportAuthTransferTokenError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else {
+                    return .generic
+                }
+            }
+            |> mapToSignal { result -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                switch result {
+                case let .password(password):
+                    return account.postbox.transaction { transaction -> Api.auth.LoginToken? in
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
+                        return nil
+                    }
+                    |> castError(ExportAuthTransferTokenError.self)
+                    
+                    return .single(nil)
+                }
+            }
+        } else {
+            return .fail(.generic)
+        }
     }
     |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
+        guard let result = result else {
+            return .single(.passwordRequested)
+        }
         switch result {
         case let .loginToken(expires, token):
             return .single(.displayToken(AuthTransferExportedToken(value: token.makeData(), validUntil: expires)))
@@ -47,8 +76,32 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
             |> castError(ExportAuthTransferTokenError.self)
             |> mapToSignal { updatedAccount -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
                 return updatedAccount.network.request(Api.functions.auth.importLoginToken(token: token))
-                |> mapError { _ -> ExportAuthTransferTokenError in
-                    return .generic
+                |> map(Optional.init)
+                |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                    if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
+                        return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+                        |> mapError { error -> ExportAuthTransferTokenError in
+                            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                                return .limitExceeded
+                            } else {
+                                return .generic
+                            }
+                        }
+                        |> mapToSignal { result -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                            switch result {
+                            case let .password(password):
+                                return account.postbox.transaction { transaction -> Api.auth.LoginToken? in
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
+                                    return nil
+                                }
+                                |> castError(ExportAuthTransferTokenError.self)
+                                
+                                return .single(nil)
+                            }
+                        }
+                    } else {
+                        return .fail(.generic)
+                    }
                 }
                 |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
                     switch result {
