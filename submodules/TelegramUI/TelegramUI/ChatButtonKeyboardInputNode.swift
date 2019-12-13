@@ -162,9 +162,11 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     @objc func buttonPressed(_ button: ASButtonNode) {
         if let button = button as? ChatButtonKeyboardInputButtonNode, let markupButton = button.button {
+            var dismissIfOnce = false
             switch markupButton.action {
                 case .text:
                     self.controllerInteraction.sendMessage(markupButton.title)
+                    dismissIfOnce = true
                 case let .url(url):
                     self.controllerInteraction.openUrl(url, true, nil, nil)
                 case .requestMap:
@@ -208,6 +210,18 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     if let message = self.message {
                         self.controllerInteraction.requestMessageActionUrlAuth(url, message.id, buttonId)
                     }
+            }
+            if dismissIfOnce {
+                if let message = self.message {
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                            if attribute.flags.contains(.once) {
+                                self.controllerInteraction.dismissReplyMarkupMessage(message)
+                            }
+                            break
+                        }
+                    }
+                }
             }
         }
     }

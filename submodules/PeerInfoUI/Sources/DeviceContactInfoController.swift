@@ -440,7 +440,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .phoneNumberShareViaExceptionInfo(_, theme, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .editingPhoneNumber(_, theme, strings, id, title, label, value, hasActiveRevealControls):
-                return UserInfoEditingPhoneItem(theme: theme, strings: strings, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
+                return UserInfoEditingPhoneItem(presentationData: presentationData, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
                     arguments.updatePhone(id, value)
@@ -450,7 +450,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
             case let .addPhoneNumber(_, theme, title):
-                return UserInfoEditingPhoneActionItem(theme: theme, title: title, sectionId: self.section, action: {
+                return UserInfoEditingPhoneActionItem(presentationData: presentationData, title: title, sectionId: self.section, action: {
                     arguments.addPhoneNumber()
                 })
             case let .email(_, index, theme, title, label, value, selected):

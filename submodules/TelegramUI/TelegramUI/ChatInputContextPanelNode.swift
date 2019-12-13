@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 
 enum ChatInputContextPanelPlacement {
@@ -17,10 +18,12 @@ class ChatInputContextPanelNode: ASDisplayNode {
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var placement: ChatInputContextPanelPlacement = .overPanels
     var theme: PresentationTheme
+    var fontSize: PresentationFontSize
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.context = context
         self.theme = theme
+        self.fontSize = fontSize
         
         super.init()
     }

@@ -11,6 +11,7 @@ import TelegramStringFormatting
 import MergeLists
 import ChatListUI
 import AccountContext
+import ContextUI
 
 private enum ChatListSearchEntryStableId: Hashable {
     case messageId(MessageId)
@@ -76,7 +77,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
     public func item(context: AccountContext, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .message(message, peer, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true, displayAsMessage: true), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: peer, combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true, displayAsMessage: true, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
         }
     }
 }
@@ -129,7 +130,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     
     private let previousEntries = Atomic<[ChatListSearchEntry]?>(value: nil)
     
-    init(context: AccountContext, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState) {
+    init(context: AccountContext, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.context = context
         self.location = location
         self.searchQuery = searchQuery
@@ -183,7 +184,24 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
-        }, activateChatPreview: { _, _, _ in
+        }, activateChatPreview: { [weak self] item, node, gesture in
+            guard let strongSelf = self else {
+                gesture?.cancel()
+                return
+            }
+            switch item.content {
+            case let .peer(peer):
+                if let message = peer.message {
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: .message(message.id), botStart: nil, mode: .standard(previewing: true))
+                    chatController.canReadHistory.set(false)
+                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single([]), reactionItems: [], gesture: gesture)
+                    presentInGlobalOverlay(contextController)
+                } else {
+                    gesture?.cancel()
+                }
+            default:
+                gesture?.cancel()
+            }
         })
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction
@@ -317,3 +335,32 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }
     }
 }
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool = true
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+    }
+}
+

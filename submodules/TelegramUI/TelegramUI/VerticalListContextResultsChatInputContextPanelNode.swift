@@ -6,6 +6,7 @@ import TelegramCore
 import SyncCore
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 
@@ -127,7 +128,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -136,7 +137,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView.isHidden = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.isOpaque = false
         self.clipsToBounds = true

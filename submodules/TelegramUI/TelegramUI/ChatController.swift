@@ -561,7 +561,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false)).start(next: { actions, animatedEmojiStickers in
+                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
+                ).start(next: { actions, animatedEmojiStickers, chatTextSelectionTips in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
@@ -590,7 +591,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
                     }
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer)
+                    
+                    let displayTextSelectionTip = !message.text.isEmpty && chatTextSelectionTips < 3
+                    if displayTextSelectionTip {
+                        let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                    }
+                    
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer, displayTextSelectionTip: displayTextSelectionTip)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
@@ -1721,6 +1728,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, let validLayout = strongSelf.validLayout, min(validLayout.size.width, validLayout.size.height) > 320.0 {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: true, action: { _ in }), in: .window(.root))
             }
+        }, dismissReplyMarkupMessage: { [weak self] message in
+            guard let strongSelf = self, strongSelf.presentationInterfaceState.keyboardButtonsMessage?.id == message.id else {
+                return
+            }
+            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                return $0.updatedInputMode({ _ in .text }).updatedInterfaceState({
+                    $0.withUpdatedMessageActionsState({ value in
+                        var value = value
+                        value.closedButtonKeyboardMessageId = message.id
+                        return value
+                    })
+                })
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

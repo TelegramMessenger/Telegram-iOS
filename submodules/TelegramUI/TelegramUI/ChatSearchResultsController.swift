@@ -64,7 +64,9 @@ final class ChatSearchResultsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatSearchResultsControllerNode(context: self.context, location: self.location, searchQuery: self.searchQuery, searchResult: self.searchResult, searchState: self.searchState)
+        self.displayNode = ChatSearchResultsControllerNode(context: self.context, location: self.location, searchQuery: self.searchQuery, searchResult: self.searchResult, searchState: self.searchState, presentInGlobalOverlay: { [weak self] c in
+            self?.presentInGlobalOverlay(c)
+        })
         self.controllerNode.resultSelected = { [weak self] messageIndex in
             self?.navigateToMessageIndex(messageIndex)
             self?.dismiss()
