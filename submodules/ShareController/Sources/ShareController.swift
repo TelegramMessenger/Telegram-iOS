@@ -804,7 +804,7 @@ public final class ShareController: ViewController {
             var peers: [RenderedPeer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
-                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _):
+                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _):
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
                             peers.append(renderedPeer)
                         }

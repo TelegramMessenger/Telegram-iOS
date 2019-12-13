@@ -69,6 +69,7 @@ final class MessageHistoryTable: Table {
     let historyMetadataTable: MessageHistoryMetadataTable
     let globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable
     let unsentTable: MessageHistoryUnsentTable
+    let failedTable: MessageHistoryFailedTable
     let tagsTable: MessageHistoryTagsTable
     let globalTagsTable: GlobalMessageHistoryTagsTable
     let localTagsTable: LocalMessageHistoryTagsTable
@@ -78,7 +79,7 @@ final class MessageHistoryTable: Table {
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.seedConfiguration = seedConfiguration
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -86,6 +87,7 @@ final class MessageHistoryTable: Table {
         self.historyMetadataTable = historyMetadataTable
         self.globallyUniqueMessageIdsTable = globallyUniqueMessageIdsTable
         self.unsentTable = unsentTable
+        self.failedTable = failedTable
         self.tagsTable = tagsTable
         self.globalTagsTable = globalTagsTable
         self.localTagsTable = localTagsTable
@@ -248,6 +250,9 @@ final class MessageHistoryTable: Table {
                     
                     if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
                         self.unsentTable.add(message.id, operations: &unsentMessageOperations)
+                    }
+                    if message.flags.contains(.Failed) {
+                        self.failedTable.add(message.id)
                     }
                     let tags = message.tags.rawValue
                     if tags != 0 {
@@ -1194,6 +1199,9 @@ final class MessageHistoryTable: Table {
             if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
                 self.unsentTable.remove(index.id, operations: &unsentMessageOperations)
             }
+            if message.flags.contains(.Failed) {
+                self.failedTable.remove(message.id)
+            }
         
             if let globallyUniqueId = message.globallyUniqueId {
                 self.globallyUniqueMessageIdsTable.remove(peerId: message.id.peerId, globallyUniqueId: globallyUniqueId)
@@ -1445,6 +1453,23 @@ final class MessageHistoryTable: Table {
                     }
                 case (false, false):
                     break
+            }
+            
+            if previousMessage.id != message.id {
+                if previousMessage.flags.contains(.Failed) {
+                    self.failedTable.remove(previousMessage.id)
+                }
+                if message.flags.contains(.Failed) {
+                    self.failedTable.add(message.id)
+                }
+            } else {
+                if previousMessage.flags.contains(.Failed) != message.flags.contains(.Failed) {
+                    if previousMessage.flags.contains(.Failed) {
+                        self.failedTable.remove(previousMessage.id)
+                    } else {
+                        self.failedTable.add(message.id)
+                    }
+                }
             }
             
             if self.seedConfiguration.peerNamespacesRequiringMessageTextIndex.contains(message.id.peerId.namespace) {
