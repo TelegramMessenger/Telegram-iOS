@@ -592,7 +592,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         reactionItems = []
                     }
                     
-                    let displayTextSelectionTip = !message.text.isEmpty && chatTextSelectionTips < 3
+                    let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
+                    let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3
                     if displayTextSelectionTip {
                         let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                     }
