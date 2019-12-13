@@ -190,6 +190,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 accentTextColor: accentColor,
                 accentControlColor: accentColor,
                 mediaActiveControlColor: accentColor,
+                fileTitleColor: accentColor,
                 polls: chat.message.incoming.polls.withUpdated(
                     radioProgress: accentColor,
                     highlight: accentColor?.withAlphaComponent(0.12),
@@ -229,7 +230,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 fileTitleColor: outgoingFileTitleColor,
                 fileDescriptionColor: outgoingFileDescriptionColor,
                 fileDurationColor: outgoingFileDurationColor,
-                mediaPlaceholderColor: day ? accentColor?.withMultipliedBrightnessBy(0.95) : nil,
+                mediaPlaceholderColor: day ? accentColor?.withMultipliedBrightnessBy(0.95) : outgoingMediaPlaceholderColor,
                 polls: chat.message.outgoing.polls.withUpdated(radioButton: outgoingPollsButtonColor, radioProgress: outgoingPollsProgressColor, highlight: outgoingPollsProgressColor?.withAlphaComponent(0.12), separator: outgoingPollsButtonColor, bar: outgoingPollsProgressColor),
                 actionButtonsFillColor: chat.message.outgoing.actionButtonsFillColor.withUpdated(withWallpaper: serviceBackgroundColor),
                 actionButtonsStrokeColor: day ? chat.message.outgoing.actionButtonsStrokeColor.withUpdated(withoutWallpaper: accentColor) : nil,

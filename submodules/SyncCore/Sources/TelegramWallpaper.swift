@@ -4,13 +4,15 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
     public let blur: Bool
     public let motion: Bool
     public let color: Int32?
+    public let bottomColor: Int32?
     public let intensity: Int32?
     public let rotation: Int32?
     
-    public init(blur: Bool = false, motion: Bool = false, color: Int32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
+    public init(blur: Bool = false, motion: Bool = false, color: Int32? = nil, bottomColor: Int32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
         self.blur = blur
         self.motion = motion
         self.color = color
+        self.bottomColor = bottomColor
         self.intensity = intensity
         self.rotation = rotation
     }
@@ -19,6 +21,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         self.blur = decoder.decodeInt32ForKey("b", orElse: 0) != 0
         self.motion = decoder.decodeInt32ForKey("m", orElse: 0) != 0
         self.color = decoder.decodeOptionalInt32ForKey("c")
+        self.bottomColor = decoder.decodeOptionalInt32ForKey("bc")
         self.intensity = decoder.decodeOptionalInt32ForKey("i")
         self.rotation = decoder.decodeOptionalInt32ForKey("r")
     }
@@ -31,6 +34,11 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "c")
         }
+        if let bottomColor = self.bottomColor {
+            encoder.encodeInt32(bottomColor, forKey: "bc")
+        } else {
+            encoder.encodeNil(forKey: "bc")
+        }
         if let intensity = self.intensity {
             encoder.encodeInt32(intensity, forKey: "i")
         } else {
@@ -41,6 +49,28 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "r")
         }
+    }
+    
+    public static func ==(lhs: WallpaperSettings, rhs: WallpaperSettings) -> Bool {
+        if lhs.blur != rhs.blur {
+            return false
+        }
+        if lhs.motion != rhs.motion {
+            return false
+        }
+        if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.bottomColor != rhs.bottomColor {
+            return false
+        }
+        if lhs.intensity != rhs.intensity {
+              return false
+          }
+        if lhs.rotation != rhs.rotation {
+              return false
+          }
+        return true
     }
 }
 
@@ -144,7 +174,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                     return false
             }
             case let .file(lhsId, _, lhsIsCreator, lhsIsDefault, lhsIsPattern, lhsIsDark, lhsSlug, lhsFile, lhsSettings):
-                if case let .file(rhsId, _, rhsIsCreator, rhsIsDefault, rhsIsPattern, rhsIsDark, rhsSlug, rhsFile, rhsSettings) = rhs, lhsId == rhsId, lhsIsCreator == rhsIsCreator, lhsIsDefault == rhsIsDefault, lhsIsPattern == rhsIsPattern, lhsIsDark == rhsIsDark, lhsSlug == rhsSlug, lhsFile == rhsFile, lhsSettings == rhsSettings {
+                if case let .file(rhsId, _, rhsIsCreator, rhsIsDefault, rhsIsPattern, rhsIsDark, rhsSlug, rhsFile, rhsSettings) = rhs, lhsId == rhsId, lhsIsCreator == rhsIsCreator, lhsIsDefault == rhsIsDefault, lhsIsPattern == rhsIsPattern, lhsIsDark == rhsIsDark, lhsSlug == rhsSlug, lhsFile.id == rhsFile.id, lhsSettings == rhsSettings {
                     return true
                 } else {
                     return false

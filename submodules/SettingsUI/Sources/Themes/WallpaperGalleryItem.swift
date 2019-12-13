@@ -200,7 +200,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let subtitleSignal: Signal<String?, NoError>
             var actionSignal: Signal<UIBarButtonItem?, NoError> = .single(nil)
             var colorSignal: Signal<UIColor, NoError> = serviceColor(from: imagePromise.get())
-            var color: UIColor?
+            var patternArguments: PatternWallpaperArguments?
             
             let displaySize: CGSize
             let contentSize: CGSize
@@ -255,14 +255,23 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: reference(for: file.file.resource, media: file.file, message: message)))
                             
                             if file.isPattern {
+                                var patternColors: [UIColor] = []
                                 var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                                 var patternIntensity: CGFloat = 0.5
+                                
                                 if let color = file.settings.color {
                                     if let intensity = file.settings.intensity {
                                         patternIntensity = CGFloat(intensity) / 100.0
                                     }
                                     patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                                    patternColors.append(patternColor)
+                                    
+                                    if let bottomColor = file.settings.bottomColor {
+                                        patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                                    }
                                 }
+       
+                                patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
@@ -270,7 +279,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     
                                     let makeImageLayout = self.imageNode.asyncLayout()
                                     Queue.concurrentDefaultQueue().async {
-                                        let apply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))
+                                        let apply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))
                                         Queue.mainQueue().async {
                                             if self.colorPreview {
                                                 apply()
@@ -280,9 +289,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     return
                                 } else if let offset = self.validOffset, self.arguments.colorPreview && abs(offset) > 0.0 {
                                     return
-                                }
-                                else {
-                                    color = patternColor
+                                } else {
+                                    patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                                 }
                                 
                                 self.colorPreview = self.arguments.colorPreview
@@ -443,7 +451,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             
             self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: color))()
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
             self.imageNode.imageUpdated = { [weak self] image in
                 if let strongSelf = self {
                     var image = isBlurrable ? image : nil
@@ -597,7 +605,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
     }
     
-    @objc func toggleMotion() {
+    @objc private func toggleMotion() {
         let value = !self.motionButtonNode.isSelected
         self.motionButtonNode.setSelected(value, animated: true)
         self.setMotionEnabled(value, animated: true)
@@ -607,7 +615,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         return self.patternButtonNode.isSelected
     }
     
-    @objc func togglePattern() {
+    @objc private func togglePattern() {
         let value = !self.patternButtonNode.isSelected
         self.patternButtonNode.setSelected(value, animated: true)
         

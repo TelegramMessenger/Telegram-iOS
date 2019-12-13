@@ -10,8 +10,9 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import PresentationDataUtils
+import MediaResources
 
-private let colors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
+private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 
 enum ThemeAccentColorControllerMode {
     case colors(themeReference: PresentationThemeReference)
@@ -64,7 +65,7 @@ final class ThemeAccentColorController: ViewController {
         self.segmentedTitleView = ThemeColorSegmentedTitleView(theme: self.presentationData.theme, strings: self.presentationData.strings, selectedSection: section)
         
         if case .background = mode {
-            self.initialBackgroundColor = colors.randomElement().flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+            self.initialBackgroundColor = randomBackgroundColors.randomElement().flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
         } else {
             self.initialBackgroundColor = nil
         }
@@ -146,7 +147,35 @@ final class ThemeAccentColorController: ViewController {
                     
                     completion(updatedTheme)
                 } else {
-                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                    let prepare: Signal<Void, NoError>
+                    if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
+                        let resource = file.file.resource
+                        let representation = CachedPatternWallpaperRepresentation(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: state.patternIntensity, rotation: state.rotation)
+                        
+                        var data: Data?
+                        if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            data = maybeData
+                        } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            data = maybeData
+                        }
+                        
+                        if let data = data {
+                            strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                            prepare = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                            |> filter({ $0.complete })
+                            |> take(1)
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return .complete()
+                            })
+                        } else {
+                            prepare = .complete()
+                        }
+                    } else {
+                        prepare = .complete()
+                    }
+                    
+                    let _ = (prepare
+                    |> then(updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                         let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
                         var currentTheme = current.theme
                         if autoNightModeTriggered {
@@ -170,16 +199,21 @@ final class ThemeAccentColorController: ViewController {
                         
                         var wallpaper = themeSpecificChatWallpapers[currentTheme.index]
                         if let backgroundColors = state.backgroundColors {
-                            if let bottomColor = backgroundColors.1 {
-                                wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
+                            let color = Int32(bitPattern: backgroundColors.0.rgb)
+                            let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }
+                            
+                            if let patternWallpaper = state.patternWallpaper {
+                                wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
+                            } else if let bottomColor = bottomColor {
+                                wallpaper = .gradient(color, bottomColor, WallpaperSettings(motion: state.motion, rotation: state.rotation))
                             } else {
-                                wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+                                wallpaper = .color(color)
                             }
                         }
                         themeSpecificChatWallpapers[currentTheme.index] = wallpaper
                         
                         return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                    }) |> deliverOnMainQueue).start(completed: { [weak self] in
+                    })) |> deliverOnMainQueue).start(completed: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.completion?()
                             strongSelf.dismiss()
@@ -196,6 +230,7 @@ final class ThemeAccentColorController: ViewController {
         }
         
         let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             guard let strongSelf = self else {
                 return
@@ -205,8 +240,12 @@ final class ThemeAccentColorController: ViewController {
             let accentColor: UIColor
             var initialWallpaper: TelegramWallpaper?
             let backgroundColors: (UIColor, UIColor?)?
+            var patternWallpaper: TelegramWallpaper?
+            var patternIntensity: Int32 = 50
+            var motion = false
             let messageColors: (UIColor, UIColor?)?
             var defaultMessagesColor: UIColor?
+            var rotation: Int32 = 0
             
             var ignoreDefaultWallpaper = false
             
@@ -235,10 +274,28 @@ final class ThemeAccentColorController: ViewController {
                 if let initialBackgroundColor = strongSelf.initialBackgroundColor {
                     backgroundColors = (initialBackgroundColor, nil)
                 } else if !ignoreDefaultWallpaper {
-                    if case let .color(color) = wallpaper {
+                    if case let .file(file) = wallpaper, file.isPattern {
+                        var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                        var bottomColor: UIColor?
+                        if let color = file.settings.color {
+                            if let intensity = file.settings.intensity {
+                                patternIntensity = intensity
+                            }
+                            patternColor = UIColor(rgb: UInt32(bitPattern: color))
+                            if let bottomColorValue = file.settings.bottomColor {
+                                bottomColor = UIColor(rgb: UInt32(bitPattern: bottomColorValue))
+                            }
+                        }
+                        patternWallpaper = wallpaper
+                        backgroundColors = (patternColor, bottomColor)
+                        motion = file.settings.motion
+                        rotation = file.settings.rotation ?? 0
+                    } else if case let .color(color) = wallpaper {
                         backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-                    } else if case let .gradient(topColor, bottomColor, _) = wallpaper {
+                    } else if case let .gradient(topColor, bottomColor, settings) = wallpaper {
                         backgroundColors = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                        motion = settings.motion
+                        rotation = settings.rotation ?? 0
                     } else {
                         backgroundColors = nil
                     }
@@ -263,8 +320,9 @@ final class ThemeAccentColorController: ViewController {
                 accentColor = theme.rootController.navigationBar.accentTextColor
                 if case let .color(color) = theme.chat.defaultWallpaper {
                     backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-                } else if case let .gradient(topColor, bottomColor, _) = theme.chat.defaultWallpaper {
+                } else if case let .gradient(topColor, bottomColor, settings) = theme.chat.defaultWallpaper {
                     backgroundColors = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                    rotation = settings.rotation ?? 0
                 } else {
                     backgroundColors = nil
                 }
@@ -277,12 +335,12 @@ final class ThemeAccentColorController: ViewController {
                     messageColors = (topMessageColor, bottomMessageColor)
                 }
             } else {
-                accentColor = UIColor(rgb: 0x007ee5)
+                accentColor = defaultDayAccentColor
                 backgroundColors = nil
                 messageColors = nil
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, motion: motion, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors, rotation: rotation)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState

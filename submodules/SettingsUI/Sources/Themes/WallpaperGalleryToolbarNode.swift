@@ -4,14 +4,31 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
+enum WallpaperGalleryToolbarCancelButtonType {
+    case cancel
+    case discard
+}
+
 enum WallpaperGalleryToolbarDoneButtonType {
     case set
     case proceed
+    case apply
 }
 
 final class WallpaperGalleryToolbarNode: ASDisplayNode {
     private var theme: PresentationTheme
-    private let doneButtonType: WallpaperGalleryToolbarDoneButtonType
+    private let strings: PresentationStrings
+    
+    var cancelButtonType: WallpaperGalleryToolbarCancelButtonType {
+        didSet {
+            self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
+        }
+    }
+    var doneButtonType: WallpaperGalleryToolbarDoneButtonType {
+        didSet {
+            self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
+        }
+    }
     
     private let cancelButton = HighlightableButtonNode()
     private let doneButton = HighlightableButtonNode()
@@ -21,8 +38,10 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var done: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, doneButtonType: WallpaperGalleryToolbarDoneButtonType) {
+    init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
         self.theme = theme
+        self.strings = strings
+        self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
         
         super.init()
@@ -73,8 +92,24 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         
-        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
-        self.doneButton.setTitle(self.doneButtonType == .set ? strings.Wallpaper_Set : strings.Theme_Colors_Proceed, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
+        let cancelTitle: String
+        switch self.cancelButtonType {
+            case .cancel:
+                cancelTitle = strings.Common_Cancel
+            case .discard:
+                cancelTitle = strings.WallpaperPreview_PatternPaternDiscard
+        }
+        let doneTitle: String
+        switch self.doneButtonType {
+            case .set:
+                doneTitle = strings.Wallpaper_Set
+            case .proceed:
+                doneTitle = strings.Theme_Colors_Proceed
+            case .apply:
+                doneTitle = strings.WallpaperPreview_PatternPaternApply
+        }
+        self.cancelButton.setTitle(cancelTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
+        self.doneButton.setTitle(doneTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
     }
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -89,7 +124,6 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     }
     
     @objc func donePressed() {
-        self.doneButton.isUserInteractionEnabled = false
         self.done?()
     }
 }

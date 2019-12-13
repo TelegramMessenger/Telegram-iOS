@@ -358,8 +358,10 @@ public class WallpaperGalleryController: ViewController {
         toolbarNode.cancel = { [weak self] in
             self?.dismiss(forceAway: true)
         }
+        var dismissed = false
         toolbarNode.done = { [weak self] in
-            if let strongSelf = self {
+            if let strongSelf = self, !dismissed {
+                dismissed = true
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
@@ -380,7 +382,7 @@ public class WallpaperGalleryController: ViewController {
                                 
                                 let completion: (TelegramWallpaper) -> Void = { wallpaper in
                                     let baseSettings = wallpaper.settings
-                                    let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, intensity: baseSettings?.intensity)
+                                    let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, bottomColor: baseSettings?.bottomColor, intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
                                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
@@ -430,7 +432,7 @@ public class WallpaperGalleryController: ViewController {
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
                                         if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                                            let representation = CachedPatternWallpaperRepresentation(color: color, intensity: intensity)
+                                            let representation = CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation)
                                             
                                             var data: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {

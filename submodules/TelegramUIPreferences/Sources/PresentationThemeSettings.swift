@@ -96,7 +96,7 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
             return false
         }
         if lhs.resolvedWallpaper != rhs.resolvedWallpaper {
-            return false
+             return false
         }
         return true
     }

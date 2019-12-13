@@ -29,6 +29,15 @@ public extension TelegramWallpaper {
         }
     }
     
+    var isPattern: Bool {
+        switch self {
+        case let .file(file):
+            return file.isPattern
+        default:
+            return false
+        }
+    }
+    
     var isBuiltin: Bool {
         switch self {
         case .builtin:
