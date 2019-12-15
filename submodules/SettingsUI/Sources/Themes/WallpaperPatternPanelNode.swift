@@ -42,7 +42,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var backgroundColors: (UIColor, UIColor?)? = nil {
         didSet {
-            self.updateWallpapers()
+            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb {
+                self.updateWallpapers()
+            }
         }
     }
     
@@ -136,7 +138,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
           
         let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil)
         
-        var selected = true
+        var selectedFileId: Int64?
+        if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
+            selectedFileId = file.id
+        }
+        
         for wallpaper in wallpapers {
             let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
@@ -146,6 +152,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             if case let .file(file) = updatedWallpaper {
                 let settings = WallpaperSettings(blur: false, motion: false, color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: 100)
                 updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
+            }
+            
+            var selected = false
+            if case let .file(file) = wallpaper, file.id == selectedFileId {
+                selected = true
             }
             
             node.setWallpaper(context: self.context, wallpaper: updatedWallpaper, selected: selected, size: itemSize)
@@ -163,8 +174,6 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                 }
             }
             self.scrollNode.addSubnode(node)
-            
-            selected = false
         }
         
         self.scrollNode.view.contentSize = CGSize(width: (itemSize.width + inset) * CGFloat(wallpapers.count) + inset, height: 112.0)

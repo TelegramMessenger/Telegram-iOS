@@ -480,7 +480,6 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                        
                         if colors.count == 1 {
                             c.setFillColor(patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
-                                      c.fill(arguments.drawingRect)
                             c.fill(arguments.drawingRect)
                         } else {
                             let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
