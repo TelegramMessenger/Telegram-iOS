@@ -1067,7 +1067,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
                 if let bubbleColors = bubbleColors {
-                    backgroundColor = UIColor(rgb: 0xffffff)
+                    backgroundColor = UIColor(rgb: 0xd6e2ee)
                     outgoingColor = bubbleColors
                 } else  {
                     backgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
@@ -1127,7 +1127,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             backgroundColor = (.black, nil)
                         case let .file(file):
                             if file.isPattern, let color = file.settings.color {
-                                backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
+                                backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) })
                             } else {
                                 backgroundColor = (theme.chatList.backgroundColor, nil)
                             }

@@ -188,12 +188,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var preview = false
-    private var currentBackgroundColor: UIColor?
+    private var currentBackgroundColors: (UIColor, UIColor?)?
+    private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
+    
     private var patternWallpaper: TelegramWallpaper?
     private var patternArguments: PatternWallpaperArguments?
-    
-    private var patternArgumentsValue = Promise<TransformImageArguments>()
+    private var patternArgumentsPromise = Promise<TransformImageArguments>()
     private var patternArgumentsDisposable: Disposable?
     
     private var tapGestureRecognizer: UITapGestureRecognizer?
@@ -399,7 +399,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.stateDisposable = (self.statePromise.get()
         |> deliverOn(Queue.concurrentDefaultQueue())
-        |> map { state -> (PresentationTheme, (TelegramWallpaper, UIImage?, Signal<(TransformImageArguments) -> DrawingContext?, NoError>?), UIColor, UIColor?, [UIColor], Bool) in
+        |> map { state -> (PresentationTheme, (TelegramWallpaper, UIImage?, Signal<(TransformImageArguments) -> DrawingContext?, NoError>?), UIColor, (UIColor, UIColor?)?, [UIColor], Bool) in
             let accentColor = state.accentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
@@ -439,12 +439,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         suggestedWallpaper = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
                         wallpaperSignal = gradientImage([topColor, bottomColor], rotation: state.rotation)
                         backgroundColors = (topColor, bottomColor)
-                        singleBackgroundColor = bottomColor
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
                         suggestedWallpaper = .color(Int32(bitPattern: color.rgb))
                         backgroundColors = (color, nil)
-                        singleBackgroundColor  = color
                     default:
                         suggestedWallpaper = .builtin(WallpaperSettings())
                 }
@@ -457,7 +455,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let serviceBackgroundColor = serviceColor(for: (wallpaper, wallpaperImage))
             let updatedTheme: PresentationTheme
             if let themeReference = mode.themeReference {
-                updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, bubbleColors: messagesColors, backgroundColors: backgroundColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+                updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
             } else if case let .edit(theme, _, _, _, _) = mode {
                 updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors)
             } else {
@@ -468,9 +466,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             let patternColors = calcPatternColors(for: state)
             
-            return (updatedTheme, (wallpaper, wallpaperImage, wallpaperSignal), serviceBackgroundColor, singleBackgroundColor, patternColors, state.preview)
+            return (updatedTheme, (wallpaper, wallpaperImage, wallpaperSignal), serviceBackgroundColor, backgroundColors, patternColors, state.preview)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaperImageAndSignal, serviceBackgroundColor, singleBackgroundColor, patternColors, preview in
+        |> deliverOnMainQueue).start(next: { [weak self] theme, wallpaperImageAndSignal, serviceBackgroundColor, backgroundColors, patternColors, preview in
             guard let strongSelf = self else {
                 return
             }
@@ -495,13 +493,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.immediateBackgroundNode.image = nil
                 strongSelf.immediateBackgroundNode.isHidden = false
                 strongSelf.signalBackgroundNode.isHidden = true
-                
+
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperImage = wallpaperImage {
                 strongSelf.immediateBackgroundNode.image = wallpaperImage
                 strongSelf.immediateBackgroundNode.isHidden = false
                 strongSelf.signalBackgroundNode.isHidden = true
-                
+
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperSignal = wallpaperSignal {
                 strongSelf.signalBackgroundNode.contentMode = .scaleToFill
@@ -520,7 +518,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     if dispatch {
                         if let _ = strongSelf.patternArgumentsDisposable {
                         } else {
-                            let throttledSignal = strongSelf.patternArgumentsValue.get()
+                            let throttledSignal = strongSelf.patternArgumentsPromise.get()
                             |> mapToThrottled { next -> Signal<TransformImageArguments, NoError> in
                                 return .single(next) |> then(.complete() |> delay(0.016667, queue: Queue.concurrentDefaultQueue()))
                             }
@@ -534,7 +532,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                             })
                         }
                         
-                        strongSelf.patternArgumentsValue.set(.single(TransformImageArguments(corners: ImageCorners(), imageSize: layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: patternArguments)))
+                        strongSelf.patternArgumentsPromise.set(.single(TransformImageArguments(corners: ImageCorners(), imageSize: layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: patternArguments)))
                     } else {
                         strongSelf.patternArgumentsDisposable?.dispose()
                         strongSelf.patternArgumentsDisposable = nil
@@ -550,8 +548,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
             strongSelf.wallpaper = wallpaper
             strongSelf.patternArguments = patternArguments
-            strongSelf.currentBackgroundColor = singleBackgroundColor
-    
+            
+            if !preview {
+                strongSelf.currentBackgroundColors = backgroundColors
+                strongSelf.patternPanelNode.backgroundColors = backgroundColors
+            }
+            
             if let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
                 strongSelf.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: .immediate)
                 strongSelf.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: .immediate)
@@ -1031,7 +1033,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     
     @objc private func togglePattern() {
         let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
-        let backgroundColor = self.currentBackgroundColor
+        let backgroundColors = self.currentBackgroundColors
         
         var appeared = false
         self.updateState({ current in
@@ -1044,8 +1046,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 updated.displayPatternPanel = true
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
                     updated.patternWallpaper = wallpaper
-                    if updated.backgroundColors == nil, let color = backgroundColor {
-                        updated.backgroundColors = (color, nil)
+                    if updated.backgroundColors == nil {
+                        updated.backgroundColors = backgroundColors
                     }
                     appeared = true
                 }

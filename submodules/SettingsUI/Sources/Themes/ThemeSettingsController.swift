@@ -481,7 +481,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 currentTheme = current.automaticThemeSwitchSetting.theme
             }
 
-            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color?.color, bubbleColors: nil) else {
+            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color?.color) else {
                 return current
             }
             
@@ -559,7 +559,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     })))
                 } else {
                     items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                        guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: nil, bubbleColors: nil, backgroundColors: nil, preview: false) else {
+                        guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, preview: false) else {
                             return
                         }
                         
@@ -725,7 +725,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         return controller?.navigationController as? NavigationController
     }
     selectThemeImpl = { theme in
-        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: .black) else {
+        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme) else {
             return
         }
         

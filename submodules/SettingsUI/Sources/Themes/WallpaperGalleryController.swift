@@ -733,7 +733,7 @@ public class WallpaperGalleryController: ViewController {
             self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)
         }
         
-        let panelHeight: CGFloat = 190.0
+        let panelHeight: CGFloat = 235.0
         var patternPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
         if self.patternPanelEnabled {
             patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)

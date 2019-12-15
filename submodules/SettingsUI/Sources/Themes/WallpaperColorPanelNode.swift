@@ -284,7 +284,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private func updateSelectionLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.measureNode.attributedText = NSAttributedString(string: self.textFieldNode.textField.text ?? "", font: self.textFieldNode.textField.font)
         let size = self.measureNode.updateLayout(size)
-        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(45.0, size.width), height: 20.0))
+        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(0.0, size.width), height: 20.0))
     }
     
     private func updateSelectionVisibility() {

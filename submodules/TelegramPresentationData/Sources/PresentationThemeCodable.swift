@@ -39,6 +39,8 @@ extension TelegramWallpaper: Codable {
                 case "builtin":
                     self = .builtin(WallpaperSettings())
                 default:
+                    let options = ["motion", "blur"]
+                    
                     if [6,7].contains(value.count), let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
@@ -52,28 +54,40 @@ extension TelegramWallpaper: Codable {
                             blur = true
                         }
                         
-                        if components.count >= 2 && components.count <= 4 && [6,7].contains(components[0].count) && !["motion", "blur"].contains(components[0]) && [6,7].contains(components[1].count) && !["motion", "blur"].contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                        if components.count >= 2 && components.count <= 4 && [6,7].contains(components[0].count) && !options.contains(components[0]) && [6,7].contains(components[1].count) && !options.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
                             self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
                         } else {
                             var slug: String?
                             var color: Int32?
+                            var bottomColor: Int32?
                             var intensity: Int32?
 
                             if !components.isEmpty {
                                 slug = components[0]
                             }
-                            if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
-                                color = Int32(bitPattern: value.rgb)
-                            }
-                            if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
-                                if value >= 0 && value <= 100 {
-                                    intensity = value
-                                } else {
-                                    intensity = 50
+                            if components.count > 1 {
+                                for i in 1 ..< components.count {
+                                    let component = components[i]
+                                    if options.contains(component) {
+                                        continue
+                                    }
+                                    if component.count == 6, let value = UIColor(hexString: component) {
+                                        if color == nil {
+                                            color = Int32(bitPattern: value.rgb)
+                                        } else if bottomColor == nil {
+                                            bottomColor = Int32(bitPattern: value.rgb)
+                                        }
+                                    } else if component.count <= 3, let value = Int32(component) {
+                                        if value >= 0 && value <= 100 {
+                                            intensity = value
+                                        } else {
+                                            intensity = 50
+                                        }
+                                    }
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -112,6 +126,9 @@ extension TelegramWallpaper: Codable {
                     }
                     if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
+                    }
+                    if let bottomColor = file.settings.bottomColor {
+                        components.append(String(format: "%06x", bottomColor))
                     }
                 }
                 if file.settings.motion {
