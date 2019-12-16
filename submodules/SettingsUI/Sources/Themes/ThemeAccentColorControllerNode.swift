@@ -492,12 +492,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.immediateBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
                 strongSelf.immediateBackgroundNode.image = nil
                 strongSelf.signalBackgroundNode.isHidden = true
-
+                strongSelf.signalBackgroundNode.contentAnimations = []
+                strongSelf.signalBackgroundNode.reset()
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperImage = wallpaperImage {
                 strongSelf.immediateBackgroundNode.image = wallpaperImage
                 strongSelf.signalBackgroundNode.isHidden = true
-
+                strongSelf.signalBackgroundNode.contentAnimations = []
+                strongSelf.signalBackgroundNode.reset()
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperSignal = wallpaperSignal {
                 strongSelf.signalBackgroundNode.contentMode = .scaleToFill
@@ -512,9 +514,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     if dispatch {
                         if let _ = strongSelf.patternArgumentsDisposable {
                         } else {
+                            strongSelf.signalBackgroundNode.contentAnimations = .subsequentUpdates
+                            
                             let throttledSignal = strongSelf.patternArgumentsPromise.get()
                             |> mapToThrottled { next -> Signal<TransformImageArguments, NoError> in
-                                return .single(next) |> then(.complete() |> delay(0.016667, queue: Queue.concurrentDefaultQueue()))
+                                return .single(next) |> then(.complete() |> delay(0.033333, queue: Queue.concurrentDefaultQueue()))
                             }
                             
                             strongSelf.patternArgumentsDisposable = (throttledSignal).start(next: { [weak self] arguments in
@@ -674,7 +678,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
 
             self.colorPanelNode.updateState({ _ in
-                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, preview: false)
+                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, preview: false)
             }, animated: animated)
             
             needsLayout = true
