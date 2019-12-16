@@ -63,12 +63,13 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
+                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
                             var color: Int32?
                             var bottomColor: Int32?
                             var intensity: Int32?
+                            var rotation: Int32?
 
                             if !components.isEmpty {
                                 slug = components[0]
@@ -86,16 +87,22 @@ extension TelegramWallpaper: Codable {
                                             bottomColor = Int32(bitPattern: value.rgb)
                                         }
                                     } else if component.count <= 3, let value = Int32(component) {
-                                        if value >= 0 && value <= 100 {
-                                            intensity = value
-                                        } else {
-                                            intensity = 50
+                                        if intensity == nil {
+                                            if value >= 0 && value <= 100 {
+                                                intensity = value
+                                            } else {
+                                                intensity = 50
+                                            }
+                                        } else if rotation == nil {
+                                            if value >= 0 && value < 360 {
+                                                rotation = value
+                                            }
                                         }
                                     }
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -141,7 +148,7 @@ extension TelegramWallpaper: Codable {
                     if let bottomColor = file.settings.bottomColor {
                         components.append(String(format: "%06x", bottomColor))
                     }
-                    if let rotation = file.settings.rotation {
+                    if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")
                     }
                 }

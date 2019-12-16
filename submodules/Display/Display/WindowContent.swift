@@ -1193,8 +1193,13 @@ public class Window1 {
     }
     
     public func forEachViewController(_ f: (ContainableController) -> Bool) {
-        if let navigationController = self._rootController as? NavigationController, let controller = navigationController.topOverlayController {
-            !f(controller)
+        if let navigationController = self._rootController as? NavigationController {
+            for case let controller as ContainableController in navigationController.viewControllers {
+                !f(controller)
+            }
+            if let controller = navigationController.topOverlayController {
+                !f(controller)
+            }
         }
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {

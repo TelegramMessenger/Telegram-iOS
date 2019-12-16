@@ -325,6 +325,7 @@ struct WallpaperColorPanelNodeState {
     var defaultColor: UIColor?
     var secondColor: UIColor?
     var secondColorAvailable: Bool
+    var rotateAvailable: Bool
     var preview: Bool
 }
 
@@ -338,6 +339,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private let bottomSeparatorNode: ASDisplayNode
     private let firstColorFieldNode: ColorInputFieldNode
     private let secondColorFieldNode: ColorInputFieldNode
+    private let rotateButton: HighlightableButtonNode
     private let swapButton: HighlightableButtonNode
     private let addButton: HighlightableButtonNode
     private let doneButton: HighlightableButtonNode
@@ -365,15 +367,17 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
         self.colorPickerNode = WallpaperColorPickerNode(strings: strings)
         
+        self.rotateButton = HighlightableButtonNode()
+        self.rotateButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         self.swapButton = HighlightableButtonNode()
-        self.swapButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
+        self.swapButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorSwapIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         self.addButton = HighlightableButtonNode()
         self.addButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorAddIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         
         self.firstColorFieldNode = ColorInputFieldNode(theme: theme)
         self.secondColorFieldNode = ColorInputFieldNode(theme: theme)
         
-        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, preview: false)
+        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, preview: false)
         
         super.init()
         
@@ -385,9 +389,11 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.addSubnode(self.doneButton)
         self.addSubnode(self.colorPickerNode)
         
+        self.addSubnode(self.rotateButton)
         self.addSubnode(self.swapButton)
         self.addSubnode(self.addButton)
         
+        self.rotateButton.addTarget(self, action: #selector(self.rotatePressed), forControlEvents: .touchUpInside)
         self.swapButton.addTarget(self, action: #selector(self.swapPressed), forControlEvents: .touchUpInside)
         self.addButton.addTarget(self, action: #selector(self.addPressed), forControlEvents: .touchUpInside)
         
@@ -591,8 +597,14 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
         
-        if let buttonSnapshotView = self.swapButton.view.snapshotContentTree() {
-            buttonSnapshotView.frame = self.swapButton.frame
+        let middleButton: ASDisplayNode
+        if self.rotateButton.alpha > 1.0 {
+            middleButton = self.rotateButton
+        } else {
+            middleButton = self.swapButton
+        }
+        if let buttonSnapshotView = middleButton.view.snapshotContentTree() {
+            buttonSnapshotView.frame = middleButton.frame
             self.view.addSubview(buttonSnapshotView)
             
             buttonSnapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.3, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, force: false) { _ in
@@ -600,6 +612,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
         
+        self.rotateButton.alpha = 0.0
         self.swapButton.alpha = 0.0
         
         let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
@@ -642,24 +655,34 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
         let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
-        let swapButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        let middleButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
-        transition.updateFrame(node: self.swapButton, frame: swapButtonFrame)
-        transition.updateFrame(node: self.addButton, frame: swapButtonFrame)
+        transition.updateFrame(node: self.rotateButton, frame: middleButtonFrame)
+        transition.updateFrame(node: self.swapButton, frame: middleButtonFrame)
+        transition.updateFrame(node: self.addButton, frame: middleButtonFrame)
         
+        let rotateButtonAlpha: CGFloat
         let swapButtonAlpha: CGFloat
         let addButtonAlpha: CGFloat
         if let _ = self.state.secondColor {
-            swapButtonAlpha = 1.0
+            if self.state.rotateAvailable {
+                rotateButtonAlpha = 1.0
+                swapButtonAlpha = 0.0
+            } else {
+                rotateButtonAlpha = 0.0
+                swapButtonAlpha = 1.0
+            }
             addButtonAlpha = 0.0
         } else {
             swapButtonAlpha = 0.0
+            rotateButtonAlpha = 0.0
             if self.state.secondColorAvailable {
                 addButtonAlpha = 1.0
             } else {
                 addButtonAlpha = 0.0
             }
         }
+        transition.updateAlpha(node: self.rotateButton, alpha: rotateButtonAlpha)
         transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
         transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)
         
@@ -682,16 +705,19 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.colorPickerNode.updateLayout(size: colorPickerSize, transition: transition)
     }
     
-    @objc private func swapPressed() {
+    @objc private func rotatePressed() {
         self.rotate?()
-//        self.updateState({ current in
-//            var updated = current
-//            if let secondColor = current.secondColor {
-//                updated.firstColor = secondColor
-//                updated.secondColor = current.firstColor
-//            }
-//            return updated
-//        })
+    }
+    
+    @objc private func swapPressed() {
+        self.updateState({ current in
+            var updated = current
+            if let secondColor = current.secondColor {
+                updated.firstColor = secondColor
+                updated.secondColor = current.firstColor
+            }
+            return updated
+        })
     }
     
     @objc private func addPressed() {

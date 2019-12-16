@@ -361,7 +361,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                 }, contextAction: { theme, node, gesture in
                     arguments.themeContextAction(theme.index == currentTheme.index, theme, node, gesture)
-                })
+                }, tag: ThemeSettingsEntryTag.theme)
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .iconItem(theme, strings, icons, value):
@@ -437,12 +437,20 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
+public protocol ThemeSettingsController {
+    
+}
+
+private final class ThemeSettingsControllerImpl: ItemListController, ThemeSettingsController {
+}
+
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var updateControllersImpl: ((([UIViewController]) -> [UIViewController]) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
+    var presentCrossfadeControllerImpl: (() -> Void)?
     
     var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var moreImpl: (() -> Void)?
@@ -673,6 +681,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         presentInGlobalOverlayImpl?(contextController, nil)
     })
     
+    let previousThemeReference = Atomic<PresentationThemeReference?>(value: nil)
+    let previousAccentColor = Atomic<PresentationThemeAccentColor?>(value: nil)
+    
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
     |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
@@ -690,7 +701,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         
         let theme = presentationData.theme
-        let accentColor = settings.themeSpecificAccentColors[themeReference.index]?.color
+        let accentColor = settings.themeSpecificAccentColors[themeReference.index]
         let wallpaper = presentationData.chatWallpaper
         
         let rightNavigationButton = ItemListNavigationButton(content: .icon(.add), style: .regular, enabled: true, action: {
@@ -714,11 +725,17 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, theme: theme, themeReference: themeReference, themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        
+        let previousThemeIndex = previousThemeReference.swap(themeReference)?.index
+        let previousAccentColor = previousAccentColor.swap(accentColor)
+        if previousThemeIndex != nil && (previousThemeIndex != themeReference.index || previousAccentColor != accentColor) {
+            presentCrossfadeControllerImpl?()
+        }
                 
         return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = ThemeSettingsControllerImpl(context: context, state: signal)
     controller.alwaysSynchronous = true
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
@@ -736,6 +753,54 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
+    }
+    presentCrossfadeControllerImpl = { [weak controller] in
+        if let controller = controller, controller.isNodeLoaded {
+            var topOffset: CGFloat?
+            var bottomOffset: CGFloat?
+            var themeItemNode: ThemeSettingsThemeItemNode?
+            var colorItemNode: ThemeSettingsAccentColorItemNode?
+            
+            controller.forEachItemNode { node in
+                if let itemNode = node as? ItemListItemNode {
+                    if let itemTag = itemNode.tag {
+                        if itemTag.isEqual(to: ThemeSettingsEntryTag.theme) {
+                            let frame = node.convert(node.bounds, to: controller.displayNode)
+                            topOffset = frame.minY
+                            bottomOffset = frame.maxY
+                            if let itemNode = node as? ThemeSettingsThemeItemNode {
+                                themeItemNode = itemNode
+                            }
+                        } else if itemTag.isEqual(to: ThemeSettingsEntryTag.accentColor) {
+                            let frame = node.convert(node.bounds, to: controller.displayNode)
+                            bottomOffset = frame.maxY
+                            if let itemNode = node as? ThemeSettingsAccentColorItemNode {
+                                colorItemNode = itemNode
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if let navigationBar = controller.navigationBar {
+                if let offset = topOffset {
+                    topOffset = max(offset, navigationBar.frame.maxY)
+                } else {
+                    topOffset = navigationBar.frame.maxY
+                }
+            }
+            
+            themeItemNode?.prepareCrossfadeTransition()
+            colorItemNode?.prepareCrossfadeTransition()
+            
+            let crossfadeController = ThemeSettingsCrossfadeController(view: controller.view, topOffset: topOffset, bottomOffset: bottomOffset)
+            crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
+                themeItemNode?.animateCrossfadeTransition()
+                colorItemNode?.animateCrossfadeTransition()
+            }
+            
+            context.sharedContext.presentGlobalController(crossfadeController, nil)
+        }
     }
     selectThemeImpl = { theme in
         guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme) else {
@@ -846,11 +911,37 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 }
 
 public final class ThemeSettingsCrossfadeController: ViewController {
-    private let snapshotView: UIView?
+    private var snapshotView: UIView?
     
-    public init(view: UIView? = nil) {
+    private var topSnapshotView: UIView?
+    private var bottomSnapshotView: UIView?
+    
+    fileprivate var didAppear: (() -> Void)?
+    
+    public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil) {
         if let view = view {
-            self.snapshotView = view.snapshotContentTree()
+            if let view = view.snapshotView(afterScreenUpdates: false) {
+                view.clipsToBounds = true
+                view.contentMode = .top
+                if let topOffset = topOffset {
+                    var frame = view.frame
+                    frame.size.height = topOffset
+                    view.frame = frame
+                }
+                self.topSnapshotView = view
+            }
+            
+            if let view = view.snapshotView(afterScreenUpdates: false) {
+                view.clipsToBounds = true
+                view.contentMode = .bottom
+                if let bottomOffset = bottomOffset {
+                    var frame = view.frame
+                    frame.origin.y = bottomOffset
+                    frame.size.height -= bottomOffset
+                    view.frame = frame
+                }
+                self.bottomSnapshotView = view
+            }
         } else {
             self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
         }
@@ -872,6 +963,12 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         if let snapshotView = self.snapshotView {
             self.displayNode.view.addSubview(snapshotView)
         }
+        if let topSnapshotView = self.topSnapshotView {
+            self.displayNode.view.addSubview(topSnapshotView)
+        }
+        if let bottomSnapshotView = self.bottomSnapshotView {
+            self.displayNode.view.addSubview(bottomSnapshotView)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -880,5 +977,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         self.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
+        
+        self.didAppear?()
     }
 }
