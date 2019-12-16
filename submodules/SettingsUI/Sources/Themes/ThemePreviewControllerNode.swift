@@ -65,7 +65,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var statusDisposable: Disposable?
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool) {
+    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool) {
         self.context = context
         self.previewTheme = previewTheme
         self.isPreview = isPreview
@@ -98,8 +98,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.instantChatBackgroundNode = WallpaperBackgroundNode()
         self.instantChatBackgroundNode.displaysAsynchronously = false
-        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-        if case .gradient = previewTheme.chat.defaultWallpaper {
+        
+        let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
+        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        if case .gradient = wallpaper {
             self.instantChatBackgroundNode.imageContentMode = .scaleToFill
         }
         self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
@@ -167,8 +169,12 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.toolbarNode.cancel = {
             dismiss()
         }
+        var dismissed = false
         self.toolbarNode.done = {
-            apply()
+            if !dismissed {
+                dismissed = true
+                apply()
+            }
         }
         
         if case let .file(file) = self.previewTheme.chat.defaultWallpaper {
@@ -255,16 +261,21 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })
                 
-                var patternColor: UIColor?
-                var patternIntensity: CGFloat = 0.5
+                
+                var patternArguments: PatternWallpaperArguments?
                 if let color = file.settings.color {
+                    var patternIntensity: CGFloat = 0.5
                     if let intensity = file.settings.intensity {
                         patternIntensity = CGFloat(intensity) / 100.0
                     }
-                    patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                    var patternColors = [UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)]
+                    if let bottomColor = file.settings.bottomColor {
+                        patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                    }
+                    patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                 }
 
-                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
+                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
             }
         })
     }

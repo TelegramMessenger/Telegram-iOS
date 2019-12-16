@@ -105,7 +105,7 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
                 }
                 |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
                     switch result {
-                    case let .loginTokenSuccess(authorization):
+                    case let .loginTokenSuccess(authorization)?:
                         switch authorization {
                         case let .authorization(_, _, user):
                             return updatedAccount.postbox.transaction { transaction -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in

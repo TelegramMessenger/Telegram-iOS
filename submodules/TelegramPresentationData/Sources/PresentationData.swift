@@ -396,8 +396,18 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
             }
-        case .file:
-            if let image = wallpaper.1 {
+        case let .file(file):
+            if file.isPattern {
+                if let color = file.settings.color {
+                    var mixedColor = UIColor(rgb: UInt32(bitPattern: color))
+                    if let bottomColor = file.settings.bottomColor {
+                        mixedColor = mixedColor.mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+                    }
+                    return serviceColor(with: mixedColor)
+                } else {
+                    return UIColor(rgb: 0x000000, alpha: 0.3)
+                }
+            } else if let image = wallpaper.1 {
                 return serviceColor(with: averageColor(from: image))
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
@@ -458,7 +468,11 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
         case let .file(file):
             if file.isPattern {
                 if let color = file.settings.color {
-                    return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
+                    var mixedColor = UIColor(rgb: UInt32(bitPattern: color))
+                    if let bottomColor = file.settings.bottomColor {
+                        mixedColor = mixedColor.mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+                    }
+                    return .single(serviceColor(with: mixedColor))
                 } else {
                     return .single(UIColor(rgb: 0x000000, alpha: 0.3))
                 }

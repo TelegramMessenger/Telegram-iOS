@@ -251,7 +251,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
                             patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, false, false))
+                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, nil, 0, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -285,7 +285,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 let components = text.replacingOccurrences(of: "#", with: "").components(separatedBy: "-")
                                 if components.count == 2, let topColorCode = components.first, let bottomColorCode = components.last {
                                     if let topColor = UIColor(hexString: topColorCode), let bottomColor = UIColor(hexString: bottomColorCode) {
-                                        let media = WallpaperPreviewMedia(content: .gradient(topColor, bottomColor))
+                                        let media = WallpaperPreviewMedia(content: .gradient(topColor, bottomColor, 0))
                                         mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                                     }
                                 } else if components.count == 1, let colorCode = components.first {
@@ -311,7 +311,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             file = contentFile
                         }
                         if let file = file {
-                            let media = WallpaperPreviewMedia(content: .file(file, nil, true, isSupported))
+                            let media = WallpaperPreviewMedia(content: .file(file, nil, nil, nil, true, isSupported))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         }
                     }

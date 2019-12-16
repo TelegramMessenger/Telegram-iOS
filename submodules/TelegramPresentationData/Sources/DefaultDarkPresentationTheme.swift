@@ -6,7 +6,7 @@ import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?) -> PresentationTheme {
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -61,7 +61,6 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         )
         list = list.withUpdated(
             itemAccentColor: accentColor,
-            itemDisclosureActions: list.itemDisclosureActions.withUpdated(accent: list.itemDisclosureActions.accent.withUpdated(fillColor: accentColor)),
             itemCheckColors: list.itemCheckColors.withUpdated(fillColor: accentColor, foregroundColor: secondaryBadgeTextColor),
             itemBarChart: list.itemBarChart.withUpdated(color1: accentColor)
         )
@@ -80,7 +79,9 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     }
     
     var defaultWallpaper: TelegramWallpaper?
-    if let backgroundColors = backgroundColors {
+    if let forcedWallpaper = forcedWallpaper {
+        defaultWallpaper = forcedWallpaper
+    } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
             defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
         } else {

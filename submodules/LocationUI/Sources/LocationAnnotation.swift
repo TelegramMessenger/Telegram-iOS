@@ -97,6 +97,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     var strokeLabelNode: ImmediateTextNode?
     var labelNode: ImmediateTextNode?
     
+    var initialized = false
     var appeared = false
     var animating = false
     
@@ -203,6 +204,11 @@ class LocationPinAnnotationView: MKAnnotationView {
                     if annotation.forcedSelection {
                         self.setSelected(true, animated: false)
                     }
+                    
+                    if self.initialized && !self.appeared {
+                        self.appeared = true
+                        self.animateAppearance()
+                    }
                 }
             }
         }
@@ -211,6 +217,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     override func prepareForReuse() {
         self.smallNode.isHidden = true
         self.backgroundNode.isHidden = false
+        self.appeared = false
     }
     
     override func setSelected(_ selected: Bool, animated: Bool) {
@@ -516,6 +523,10 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     func animateAppearance() {
+        guard let annotation = self.annotation as? LocationPinAnnotation, annotation.location != nil && !annotation.forcedSelection else {
+            return
+        }
+        
         self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
         
         let avatarNodeTransform = self.avatarNode?.transform
@@ -546,8 +557,13 @@ class LocationPinAnnotationView: MKAnnotationView {
         let smallIconApply = smallIconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.smallIconNode.bounds.size, boundingSize: self.smallIconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
         smallIconApply()
         
+        var arguments: VenueIconArguments?
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            arguments = VenueIconArguments(defaultForegroundColor: annotation.theme.chat.inputPanel.actionControlForegroundColor)
+        }
+        
         let iconLayout = self.iconNode.asyncLayout()
-        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
+        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets(), custom: arguments))
         iconApply()
         
         if let avatarNode = self.avatarNode {
@@ -558,10 +574,8 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if !self.appeared {
             self.appeared = true
-            
-            if let annotation = annotation as? LocationPinAnnotation, annotation.location != nil && !annotation.forcedSelection {
-                self.animateAppearance()
-            }
+            self.initialized = true
+            self.animateAppearance()
         }
     }
 }

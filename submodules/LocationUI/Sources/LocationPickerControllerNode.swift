@@ -412,16 +412,18 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             }
         )
         
-        let foundVenues: Signal<[TelegramMediaMap]?, NoError> = .single(nil)
+        let foundVenues: Signal<([TelegramMediaMap], CLLocation)?, NoError> = .single(nil)
         |> then(
             self.searchVenuesPromise.get()
             |> distinctUntilChanged
-            |> mapToSignal { coordinate -> Signal<[TelegramMediaMap]?, NoError> in
+            |> mapToSignal { coordinate -> Signal<([TelegramMediaMap], CLLocation)?, NoError> in
                 if let coordinate = coordinate {
                     return (.single(nil)
                     |> then(
                         nearbyVenues(account: context.account, latitude: coordinate.latitude, longitude: coordinate.longitude)
-                        |> map (Optional.init)
+                        |> map { venues -> ([TelegramMediaMap], CLLocation)? in
+                            return (venues, CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
+                        }
                     ))
                 } else {
                     return .single(nil)
@@ -435,8 +437,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         let previousEntries = Atomic<[LocationPickerEntry]?>(value: nil)
         
         self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), userLocation, venues, foundVenues)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues, foundVenues in
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues, foundVenuesAndLocation in
             if let strongSelf = self {
+                let (foundVenues, foundVenuesLocation) = foundVenuesAndLocation ?? (nil, nil)
+                
                 var entries: [LocationPickerEntry] = []
                 switch state.selectedLocation {
                     case let .location(coordinate, address):
@@ -483,7 +487,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
                 
-                var displayedVenues = state.searchingVenuesAround ? foundVenues : venues
+                var displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
                 if let venues = displayedVenues {
                     var index: Int = 0
                     for venue in venues {
@@ -513,10 +517,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: userLocation.coordinate, isUserLocation: true, animated: previousUserLocation != nil)
                         }
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
-                        strongSelf.searchVenuesPromise.set(.single(nil))
                     case .selecting:
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
-                        strongSelf.searchVenuesPromise.set(.single(nil))
                     case let .location(coordinate, address):
                         var updateMap = false
                         switch previousState.selectedLocation {
@@ -530,16 +532,22 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                                 break
                         }
                         if updateMap {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, animated: true)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, hidePicker: false, animated: true)
                             strongSelf.headerNode.mapNode.switchToPicking(animated: false)
                         }
                     
                         if address != nil {
-                            displayingPlacesButton = foundVenues == nil
+                            if foundVenues == nil {
+                                displayingPlacesButton = true
+                            } else if let previousLocation = foundVenuesLocation {
+                                let currentLocation =  CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                                if currentLocation.distance(from: previousLocation) > 500 {
+                                    displayingPlacesButton = true
+                                }
+                            }
                         }
                     case let .venue(venue):
-                        strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, animated: true)
-                        strongSelf.searchVenuesPromise.set(.single(nil))
+                        strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, hidePicker: true, animated: true)
                 }
                 
                 strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: displayingPlacesButton, animated: true)
@@ -656,21 +664,16 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = annotation?.location.flatMap { .venue($0) } ?? .none
-                state.searchingVenuesAround = false
+                if annotation == nil {
+                    state.searchingVenuesAround = false
+                }
                 return state
             }
         }
         
         self.headerNode.mapNode.userLocationAnnotationSelected = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.updateState { state in
-                var state = state
-                state.displayingMapModeOptions = false
-                state.selectedLocation = .none
-                state.searchingVenuesAround = false
-                return state
+            if let strongSelf = self {
+                strongSelf.goToUserLocation()
             }
         }
     }
@@ -856,8 +859,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.shadeNode.backgroundColor = highlighted ? self.presentationData.theme.list.itemHighlightedBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
     }
     
+    func goToUserLocation() {
+        self.searchVenuesPromise.set(.single(nil))
+        self.updateState { state in
+            var state = state
+            state.displayingMapModeOptions = false
+            state.selectedLocation = .none
+            state.searchingVenuesAround = false
+            return state
+        }
+    }
+    
     func requestPlacesAtSelectedLocation() {
         if case let .location(coordinate, _) = self.state.selectedLocation {
+            self.headerNode.mapNode.setMapCenter(coordinate: coordinate, animated: true)
             self.searchVenuesPromise.set(.single(coordinate))
             self.updateState { state in
                  var state = state

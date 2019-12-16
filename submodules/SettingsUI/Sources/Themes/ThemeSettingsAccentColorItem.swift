@@ -8,9 +8,10 @@ import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import ContextUI
 import PresentationDataUtils
 
-private func generateSwatchImage(theme: PresentationTheme, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool, more: Bool) -> UIImage? {
+private func generateSwatchImage(theme: PresentationTheme, themeReference: PresentationThemeReference, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool, more: Bool) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
@@ -50,9 +51,17 @@ private func generateSwatchImage(theme: PresentationTheme, color: PresentationTh
             context.addEllipse(in: bounds.insetBy(dx: 10.0, dy: 10.0))
             context.clip()
             
-            if let colors = bubbles {
-                var colors: (UIColor, UIColor) = (colors.0, colors.1 ?? colors.0)
-                
+            var colors: (UIColor, UIColor)?
+            
+            if let customColors = bubbles {
+                colors = (customColors.0, customColors.1 ?? customColors.0)
+            } else if case .builtin(.dayClassic) = themeReference {
+                let hsb = color.color.hsb
+                let bubbleColor = UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0)
+                colors = (bubbleColor, bubbleColor)
+            }
+            
+            if let colors = colors {
                 let gradientColors = [colors.0.cgColor, colors.1.cgColor] as CFArray
                 var locations: [CGFloat] = [0.0, 1.0]
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -105,17 +114,21 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
+    let themeReference: PresentationThemeReference
     let colors: [ThemeSettingsAccentColor]
     let currentColor: PresentationThemeAccentColor?
     let updated: (PresentationThemeAccentColor?) -> Void
+    let contextAction: ((PresentationThemeReference, PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?
     let openColorPicker: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [ThemeSettingsAccentColor], currentColor: PresentationThemeAccentColor?, updated: @escaping (PresentationThemeAccentColor?) -> Void, openColorPicker: @escaping () -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: PresentationThemeAccentColor?, updated: @escaping (PresentationThemeAccentColor?) -> Void, contextAction: ((PresentationThemeReference, PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping () -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
+        self.themeReference = themeReference
         self.colors = colors
         self.currentColor = currentColor
         self.updated = updated
+        self.contextAction = contextAction
         self.openColorPicker = openColorPicker
         self.tag = tag
         self.sectionId = sectionId
@@ -156,23 +169,39 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
 }
 
 private final class ThemeSettingsAccentColorNode : ASDisplayNode {
+    private let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
     private var action: (() -> Void)?
+    private var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     override init() {
+        self.containerNode = ContextControllerSourceNode()
+        
         self.iconNode = ASImageNode()
         self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
         self.iconNode.isLayerBacked = true
         
         super.init()
         
-        self.addSubnode(self.iconNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.iconNode)
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self else {
+                gesture.cancel()
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
     }
     
-    func setup(theme: PresentationTheme, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool, more: Bool, action: @escaping () -> Void) {
-        self.iconNode.image = generateSwatchImage(theme: theme, color: color, bubbles: bubbles, selected: selected, more: more)
+    func setup(theme: PresentationTheme, themeReference: PresentationThemeReference, isDefault: Bool, color: PresentationThemeAccentColor, bubbles: (UIColor, UIColor?)?, selected: Bool, more: Bool, action: @escaping () -> Void, contextAction: ((PresentationThemeReference, PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?) {
+        self.iconNode.image = generateSwatchImage(theme: theme, themeReference: themeReference, color: color, bubbles: bubbles, selected: selected, more: more)
         self.action = {
             action()
+        }
+        self.contextAction = { node, gesture in
+            contextAction?(themeReference, isDefault ? nil : color, node, gesture)
         }
     }
     
@@ -191,7 +220,8 @@ private final class ThemeSettingsAccentColorNode : ASDisplayNode {
     override func layout() {
         super.layout()
 
-        self.iconNode.frame = self.bounds
+        self.containerNode.frame = self.bounds
+        self.iconNode.frame = self.containerNode.bounds
     }
 }
 
@@ -340,10 +370,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var updated = false
                     var selectedNode: ThemeSettingsAccentColorNode?
-                    
-                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
-                    nodeOffset += nodeSize.width + 18.0
-                    
+                                        
                     var i = 0
                     for color in item.colors {
                         let imageNode: ThemeSettingsAccentColorNode
@@ -359,10 +386,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         let selected: Bool
                         var accentColor: PresentationThemeAccentColor
                         var itemColor: PresentationThemeAccentColor?
+                        var isDefault = false
                         switch color {
                             case .default:
                                 selected = item.currentColor == nil
                                 accentColor = PresentationThemeAccentColor(baseColor: .blue, accentColor: 0x007ee5, bubbleColors: (0xe1ffc7, nil))
+                                isDefault = true
                             case let .color(color):
                                 selected = item.currentColor?.baseColor == color
                                 if let currentColor = item.currentColor, selected {
@@ -377,7 +406,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             selectedNode = imageNode
                         }
                                           
-                        imageNode.setup(theme: item.theme, color: accentColor, bubbles: accentColor.customBubbleColors, selected: selected, more: true, action: { [weak self, weak imageNode] in
+                        imageNode.setup(theme: item.theme, themeReference: item.themeReference, isDefault: isDefault, color: accentColor, bubbles: accentColor.customBubbleColors, selected: selected, more: true, action: { [weak self, weak imageNode] in
                             if selected {
                                 item.openColorPicker()
                             } else {
@@ -386,7 +415,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
                             }
-                        })
+                        }, contextAction: item.contextAction)
                         
                         imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 10.0), size: nodeSize)
                         nodeOffset += nodeSize.width + 18.0
@@ -394,7 +423,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         i += 1
                     }
                     
-//                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
+                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                     
                     for k in (i ..< strongSelf.colorNodes.count).reversed() {
                         let node = strongSelf.colorNodes[k]
@@ -402,7 +431,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         node.removeFromSupernode()
                     }
                 
-                    let contentSize = CGSize(width: strongSelf.colorNodes.last!.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
+                    let contentSize = CGSize(width: strongSelf.customNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
                     if strongSelf.scrollNode.view.contentSize != contentSize {
                         strongSelf.scrollNode.view.contentSize = contentSize
                     }

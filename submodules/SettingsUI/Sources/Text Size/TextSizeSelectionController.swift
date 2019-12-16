@@ -126,11 +126,15 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.toolbarNode.cancel = {
             dismiss()
         }
+        var dismissed = false
         self.toolbarNode.done = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize)
+            if !dismissed {
+                dismissed = true
+                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize)
+            }
         }
         self.toolbarNode.updateUseSystemFont = { [weak self] value in
             guard let strongSelf = self else {
