@@ -31,36 +31,22 @@ private func textInputBackgroundImage(fieldColor: UIColor, strokeColor: UIColor,
     }
 }
 
-private func generateSwatchImage(theme: PresentationTheme, color: UIColor) -> UIImage? {
+private func generateSwatchBorderImage(theme: PresentationTheme) -> UIImage? {
+    return nil
     return generateImage(CGSize(width: 21.0, height: 21.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let fillColor = color
-        var strokeColor: UIColor?
-        let inputBackgroundColor = theme.chat.inputPanel.inputBackgroundColor
-        if fillColor.distance(to: inputBackgroundColor) < 200 {
-            strokeColor = theme.chat.inputPanel.inputStrokeColor
-            if strokeColor!.distance(to: inputBackgroundColor) < 200 {
-                strokeColor = theme.chat.inputPanel.inputControlColor
-            }
-        }
-        
-        context.setFillColor(fillColor.cgColor)
         context.setLineWidth(1.0)
-        
-        context.fillEllipse(in: bounds)
-        if let strokeColor = strokeColor {
-            context.setStrokeColor(strokeColor.cgColor)
-            context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
-        }
+        context.setStrokeColor(theme.chat.inputPanel.inputControlColor.cgColor)
+        context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
     })
 }
 
 private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     
-    private let swatchNode: ASImageNode
+    private let swatchNode: ASDisplayNode
+    private let borderNode: ASImageNode
     private let removeButton: HighlightableButtonNode
     private let textBackgroundNode: ASImageNode
     private let selectionNode: ASDisplayNode
@@ -123,9 +109,13 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.prefixNode = ASTextNode()
         self.prefixNode.attributedText = NSAttributedString(string: "#", font: Font.regular(17.0), textColor: self.theme.chat.inputPanel.inputTextColor)
         
-        self.swatchNode = ASImageNode()
-        self.swatchNode.displaysAsynchronously = false
-        self.swatchNode.displayWithoutProcessing = true
+        self.swatchNode = ASDisplayNode()
+        self.swatchNode.cornerRadius = 10.5
+        
+        self.borderNode = ASImageNode()
+        self.borderNode.displaysAsynchronously = false
+        self.borderNode.displayWithoutProcessing = true
+        self.borderNode.image = generateSwatchBorderImage(theme: theme)
         
         self.removeButton = HighlightableButtonNode()
         self.removeButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRemoveIcon"), color: theme.chat.inputPanel.inputControlColor), for: .normal)
@@ -137,6 +127,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.textFieldNode)
         self.addSubnode(self.prefixNode)
         self.addSubnode(self.swatchNode)
+        self.addSubnode(self.borderNode)
         self.addSubnode(self.removeButton)
         
         self.removeButton.addTarget(self, action: #selector(self.removePressed), forControlEvents: .touchUpInside)
@@ -172,6 +163,8 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.tintColor = self.theme.list.itemAccentColor
         
         self.selectionNode.backgroundColor = theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.2)
+        self.borderNode.image = generateSwatchBorderImage(theme: theme)
+        self.updateBorderVisibility()
     }
     
     func setColor(_ color: UIColor, isDefault: Bool = false, update: Bool = true, ended: Bool = true) {
@@ -186,7 +179,20 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         if update {
             self.colorChanged?(color, ended)
         }
-        self.swatchNode.image = generateSwatchImage(theme: self.theme, color: color)
+        self.swatchNode.backgroundColor = color
+        self.updateBorderVisibility()
+    }
+    
+    private func updateBorderVisibility() {
+        guard let color = self.swatchNode.backgroundColor else {
+            return
+        }
+        let inputBackgroundColor = self.theme.chat.inputPanel.inputBackgroundColor
+        if color.distance(to: inputBackgroundColor) < 200 {
+            self.borderNode.alpha = 1.0
+        } else {
+            self.borderNode.alpha = 0.0
+        }
     }
     
     @objc private func removePressed() {
@@ -294,7 +300,9 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     func updateLayout(size: CGSize, condensed: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, condensed)
         
-        transition.updateFrame(node: self.swatchNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 21.0, height: 21.0)))
+        let swatchFrame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 21.0, height: 21.0))
+        transition.updateFrame(node: self.swatchNode, frame: swatchFrame)
+        transition.updateFrame(node: self.borderNode, frame: swatchFrame)
         
         let textPadding: CGFloat = condensed ? 31.0 : 37.0
         

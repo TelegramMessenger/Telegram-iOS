@@ -384,23 +384,24 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], availableThemes: [PresentationThemeReference], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
+    let strings = presentationData.strings
     let title = presentationData.autoNightModeTriggered ? strings.Appearance_ColorThemeNight.uppercased() : strings.Appearance_ColorTheme.uppercased()
     entries.append(.themeListHeader(presentationData.theme, title))
-    entries.append(.chatPreview(presentationData.theme, theme, wallpaper, presentationData.fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
+    entries.append(.chatPreview(presentationData.theme, presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
-    entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
+    entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificAccentColors[themeReference.index]))
     
     if case let .builtin(theme) = themeReference {
-        entries.append(.accentColor(presentationData.theme, themeReference, themeSpecificAccentColors[themeReference.index]))
+        entries.append(.accentColor(presentationData.theme, themeReference, presentationThemeSettings.themeSpecificAccentColors[themeReference.index]))
     }
     
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
     let autoNightMode: String
-    switch autoNightSettings.trigger {
+    switch presentationThemeSettings.automaticThemeSwitchSetting.trigger {
         case .system:
             if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
                 autoNightMode = strings.AutoNightTheme_System
@@ -430,8 +431,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
-    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, largeEmoji))
-    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
+    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, presentationData.largeEmoji))
+    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.disableAnimations))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
     return entries
@@ -688,7 +689,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
-        let fontSize = settings.fontSize
+        let fontSize = presentationData.fontSize
         let dateTimeFormat = presentationData.dateTimeFormat
         let largeEmoji = presentationData.largeEmoji
         let disableAnimations = presentationData.disableAnimations
@@ -700,9 +701,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             themeReference = settings.theme
         }
         
-        let theme = presentationData.theme
         let accentColor = settings.themeSpecificAccentColors[themeReference.index]
-        let wallpaper = presentationData.chatWallpaper
         
         let rightNavigationButton = ItemListNavigationButton(content: .icon(.add), style: .regular, enabled: true, action: {
             moreImpl?()
@@ -724,7 +723,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         availableThemes.append(contentsOf: cloudThemes)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, theme: theme, themeReference: themeReference, themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         let previousThemeIndex = previousThemeReference.swap(themeReference)?.index
         let previousAccentColor = previousAccentColor.swap(accentColor)

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SyncCore
 
@@ -44,6 +45,14 @@ public extension TelegramWallpaper {
             return true
         default:
             return false
+        }
+    }
+    
+    var dimensions: CGSize? {
+        if case let .file(file) = self {
+            return file.file.dimensions?.cgSize
+        } else {
+            return nil
         }
     }
 }

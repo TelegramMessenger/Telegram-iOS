@@ -291,7 +291,6 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
 
 public enum PatternWallpaperDrawMode {
     case thumbnail
-    case fastScreen
     case screen
 }
 
@@ -322,8 +321,6 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
         switch mode {
             case .thumbnail:
                 size = largestRepresentation.dimensions.cgSize.fitted(CGSize(width: 640.0, height: 640.0))
-            case .fastScreen:
-                size = largestRepresentation.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0))
             default:
                 size = nil
         }
@@ -407,18 +404,23 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
     }
     
     var scale: CGFloat = 0.0
-    if case .fastScreen = mode {
-        scale = max(1.0, UIScreenScale - 1.0)
-    }
     
     return .single((thumbnailData, fullSizeData, fullSizeComplete))
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         var fullSizeImage: CGImage?
+        var scaledSizeImage: CGImage?
         if let fullSizeData = fullSizeData, fullSizeComplete {
             let options = NSMutableDictionary()
             options[kCGImageSourceShouldCache as NSString] = false as NSNumber
             if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
                 fullSizeImage = image
+                
+                let options = NSMutableDictionary()
+                options.setValue(960 as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
+                options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
+                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
+                    scaledSizeImage = image
+                }
             }
         }
         
@@ -433,6 +435,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
             if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
                 fittedSize.height = arguments.boundingSize.height
             }
+            fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
             
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
     
@@ -446,7 +449,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                 let color = combinedColor.withAlphaComponent(1.0)
                 let intensity = combinedColor.alpha
                 
-                let context = DrawingContext(size: arguments.drawingSize, scale: fullSizeImage == nil ? 1.0 : scale, clear: true)
+                let context = DrawingContext(size: arguments.drawingSize, scale: fullSizeImage == nil ? 1.0 : scale, clear: !arguments.corners.isEmpty)
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
                     
@@ -473,10 +476,11 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.restoreGState()
                     }
                     
-                    if let fullSizeImage = fullSizeImage {
+                    let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
+                    if let image = image {
                         c.setBlendMode(.normal)
-                        c.interpolationQuality = .medium
-                        c.clip(to: fittedRect, mask: fullSizeImage)
+                        c.interpolationQuality = customArguments.preview ? .low : .medium
+                        c.clip(to: fittedRect, mask: image)
                        
                         if colors.count == 1 {
                             c.setFillColor(patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)

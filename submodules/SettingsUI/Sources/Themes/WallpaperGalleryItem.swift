@@ -271,7 +271,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     }
                                 }
        
-                                patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
+                                patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation, preview: self.arguments.colorPreview)
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
@@ -295,7 +295,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.colorPreview = self.arguments.colorPreview
                                 
-                                signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
+                                signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                                 colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
