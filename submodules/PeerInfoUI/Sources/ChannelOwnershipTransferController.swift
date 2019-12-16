@@ -413,6 +413,8 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
     var dismissImpl: (() -> Void)?
     var proceedImpl: (() -> Void)?
     
+    var pushControllerImpl: ((ViewController) -> Void)?
+    
     let disposable = MetaDisposable()
     
     let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
@@ -453,7 +455,14 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
         } else if let peer = peer as? TelegramGroup {
             signal = convertGroupToSupergroup(account: context.account, peerId: peer.id)
             |> map(Optional.init)
-            |> mapError { _ in ChannelOwnershipTransferError.generic }
+            |> mapError { error -> ChannelOwnershipTransferError in
+                switch error {
+                case .tooManyChannels:
+                    return .tooMuchJoined
+                default:
+                    return .generic
+                }
+            }
             |> deliverOnMainQueue
             |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ChannelOwnershipTransferError> in
                 guard let upgradedPeerId = upgradedPeerId else {
@@ -479,6 +488,9 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
             
             var errorTextAndActions: (String, [TextAlertAction])?
             switch error {
+                case .tooMuchJoined:
+                    pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                    return
                 case .invalidPassword:
                     contentNode?.animateError()
                 case .limitExceeded:
@@ -502,6 +514,11 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
             }
         }))
     }
+    
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
+    }
+    
     return controller
 }
 

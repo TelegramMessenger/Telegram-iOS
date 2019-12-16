@@ -5197,6 +5197,8 @@ Any member of this group will be able to see messages in the channel.";
 "OldChannels.Title" = "Limit Reached";
 "OldChannels.NoticeTitle" = "Too Many Groups and Channels";
 "OldChannels.NoticeText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before joining new one.";
+"OldChannels.NoticeCreateText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before creating a new one.";
+"OldChannels.NoticeUpgradeText" = "Sorry, you are a member of too many groups and channels.\nFor technical reasons, you need to leave some first before changing this setting in your groups.";
 "OldChannels.ChannelsHeader" = "MOST INACTIVE";
 "OldChannels.Leave" = "Leave";
 

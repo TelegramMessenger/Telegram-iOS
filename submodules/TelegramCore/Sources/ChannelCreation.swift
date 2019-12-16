@@ -13,6 +13,10 @@ public enum CreateChannelError {
 }
 
 private func createChannel(account: Account, title: String, description: String?, isSupergroup:Bool, location: (latitude: Double, longitude: Double, address: String)? = nil) -> Signal<PeerId, CreateChannelError> {
+    #if DEBUG
+    return .fail(.tooMuchJoined)
+    #endif
+    
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
         var flags: Int32 = 0
         if isSupergroup {

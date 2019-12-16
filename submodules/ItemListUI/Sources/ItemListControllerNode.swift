@@ -418,6 +418,9 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let searchNode = self.searchNode {
+            var layout = layout
+            layout = layout.addedInsets(insets: additionalInsets)
+            
             searchNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
@@ -652,7 +655,6 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     emptyStateNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak emptyStateNode] _ in
                         emptyStateNode?.removeFromSupernode()
                     })
-                    self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     self.emptyStateNode = nil
                 }
             }

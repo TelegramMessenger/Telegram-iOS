@@ -791,6 +791,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var errorImpl: (() -> Void)?
     var scrollToRankImpl: (() -> Void)?
     
@@ -1152,7 +1153,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
                                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
                                     } else if case .tooMuchJoined = error {
-                                        text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                        pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                                        return
                                     }
                                     presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
@@ -1191,6 +1193,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     
     let hapticFeedback = HapticFeedback()

@@ -136,7 +136,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, subject: nil))
-            }), nil)
+            }, parentNavigationController: navigationController), nil)
         case let .localization(identifier):
             dismissInput()
             present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)
