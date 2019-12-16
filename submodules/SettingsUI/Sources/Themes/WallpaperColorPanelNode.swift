@@ -284,7 +284,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private func updateSelectionLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.measureNode.attributedText = NSAttributedString(string: self.textFieldNode.textField.text ?? "", font: self.textFieldNode.textField.font)
         let size = self.measureNode.updateLayout(size)
-        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(45.0, size.width), height: 20.0))
+        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(0.0, size.width), height: 20.0))
     }
     
     private func updateSelectionVisibility() {
@@ -325,6 +325,7 @@ struct WallpaperColorPanelNodeState {
     var defaultColor: UIColor?
     var secondColor: UIColor?
     var secondColorAvailable: Bool
+    var preview: Bool
 }
 
 final class WallpaperColorPanelNode: ASDisplayNode {
@@ -365,14 +366,14 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.colorPickerNode = WallpaperColorPickerNode(strings: strings)
         
         self.swapButton = HighlightableButtonNode()
-        self.swapButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorSwapIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
+        self.swapButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         self.addButton = HighlightableButtonNode()
         self.addButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorAddIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         
         self.firstColorFieldNode = ColorInputFieldNode(theme: theme)
         self.secondColorFieldNode = ColorInputFieldNode(theme: theme)
         
-        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false)
+        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, preview: false)
         
         super.init()
         
@@ -467,6 +468,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
+                    updated.preview = true
                     switch strongSelf.state.selection {
                         case .first:
                             updated.firstColor = color
@@ -483,6 +485,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
+                    updated.preview = false
                     switch strongSelf.state.selection {
                         case .first:
                             updated.firstColor = color
@@ -510,6 +513,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         var updateLayout = updateLayout
         let previousFirstColor = self.state.firstColor
         let previousSecondColor = self.state.secondColor
+        let previousPreview = self.state.preview
         self.state = f(self.state)
         
         let firstColor: UIColor
@@ -554,8 +558,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
         
-        if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb {
-            self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, updateLayout)
+        if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb || self.state.preview != previousPreview {
+            self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, !self.state.preview)
         }
     }
     
@@ -679,14 +683,15 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     }
     
     @objc private func swapPressed() {
-        self.updateState({ current in
-            var updated = current
-            if let secondColor = current.secondColor {
-                updated.firstColor = secondColor
-                updated.secondColor = current.firstColor
-            }
-            return updated
-        })
+        self.rotate?()
+//        self.updateState({ current in
+//            var updated = current
+//            if let secondColor = current.secondColor {
+//                updated.firstColor = secondColor
+//                updated.secondColor = current.firstColor
+//            }
+//            return updated
+//        })
     }
     
     @objc private func addPressed() {

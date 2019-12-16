@@ -39,7 +39,9 @@ extension TelegramWallpaper: Codable {
                 case "builtin":
                     self = .builtin(WallpaperSettings())
                 default:
-                    if [6,7].contains(value.count), let color = UIColor(hexString: value) {
+                    let optionKeys = ["motion", "blur"]
+                    
+                    if value.count == 6, let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
                         let components = value.components(separatedBy: " ")
@@ -52,28 +54,48 @@ extension TelegramWallpaper: Codable {
                             blur = true
                         }
                         
-                        if components.count >= 2 && components.count <= 4 && [6,7].contains(components[0].count) && !["motion", "blur"].contains(components[0]) && [6,7].contains(components[1].count) && !["motion", "blur"].contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                        if components.count >= 2 && components.count <= 5 && components[0].count == 6 && !optionKeys.contains(components[0]) && components[1].count == 6 && !optionKeys.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                            
+                            var rotation: Int32?
+                            if components.count > 2, components[2].count <= 3, let value = Int32(components[2]) {
+                                if value >= 0 && value < 360 {
+                                    rotation = value
+                                }
+                            }
+                            
                             self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
                         } else {
                             var slug: String?
                             var color: Int32?
+                            var bottomColor: Int32?
                             var intensity: Int32?
 
                             if !components.isEmpty {
                                 slug = components[0]
                             }
-                            if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
-                                color = Int32(bitPattern: value.rgb)
-                            }
-                            if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
-                                if value >= 0 && value <= 100 {
-                                    intensity = value
-                                } else {
-                                    intensity = 50
+                            if components.count > 1 {
+                                for i in 1 ..< components.count {
+                                    let component = components[i]
+                                    if optionKeys.contains(component) {
+                                        continue
+                                    }
+                                    if component.count == 6, let value = UIColor(hexString: component) {
+                                        if color == nil {
+                                            color = Int32(bitPattern: value.rgb)
+                                        } else if bottomColor == nil {
+                                            bottomColor = Int32(bitPattern: value.rgb)
+                                        }
+                                    } else if component.count <= 3, let value = Int32(component) {
+                                        if value >= 0 && value <= 100 {
+                                            intensity = value
+                                        } else {
+                                            intensity = 50
+                                        }
+                                    }
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -96,6 +118,9 @@ extension TelegramWallpaper: Codable {
                 var components: [String] = []
                 components.append(String(format: "%06x", topColor))
                 components.append(String(format: "%06x", bottomColor))
+                if let rotation = settings.rotation {
+                    components.append("\(rotation)")
+                }
                 if settings.motion {
                     components.append("motion")
                 }
@@ -112,6 +137,12 @@ extension TelegramWallpaper: Codable {
                     }
                     if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
+                    }
+                    if let bottomColor = file.settings.bottomColor {
+                        components.append(String(format: "%06x", bottomColor))
+                    }
+                    if let rotation = file.settings.rotation {
+                        components.append("\(rotation)")
                     }
                 }
                 if file.settings.motion {

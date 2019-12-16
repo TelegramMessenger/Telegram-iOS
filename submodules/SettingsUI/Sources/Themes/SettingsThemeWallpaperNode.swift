@@ -30,8 +30,8 @@ private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal
 }
 
 final class SettingsThemeWallpaperNode: ASDisplayNode {
-    private var wallpaper: TelegramWallpaper?
-    private var color: UIColor?
+    var wallpaper: TelegramWallpaper?
+    private var arguments: PatternWallpaperArguments?
     
     let buttonNode = HighlightTrackingButtonNode()
     let backgroundNode = ASDisplayNode()
@@ -39,7 +39,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     private let statusNode: RadialStatusNode
     
     var pressed: (() -> Void)?
-    
+         
     init(overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
@@ -61,6 +61,10 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     func setSelected(_ selected: Bool, animated: Bool = false) {
         let state: RadialStatusNodeState = selected ? .check(.white) : .none
         self.statusNode.transitionToState(state, animated: animated, completion: {})
+    }
+    
+    func setOverlayBackgroundColor(_ color: UIColor) {
+        self.statusNode.backgroundNodeColor = color
     }
     
     func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
@@ -125,6 +129,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     if file.isPattern {
                         self.backgroundNode.isHidden = false
                         
+                        var patternColors: [UIColor] = []
                         var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                         var patternIntensity: CGFloat = 0.5
                         if let color = file.settings.color {
@@ -132,9 +137,15 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                                 patternIntensity = CGFloat(intensity) / 100.0
                             }
                             patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                            patternColors.append(patternColor)
+                            
+                            if let bottomColor = file.settings.bottomColor {
+                                patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                            }
                         }
+                        
                         self.backgroundNode.backgroundColor = patternColor
-                        self.color = patternColor
+                        self.arguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                         imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.backgroundNode.isHidden = true
@@ -144,7 +155,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
                     
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: self.arguments))
                     apply()
             }
         } else if let wallpaper = self.wallpaper {
@@ -157,7 +168,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     apply()
                 case let .file(file):
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), custom: self.arguments))
                     apply()
             }
         }

@@ -315,6 +315,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
         let _ = (previewThemePromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { theme in
+            var controllerDismissImpl: (() -> Void)?
             let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme in
                 updateState { current in
                     var state = current
@@ -322,7 +323,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     state.updatedTheme = updatedTheme
                     return state
                 }
+                controllerDismissImpl?()
             }))
+            controllerDismissImpl = { [weak controller] in
+                controller?.dismiss()
+            }
             pushControllerImpl?(controller)
         })
     }, openFile: {

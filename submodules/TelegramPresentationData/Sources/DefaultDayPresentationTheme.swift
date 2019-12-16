@@ -8,7 +8,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -21,9 +21,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var chat = theme.chat
     var actionSheet = theme.actionSheet
     
-    var bubbleColors = bubbleColors
     var outgoingAccent: UIColor?
     var suggestedWallpaper: TelegramWallpaper?
+    
+    var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
         if day {
             let accentColor = accentColor ?? defaultDayAccentColor
@@ -172,7 +173,9 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     }
     
     var defaultWallpaper: TelegramWallpaper?
-    if let backgroundColors = backgroundColors {
+    if let forcedWallpaper = forcedWallpaper {
+        defaultWallpaper = forcedWallpaper
+    } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
             defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
         } else {
@@ -190,6 +193,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 accentTextColor: accentColor,
                 accentControlColor: accentColor,
                 mediaActiveControlColor: accentColor,
+                fileTitleColor: accentColor,
                 polls: chat.message.incoming.polls.withUpdated(
                     radioProgress: accentColor,
                     highlight: accentColor?.withAlphaComponent(0.12),
@@ -229,7 +233,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 fileTitleColor: outgoingFileTitleColor,
                 fileDescriptionColor: outgoingFileDescriptionColor,
                 fileDurationColor: outgoingFileDurationColor,
-                mediaPlaceholderColor: day ? accentColor?.withMultipliedBrightnessBy(0.95) : nil,
+                mediaPlaceholderColor: day ? accentColor?.withMultipliedBrightnessBy(0.95) : outgoingMediaPlaceholderColor,
                 polls: chat.message.outgoing.polls.withUpdated(radioButton: outgoingPollsButtonColor, radioProgress: outgoingPollsProgressColor, highlight: outgoingPollsProgressColor?.withAlphaComponent(0.12), separator: outgoingPollsButtonColor, bar: outgoingPollsProgressColor),
                 actionButtonsFillColor: chat.message.outgoing.actionButtonsFillColor.withUpdated(withWallpaper: serviceBackgroundColor),
                 actionButtonsStrokeColor: day ? chat.message.outgoing.actionButtonsStrokeColor.withUpdated(withoutWallpaper: accentColor) : nil,

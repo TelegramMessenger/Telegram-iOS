@@ -22,8 +22,17 @@ public extension TelegramWallpaper {
     
     var isColorOrGradient: Bool {
         switch self {
-            case .color, .gradient:
+        case .color, .gradient:
             return true
+        default:
+            return false
+        }
+    }
+    
+    var isPattern: Bool {
+        switch self {
+        case let .file(file):
+            return file.isPattern
         default:
             return false
         }

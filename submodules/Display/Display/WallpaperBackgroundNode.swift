@@ -81,7 +81,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let isFirstLayout = self.frame.isEmpty
+        let isFirstLayout = self.contentNode.frame.isEmpty
         transition.updatePosition(node: self.contentNode, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
         transition.updateBounds(node: self.contentNode, bounds: CGRect(origin: CGPoint(), size: size))
         

@@ -43,7 +43,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.backgroundNode.cornerRadius = 6.0
+        self.backgroundNode.cornerRadius = 14.0
         
         self.checkNode = ModernCheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, hasShadow: false))
         self.checkNode.isUserInteractionEnabled = false
@@ -147,7 +147,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     override func measure(_ constrainedSize: CGSize) -> CGSize {
         let size = self.textNode.measure(constrainedSize)
         self.textSize = size
-        return CGSize(width: ceil(size.width) + 52.0, height: 30.0)
+        return CGSize(width: ceil(size.width) + 48.0, height: 30.0)
     }
     
     override func layout() {
@@ -159,42 +159,15 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
             return
         }
         
-        let checkSize = CGSize(width: 18.0, height: 18.0)
+        let padding: CGFloat = 6.0
         let spacing: CGFloat = 9.0
-        let totalWidth = checkSize.width + spacing + textSize.width
-        let origin = floor((self.bounds.width - totalWidth) / 2.0)
+        let checkSize = CGSize(width: 18.0, height: 18.0)
         
-        self.checkNode.frame = CGRect(origin: CGPoint(x: origin, y: 6.0), size: checkSize)
-        self.colorNode.frame = CGRect(origin: CGPoint(x: origin, y: 6.0), size: checkSize)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: padding, y: padding), size: checkSize)
+        self.colorNode.frame = CGRect(origin: CGPoint(x: padding, y: padding), size: checkSize)
         
         if let textSize = self.textSize {
-            self.textNode.frame = CGRect(x: origin + checkSize.width + spacing, y: 6.0 + UIScreenPixel, width: textSize.width, height: textSize.height)
-        }
-    }
-}
-
-final class WallpaperGalleryDecorationNode: ASDisplayNode {
-    private let dismiss: () -> Void
-    private let apply: () -> Void
-    
-//    private var messageNodes: [ListViewItemNode]?
-//    private var blurredButtonNode: WallpaperOptionButtonNode?
-//    private var motionButtonNode: WallpaperOptionButtonNode?
-//    private var toolbarNode: WallpaperGalleryToolbarNode?
-    
-    init(source: WallpaperListSource, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
-        self.dismiss = dismiss
-        self.apply = apply
-        
-        super.init()
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let result = super.hitTest(point, with: event)
-        if result != self.view {
-            return result
-        } else {
-            return nil
+            self.textNode.frame = CGRect(x: max(padding + checkSize.width + spacing, padding + checkSize.width + floor((self.bounds.width - padding - checkSize.width - textSize.width) / 2.0) - 2.0), y: 6.0 + UIScreenPixel, width: textSize.width, height: textSize.height)
         }
     }
 }

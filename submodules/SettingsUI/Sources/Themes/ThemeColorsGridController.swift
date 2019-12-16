@@ -129,6 +129,7 @@ final class ThemeColorsGridController: ViewController {
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
                 let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+                |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] sharedData in
                     guard let strongSelf = self else {
                         return
@@ -144,10 +145,23 @@ final class ThemeColorsGridController: ViewController {
                     }
                     
                     let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
-                    controller.navigationPresentation = .modalInLargeLayout
                     controller.completion = { [weak self] in
                         if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                            let _ = navigationController.popViewController(animated: true)
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeColorsGridController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: false)
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeAccentColorController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
                         }
                     }
                     strongSelf.push(controller)

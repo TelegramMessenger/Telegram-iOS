@@ -7,15 +7,7 @@ import TelegramUIPreferences
 private let defaultDarkTintedAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkTintedPresentationTheme = makeDefaultDarkTintedPresentationTheme(preview: false)
 
-//public func makeDarkAccentPresentationTheme(accentColor: UIColor?, bubbleColors: (UIColor, UIColor?)?, preview: Bool) -> PresentationTheme {
-//    var accentColor = accentColor ?? defaultDarkAccentColor
-//    if accentColor == PresentationThemeBaseColor.blue.color {
-//        accentColor = defaultDarkAccentColor
-//    }
-//    return makeDarkPresentationTheme(accentColor: accentColor, bubbleColors: bubbleColors, preview: preview)
-//}
-
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?) -> PresentationTheme {
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
     }
@@ -44,8 +36,15 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var inputBackgroundColor: UIColor?
     var buttonStrokeColor: UIColor?
     
+    var suggestedWallpaper: TelegramWallpaper?
+    
     var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
+        if let accentColor = accentColor {
+            let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+            suggestedWallpaper = .color(Int32(bitPattern: color.rgb))
+        }
+        
         let accentColor = accentColor ?? defaultDarkTintedAccentColor
         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
         let topColor = bottomColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
@@ -217,12 +216,16 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     }
     
     var defaultWallpaper: TelegramWallpaper?
-    if let backgroundColors = backgroundColors {
+    if let forcedWallpaper = forcedWallpaper {
+        defaultWallpaper = forcedWallpaper
+    } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
             defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
         } else {
             defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
         }
+    } else if let forcedWallpaper = suggestedWallpaper {
+        defaultWallpaper = forcedWallpaper
     }
     
     var outgoingBubbleFillColor: UIColor?

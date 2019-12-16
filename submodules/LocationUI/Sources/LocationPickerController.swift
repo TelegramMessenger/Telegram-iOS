@@ -196,13 +196,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.controllerNode.updateState { state in
-                var state = state
-                state.displayingMapModeOptions = false
-                state.selectedLocation = .none
-                state.searchingVenuesAround = false
-                return state
-            }
+            strongSelf.controllerNode.goToUserLocation()
         }, goToCoordinate: { [weak self] coordinate in
             guard let strongSelf = self else {
                 return

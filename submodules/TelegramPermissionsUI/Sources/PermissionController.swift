@@ -15,6 +15,8 @@ public final class PermissionController: ViewController {
     private var state: PermissionControllerContent?
     private var splashScreen = false
     
+    private var locationManager: LocationManager?
+    
     private var controllerNode: PermissionControllerNode {
         return self.displayNode as! PermissionControllerNode
     }
@@ -185,11 +187,15 @@ public final class PermissionController: ViewController {
                 case let .nearbyLocation(status):
                     self.title = self.presentationData.strings.Permissions_PeopleNearbyTitle_v0
                     
+                    if self.locationManager == nil {
+                        self.locationManager = LocationManager()
+                    }
+                    
                     self.allow = { [weak self] in
                         if let strongSelf = self {
                             switch status {
                                 case .requestable:
-                                    DeviceAccess.authorizeAccess(to: .location(.tracking), presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
+                                    DeviceAccess.authorizeAccess(to: .location(.tracking), locationManager: strongSelf.locationManager, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, { [weak self] result in
                                         self?.proceed?(result)
                                     })
                             case .denied, .unreachable:

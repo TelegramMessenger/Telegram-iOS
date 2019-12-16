@@ -154,6 +154,20 @@ public func venueIconColor(type: String) -> UIColor {
     return randomColors[index]
 }
 
+public struct VenueIconArguments: TransformImageCustomArguments {
+    let defaultForegroundColor: UIColor
+    
+    public init(defaultForegroundColor: UIColor) {
+        self.defaultForegroundColor = defaultForegroundColor
+    }
+    
+    public func serialized() -> NSArray {
+        let array = NSMutableArray()
+        array.add(self.defaultForegroundColor)
+        return array
+    }
+}
+
 public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let isBuiltinIcon = ["", "home", "work"].contains(type)
     let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(postbox: postbox, resource: VenueIconResource(type: type))
@@ -167,8 +181,13 @@ public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signa
             }
             
             let backgroundColor = venueIconColor(type: type)
-            let foregroundColor = UIColor.white
-            
+            let foregroundColor: UIColor
+            if type.isEmpty, let customArguments = arguments.custom as? VenueIconArguments {
+                foregroundColor = customArguments.defaultForegroundColor
+            } else {
+                foregroundColor = UIColor.white
+            }
+                
             context.withFlippedContext { c in
                 if background {
                     c.setFillColor(backgroundColor.cgColor)

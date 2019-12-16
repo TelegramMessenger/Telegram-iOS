@@ -17,7 +17,7 @@ import AppBundle
 import PresentationDataUtils
 
 public enum ThemePreviewSource {
-    case settings(PresentationThemeReference)
+    case settings(PresentationThemeReference, TelegramWallpaper?)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
     case media(AnyMediaReference)
@@ -95,7 +95,7 @@ public final class ThemePreviewController: ViewController {
                 }
             ))
             hasInstallsCount = true
-        } else if case let .settings(themeReference) = source, case let .cloud(theme) = themeReference {
+        } else if case let .settings(themeReference, _) = source, case let .cloud(theme) = themeReference {
             self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
             |> map(Optional.init)
             |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
@@ -171,7 +171,13 @@ public final class ThemePreviewController: ViewController {
         if case .settings = self.source {
             isPreview = true
         }
-        self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, dismiss: { [weak self] in
+        
+        var initialWallpaper: TelegramWallpaper?
+        if case let .settings(_, currentWallpaper) = self.source, let wallpaper = currentWallpaper {
+            initialWallpaper = wallpaper
+        }
+        
+        self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, initialWallpaper: initialWallpaper, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -183,7 +189,9 @@ public final class ThemePreviewController: ViewController {
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
-        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+        if let initialWallpaper = initialWallpaper {
+            self.controllerNode.wallpaperPromise.set(.single(initialWallpaper))
+        } else if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
             self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug, settings: file.settings)
             |> mapToSignal { wallpaper in
                 return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
@@ -203,7 +211,7 @@ public final class ThemePreviewController: ViewController {
         let disposable = self.applyDisposable
         
         switch self.source {
-            case let .settings(reference):
+            case let .settings(reference, _):
                 theme = .single(reference)
             case .theme, .slug:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
