@@ -500,9 +500,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         }
                     }
                 }
-                
                 addCorners(context, arguments: arguments)
-                
                 return context
             } else {
                 return nil

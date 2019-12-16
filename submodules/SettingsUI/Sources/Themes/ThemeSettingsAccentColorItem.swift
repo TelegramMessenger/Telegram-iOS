@@ -230,10 +230,12 @@ private let textFont = Font.regular(11.0)
 private let itemSize = Font.regular(11.0)
 
 class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
+    private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
+    private var snapshotView: UIView?
     
     private let scrollNode: ASScrollNode
     private var colorNodes: [ThemeSettingsAccentColorNode] = []
@@ -247,6 +249,8 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     init() {
+        self.containerNode = ASDisplayNode()
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -264,6 +268,8 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
 
+        self.addSubnode(self.containerNode)
+        
         self.customNode.setImage(generateCustomSwatchImage(), for: .normal)
         self.customNode.addTarget(self, action: #selector(customPressed), forControlEvents: .touchUpInside)
         
@@ -320,16 +326,16 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     
                     if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                        strongSelf.containerNode.insertSubnode(strongSelf.backgroundNode, at: 0)
                     }
                     if strongSelf.topStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                        strongSelf.containerNode.insertSubnode(strongSelf.topStripeNode, at: 1)
                     }
                     if strongSelf.bottomStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                        strongSelf.containerNode.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
                     let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -355,6 +361,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
+                    strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
@@ -451,5 +458,19 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
+    
+    func prepareCrossfadeTransition() {
+        self.snapshotView?.removeFromSuperview()
+        
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+            self.snapshotView = snapshotView
+        }
+    }
+    
+    func animateCrossfadeTransition() {
+        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.snapshotView?.removeFromSuperview()
+        })
+    }
 }
-

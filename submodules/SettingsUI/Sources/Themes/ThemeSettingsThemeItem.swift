@@ -182,7 +182,7 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
                     c.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floor((drawingRect.width - icon.size.width) / 2.0) - 3.0, y: floor((drawingRect.height - icon.size.height) / 2.0)), size: icon.size))
                 }
             }
-            
+            addCorners(context, arguments: arguments)
             return context
         }
     }
@@ -412,11 +412,13 @@ private func ensureThemeVisible(listNode: ListView, themeReference: Presentation
 }
 
 class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
+    private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
-
+    private var snapshotView: UIView?
+    
     private let listNode: ListView
     private var entries: [ThemeSettingsThemeEntry]?
     private var enqueuedTransitions: [ThemeSettingsThemeItemNodeTransition] = []
@@ -430,6 +432,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
 
     init() {
+        self.containerNode = ASDisplayNode()
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
 
@@ -446,6 +450,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
 
         super.init(layerBacked: false, dynamicBounce: false)
 
+        self.addSubnode(self.containerNode)
         self.addSubnode(self.listNode)
     }
 
@@ -512,16 +517,16 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
 
                     if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                        strongSelf.containerNode.insertSubnode(strongSelf.backgroundNode, at: 0)
                     }
                     if strongSelf.topStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                        strongSelf.containerNode.insertSubnode(strongSelf.topStripeNode, at: 1)
                     }
                     if strongSelf.bottomStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                        strongSelf.containerNode.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
 
                     let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -547,6 +552,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
 
+                    strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
 
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
@@ -559,7 +565,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     listInsets.bottom += params.rightInset + 4.0
                     
                     strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width)
-                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0)
+                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + 2.0)
                     strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     
                     var entries: [ThemeSettingsThemeEntry] = []
@@ -588,12 +594,27 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             })
         }
     }
-
+    
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
 
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    func prepareCrossfadeTransition() {
+        self.snapshotView?.removeFromSuperview()
+        
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+            self.snapshotView = snapshotView
+        }
+    }
+    
+    func animateCrossfadeTransition() {
+        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.snapshotView?.removeFromSuperview()
+        })
     }
 }

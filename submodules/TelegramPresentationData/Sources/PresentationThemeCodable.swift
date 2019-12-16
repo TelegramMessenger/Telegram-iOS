@@ -86,10 +86,16 @@ extension TelegramWallpaper: Codable {
                                             bottomColor = Int32(bitPattern: value.rgb)
                                         }
                                     } else if component.count <= 3, let value = Int32(component) {
-                                        if value >= 0 && value <= 100 {
-                                            intensity = value
-                                        } else {
-                                            intensity = 50
+                                        if intensity == nil {
+                                            if value >= 0 && value <= 100 {
+                                                intensity = value
+                                            } else {
+                                                intensity = 50
+                                            }
+                                        } else if rotation == nil {
+                                            if value >= 0 && value < 360 {
+                                                rotation = value
+                                            }
                                         }
                                     }
                                 }
@@ -141,7 +147,7 @@ extension TelegramWallpaper: Codable {
                     if let bottomColor = file.settings.bottomColor {
                         components.append(String(format: "%06x", bottomColor))
                     }
-                    if let rotation = file.settings.rotation {
+                    if let rotation = file.settings.rotation, rotation != 0 {
                         components.append("\(rotation)")
                     }
                 }
