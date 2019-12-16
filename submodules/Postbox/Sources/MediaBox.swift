@@ -234,6 +234,8 @@ public final class MediaBox {
             let pathsTo = self.storePathsForId(to)
             link(pathsFrom.partial, pathsTo.partial)
             link(pathsFrom.complete, pathsTo.complete)
+            unlink(pathsFrom.partial)
+            unlink(pathsFrom.complete)
         }
     }
     

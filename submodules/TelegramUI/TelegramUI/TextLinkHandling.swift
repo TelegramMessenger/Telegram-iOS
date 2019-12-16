@@ -64,7 +64,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     case let .join(link):
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                             openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil))
-                        }), in: .window(.root))
+                        }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .wallet(address, amount, comment):
                         context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
                             (controller.navigationController as? NavigationController)?.pushViewController(c)

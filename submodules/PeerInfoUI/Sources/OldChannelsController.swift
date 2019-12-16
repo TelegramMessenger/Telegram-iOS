@@ -61,11 +61,11 @@ func localizedOldChannelDate(peer: InactiveChannel, strings: PresentationStrings
 
 private final class OldChannelsItemArguments {
     let context: AccountContext
-    let togglePeer: (PeerId) -> Void
+    let togglePeer: (PeerId, Bool) -> Void
     
     init(
         context: AccountContext,
-        togglePeer: @escaping (PeerId) -> Void
+        togglePeer: @escaping (PeerId, Bool) -> Void
     ) {
         self.context = context
         self.togglePeer = togglePeer
@@ -174,7 +174,7 @@ private enum OldChannelsEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .peer(_, peer, selected):
             return ContactsPeerItem(presentationData: presentationData, style: .blocks, sectionId: self.section, sortOrder: .firstLast, displayOrder: .firstLast, context: arguments.context, peerMode: .peer, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .custom(localizedOldChannelDate(peer: peer, strings: presentationData.strings)), badge: nil, enabled: true, selection: ContactsPeerItemSelection.selectable(selected: selected), editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .none, index: nil, header: nil, action: { _ in
-                arguments.togglePeer(peer.peer.id)
+                arguments.togglePeer(peer.peer.id, true)
             }, setPeerIdWithRevealedOptions: nil, deletePeer: nil, itemHighlighting: nil, contextAction: nil)
         }
     }
@@ -185,13 +185,23 @@ private struct OldChannelsState: Equatable {
     var isSearching: Bool = false
 }
 
-private func oldChannelsEntries(presentationData: PresentationData, state: OldChannelsState, peers: [InactiveChannel]?) -> [OldChannelsEntry] {
+private func oldChannelsEntries(presentationData: PresentationData, state: OldChannelsState, peers: [InactiveChannel]?, intent: OldChannelsControllerIntent) -> [OldChannelsEntry] {
     var entries: [OldChannelsEntry] = []
     
+    let noticeText: String
+    switch intent {
+    case .join:
+        noticeText = presentationData.strings.OldChannels_NoticeText
+    case .create:
+        noticeText = presentationData.strings.OldChannels_NoticeCreateText
+    case .upgrade:
+        noticeText = presentationData.strings.OldChannels_NoticeUpgradeText
+    }
+    entries.append(.info(presentationData.strings.OldChannels_NoticeTitle, noticeText))
+    
     if let peers = peers, !peers.isEmpty {
-        entries.append(.info(presentationData.strings.OldChannels_NoticeTitle, presentationData.strings.OldChannels_NoticeText))
-        
         entries.append(.peersHeader(presentationData.strings.OldChannels_ChannelsHeader))
+        
         for peer in peers {
             entries.append(.peer(entries.count, peer, state.selectedPeers.contains(peer.peer.id)))
         }
@@ -316,7 +326,13 @@ private final class OldChannelsControllerImpl: ItemListController {
     }
 }
 
-public func oldChannelsController(context: AccountContext) -> ViewController {
+public enum OldChannelsControllerIntent {
+    case join
+    case create
+    case upgrade
+}
+
+public func oldChannelsController(context: AccountContext, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
     let initialState = OldChannelsState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -329,23 +345,30 @@ public func oldChannelsController(context: AccountContext) -> ViewController {
     var dismissImpl: (() -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     
+    var ensurePeerVisibleImpl: ((PeerId) -> Void)?
+    
     let actionsDisposable = DisposableSet()
     
     let arguments = OldChannelsItemArguments(
         context: context,
-        togglePeer: { peerId in
+        togglePeer: { peerId, ensureVisible in
             var hasSelectedPeers = false
+            var didSelect = false
             updateState { state in
                 var state = state
                 if state.selectedPeers.contains(peerId) {
                     state.selectedPeers.remove(peerId)
                 } else {
                     state.selectedPeers.insert(peerId)
+                    didSelect = true
                 }
                 hasSelectedPeers = !state.selectedPeers.isEmpty
                 return state
             }
             updateHasSelectedPeersImpl?(hasSelectedPeers)
+            if didSelect && ensureVisible {
+                ensurePeerVisibleImpl?(peerId)
+            }
         }
     )
     
@@ -395,7 +418,7 @@ public func oldChannelsController(context: AccountContext) -> ViewController {
                 setDisplayNavigationBarImpl?(false)
             }
         }, peers: peersPromise.get() |> map { $0 ?? [] }, selectedPeerIds: selectedPeerIds, togglePeer: { peerId in
-            arguments.togglePeer(peerId)
+            arguments.togglePeer(peerId, false)
         })
         
         let peersAreEmpty = peers == nil
@@ -407,7 +430,7 @@ public func oldChannelsController(context: AccountContext) -> ViewController {
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, peers: peers, intent: intent), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -430,19 +453,22 @@ public func oldChannelsController(context: AccountContext) -> ViewController {
             return context.account.postbox.transaction { transaction -> Void in
                 if let peers = peers {
                     for peer in peers {
-                        if transaction.getPeer(peer.peer.id) == nil {
-                            updatePeers(transaction: transaction, peers: [peer.peer], update: { _, updated in
-                                return updated
-                            })
+                        if state.selectedPeers.contains(peer.peer.id) {
+                            if transaction.getPeer(peer.peer.id) == nil {
+                                updatePeers(transaction: transaction, peers: [peer.peer], update: { _, updated in
+                                    return updated
+                                })
+                            }
+                            removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peer.peer.id, reportChatSpam: false, deleteGloballyIfPossible: false)
                         }
-                        removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peer.peer.id, reportChatSpam: false, deleteGloballyIfPossible: false)
                     }
                 }
             }
         }
-        |> deliverOnMainQueue).start()
-        
-        dismissImpl?()
+        |> deliverOnMainQueue).start(completed: {
+            completed(true)
+            dismissImpl?()
+        })
     }
     
     dismissImpl = { [weak controller] in
@@ -450,6 +476,16 @@ public func oldChannelsController(context: AccountContext) -> ViewController {
     }
     setDisplayNavigationBarImpl = { [weak controller] display in
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
+    }
+    ensurePeerVisibleImpl = { [weak controller] peerId in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ContactsPeerItemNode, let peer = itemNode.chatPeer, peer.id == peerId {
+                controller.ensureItemNodeVisible(itemNode, curve: .Spring(duration: 0.3))
+            }
+        }
     }
     
     return controller

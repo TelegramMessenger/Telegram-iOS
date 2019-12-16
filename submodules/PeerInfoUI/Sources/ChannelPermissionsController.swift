@@ -472,6 +472,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var resetSlowmodeVisualValueImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -728,17 +729,15 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 presentControllerImpl?(progress, nil)
                 
                 let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)
-                |> mapError { _ -> UpdateChannelSlowModeError in
-                    return .generic
-                }
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    return .single(nil)
+                |> mapError { error -> UpdateChannelSlowModeError in
+                    switch error {
+                    case .tooManyChannels:
+                        return .tooManyChannels
+                    default:
+                        return .generic
+                    }
                 }
                 |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    guard let upgradedPeerId = upgradedPeerId else {
-                        return .single(nil)
-                    }
                     return updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
                     |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
                         return .complete()
@@ -752,8 +751,21 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                         upgradedToSupergroupImpl?(peerId, {})
                     }
                     progress?.dismiss()
-                }, error: { [weak progress] _ in
+                }, error: { [weak progress] error in
                     progress?.dismiss()
+                    updateState { state in
+                        var state = state
+                        state.modifiedSlowmodeTimeout = nil
+                        return state
+                    }
+                    resetSlowmodeVisualValueImpl?()
+                    
+                    switch error {
+                    case .tooManyChannels:
+                        pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                    default:
+                        break
+                    }
                 }))
             }
         })
@@ -852,6 +864,16 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    resetSlowmodeVisualValueImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatSlowmodeItemNode {
+                itemNode.forceSetValue(0)
+            }
+        }
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {

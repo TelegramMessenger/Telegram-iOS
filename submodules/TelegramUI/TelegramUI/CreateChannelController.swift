@@ -205,6 +205,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     }
     
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var endEditingImpl: (() -> Void)?
     
@@ -273,7 +274,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
                     case .tooMuchJoined:
-                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
+                        pushControllerImpl?(oldChannelsController(context: context, intent: .create))
+                        return
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
                     default:
@@ -383,6 +385,9 @@ public func createChannelController(context: AccountContext) -> ViewController {
     let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+    }
+    pushControllerImpl = { [weak controller] value in
+        controller?.push(value)
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)

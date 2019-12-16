@@ -531,7 +531,8 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
                     case .tooMuchJoined:
-                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
+                        pushImpl?(oldChannelsController(context: context, intent: .create))
+                        return
                     case .tooMuchLocationBasedGroups:
                         text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
                     default:

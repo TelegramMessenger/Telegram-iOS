@@ -315,8 +315,13 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     var updatedPeerId: PeerId? = nil
                     if let legacyGroup = groupPeer as? TelegramGroup {
                         applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
-                        |> mapError { _ -> ChannelDiscussionGroupError in
-                            return .generic
+                        |> mapError { error -> ChannelDiscussionGroupError in
+                            switch error {
+                            case .tooManyChannels:
+                                return .tooManyChannels
+                            default:
+                                return .generic
+                            }
                         }
                         |> deliverOnMainQueue
                         |> mapToSignal { resultPeerId -> Signal<Bool, ChannelDiscussionGroupError> in
@@ -378,6 +383,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     applyGroupDisposable.set((applySignal
                     |> deliverOnMainQueue).start(error: { error in
                         switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
                             case .generic, .hasNotPermissions:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)

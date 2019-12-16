@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import AlertUI
 import PresentationDataUtils
+import PeerInfoUI
 
 public final class JoinLinkPreviewController: ViewController {
     private var controllerNode: JoinLinkPreviewControllerNode {
@@ -21,14 +22,18 @@ public final class JoinLinkPreviewController: ViewController {
     private let context: AccountContext
     private let link: String
     private let navigateToPeer: (PeerId) -> Void
+    private let parentNavigationController: NavigationController?
+    private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId) -> Void) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
+        self.parentNavigationController = parentNavigationController
+        self.resolvedState = resolvedState
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -59,9 +64,18 @@ public final class JoinLinkPreviewController: ViewController {
             self?.join()
         }
         self.displayNodeDidLoad()
-        self.disposable.set((joinLinkInformation(self.link, account: self.context.account)
+        
+        let signal: Signal<ExternalJoiningChatState, NoError>
+        if let resolvedState = self.resolvedState {
+            signal = .single(resolvedState)
+        } else {
+            signal = joinLinkInformation(self.link, account: self.context.account)
+        }
+        
+        self.disposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
+                strongSelf.resolvedState = result
                 switch result {
                     case let .invite(title, photoRepresentation, participantsCount, participants):
                         let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
@@ -112,7 +126,19 @@ public final class JoinLinkPreviewController: ViewController {
         }, error: { [weak self] error in
             if let strongSelf = self {
                 if case .tooMuchJoined = error {
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    if let parentNavigationController = strongSelf.parentNavigationController {
+                        let context = strongSelf.context
+                        let link = strongSelf.link
+                        let navigateToPeer = strongSelf.navigateToPeer
+                        let resolvedState = strongSelf.resolvedState
+                        parentNavigationController.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { [weak parentNavigationController] value in
+                            if value {
+                                (parentNavigationController?.viewControllers.last as? ViewController)?.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState), in: .window(.root))
+                            }
+                        }))
+                    } else {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }
                     strongSelf.dismiss()
                 }
             }

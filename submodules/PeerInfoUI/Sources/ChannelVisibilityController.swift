@@ -829,6 +829,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -1094,14 +1095,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                            guard let upgradedPeerId = upgradedPeerId else {
-                                return .single(nil)
-                            }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return updateAddressName(account: context.account, domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
@@ -1110,6 +1104,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                 return .complete()
                             }
                             |> then(.single(upgradedPeerId))
+                            |> castError(ConvertGroupToSupergroupError.self)
                         }
                         |> deliverOnMainQueue
                         
@@ -1122,11 +1117,16 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             } else {
                                 dismissImpl?()
                             }
-                        }, error: { _ in
+                        }, error: { error in
                             updateState { state in
                                 return state.withUpdatedUpdatingAddressName(false)
                             }
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                            default:
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            }
                         }))
                     }
                     
@@ -1327,6 +1327,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     clearHighlightImpl = { [weak controller] in
         controller?.clearItemNodesHighlight(animated: true)
