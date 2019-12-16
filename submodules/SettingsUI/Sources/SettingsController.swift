@@ -670,10 +670,8 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         
         entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
         entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        if enableQRLogin {
+        if enableQRLogin || otherSessionCount != 0 {
             entries.append(.devices(presentationData.theme, UIImage(bundleImageName: "Settings/MenuIcons/Sessions")?.precomposed(), presentationData.strings.Settings_Devices, otherSessionCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionCount + 1)"))
-        } else {
-            entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         }
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
@@ -683,9 +681,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
         entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
-        if enableQRLogin {
-            entries.append(.contentStickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
-        }
+        entries.append(.contentStickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
         if hasWallet {
             entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.wallet, "Gram Wallet", ""))
@@ -1113,7 +1109,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             if count == 0 {
                 pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
             } else {
-                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
+                pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
             }
         })
     })
@@ -1266,6 +1262,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }))
     }
     updatePassport()
+    
+    let updateActiveSessions: () -> Void = {
+        let _ = (activeSessionsContextAndCount.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { activeSessionsContext, _, _ in
+            activeSessionsContext.loadMore()
+        })
+    }
     
     let notificationsAuthorizationStatus = Promise<AccessType>(.allowed)
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -1655,6 +1659,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     controller.didAppear = { _ in
         updatePassport()
         updateNotifyExceptions()
+        updateActiveSessions()
     }
     controller.previewItemWithTag = { tag in
         if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {

@@ -9,6 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AlertUI
 import PresentationDataUtils
+import PeerInfoUI
 
 private enum SubscriberAction {
     case join
@@ -118,40 +119,41 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
         
         switch action {
-            case .join:
-                self.activityIndicator.isHidden = false
-                self.activityIndicator.startAnimating()
-                self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id)
-                |> afterDisposed { [weak self] in
-                    Queue.mainQueue().async {
-                        if let strongSelf = self {
-                            strongSelf.activityIndicator.isHidden = true
-                            strongSelf.activityIndicator.stopAnimating()
-                        }
+        case .join:
+            self.activityIndicator.isHidden = false
+            self.activityIndicator.startAnimating()
+            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peer.id)
+            |> afterDisposed { [weak self] in
+                Queue.mainQueue().async {
+                    if let strongSelf = self {
+                        strongSelf.activityIndicator.isHidden = true
+                        strongSelf.activityIndicator.stopAnimating()
                     }
-                }).start(error: { [weak self] error in
-                    guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
-                        return
-                    }
-                    let text: String
-                    switch error {
-                        case .tooMuchJoined:
-                            text = presentationInterfaceState.strings.Join_ChannelsTooMuch
-                        default:
-                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
-                            } else {
-                                text = presentationInterfaceState.strings.Group_ErrorAccessDenied
-                            }
-                    }
-                    strongSelf.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
-                }))
-            case .kicked:
-                break
-            case .muteNotifications, .unmuteNotifications:
-                if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
-                    self.actionDisposable.set(togglePeerMuted(account: context.account, peerId: peer.id).start())
                 }
+            }).start(error: { [weak self] error in
+                guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
+                    return
+                }
+                let text: String
+                switch error {
+                case .tooMuchJoined:
+                    strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context))
+                    return
+                default:
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        text = presentationInterfaceState.strings.Channel_ErrorAccessDenied
+                    } else {
+                        text = presentationInterfaceState.strings.Group_ErrorAccessDenied
+                    }
+                }
+                strongSelf.interfaceInteraction?.presentController(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationInterfaceState.strings.Common_OK, action: {})]), nil)
+            }))
+        case .kicked:
+            break
+        case .muteNotifications, .unmuteNotifications:
+            if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
+                self.actionDisposable.set(togglePeerMuted(account: context.account, peerId: peer.id).start())
+            }
         }
     }
     
