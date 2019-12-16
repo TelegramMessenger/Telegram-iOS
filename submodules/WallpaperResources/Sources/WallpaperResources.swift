@@ -469,7 +469,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                         c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
                         c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
                         
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                         c.restoreGState()
                     }
                     
@@ -496,7 +496,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                             c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
                             c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
                             
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                         }
                     }
                 }
@@ -555,7 +555,7 @@ public func gradientImage(_ colors: [UIColor], rotation: Int32 = 0) -> Signal<(T
         }
     }
     return .single({ arguments in
-        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        let context = DrawingContext(size: arguments.drawingSize, clear: !arguments.corners.isEmpty)
         
         context.withContext { c in
             let gradientColors = colors.map { $0.cgColor } as CFArray
@@ -572,7 +572,7 @@ public func gradientImage(_ colors: [UIColor], rotation: Int32 = 0) -> Signal<(T
             c.rotate(by: CGFloat(rotation) * CGFloat.pi / 180.0)
             c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
             
-            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
+            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
         }
         
         addCorners(context, arguments: arguments)
@@ -755,7 +755,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: drawingRect.height), end: CGPoint(x: 0.0, y: 0.0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
         case .file:
             c.setFillColor(theme.chatList.backgroundColor.cgColor)
             c.fill(drawingRect)

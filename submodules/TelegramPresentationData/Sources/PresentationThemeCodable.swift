@@ -63,7 +63,7 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
+                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
                             var color: Int32?

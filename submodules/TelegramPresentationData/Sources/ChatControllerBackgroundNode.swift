@@ -54,7 +54,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                     context.rotate(by: CGFloat(settings.rotation ?? 0) * CGFloat.pi / 180.0)
                     context.translateBy(x: -320.0, y: -640.0)
                     
-                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                 })
             case let .image(representations, settings):
                 if let largest = largestImageRepresentation(representations) {
