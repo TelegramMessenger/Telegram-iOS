@@ -5171,3 +5171,25 @@ Any member of this group will be able to see messages in the channel.";
 "AuthSessions.AddDevice.UrlLoginHint" = "This code can be used to allow someone to log in to your Telegram account.\n\nTo confirm Telegram login, please go to Settings > Devices > Scan QR and scan the code.";
 
 "ChatContextMenu.TextSelectionTip" = "Hold a word, then move cursor to select more| text to copy.";
+
+"OldChannels.Title" = "Limit Reached";
+"OldChannels.NoticeTitle" = "Too Many Groups and Channels";
+"OldChannels.NoticeText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before joining new one.";
+"OldChannels.ChannelsHeader" = "MOST INACTIVE";
+"OldChannels.Leave" = "Leave";
+
+"OldChannels.ChannelFormat" = "channel, ";
+"OldChannels.GroupEmptyFormat" = "group, ";
+"OldChannels.GroupFormat_1" = "%@ member";
+"OldChannels.GroupFormat_any" = "%@ members";
+
+"OldChannels.InactiveWeek_1" = "inactive %@ week";
+"OldChannels.InactiveWeek_any" = "inactive %@ weeks";
+
+"OldChannels.InactiveMonth_1" = "inactive %@ month";
+"OldChannels.InactiveMonth_any" = "inactive %@ months";
+
+"OldChannels.InactiveYear_1" = "inactive %@ year";
+"OldChannels.InactiveYear_any" = "inactive %@ years";
+
+"PrivacySettings.WebSessions" = "Active Websites";
