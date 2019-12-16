@@ -120,7 +120,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
-    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, animated: Bool = false) {
+    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, hidePicker: Bool = false, animated: Bool = false) {
         let region = MKCoordinateRegion(center: coordinate, span: span)
         self.ignoreRegionChanges = true
         if offset == CGPoint() {
@@ -136,7 +136,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 self.returnedToUserLocation = true
                 self.pickerAnnotationView?.setRaised(true, animated: true)
             }
-        } else if self.hasPickerAnnotation, let customUserLocationAnnotationView = self.customUserLocationAnnotationView, customUserLocationAnnotationView.isHidden {
+        } else if self.hasPickerAnnotation, let customUserLocationAnnotationView = self.customUserLocationAnnotationView, customUserLocationAnnotationView.isHidden, hidePicker {
             self.pickerAnnotationContainerView.isHidden = true
             customUserLocationAnnotationView.setSelected(false, animated: false)
             customUserLocationAnnotationView.isHidden = false

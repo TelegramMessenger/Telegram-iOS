@@ -105,11 +105,7 @@ final class ThemeAccentColorController: ViewController {
             }
         }
         
-        if case .background = mode {
-            self.title = self.presentationData.strings.Wallpaper_Title
-        } else {
-            self.navigationItem.titleView = self.segmentedTitleView
-        }
+        self.navigationItem.titleView = self.segmentedTitleView
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
     }
     
@@ -238,9 +234,11 @@ final class ThemeAccentColorController: ViewController {
             }
         }
         
-        let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+        let _ = (combineLatest(
+            self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]) |> take(1),
+            telegramWallpapers(postbox: context.account.postbox, network: context.account.network) |> take(1)
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData, wallpapers in
             guard let strongSelf = self else {
                 return
             }
@@ -250,7 +248,7 @@ final class ThemeAccentColorController: ViewController {
             var initialWallpaper: TelegramWallpaper?
             var backgroundColors: (UIColor, UIColor?)?
             var patternWallpaper: TelegramWallpaper?
-            var patternIntensity: Int32 = 50
+            var patternIntensity: Int32 = 40
             var motion = false
             let messageColors: (UIColor, UIColor?)?
             var defaultMessagesColor: UIColor?
@@ -263,7 +261,7 @@ final class ThemeAccentColorController: ViewController {
                     return
                 }
                 if case let .file(file) = wallpaper, file.isPattern {
-                    var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                    var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.4)
                     var bottomColor: UIColor?
                     if let color = file.settings.color {
                         if let intensity = file.settings.intensity {
@@ -291,7 +289,7 @@ final class ThemeAccentColorController: ViewController {
             
             if let themeReference = strongSelf.mode.themeReference {
                 accentColor = settings.themeSpecificAccentColors[themeReference.index]?.color ?? defaultDayAccentColor
-                let wallpaper: TelegramWallpaper
+                var wallpaper: TelegramWallpaper
                 if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                     wallpaper = customWallpaper
                 } else {
@@ -305,6 +303,21 @@ final class ThemeAccentColorController: ViewController {
                     }
                     
                     wallpaper = theme.chat.defaultWallpaper
+                }
+                
+                if case let .builtin(settings) = wallpaper {
+                    var defaultPatternWallpaper: TelegramWallpaper?
+                    
+                    for wallpaper in wallpapers {
+                        if case let .file(file) = wallpaper, file.slug == "JqSUrO0-mFIBAAAAWwTvLzoWGQI" {
+                            defaultPatternWallpaper = wallpaper
+                            break
+                        }
+                    }
+                    
+                    if let defaultPatternWallpaper = defaultPatternWallpaper {
+                        wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 25, rotation: nil))
+                    }
                 }
                 
                 if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
@@ -337,6 +350,10 @@ final class ThemeAccentColorController: ViewController {
                 
                 let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
                 extractWallpaperParameters(wallpaper)
+                
+                if !wallpaper.isColorOrGradient {
+                    initialWallpaper = wallpaper
+                }
                 
                 let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
                 let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill

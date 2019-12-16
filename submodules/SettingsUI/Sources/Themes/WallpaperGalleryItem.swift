@@ -688,7 +688,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         var additionalYOffset: CGFloat = 0.0
         if self.patternButtonNode.isSelected {
-            additionalYOffset = -190.0
+            additionalYOffset = -235.0
         }
         
         let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)

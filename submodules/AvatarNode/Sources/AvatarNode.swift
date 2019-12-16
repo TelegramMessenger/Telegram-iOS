@@ -449,7 +449,12 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = grayscaleColors
             }
         } else if colorIndex == -1 {
-            colorsArray = grayscaleColors
+            if let parameters = parameters as? AvatarNodeParameters, let theme = parameters.theme {
+                let colors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
+                colorsArray = [colors.1.cgColor, colors.0.cgColor]
+            } else {
+                colorsArray = grayscaleColors
+            }
         } else {
             colorsArray = gradientColors[colorIndex % gradientColors.count]
         }

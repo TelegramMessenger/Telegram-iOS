@@ -168,7 +168,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     }
                     if let subnodes = strongSelf.scrollNode.subnodes {
                         for case let subnode as SettingsThemeWallpaperNode in subnodes {
-                            subnode.setSelected(node === subnode, animated: true)
+                            let selected = node === subnode
+                            subnode.setSelected(selected, animated: true)
+                            if selected {
+                                strongSelf.scrollToNode(subnode, animated: true)
+                            }
                         }
                     }
                 }
@@ -206,7 +210,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    func didAppear(initialWallpaper: TelegramWallpaper? = nil) {
+    func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
         var wallpaper = initialWallpaper ?? self.wallpapers.first
         
         if let wallpaper = wallpaper {
@@ -216,23 +220,38 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = 40.0
+            self.sliderView?.value = CGFloat(intensity ?? 40)
             
             self.scrollNode.view.contentOffset = CGPoint()
             
+            var selectedNode: SettingsThemeWallpaperNode?
             if let subnodes = self.scrollNode.subnodes {
                 for case let subnode as SettingsThemeWallpaperNode in subnodes {
                     var selected = false
                     if case let .file(file) = subnode.wallpaper, file.id == selectedFileId {
                         selected = true
+                        selectedNode = subnode
                     }
                     subnode.setSelected(selected, animated: false)
                 }
             }
-            
+                        
             if initialWallpaper == nil, let wallpaper = self.currentWallpaper, let sliderView = self.sliderView {
                 self.patternChanged?(wallpaper, Int32(sliderView.value), false)
             }
+            
+            if let selectedNode = selectedNode {
+                self.scrollToNode(selectedNode)
+            }
+        }
+    }
+    
+    private func scrollToNode(_ node: SettingsThemeWallpaperNode, animated: Bool = false) {
+        let bounds = self.scrollNode.view.bounds
+        let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
+        
+        if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
+            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
         }
     }
     

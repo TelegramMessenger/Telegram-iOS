@@ -1233,7 +1233,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
                 c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
             }
-            
+            addCorners(context, arguments: arguments)
             return context
         }
     }

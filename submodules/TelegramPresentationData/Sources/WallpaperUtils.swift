@@ -22,7 +22,7 @@ public extension TelegramWallpaper {
     
     var isColorOrGradient: Bool {
         switch self {
-            case .color, .gradient:
+        case .color, .gradient:
             return true
         default:
             return false

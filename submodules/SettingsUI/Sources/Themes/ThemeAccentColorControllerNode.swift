@@ -63,7 +63,7 @@ struct ThemeColorState {
         self.preview = false
         self.previousPatternWallpaper = nil
         self.patternWallpaper = nil
-        self.patternIntensity = 50
+        self.patternIntensity = 40
         self.motion = false
         self.defaultMessagesColor = nil
         self.messagesColors = nil
@@ -491,28 +491,22 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
                 strongSelf.immediateBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
                 strongSelf.immediateBackgroundNode.image = nil
-                strongSelf.immediateBackgroundNode.isHidden = false
                 strongSelf.signalBackgroundNode.isHidden = true
 
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperImage = wallpaperImage {
                 strongSelf.immediateBackgroundNode.image = wallpaperImage
-                strongSelf.immediateBackgroundNode.isHidden = false
                 strongSelf.signalBackgroundNode.isHidden = true
 
                 strongSelf.patternWallpaper = nil
             } else if let wallpaperSignal = wallpaperSignal {
                 strongSelf.signalBackgroundNode.contentMode = .scaleToFill
-                strongSelf.immediateBackgroundNode.isHidden = false
                 strongSelf.signalBackgroundNode.isHidden = false
                 
                 if case let .file(file) = wallpaper, let (layout, _, _) = strongSelf.validLayout {
                     var dispatch = false
                     if let previousWallpaper = strongSelf.patternWallpaper, case let .file(previousFile) = previousWallpaper, file.id == previousFile.id {
                         dispatch = true
-                    } else {
-                        strongSelf.patternWallpaper = wallpaper
-                        strongSelf.signalBackgroundNode.setSignal(wallpaperSignal)
                     }
                     
                     if dispatch {
@@ -540,6 +534,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         let makeImageLayout = strongSelf.signalBackgroundNode.asyncLayout()
                         let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))
                         let _ = imageApply()
+                    }
+                    
+                    if !dispatch {
+                        strongSelf.signalBackgroundNode.setSignal(wallpaperSignal)
+                        strongSelf.patternWallpaper = wallpaper
                     }
                 } else {
                     strongSelf.signalBackgroundNode.setSignal(wallpaperSignal)
@@ -1043,6 +1042,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 updated.patternWallpaper = nil
                 updated.displayPatternPanel = false
             } else {
+                updated.colorPanelCollapsed = false
                 updated.displayPatternPanel = true
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
                     updated.patternWallpaper = wallpaper
@@ -1056,7 +1056,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }, animated: true)
         
         if appeared {
-            self.patternPanelNode.didAppear(initialWallpaper: wallpaper)
+            self.patternPanelNode.didAppear(initialWallpaper: wallpaper, intensity: self.state.patternIntensity)
         }
     }
     

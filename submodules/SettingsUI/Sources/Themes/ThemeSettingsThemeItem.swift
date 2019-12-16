@@ -133,25 +133,21 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     } else {
         let image = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
-            context.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
-            context.fill(bounds)
-
-            context.setBlendMode(.clear)
-            if selected {
-                context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
-            } else {
-                context.fillEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
-            }
-            context.setBlendMode(.normal)
+            context.clear(bounds)
 
             let lineWidth: CGFloat
             if selected {
+                lineWidth = 2.0
+                context.setLineWidth(lineWidth)
+                context.setStrokeColor(theme.list.itemBlocksBackgroundColor.cgColor)
+                
+                context.strokeEllipse(in: bounds.insetBy(dx: 3.0 + lineWidth / 2.0, dy: 3.0 + lineWidth / 2.0))
+                
                 var accentColor = theme.list.itemAccentColor
                 if accentColor.rgb == 0xffffff {
                     accentColor = UIColor(rgb: 0x999999)
                 }
                 context.setStrokeColor(accentColor.cgColor)
-                lineWidth = 2.0
             } else {
                 context.setStrokeColor(theme.list.disclosureArrowColor.withAlphaComponent(0.4).cgColor)
                 lineWidth = 1.0
@@ -291,7 +287,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 
                     let imageSize = CGSize(width: 98.0, height: 62.0)
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: imageSize)
-                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
+                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
                     applyLayout()
                     
                     strongSelf.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 13.0), size: CGSize(width: 100.0, height: 64.0))
@@ -398,7 +394,7 @@ private func preparedTransition(context: AccountContext, action: @escaping (Pres
     return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) {
+private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) -> Bool {
     var resultNode: ThemeSettingsThemeItemIconNode?
     listNode.forEachItemNode { node in
         if resultNode == nil, let node = node as? ThemeSettingsThemeItemIconNode {
@@ -408,7 +404,10 @@ private func ensureThemeVisible(listNode: ListView, themeReference: Presentation
         }
     }
     if let resultNode = resultNode {
-        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 56.0)
+        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 57.0)
+        return true
+    } else {
+        return false
     }
 }
 
@@ -466,21 +465,25 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     private func dequeueTransition() {
-        guard let _ = self.item, let transition = self.enqueuedTransitions.first else {
+        guard let item = self.item, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
         
         var options = ListViewDeleteAndInsertOptions()
+        if self.initialized {
+            options.insert(.AnimateInsertion)
+        }
         
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-            if let strongSelf = self, let item = strongSelf.item {
-                if !strongSelf.initialized {
-                    strongSelf.initialized = true
-                    ensureThemeVisible(listNode: strongSelf.listNode, themeReference: item.currentTheme, animated: false)
-                }
+        var scrollToItem: ListViewScrollToItem?
+        if !self.initialized {
+            if let index = item.themes.firstIndex(where: { $0.index == item.currentTheme.index }) {
+                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
+                self.initialized = true
             }
-        })
+        }
+        
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in })
     }
 
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -555,9 +558,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     listInsets.top += params.leftInset + 4.0
                     listInsets.bottom += params.rightInset + 4.0
                     
-                    strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layoutSize.height, height: layoutSize.width)
-                    strongSelf.listNode.position = CGPoint(x: layoutSize.width / 2.0, y: layoutSize.height / 2.0)
-                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: layoutSize.height, height: layoutSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width)
+                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0)
+                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0

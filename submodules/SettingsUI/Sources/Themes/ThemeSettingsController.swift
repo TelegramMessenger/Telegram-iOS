@@ -563,27 +563,40 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             return
                         }
                         
-                        let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: true, completion: { result in
-                            let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
-                                if let navigationController = getNavigationControllerImpl?() {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                                }
-                            })
-                            updateControllersImpl?({ controllers in
-                                var controllers = controllers
-                                controllers = controllers.filter { controller in
-                                    if controller is ThemeAccentColorController {
-                                        return false
-                                    }
-                                    return true
-                                }
-                                controllers.append(controller)
-                                return controllers
-                            })
-                        }))
+                        let resolvedWallpaper: Signal<TelegramWallpaper, NoError>
+                        if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                            |> map { cachedWallpaper -> TelegramWallpaper in
+                                return cachedWallpaper?.wallpaper ?? theme.chat.defaultWallpaper
+                            }
+                        } else {
+                            resolvedWallpaper = .single(theme.chat.defaultWallpaper)
+                        }
                         
-                        c.dismiss(completion: {
-                            pushControllerImpl?(controller)
+                        let _ = (resolvedWallpaper
+                        |> deliverOnMainQueue).start(next: { wallpaper in
+                            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, defaultThemeReference: nil, create: true, completion: { result in
+                                let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
+                                    if let navigationController = getNavigationControllerImpl?() {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                    }
+                                })
+                                updateControllersImpl?({ controllers in
+                                    var controllers = controllers
+                                    controllers = controllers.filter { controller in
+                                        if controller is ThemeAccentColorController {
+                                            return false
+                                        }
+                                        return true
+                                    }
+                                    controllers.append(controller)
+                                    return controllers
+                                })
+                            }))
+                            
+                            c.dismiss(completion: {
+                                pushControllerImpl?(controller)
+                            })
                         })
                     })))
                 }
@@ -835,9 +848,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 public final class ThemeSettingsCrossfadeController: ViewController {
     private let snapshotView: UIView?
     
-    public init() {
-        self.snapshotView = (UIScreen.main as? UIView)?.snapshotContentTree() //UIScreen.main.snapshotView(afterScreenUpdates: false)
-        
+    public init(view: UIView? = nil) {
+        if let view = view {
+            self.snapshotView = view.snapshotContentTree()
+        } else {
+            self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
+        }
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore

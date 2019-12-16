@@ -36,8 +36,15 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var inputBackgroundColor: UIColor?
     var buttonStrokeColor: UIColor?
     
+    var suggestedWallpaper: TelegramWallpaper?
+    
     var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
+        if let accentColor = accentColor {
+            let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+            suggestedWallpaper = .color(Int32(bitPattern: color.rgb))
+        }
+        
         let accentColor = accentColor ?? defaultDarkTintedAccentColor
         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
         let topColor = bottomColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
@@ -217,6 +224,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         } else {
             defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
         }
+    } else if let forcedWallpaper = suggestedWallpaper {
+        defaultWallpaper = forcedWallpaper
     }
     
     var outgoingBubbleFillColor: UIColor?

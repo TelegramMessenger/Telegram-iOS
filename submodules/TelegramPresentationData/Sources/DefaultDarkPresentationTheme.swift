@@ -61,7 +61,6 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         )
         list = list.withUpdated(
             itemAccentColor: accentColor,
-            itemDisclosureActions: list.itemDisclosureActions.withUpdated(accent: list.itemDisclosureActions.accent.withUpdated(fillColor: accentColor)),
             itemCheckColors: list.itemCheckColors.withUpdated(fillColor: accentColor, foregroundColor: secondaryBadgeTextColor),
             itemBarChart: list.itemBarChart.withUpdated(color1: accentColor)
         )

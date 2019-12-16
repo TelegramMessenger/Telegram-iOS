@@ -157,10 +157,8 @@ public class WallpaperGalleryController: ViewController {
     private var overlayNode: WallpaperGalleryOverlayNode?
     private var messageNodes: [ListViewItemNode]?
     private var toolbarNode: WallpaperGalleryToolbarNode?
-    private var colorPanelNode: WallpaperColorPanelNode?
     private var patternPanelNode: WallpaperPatternPanelNode?
     
-    private var colorPanelEnabled = false
     private var patternPanelEnabled = false
     
     public init(context: AccountContext, source: WallpaperListSource) {
@@ -204,7 +202,6 @@ public class WallpaperGalleryController: ViewController {
                 entries = [.contextResult(result)]
                 centralEntryIndex = 0
             case let .customColor(color):
-                self.colorPanelEnabled = true
                 let initialColor = color ?? 0x000000
                 entries = [.wallpaper(.color(initialColor), nil)]
                 centralEntryIndex = 0
@@ -338,19 +335,7 @@ public class WallpaperGalleryController: ViewController {
         self.overlayNode = overlayNode
         self.galleryNode.overlayNode = overlayNode
         self.galleryNode.addSubnode(overlayNode)
-        
-        let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
-        colorPanelNode.colorsChanged = { [weak self] color, _, ended in
-            if let strongSelf = self , let color = color {
-                strongSelf.updateEntries(color: color, preview: !ended)
-            }
-        }
-        if case let .customColor(colorValue) = self.source, let color = colorValue {
-            //colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
-        }
-        self.colorPanelNode = colorPanelNode
-        overlayNode.addSubnode(colorPanelNode)
-        
+                
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: .set)
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
@@ -632,12 +617,7 @@ public class WallpaperGalleryController: ViewController {
                 topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
                 bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
         }
-        
-        if self.colorPanelEnabled {
-            topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
-            bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
-        }
-        
+                
         let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
@@ -680,10 +660,6 @@ public class WallpaperGalleryController: ViewController {
         
         if let messageNodes = self.messageNodes {
             var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
-            if self.colorPanelEnabled {
-            } else {
-                bottomOffset -= 66.0
-            }
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
@@ -707,16 +683,6 @@ public class WallpaperGalleryController: ViewController {
         var bottomInset = layout.intrinsicInsets.bottom + 49.0
         let standardInputHeight = layout.deviceMetrics.keyboardHeight(inLandscape: false)
         let height = max(standardInputHeight, layout.inputHeight ?? 0.0) - bottomInset + 47.0
-        if let colorPanelNode = self.colorPanelNode {
-            var colorPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: height)
-            if self.colorPanelEnabled {
-                colorPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - height)
-                bottomInset += height
-            }
-            
-            transition.updateFrame(node: colorPanelNode, frame: colorPanelFrame)
-            colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
-        }
         
         let currentPatternPanelNode: WallpaperPatternPanelNode
         if let patternPanelNode = self.patternPanelNode {
@@ -739,6 +705,7 @@ public class WallpaperGalleryController: ViewController {
             patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)
             bottomInset += panelHeight
         }
+        bottomInset += 66.0
         
         transition.updateFrame(node: currentPatternPanelNode, frame: patternPanelFrame)
         currentPatternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)

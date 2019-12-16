@@ -21,9 +21,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var chat = theme.chat
     var actionSheet = theme.actionSheet
     
-    var bubbleColors = bubbleColors
     var outgoingAccent: UIColor?
     var suggestedWallpaper: TelegramWallpaper?
+    
+    var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
         if day {
             let accentColor = accentColor ?? defaultDayAccentColor
