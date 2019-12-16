@@ -369,9 +369,10 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.bottom = max(insets.bottom, additionalInsets.bottom)
         
         var addedInsets: UIEdgeInsets?
         if layout.size.width > 480.0 {
@@ -551,7 +552,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
+                        self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
                         updatedNode.activate()
                     }
                 } else {
@@ -684,6 +685,11 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let searchNode = self.searchNode {
+            if !self.navigationBar.isHidden && self.navigationBar.supernode != nil {
+                if let result = self.navigationBar.hitTest(self.view.convert(point, to: self.navigationBar.view), with: event) {
+                    return result
+                }
+            }
             if let result = searchNode.hitTest(point, with: event) {
                 return result
             }

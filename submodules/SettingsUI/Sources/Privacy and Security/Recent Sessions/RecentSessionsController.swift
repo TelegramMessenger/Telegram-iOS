@@ -447,7 +447,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext, webSessionsContext: WebSessionsContext) -> ViewController {
+public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext, webSessionsContext: WebSessionsContext, websitesOnly: Bool) -> ViewController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
     let updateState: ((RecentSessionsControllerState) -> RecentSessionsControllerState) -> Void = { f in
@@ -459,6 +459,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -468,8 +469,23 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     let terminateOtherSessionsDisposable = MetaDisposable()
     actionsDisposable.add(terminateOtherSessionsDisposable)
     
-    let mode = ValuePromise<RecentSessionsMode>(.sessions)
-    let websitesPromise = Promise<([WebAuthorization], [PeerId : Peer])?>(nil)
+    let didAppearValue = ValuePromise<Bool>(false)
+    
+    if websitesOnly {
+        let autoDismissDisposable = (webSessionsContext.state
+        |> filter { !$0.isLoadingMore && $0.sessions.isEmpty }
+        |> take(1)
+        |> mapToSignal { _ in
+            return didAppearValue.get()
+            |> filter { $0 }
+            |> take(1)
+        }
+        |> deliverOnMainQueue).start(next: { _ in
+            dismissImpl?()
+        })
+    }
+    
+    let mode = ValuePromise<RecentSessionsMode>(websitesOnly ? .websites : .sessions)
     
     let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
@@ -636,16 +652,11 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         
         let emptyStateItem: ItemListControllerEmptyStateItem? = nil
-        /*if sessionsState.sessions.isEmpty {
-            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-        } else if sessionsState.sessions.count == 1 && mode == .sessions {
-            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-        }*/
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]
-        if !websites.isEmpty {
-            title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
+        if websitesOnly {
+            title = .text(presentationData.strings.AuthSessions_LoggedIn)
         } else {
             title = .text(presentationData.strings.AuthSessions_DevicesTitle)
         }
@@ -678,6 +689,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     controller.titleControlValueChanged = { [weak mode] index in
         mode?.set(index == 0 ? .sessions : .websites)
     }
+    controller.didAppear = { _ in
+        didAppearValue.set(true)
+    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
@@ -685,6 +699,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     }
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
     }
     
     return controller
