@@ -226,6 +226,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public var scrollingInitiated: (() -> Void)?
     public var scrollingCompleted: (() -> Void)?
     public var interactiveScrollingEnded: (() -> Void)?
+    public var interactiveScrollingWillBeEnded: ((CGPoint, CGPoint) -> Void)?
     public var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     
     public final var floatingSections = false
@@ -372,6 +373,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         self.updateItemNodeVisibilititesAndScrolling()
         self.updateVisibleContentOffset()
         self.scrollingInitiated?()
+    }
+    
+    public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        self.interactiveScrollingWillBeEnded?(velocity, targetContentOffset.pointee)
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {

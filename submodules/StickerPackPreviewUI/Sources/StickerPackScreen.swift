@@ -157,18 +157,28 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
-        self.gridNode.scrollingCompleted = { [weak self] in
+        self.gridNode.interactiveScrollingWillBeEnded = { [weak self] velocity, targetOffset in
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
-            let contentOffset = strongSelf.gridNode.scrollView.contentOffset
+            let contentOffset = targetOffset
             let insets = strongSelf.gridNode.scrollView.contentInset
-            if contentOffset.y <= 0.0 && contentOffset.y >= -insets.top {
-                if contentOffset.y <= -insets.top / 2.0 {
-                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -insets.top), animated: true)
-                } else {
+            var modalProgress: CGFloat = 0.0
+            
+            if contentOffset.y < 0.0 && contentOffset.y >= -insets.top {
+                if contentOffset.y > -insets.top / 2.0 || velocity.y <= -100.0 {
                     strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: true)
+                    modalProgress = 1.0
+                } else {
+                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -insets.top), animated: true)
                 }
+            } else if contentOffset.y >= 0.0 {
+                modalProgress = 1.0
+            }
+            
+            if abs(strongSelf.modalProgress - modalProgress) > CGFloat.ulpOfOne {
+                strongSelf.modalProgress = modalProgress
+                strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring))
             }
         }
         
@@ -346,6 +356,8 @@ private final class StickerPackContainer: ASDisplayNode {
         if updateLayout, let (layout, _, _, _) = self.validLayout {
             let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
             self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
+            
+            self.updateLayout(layout: layout, transition: .immediate)
         }
         
         let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, account: self.context.account, interaction: self.interaction)
@@ -385,12 +397,21 @@ private final class StickerPackContainer: ASDisplayNode {
         let fillingWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         let itemWidth = floor(fillingWidth / CGFloat(itemsPerRow))
         let gridLeftInset = floor((layout.size.width - fillingWidth) / 2.0)
+        let contentHeight: CGFloat
+        if let (_, items, _) = self.currentStickerPack {
+            let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
+            contentHeight = itemWidth * CGFloat(rowCount)
+        } else {
+            contentHeight = gridFrame.size.height
+        }
         
         let initialRevealedRowCount: CGFloat = 4.5
         
         let topInset = max(0.0, layout.size.height - floor(initialRevealedRowCount * itemWidth) - insets.top - actionAreaHeight - titleAreaInset)
         
-        let gridInsets = UIEdgeInsets(top: insets.top + topInset, left: gridLeftInset, bottom: actionAreaHeight, right: layout.size.width - fillingWidth - gridLeftInset)
+        let additionalGridBottomInset = max(0.0, gridFrame.size.height - actionAreaHeight - contentHeight)
+        
+        let gridInsets = UIEdgeInsets(top: insets.top + topInset, left: gridLeftInset, bottom: actionAreaHeight + additionalGridBottomInset, right: layout.size.width - fillingWidth - gridLeftInset)
         
         let firstTime = self.validLayout == nil
         self.validLayout = (layout, gridFrame, titleAreaInset, gridInsets)
@@ -427,13 +448,6 @@ private final class StickerPackContainer: ASDisplayNode {
         
         var expandProgressTransition = transition
         var expandUpdated = false
-        
-        let modalProgress: CGFloat = unclippedBackgroundY <= minBackgroundY ? 1.0 : 0.0
-        if abs(self.modalProgress - modalProgress) > CGFloat.ulpOfOne {
-            self.modalProgress = modalProgress
-            expandUpdated = true
-            expandProgressTransition = .animated(duration: 0.3, curve: .easeInOut)
-        }
         
         if abs(self.expandProgress - expandProgress) > CGFloat.ulpOfOne {
             self.expandProgress = expandProgress
