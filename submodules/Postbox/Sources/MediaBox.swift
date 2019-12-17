@@ -229,6 +229,9 @@ public final class MediaBox {
     }
     
     public func moveResourceData(from: MediaResourceId, to: MediaResourceId) {
+        if from.isEqual(to: to) {
+            return
+        }
         self.dataQueue.async {
             let pathsFrom = self.storePathsForId(from)
             let pathsTo = self.storePathsForId(to)
