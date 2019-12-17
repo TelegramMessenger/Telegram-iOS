@@ -56,6 +56,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.textNode.maximumNumberOfLines = 0
         
         var displayUndo = true
+        var undoText = presentationData.strings.Undo_Undo
+        var undoTextColor = UIColor(rgb: 0x5ac8fa)
         
         if presentationData.theme.overallDarkAppearance {
             self.animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
@@ -122,6 +124,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .actionSucceeded(title, text, cancel):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+            
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = true
+                undoText = cancel
+                undoTextColor = UIColor(rgb: 0xff7b74)
+                self.originalRemainingSeconds = 3
             case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -155,7 +169,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         self.buttonTextNode = ImmediateTextNode()
         self.buttonTextNode.displaysAsynchronously = false
-        self.buttonTextNode.attributedText = NSAttributedString(string: presentationData.strings.Undo_Undo, font: Font.regular(17.0), textColor: UIColor(rgb: 0x5ac8fa))
+        self.buttonTextNode.attributedText = NSAttributedString(string: undoText, font: Font.regular(17.0), textColor: undoTextColor)
         
         self.buttonNode = HighlightTrackingButtonNode()
         
@@ -175,11 +189,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         super.init()
         
         switch content {
-            case .removedChat:
-                self.panelWrapperNode.addSubnode(self.timerTextNode)
-                self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply:
-                break
+        case .removedChat:
+            self.panelWrapperNode.addSubnode(self.timerTextNode)
+            self.panelWrapperNode.addSubnode(self.statusNode)
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded:
+            break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)

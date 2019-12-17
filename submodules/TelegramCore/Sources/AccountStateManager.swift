@@ -130,6 +130,11 @@ public final class AccountStateManager {
         return self.significantStateUpdateCompletedPipe.signal()
     }
     
+    private let authorizationListUpdatesPipe = ValuePipe<Void>()
+    var authorizationListUpdates: Signal<Void, NoError> {
+        return self.authorizationListUpdatesPipe.signal()
+    }
+    
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
     
@@ -701,6 +706,10 @@ public final class AccountStateManager {
             
                 if !events.externallyUpdatedPeerId.isEmpty {
                     self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
+                }
+            
+                if events.authorizationListUpdated {
+                    self.authorizationListUpdatesPipe.putNext(Void())
                 }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {

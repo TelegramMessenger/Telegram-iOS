@@ -10,6 +10,7 @@ import CoreImage
 import AlertUI
 import TelegramPresentationData
 import TelegramCore
+import UndoUI
 
 private func parseAuthTransferUrl(_ url: URL) -> Data? {
     var tokenString: String?
@@ -72,7 +73,7 @@ private func generateFrameImage() -> UIImage? {
 
 public final class AuthTransferScanScreen: ViewController {
     private let context: AccountContext
-    private let activeSessionsContext: ActiveSessionsContext?
+    private let activeSessionsContext: ActiveSessionsContext
     private var presentationData: PresentationData
     
     private var codeDisposable: Disposable?
@@ -83,7 +84,7 @@ public final class AuthTransferScanScreen: ViewController {
         return self.displayNode as! AuthTransferScanScreenNode
     }
     
-    public init(context: AccountContext, activeSessionsContext: ActiveSessionsContext?) {
+    public init(context: AccountContext, activeSessionsContext: ActiveSessionsContext) {
         self.context = context
         self.activeSessionsContext = activeSessionsContext
         
@@ -99,7 +100,7 @@ public final class AuthTransferScanScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.inForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> deliverOnMainQueue).start(next: { [weak self] inForeground in
@@ -108,6 +109,10 @@ public final class AuthTransferScanScreen: ViewController {
             }
             (strongSelf.displayNode as! AuthTransferScanScreenNode).updateInForeground(inForeground)
         })
+        
+        #if DEBUG
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Test", style: .plain, target: self, action: #selector(self.testPressed))
+        #endif
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -120,8 +125,34 @@ public final class AuthTransferScanScreen: ViewController {
         self.approveDisposable.dispose()
     }
     
-    @objc private func backPressed() {
-        self.dismiss()
+    @objc private func testPressed() {
+        self.dismissWithSuccess(session: nil)
+    }
+    
+    private func dismissWithSuccess(session: RecentAccountSession?) {
+        if let navigationController = navigationController as? NavigationController {
+            let activeSessionsContext = self.activeSessionsContext
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: "Loggin Successful", text: "Telegram for macOS", cancel: "Terminate"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                if !value, let session = session {
+                    let _ = activeSessionsContext.remove(hash: session.hash).start()
+                }
+            }), in: .window(.root))
+            
+            var viewControllers = navigationController.viewControllers
+            viewControllers = viewControllers.filter { controller in
+                if controller is RecentSessionsController {
+                    return false
+                }
+                if controller === self {
+                    return false
+                }
+                return true
+            }
+            viewControllers.append(self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext))
+            navigationController.setViewControllers(viewControllers, animated: true)
+        } else {
+            self.dismiss()
+        }
     }
     
     override public func loadDisplayNode() {
@@ -145,36 +176,24 @@ public final class AuthTransferScanScreen: ViewController {
                 return
             }
             if let url = URL(string: code), let parsedToken = parseAuthTransferUrl(url) {
-                let _ = (getAuthTransferTokenInfo(network: strongSelf.context.account.network, token: parsedToken)
-                |> deliverOnMainQueue).start(next: { tokenInfo in
+                strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken, activeSessionsContext: strongSelf.activeSessionsContext)
+                |> deliverOnMainQueue).start(next: { session in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken)
-                    |> deliverOnMainQueue).start(error: { _ in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.controllerNode.codeWithError = code
-                        strongSelf.controllerNode.updateFocusedRect(nil)
-                    }, completed: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.controllerNode.codeWithError = nil
-                        let activeSessionsContext = strongSelf.activeSessionsContext
-                        Queue.mainQueue().after(1.5, {
-                            activeSessionsContext?.loadMore()
-                        })
-                        strongSelf.dismiss()
-                    }))
+                    strongSelf.controllerNode.codeWithError = nil
+                    let activeSessionsContext = strongSelf.activeSessionsContext
+                    Queue.mainQueue().after(1.5, {
+                        activeSessionsContext.loadMore()
+                    })
+                    strongSelf.dismissWithSuccess(session: session)
                 }, error: { _ in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.controllerNode.codeWithError = code
                     strongSelf.controllerNode.updateFocusedRect(nil)
-                })
+                }))
             }
         })
     }
