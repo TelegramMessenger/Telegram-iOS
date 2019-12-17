@@ -447,7 +447,10 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext, webSessionsContext: WebSessionsContext, websitesOnly: Bool) -> ViewController {
+private final class RecentSessionsControllerImpl: ItemListController, RecentSessionsController {
+}
+
+public func recentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext, webSessionsContext: WebSessionsContext, websitesOnly: Bool) -> ViewController & RecentSessionsController {
     let statePromise = ValuePromise(RecentSessionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: RecentSessionsControllerState())
     let updateState: ((RecentSessionsControllerState) -> RecentSessionsControllerState) -> Void = { f in
@@ -685,7 +688,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = RecentSessionsControllerImpl(context: context, state: signal)
     controller.titleControlValueChanged = { [weak mode] index in
         mode?.set(index == 0 ? .sessions : .websites)
     }

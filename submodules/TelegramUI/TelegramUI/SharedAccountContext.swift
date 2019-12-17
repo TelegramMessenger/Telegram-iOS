@@ -1150,6 +1150,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             present(legacyController)
         })
     }
+    
+    public func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController {
+        return recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: WebSessionsContext(account: context.account), websitesOnly: false)
+    }
 }
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default

@@ -392,6 +392,9 @@ public protocol AppLockContext: class {
     func failedUnlockAttempt()
 }
 
+public protocol RecentSessionsController: class {
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -454,6 +457,8 @@ public protocol SharedAccountContext: class {
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void)
     func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
+    
+    func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

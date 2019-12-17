@@ -962,6 +962,10 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
                         }
                         
+                        if type.hasPrefix("auth") {
+                            updatedState.authorizationListUpdated = true
+                        }
+                        
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
