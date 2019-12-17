@@ -777,7 +777,29 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         }
     }
     presentStickerPackController = { [weak controller] info in
-        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        let _ = (stickerPacks.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
+            guard let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] else {
+                return
+            }
+            var packs: [StickerPackReference] = []
+            var selectedIndex: Int = 0
+            var foundSelected = false
+            for entry in entries {
+                if let listInfo = entry.info as? StickerPackCollectionInfo {
+                    if listInfo.id == info.id {
+                        foundSelected = true
+                        selectedIndex = packs.count
+                    }
+                    packs.append(.id(id: listInfo.id.id, accessHash: listInfo.accessHash))
+                }
+            }
+            if !foundSelected {
+                packs.insert(.id(id: info.id.id, accessHash: info.accessHash), at: 0)
+            }
+            presentControllerImpl?(StickerPackScreen(context: context, stickerPacks: packs, selectedStickerPackIndex: selectedIndex, parentNavigationController: controller?.navigationController as? NavigationController), nil)
+        })
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)

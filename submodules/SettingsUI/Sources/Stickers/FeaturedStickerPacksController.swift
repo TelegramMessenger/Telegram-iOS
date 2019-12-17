@@ -264,7 +264,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     }
     
     presentStickerPackController = { [weak controller] info in
-        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(StickerPackScreen(context: context, stickerPacks: [.id(id: info.id.id, accessHash: info.accessHash)], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     
     return controller

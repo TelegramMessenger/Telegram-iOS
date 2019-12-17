@@ -151,17 +151,16 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 }
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                     if let strongSelf = self {
-                                        let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
-                                                    controller.sendSticker = { file, sourceNode, sourceRect in
-                                                        if let strongSelf = self {
-                                                            return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
-                                                        } else {
-                                                            return false
-                                                        }
-                                                    }
+                                        let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                            if let strongSelf = self {
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
+                                            } else {
+                                                return false
+                                            }
+                                        })
                                                     
-                                                    strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
-                                                    strongSelf.interfaceInteraction?.presentController(controller, nil)
+                                        strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
+                                        strongSelf.interfaceInteraction?.presentController(controller, nil)
                                     }
                                     return true
                                 }))

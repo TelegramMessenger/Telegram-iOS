@@ -126,8 +126,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
             } else {
-                let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-                controller.sendSticker = sendSticker
+                let controller = StickerPackScreen(context: context, stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
                 present(controller, nil)
             }
         case let .instantView(webpage, anchor):

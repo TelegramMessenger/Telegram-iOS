@@ -148,14 +148,14 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 switch attribute {
                                                 case let .Sticker(_, packReference, _):
                                                     if let packReference = packReference {
-                                                        let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
-                                                        controller.sendSticker = { file, sourceNode, sourceRect in
+                                                        let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                                                 return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
                                                             } else {
                                                                 return false
                                                             }
-                                                        }
+                                                            
+                                                        })
                                                         
                                                         controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                         controllerInteraction.presentController(controller, nil)
