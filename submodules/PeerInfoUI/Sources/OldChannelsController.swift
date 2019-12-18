@@ -212,12 +212,12 @@ private func oldChannelsEntries(presentationData: PresentationData, state: OldCh
 
 private final class OldChannelsActionPanelNode: ASDisplayNode {
     private let separatorNode: ASDisplayNode
-    private let buttonNode: SolidRoundedButtonNode
+    let buttonNode: SolidRoundedButtonNode
     
     init(presentationData: ItemListPresentationData, leaveAction: @escaping () -> Void) {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-        self.buttonNode = SolidRoundedButtonNode(title: presentationData.strings.OldChannels_Leave, icon: nil, theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: "", icon: nil, theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
         
@@ -258,11 +258,14 @@ private final class OldChannelsControllerImpl: ItemListController {
     private var displayPanel: Bool = false
     private var validLayout: ContainerViewLayout?
     
+    private var presentationData: ItemListPresentationData
     private var presentationDataDisposable: Disposable?
     
     var leaveAction: (() -> Void)?
     
     override init<ItemGenerationArguments>(presentationData: ItemListPresentationData, updatedPresentationData: Signal<ItemListPresentationData, NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+        self.presentationData = presentationData
+        
         var leaveActionImpl: (() -> Void)?
         self.panelNode = OldChannelsActionPanelNode(presentationData: presentationData, leaveAction: {
             leaveActionImpl?()
@@ -275,6 +278,7 @@ private final class OldChannelsControllerImpl: ItemListController {
             guard let strongSelf = self else {
                 return
             }
+            strongSelf.presentationData = presentationData
             strongSelf.panelNode.updatePresentationData(presentationData)
         })
         
@@ -316,9 +320,11 @@ private final class OldChannelsControllerImpl: ItemListController {
         transition.updateFrame(node: self.panelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.displayPanel ? (layout.size.height - panelHeight) : layout.size.height), size: CGSize(width: layout.size.width, height: panelHeight)), beginWithCurrentState: true)
     }
     
-    func updateDisplayPanel(_ value: Bool) {
-        if self.displayPanel != value {
-            self.displayPanel = value
+    func updatePanelPeerCount(_ value: Int) {
+        self.panelNode.buttonNode.title = self.presentationData.strings.OldChannels_Leave(Int32(value))
+        
+        if self.displayPanel != (value != 0) {
+            self.displayPanel = (value != 0)
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -340,7 +346,7 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var updateHasSelectedPeersImpl: ((Bool) -> Void)?
+    var updateSelectedPeersImpl: ((Int) -> Void)?
     
     var dismissImpl: (() -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
@@ -352,7 +358,7 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     let arguments = OldChannelsItemArguments(
         context: context,
         togglePeer: { peerId, ensureVisible in
-            var hasSelectedPeers = false
+            var selectedPeerCount = 0
             var didSelect = false
             updateState { state in
                 var state = state
@@ -362,10 +368,10 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
                     state.selectedPeers.insert(peerId)
                     didSelect = true
                 }
-                hasSelectedPeers = !state.selectedPeers.isEmpty
+                selectedPeerCount = state.selectedPeers.count
                 return state
             }
-            updateHasSelectedPeersImpl?(hasSelectedPeers)
+            updateSelectedPeersImpl?(selectedPeerCount)
             if didSelect && ensureVisible {
                 ensurePeerVisibleImpl?(peerId)
             }
@@ -441,8 +447,8 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     let controller = OldChannelsControllerImpl(context: context, state: signal)
     controller.navigationPresentation = .modal
     
-    updateHasSelectedPeersImpl = { [weak controller] value in
-        controller?.updateDisplayPanel(value)
+    updateSelectedPeersImpl = { [weak controller] value in
+        controller?.updatePanelPeerCount(value)
     }
     
     controller.leaveAction = {

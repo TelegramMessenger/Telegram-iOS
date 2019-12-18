@@ -732,6 +732,14 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 |> mapError { error -> UpdateChannelSlowModeError in
                     switch error {
                     case .tooManyChannels:
+                        Queue.mainQueue().async {
+                            updateState { state in
+                                var state = state
+                                state.modifiedSlowmodeTimeout = nil
+                                return state
+                            }
+                            resetSlowmodeVisualValueImpl?()
+                        }
                         return .tooManyChannels
                     default:
                         return .generic
@@ -753,12 +761,6 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                     progress?.dismiss()
                 }, error: { [weak progress] error in
                     progress?.dismiss()
-                    updateState { state in
-                        var state = state
-                        state.modifiedSlowmodeTimeout = nil
-                        return state
-                    }
-                    resetSlowmodeVisualValueImpl?()
                     
                     switch error {
                     case .tooManyChannels:

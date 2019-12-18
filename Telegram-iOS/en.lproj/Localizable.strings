@@ -5206,7 +5206,8 @@ Any member of this group will be able to see messages in the channel.";
 "OldChannels.NoticeCreateText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before creating a new one.";
 "OldChannels.NoticeUpgradeText" = "Sorry, you are a member of too many groups and channels.\nFor technical reasons, you need to leave some first before changing this setting in your groups.";
 "OldChannels.ChannelsHeader" = "MOST INACTIVE";
-"OldChannels.Leave" = "Leave";
+"OldChannels.Leave_1" = "Leave %@ Chat";
+"OldChannels.Leave_any" = "Leave %@ Chats";
 
 "OldChannels.ChannelFormat" = "channel, ";
 "OldChannels.GroupEmptyFormat" = "group, ";
