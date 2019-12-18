@@ -161,24 +161,27 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
-            let contentOffset = targetOffset
-            let insets = strongSelf.gridNode.scrollView.contentInset
-            var modalProgress: CGFloat = 0.0
-            
-            if contentOffset.y < 0.0 && contentOffset.y >= -insets.top {
-                if contentOffset.y > -insets.top / 2.0 || velocity.y <= -100.0 {
-                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: true)
+            DispatchQueue.main.async {
+                let contentOffset = targetOffset
+                let insets = strongSelf.gridNode.scrollView.contentInset
+                var modalProgress: CGFloat = 0.0
+                
+                if contentOffset.y < 0.0 && contentOffset.y >= -insets.top {
+                    strongSelf.gridNode.scrollView.stopScrollingAnimation()
+                    if contentOffset.y > -insets.top / 2.0 || velocity.y <= -100.0 {
+                        strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: true)
+                        modalProgress = 1.0
+                    } else {
+                        strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -insets.top), animated: true)
+                    }
+                } else if contentOffset.y >= 0.0 {
                     modalProgress = 1.0
-                } else {
-                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -insets.top), animated: true)
                 }
-            } else if contentOffset.y >= 0.0 {
-                modalProgress = 1.0
-            }
-            
-            if abs(strongSelf.modalProgress - modalProgress) > CGFloat.ulpOfOne {
-                strongSelf.modalProgress = modalProgress
-                strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring))
+                
+                if abs(strongSelf.modalProgress - modalProgress) > CGFloat.ulpOfOne {
+                    strongSelf.modalProgress = modalProgress
+                    strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring))
+                }
             }
         }
         
