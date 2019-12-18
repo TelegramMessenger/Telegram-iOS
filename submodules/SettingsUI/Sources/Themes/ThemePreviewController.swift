@@ -34,6 +34,11 @@ public final class ThemePreviewController: ViewController {
         return self.displayNode as! ThemePreviewControllerNode
     }
         
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -185,7 +190,7 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.apply()
             }
-        }, isPreview: isPreview)
+        }, isPreview: isPreview, ready: self._ready)
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
@@ -193,7 +198,7 @@ public final class ThemePreviewController: ViewController {
             self.controllerNode.wallpaperPromise.set(.single(initialWallpaper))
         } else if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
             self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug, settings: file.settings)
-            |> mapToSignal { wallpaper in
+            |> mapToSignal { wallpaper in                
                 return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
             })
         } else {

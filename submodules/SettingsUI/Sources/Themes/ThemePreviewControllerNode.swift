@@ -33,6 +33,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
     private let isPreview: Bool
+        
+    private let ready: Promise<Bool>
     
     public let wallpaperPromise = Promise<TelegramWallpaper>()
     
@@ -65,10 +67,12 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var statusDisposable: Disposable?
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool) {
+    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, ready: Promise<Bool>) {
         self.context = context
         self.previewTheme = previewTheme
         self.isPreview = isPreview
+        
+        self.ready = ready
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -101,6 +105,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        if self.instantChatBackgroundNode.image != nil {
+            self.ready.set(.single(true))
+        }
         if case .gradient = wallpaper {
             self.instantChatBackgroundNode.imageContentMode = .scaleToFill
         }
@@ -108,7 +115,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()
-        self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
         self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.blurredNode = BlurredImageNode()
@@ -230,7 +236,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if file.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                } else {
+                } else if strongSelf.instantChatBackgroundNode.image == nil {
                     signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
                         |> afterNext { next in
                             if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
@@ -238,8 +244,13 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
                             }
                     }
+                } else {
+                    signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
+                strongSelf.remoteChatBackgroundNode.imageUpdated = { [weak self] _ in
+                    self?.ready.set(.single(true))
+                }
 
                 strongSelf.fetchDisposable.set(freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file.file)).start())
                 

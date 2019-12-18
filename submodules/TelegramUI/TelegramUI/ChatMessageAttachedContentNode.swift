@@ -767,7 +767,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             var hasAnimation = true
                             var transition: ContainedViewLayoutTransition = .immediate
                             switch animation {
-                                case .None:
+                                case .None, .Crossfade:
                                     hasAnimation = false
                                 case let .System(duration):
                                     hasAnimation = true

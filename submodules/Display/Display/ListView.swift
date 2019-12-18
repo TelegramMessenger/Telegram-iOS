@@ -1687,7 +1687,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 updateIndices.subtract(explicitelyUpdateIndices)
                 
-                self.updateNodes(synchronous: options.contains(.Synchronous), synchronousLoads: options.contains(.PreferSynchronousResourceLoading), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, previousNodes: previousNodes, inputOperations: operations, completion: { updatedState, operations in
+                self.updateNodes(synchronous: options.contains(.Synchronous), synchronousLoads: options.contains(.PreferSynchronousResourceLoading), crossfade: options.contains(.AnimateCrossfade), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, previousNodes: previousNodes, inputOperations: operations, completion: { updatedState, operations in
                     self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
                         var updatedState = state
                         var updatedOperations = operations
@@ -1893,7 +1893,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateNodes(synchronous: Bool, synchronousLoads: Bool, animated: Bool, updateIndicesAndItems: [ListViewUpdateItem], inputState: ListViewState, previousNodes: [Int: QueueLocalObject<ListViewItemNode>], inputOperations: [ListViewStateOperation], completion: @escaping (ListViewState, [ListViewStateOperation]) -> Void) {
+    private func updateNodes(synchronous: Bool, synchronousLoads: Bool, crossfade: Bool, animated: Bool, updateIndicesAndItems: [ListViewUpdateItem], inputState: ListViewState, previousNodes: [Int: QueueLocalObject<ListViewItemNode>], inputOperations: [ListViewStateOperation], completion: @escaping (ListViewState, [ListViewStateOperation]) -> Void) {
         var state = inputState
         var operations = inputOperations
         var updateIndicesAndItems = updateIndicesAndItems
@@ -1905,11 +1905,19 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 let updateItem = updateIndicesAndItems[0]
                 if let previousNode = previousNodes[updateItem.index] {
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: animated ? .System(duration: insertionAnimationDuration) : .None, completion: { _, layout, apply in
+                    let updateAnimation: ListViewItemUpdateAnimation
+                    if crossfade {
+                        updateAnimation = .Crossfade
+                    } else if animated {
+                        updateAnimation = .System(duration: insertionAnimationDuration)
+                    } else {
+                        updateAnimation = .None
+                    }
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: updateAnimation, completion: { _, layout, apply in
                         state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, animation: animated ? .System(duration: insertionAnimationDuration) : .None, apply: apply, operations: &operations)
                         
                         updateIndicesAndItems.remove(at: 0)
-                        self.updateNodes(synchronous: synchronous, synchronousLoads: synchronousLoads, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
+                        self.updateNodes(synchronous: synchronous, synchronousLoads: synchronousLoads, crossfade: crossfade, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
                     })
                     break
                 } else {

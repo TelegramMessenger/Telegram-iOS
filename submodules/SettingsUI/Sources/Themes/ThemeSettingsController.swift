@@ -611,7 +611,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 settings.themeSpecificChatWallpapers[reference.index]
             }
             return (accentColor, wallpaper)
-        } |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in
+        }
+        |> map { accentColor, wallpaper -> (PresentationThemeAccentColor?, TelegramWallpaper) in
             let effectiveWallpaper: TelegramWallpaper
             if let wallpaper = wallpaper {
                 effectiveWallpaper = wallpaper
@@ -619,7 +620,24 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors)
                 effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
-            return chatServiceBackgroundColor(wallpaper: effectiveWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
+            return (accentColor, effectiveWallpaper)
+        }
+        |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationThemeAccentColor?, TelegramWallpaper), NoError> in
+            if case let .file(file) = wallpaper, file.id == 0 {
+                return cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                |> map { cachedWallpaper in
+                    if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
+                        return (accentColor, wallpaper)
+                    } else {
+                        return (accentColor, .builtin(WallpaperSettings()))
+                    }
+                }
+            } else {
+                return .single((accentColor, wallpaper))
+            }
+        }
+        |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in
+            return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
             |> map { serviceBackgroundColor in
                 return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor), wallpaper)
             }

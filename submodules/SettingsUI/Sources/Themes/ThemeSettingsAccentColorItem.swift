@@ -112,7 +112,13 @@ private class ThemeSettingsAccentColorIconItem: ListViewItem {
                     let (nodeLayout, apply) = layout(self, params)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
-                            apply(animation.isAnimated)
+                            let animated: Bool
+                            if case .Crossfade = animation {
+                                animated = true
+                            } else {
+                                animated = false
+                            }
+                            apply(animated)
                         })
                     }
                 }
@@ -240,7 +246,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
             transition.updateTransformScale(node: self.fillNode, scale: 1.2)
             transition.updateTransformScale(node: self.centerNode, scale: 1.0)
             transition.updateAlpha(node: self.centerNode, alpha: 1.0)
-            transition.updateTransformScale(node: self.dotsNode, scale: 0.7)
+            transition.updateTransformScale(node: self.dotsNode, scale: 0.8)
             transition.updateAlpha(node: self.dotsNode, alpha: 0.0)
         }
     }
@@ -270,7 +276,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                         if strokeColor == .clear {
                             strokeColor = fillColor
                         }
-                        
+                                                
                         //        if strokeColor.distance(to: theme.list.itemBlocksBackgroundColor) < 200 {
                         //            if strokeColor.distance(to: UIColor.white) < 200 {
                         //                strokeColor = UIColor(rgb: 0x999999)
@@ -319,7 +325,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                     strongSelf.dotsNode.bounds = bounds
                     
                     if updatedSelected {
-                        strongSelf.setSelected(item.selected, animated: currentItem != nil)
+                        strongSelf.setSelected(item.selected, animated: currentItem != nil && !animated)
                     }
                 }
             })
