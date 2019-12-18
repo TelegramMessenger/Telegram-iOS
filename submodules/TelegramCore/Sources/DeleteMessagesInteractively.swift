@@ -35,7 +35,15 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMess
         }
         for (peerId, peerMessageIds) in messageIdsByPeerId {
             if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
-                cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, messageIds: peerMessageIds, type: CloudChatRemoveMessagesType(type))
+                let remoteMessageIds = peerMessageIds.filter { id in
+                    if id.namespace == Namespaces.Message.Local {
+                        return false
+                    }
+                    return true
+                }
+                if !remoteMessageIds.isEmpty {
+                    cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, messageIds: remoteMessageIds, type: CloudChatRemoveMessagesType(type))
+                }
             } else if peerId.namespace == Namespaces.Peer.SecretChat {
                 if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                     var layer: SecretChatLayer?
