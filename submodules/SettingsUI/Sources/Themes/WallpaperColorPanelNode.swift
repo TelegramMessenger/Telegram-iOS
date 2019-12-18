@@ -334,6 +334,7 @@ struct WallpaperColorPanelNodeState {
     var secondColor: UIColor?
     var secondColorAvailable: Bool
     var rotateAvailable: Bool
+    var rotation: Int32
     var preview: Bool
 }
 
@@ -385,7 +386,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.firstColorFieldNode = ColorInputFieldNode(theme: theme)
         self.secondColorFieldNode = ColorInputFieldNode(theme: theme)
         
-        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, preview: false)
+        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, rotation: 0, preview: false)
         
         super.init()
         
@@ -528,6 +529,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         let previousFirstColor = self.state.firstColor
         let previousSecondColor = self.state.secondColor
         let previousPreview = self.state.preview
+        let previousRotation = self.state.rotation
         self.state = f(self.state)
         
         let firstColor: UIColor
@@ -556,7 +558,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         if firstColorWasRemovable != self.firstColorFieldNode.isRemovable {
             updateLayout = true
         }
-        
+    
         if updateLayout, let size = self.validLayout {
             switch self.state.selection {
                 case .first:
@@ -694,6 +696,17 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
         transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)
         
+        func degreesToRadians(_ degrees: CGFloat) -> CGFloat
+        {
+            var degrees = degrees
+            if degrees >= 270.0 {
+                degrees = degrees - 360.0
+            }
+            return degrees * CGFloat.pi / 180.0
+        }
+
+        transition.updateTransformRotation(node: self.rotateButton, angle: degreesToRadians(CGFloat(self.state.rotation)), beginWithCurrentState: true, completion: nil)
+        
         self.firstColorFieldNode.isRemovable = self.state.secondColor != nil || (self.state.defaultColor != nil && self.state.firstColor != nil)
         self.secondColorFieldNode.isRemovable = true
         
@@ -715,6 +728,15 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
     @objc private func rotatePressed() {
         self.rotate?()
+        self.updateState({ current in
+            var updated = current
+            var newRotation = updated.rotation + 45
+            if newRotation >= 360 {
+                newRotation = 0
+            }
+            updated.rotation = newRotation
+            return updated
+        })
     }
     
     @objc private func swapPressed() {

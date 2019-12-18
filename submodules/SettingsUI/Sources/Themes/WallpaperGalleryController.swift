@@ -374,12 +374,20 @@ public class WallpaperGalleryController: ViewController {
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         var wallpaper = wallpaper.isBasicallyEqual(to: strongSelf.presentationData.theme.chat.defaultWallpaper) ? nil : wallpaper
+                                        let themeReference: PresentationThemeReference
                                         if autoNightModeTriggered {
-                                            themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
+                                            themeReference = current.automaticThemeSwitchSetting.theme
                                         } else {
-                                            themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                                            themeReference = current.theme
                                         }
-                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        let accentColor = current.themeSpecificAccentColors[themeReference.index]
+                                        if let accentColor = accentColor, accentColor.baseColor == .custom {
+                                            themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColor.index)] = wallpaper
+                                        } else {
+                                            themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColor?.index ?? 0)] = nil
+                                            themeSpecificChatWallpapers[themeReference.index] = wallpaper
+                                        }
+                                        return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
                                     })

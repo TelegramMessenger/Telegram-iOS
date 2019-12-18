@@ -808,6 +808,39 @@ public extension ContainedViewLayoutTransition {
             })
         }
     }
+    
+    func updateTransformRotation(node: ASDisplayNode, angle: CGFloat, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        let t = node.layer.transform
+        let currentAngle = atan2(t.m12, t.m11)
+        if currentAngle.isEqual(to: angle) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            node.layer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousAngle: CGFloat
+            if beginWithCurrentState, let presentation = node.layer.presentation() {
+                let t = presentation.transform
+                previousAngle = atan2(t.m12, t.m11)
+            } else {
+                previousAngle = currentAngle
+            }
+            node.layer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
+            node.layer.animateRotation(from: previousAngle, to: angle, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
 }
 
 #if os(iOS)

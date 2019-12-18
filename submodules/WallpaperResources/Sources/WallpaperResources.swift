@@ -1056,39 +1056,41 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
     }
 }
 
-public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, accentColor: UIColor?, bubbleColors: (UIColor, UIColor)?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let colorsSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError>
+public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let colorsSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError>
     if case let .builtin(theme) = theme {
-        let backgroundColor: UIColor
         let incomingColor: UIColor
         let outgoingColor: (UIColor, UIColor)
-        var accentColor = accentColor
+        var accentColor = color?.color
+        var bubbleColors = color?.plainBubbleColors
+        var topBackgroundColor: UIColor
+        var bottomBackgroundColor: UIColor?
         switch theme {
         case .dayClassic:
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
                 if let bubbleColors = bubbleColors {
-                    backgroundColor = UIColor(rgb: 0xd6e2ee)
+                    topBackgroundColor = UIColor(rgb: 0xd6e2ee)
                     outgoingColor = bubbleColors
                 } else  {
-                    backgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                    topBackgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
                     let hsb = accentColor.hsb
                     let bubbleColor = UIColor(hue: hsb.0, saturation: hsb.2 > 0.0 ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0)
                     outgoingColor = (bubbleColor, bubbleColor)
                 }
             } else {
-                backgroundColor = UIColor(rgb: 0xd6e2ee)
+                topBackgroundColor = UIColor(rgb: 0xd6e2ee)
                 outgoingColor = (UIColor(rgb: 0xe1ffc7), UIColor(rgb: 0xe1ffc7))
             }
         case .day:
-            backgroundColor = UIColor(rgb: 0xffffff)
+            topBackgroundColor = UIColor(rgb: 0xffffff)
             incomingColor = UIColor(rgb: 0xd5dde6)
             if accentColor == nil {
                 accentColor = UIColor(rgb: 0x007aff)
             }
             outgoingColor = bubbleColors ?? (accentColor!, accentColor!)
         case .night:
-            backgroundColor = UIColor(rgb: 0x000000)
+            topBackgroundColor = UIColor(rgb: 0x000000)
             incomingColor = UIColor(rgb: 0x1f1f1f)
             if accentColor == nil {
                 accentColor = UIColor(rgb: 0x313131)
@@ -1096,12 +1098,33 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             outgoingColor = bubbleColors ?? (accentColor!, accentColor!)
         case .nightAccent:
             let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
-            backgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+            topBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
             incomingColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
             let accentBubbleColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
             outgoingColor = bubbleColors ?? (accentBubbleColor, accentBubbleColor)
         }
-        colorsSignal = .single(((backgroundColor, nil), (incomingColor, incomingColor), outgoingColor, nil))
+        
+        var rotation: Int32?
+        if let wallpaper = wallpaper {
+            switch wallpaper {
+                case let .color(color):
+                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                case let .gradient(topColor, bottomColor, settings):
+                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
+                    bottomBackgroundColor = UIColor(rgb: UInt32(bitPattern: bottomColor))
+                    rotation = settings.rotation
+                case let .file(file):
+                    if let color = file.settings.color {
+                        topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                    }
+                    rotation = file.settings.rotation
+                default:
+                    topBackgroundColor = UIColor(rgb: 0xd6e2ee)
+            }
+        }
+        
+        colorsSignal = .single(((topBackgroundColor, bottomBackgroundColor), (incomingColor, incomingColor), outgoingColor, nil, rotation))
     } else {
         var resource: MediaResource?
         if case let .local(theme) = theme {
@@ -1111,9 +1134,10 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         }
         if let resource = resource {
             colorsSignal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
-            |> mapToSignal { data -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> in
+            |> mapToSignal { data -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
                 if let data = data, let theme = makePresentationTheme(data: data) {
-                    var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> = .complete()
+                    var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> = .complete()
+                    var rotation: Int32?
                     let backgroundColor: (UIColor, UIColor?)
                     let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
                     let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
@@ -1122,11 +1146,13 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                         case let .color(color):
                             backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-                        case let .gradient(topColor, bottomColor, _):
+                        case let .gradient(topColor, bottomColor, settings):
                             backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                            rotation = settings.rotation
                         case .image:
                             backgroundColor = (.black, nil)
                         case let .file(file):
+                            rotation = file.settings.rotation
                             if file.isPattern, let color = file.settings.color {
                                 backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) })
                             } else {
@@ -1138,7 +1164,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                                     convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                                     return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                                    |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?), NoError> in
+                                    |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {
                                             return .complete()
                                         }
@@ -1154,13 +1180,13 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                             return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
                                             |> mapToSignal { _ in
                                                 if let image = UIImage(data: fullSizeData) {
-                                                    return .single((backgroundColor, incomingColor, outgoingColor, image))
+                                                    return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
                                                 } else {
                                                     return .complete()
                                                 }
                                             }
                                         } else if let image = UIImage(data: fullSizeData) {
-                                            return .single((backgroundColor, incomingColor, outgoingColor, image))
+                                            return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
                                         } else {
                                             return .complete()
                                         }
@@ -1170,7 +1196,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                 }
                             }
                     }
-                    return .single((backgroundColor, incomingColor, outgoingColor, nil))
+                    return .single((backgroundColor, incomingColor, outgoingColor, nil, rotation))
                     |> then(wallpaperSignal)
                 } else {
                     return .complete()
@@ -1192,7 +1218,14 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     var locations: [CGFloat] = [0.0, 1.0]
                     let colorSpace = CGColorSpaceCreateDeviceRGB()
                     let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-                    c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: drawingRect.height), options: CGGradientDrawingOptions())
+                    c.saveGState()
+                    if let rotation = colors.4 {
+                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                        c.rotate(by: CGFloat(rotation) * CGFloat.pi / 180.0)
+                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                    }
+                    c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: drawingRect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                    c.restoreGState()
                 } else {
                     c.setFillColor(colors.0.0.cgColor)
                     c.fill(drawingRect)

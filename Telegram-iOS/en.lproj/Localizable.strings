@@ -5186,7 +5186,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "AuthSessions.AddDevice.UrlLoginHint" = "This code can be used to allow someone to log in to your Telegram account.\n\nTo confirm Telegram login, please go to Settings > Devices > Scan QR and scan the code.";
 
-"Appearance.RemoveThemeColor" = "Remove Color";
+"Appearance.RemoveThemeColor" = "Remove";
+"Appearance.RemoveThemeColorConfirmation" = "Remove Color";
 
 "WallpaperPreview.PatternTitle" = "Choose Pattern";
 "WallpaperPreview.PatternPaternDiscard" = "Discard";

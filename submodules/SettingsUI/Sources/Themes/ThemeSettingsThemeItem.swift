@@ -23,6 +23,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let accentColor: PresentationThemeAccentColor?
     var selected: Bool
     let theme: PresentationTheme
+    let wallpaper: TelegramWallpaper?
     
     var stableId: Int64 {
         return self.themeReference.index
@@ -47,6 +48,9 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.wallpaper != rhs.wallpaper {
+            return false
+        }
         return true
     }
     
@@ -55,7 +59,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, themeReference: self.themeReference, accentColor: self.accentColor, selected: self.selected, title: self.title, theme: self.theme, action: action, contextAction: contextAction)
+        return ThemeSettingsThemeIconItem(context: context, themeReference: self.themeReference, accentColor: self.accentColor, selected: self.selected, title: self.title, theme: self.theme, wallpaper: self.wallpaper, action: action, contextAction: contextAction)
     }
 }
 
@@ -67,16 +71,18 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let selected: Bool
     let title: String
     let theme: PresentationTheme
+    let wallpaper: TelegramWallpaper?
     let action: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(context: AccountContext, themeReference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?, selected: Bool, title: String, theme: PresentationTheme, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, themeReference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?, selected: Bool, title: String, theme: PresentationTheme, wallpaper: TelegramWallpaper?, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.themeReference = themeReference
         self.accentColor = accentColor
         self.selected = selected
         self.title = title
         self.theme = theme
+        self.wallpaper = wallpaper
         self.action = action
         self.contextAction = contextAction
     }
@@ -248,7 +254,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
             }
-            if currentItem?.accentColor != item.accentColor {
+            if currentItem == nil || currentItem?.accentColor != item.accentColor {
                 updatedAccentColor = true
             }
             if currentItem?.theme !== item.theme {
@@ -273,7 +279,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         strongSelf.containerNode.isGestureEnabled = false
                     } else {
                         if updatedThemeReference || updatedAccentColor {
-                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: item.themeReference, accentColor: item.accentColor?.color, bubbleColors: item.accentColor?.plainBubbleColors))
+                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: item.themeReference, color: item.accentColor, wallpaper: item.wallpaper))
                         }
                         strongSelf.containerNode.isGestureEnabled = true
                     }
@@ -325,18 +331,20 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let themes: [PresentationThemeReference]
     let displayUnsupported: Bool
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
+    let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
         self.displayUnsupported = displayUnsupported
         self.themeSpecificAccentColors = themeSpecificAccentColors
+        self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
         self.contextAction = contextAction
@@ -382,16 +390,17 @@ private struct ThemeSettingsThemeItemNodeTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let crossfade: Bool
 }
 
-private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeSettingsThemeEntry], to toEntries: [ThemeSettingsThemeEntry]) -> ThemeSettingsThemeItemNodeTransition {
+private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeSettingsThemeEntry], to toEntries: [ThemeSettingsThemeEntry], crossfade: Bool) -> ThemeSettingsThemeItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: .Down) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: nil) }
     
-    return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade)
 }
 
 private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) -> Bool {
@@ -476,8 +485,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         self.enqueuedTransitions.remove(at: 0)
         
         var options = ListViewDeleteAndInsertOptions()
-        if self.initialized {
-            options.insert(.AnimateInsertion)
+        if self.initialized && transition.crossfade {
+            options.insert(.AnimateCrossfade)
         }
         
         var scrollToItem: ListViewScrollToItem?
@@ -488,7 +497,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             }
         }
         
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+        })
     }
 
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -576,7 +586,11 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
                         let accentColor = item.themeSpecificAccentColors[theme.index]
-                        entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme))
+                        var wallpaper: TelegramWallpaper?
+                        if let accentColor = accentColor {
+                            wallpaper = item.themeSpecificChatWallpapers[theme.index &+ Int64(accentColor.index)]
+                        }
+                        entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1
                     }
                     
@@ -586,7 +600,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
                         }
                     }
-                    let transition = preparedTransition(context: item.context, action: action, contextAction: item.contextAction, from: strongSelf.entries ?? [], to: entries)
+                    let previousEntries = strongSelf.entries ?? []
+                    let crossfade = previousEntries.count != entries.count
+                    let transition = preparedTransition(context: item.context, action: action, contextAction: item.contextAction, from: previousEntries, to: entries, crossfade: crossfade)
                     strongSelf.enqueueTransition(transition)
                     
                     strongSelf.entries = entries

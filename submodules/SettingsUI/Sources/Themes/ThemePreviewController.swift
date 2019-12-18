@@ -322,25 +322,21 @@ public final class ThemePreviewController: ViewController {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
-            return context.sharedContext.accountManager.transaction { transaction -> Void in
-                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                
-                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                    let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
-                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                    themeSpecificChatWallpapers[updatedTheme.index] = nil
-                    
-                    var theme = current.theme
+            let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+            return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
+                var updated: PresentationThemeSettings
+                if autoNightModeTriggered {
                     var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                    if autoNightModeTriggered {
-                        automaticThemeSwitchSetting.theme = updatedTheme
-                    } else {
-                        theme = updatedTheme
-                    }
-                    
-                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                })
-            }
+                    automaticThemeSwitchSetting.theme = updatedTheme
+                    updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                } else {
+                    updated = current.withUpdatedTheme(updatedTheme)
+                }
+                
+                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                themeSpecificChatWallpapers[updatedTheme.index] = nil
+                return updated.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
+            })
         }
         
         var cancelImpl: (() -> Void)?

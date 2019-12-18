@@ -182,8 +182,16 @@ final class ThemeGridController: ViewController {
                             let presentationData = strongSelf.presentationData
                             let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                let themeReference: PresentationThemeReference
+                                if presentationData.autoNightModeTriggered {
+                                    themeReference = current.automaticThemeSwitchSetting.theme
+                                } else {
+                                    themeReference = current.theme
+                                }
+                                let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
                                 themeSpecificChatWallpapers[current.theme.index] = nil
-                                return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                themeSpecificChatWallpapers[current.theme.index &+ Int64(accentColorIndex)] = nil
+                                return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                             })).start()
                             break
                         }
@@ -233,18 +241,8 @@ final class ThemeGridController: ViewController {
                             
                             let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
                                 let presentationData = strongSelf.presentationData
-                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                                        let current: PresentationThemeSettings
-                                        if let entry = entry as? PresentationThemeSettings {
-                                            current = entry
-                                        } else {
-                                            current = PresentationThemeSettings.defaultSettings
-                                        }
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        themeSpecificChatWallpapers[current.theme.index] = nil
-                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: [:], useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                    })
+                                let _ = updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
+                                    return current.withUpdatedThemeSpecificChatWallpapers([:])
                                 }).start()
                                 
                                 let _ = (telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network)

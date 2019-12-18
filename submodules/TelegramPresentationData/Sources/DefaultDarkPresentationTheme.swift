@@ -190,6 +190,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     
     return PresentationTheme(
         name: theme.name,
+        index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
         intro: intro,
@@ -515,6 +516,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
 
     return PresentationTheme(
         name: .builtin(.night),
+        index: PresentationThemeReference.builtin(.night).index,
         referenceTheme: .night,
         overallDarkAppearance: true,
         intro: intro,
