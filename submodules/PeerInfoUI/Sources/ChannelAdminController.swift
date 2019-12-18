@@ -1148,6 +1148,10 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     })
                                 }
                             }, error: { error in
+                                updateState { current in
+                                    return current.withUpdatedUpdating(false)
+                                }
+                                
                                 if case let .addMemberError(error) = error {
                                     var text = presentationData.strings.Login_UnknownError
                                     if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
