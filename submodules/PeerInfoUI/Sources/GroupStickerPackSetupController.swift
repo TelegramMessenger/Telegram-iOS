@@ -490,7 +490,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     }
     presentStickerPackController = { [weak controller] info in
         dismissInputImpl?()
-        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(StickerPackScreen(context: context, stickerPacks: [.id(id: info.id.id, accessHash: info.accessHash)], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {

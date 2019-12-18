@@ -25,6 +25,7 @@ static_library(
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/UndoUI:UndoUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

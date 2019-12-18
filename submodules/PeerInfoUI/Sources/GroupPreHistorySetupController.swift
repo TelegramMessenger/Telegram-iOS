@@ -124,6 +124,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -161,14 +162,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                 if let value = value, value != defaultValue {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                            guard let upgradedPeerId = upgradedPeerId else {
-                                return .single(nil)
-                            }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
@@ -177,6 +171,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                                 return .complete()
                             }
                             |> then(.single(upgradedPeerId))
+                            |> castError(ConvertGroupToSupergroupError.self)
                         }
                         |> deliverOnMainQueue
                         applyDisposable.set((signal
@@ -185,6 +180,13 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
                                 upgradedToSupergroup(upgradedPeerId, {
                                     dismissImpl?()
                                 })
+                            }
+                        }, error: { error in
+                            switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                            default:
+                                break
                             }
                         }))
                     } else {
@@ -212,6 +214,9 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     return controller
 }

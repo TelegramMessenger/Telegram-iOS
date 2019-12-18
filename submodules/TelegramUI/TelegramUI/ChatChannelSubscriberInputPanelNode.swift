@@ -137,7 +137,11 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 let text: String
                 switch error {
                 case .tooMuchJoined:
-                    strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context))
+                    strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context, intent: .join, completed: { value in
+                        if value {
+                            self?.buttonPressed()
+                        }
+                    }))
                     return
                 default:
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {

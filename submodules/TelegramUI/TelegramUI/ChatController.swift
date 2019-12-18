@@ -6289,7 +6289,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 videoRecorderValue.completeVideo()
                 self.videoRecorder.set(.single(nil))
             } else {
-                if videoRecorderValue.stopVideo() {
+                if case .preview = updatedAction, videoRecorderValue.stopVideo() {
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
                             return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))

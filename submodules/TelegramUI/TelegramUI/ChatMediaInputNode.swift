@@ -738,14 +738,13 @@ final class ChatMediaInputNode: ChatInputNode {
                 return
             }
             strongSelf.view.window?.endEditing(true)
-            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
-            controller.sendSticker = { fileReference, sourceNode, sourceRect in
+            let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [.id(id: info.id.id, accessHash: info.accessHash)], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                 if let strongSelf = self {
                     return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
                 } else {
                     return false
                 }
-            }
+            })
             strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
@@ -975,14 +974,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
-                                                            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                            controller.sendSticker = { file, sourceNode, sourceRect in
+                                                            let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
                                                                     return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
                                                                 } else {
                                                                     return false
                                                                 }
-                                                            }
+                                                            })
                                                             
                                                             strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                             strongSelf.controllerInteraction.presentController(controller, nil)
@@ -1090,14 +1088,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
-                                                                    let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                                    controller.sendSticker = { file, sourceNode, sourceRect in
-                                                                        if let strongSelf = self {
-                                                                            return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
-                                                                        } else {
-                                                                            return false
-                                                                        }
-                                                                    }
+                                                                    let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                                                                                                               if let strongSelf = self {
+                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                                                                                               } else {
+                                                                                                                                                   return false
+                                                                                                                                               }
+                                                                    })
                                                           
                                                                     strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                                     strongSelf.controllerInteraction.presentController(controller, nil)

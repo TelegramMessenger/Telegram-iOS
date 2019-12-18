@@ -4167,29 +4167,15 @@ public extension Api {
                     })
                 }
             
-                public static func acceptLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func acceptLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Authorization>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1122447801)
+                    buffer.appendInt32(-392909491)
                     serializeBytes(token, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.acceptLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "auth.acceptLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Authorization? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Updates?
+                        var result: Api.Authorization?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func checkLoginToken(token: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoginTokenInfo>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2102383792)
-                    serializeBytes(token, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.checkLoginToken", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoginTokenInfo? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.auth.LoginTokenInfo?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.auth.LoginTokenInfo
+                            result = Api.parse(reader, signature: signature) as? Api.Authorization
                         }
                         return result
                     })

@@ -310,8 +310,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                     return true
                 }
-                let controller = StickerPackPreviewController(context: params.context, stickerPack: reference, parentNavigationController: params.navigationController)
-                controller.sendSticker = params.sendSticker
+                let controller = StickerPackScreen(context: params.context, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker)
                 params.dismissInput()
                 params.present(controller, nil)
                 return true

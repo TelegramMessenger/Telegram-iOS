@@ -126,8 +126,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
             } else {
-                let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
-                controller.sendSticker = sendSticker
+                let controller = StickerPackScreen(context: context, stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
                 present(controller, nil)
             }
         case let .instantView(webpage, anchor):
@@ -136,7 +135,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, subject: nil))
-            }), nil)
+            }, parentNavigationController: navigationController), nil)
         case let .localization(identifier):
             dismissInput()
             present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)

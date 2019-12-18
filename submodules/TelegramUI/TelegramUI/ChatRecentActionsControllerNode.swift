@@ -146,7 +146,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         switch entry.entry.event.action {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
-                                    strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: new, parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
                                     return true
                                 }
                             default:
@@ -779,7 +779,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
-                        strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
+                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, stickerPacks: [.name(name)], parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
@@ -787,7 +787,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
-                        }), nil)
+                        }, parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:

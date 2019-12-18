@@ -218,15 +218,14 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
                 
-                let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                controller.sendSticker = { [weak self] fileReference, sourceNode, sourceRect in
+                let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [.id(id: info.id.id, accessHash: info.accessHash)], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
                         return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
                     } else {
                         return false
                     }
-                }
-                strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                })
+                strongSelf.controllerInteraction.presentController(controller, nil)
             }
         }, install: { [weak self] info in
             if let strongSelf = self {

@@ -36,6 +36,7 @@ public enum ChannelDiscussionGroupError {
     case generic
     case groupHistoryIsCurrentlyPrivate
     case hasNotPermissions
+    case tooManyChannels
 }
 
 public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, channelId: PeerId?, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {

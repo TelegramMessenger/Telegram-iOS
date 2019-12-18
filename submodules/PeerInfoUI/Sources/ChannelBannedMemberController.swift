@@ -390,6 +390,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     
     let peerView = Promise<PeerView>()
     peerView.set(context.account.viewTracker.peerView(peerId))
@@ -654,7 +655,15 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                 if peerId.namespace == Namespaces.Peer.CloudGroup {
                                     let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                                     |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<PeerId?, NoError> in
+                                    |> `catch` { error -> Signal<PeerId?, NoError> in
+                                        switch error {
+                                        case .tooManyChannels:
+                                            Queue.mainQueue().async {
+                                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                                            }
+                                        default:
+                                            break
+                                        }
                                         return .single(nil)
                                     }
                                     |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
@@ -679,6 +688,12 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                             upgradedToSupergroup(upgradedPeerId, {
                                                 dismissImpl?()
                                             })
+                                        } else {
+                                            updateState { current in
+                                                var current = current
+                                                current.updating = false
+                                                return current
+                                            }
                                         }
                                     }, error: { _ in
                                         updateState { current in
@@ -747,6 +762,9 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     return controller
 }

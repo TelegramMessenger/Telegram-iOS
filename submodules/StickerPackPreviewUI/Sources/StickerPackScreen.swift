@@ -53,6 +53,7 @@ private enum StickerPackNextAction {
 }
 
 private final class StickerPackContainer: ASDisplayNode {
+    let index: Int
     private let context: AccountContext
     private var presentationData: PresentationData
     private let stickerPack: StickerPackReference
@@ -87,9 +88,12 @@ private final class StickerPackContainer: ASDisplayNode {
     var modalProgress: CGFloat = 0.0
     let expandProgressUpdated: (StickerPackContainer, ContainedViewLayoutTransition) -> Void
     
+    private var isDismissed: Bool = false
+    
     private let interaction: StickerPackPreviewInteraction
     
-    init(context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+        self.index = index
         self.context = context
         self.presentationData = presentationData
         self.stickerPack = stickerPack
@@ -139,16 +143,42 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         self.gridNode.interactiveScrollingEnded = { [weak self] in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
             let contentOffset = strongSelf.gridNode.scrollView.contentOffset
             let insets = strongSelf.gridNode.scrollView.contentInset
             
             if contentOffset.y <= -insets.top - 30.0 {
+                strongSelf.isDismissed = true
                 DispatchQueue.main.async {
                     self?.requestDismiss()
                 }
+            }
+        }
+        
+        self.gridNode.interactiveScrollingWillBeEnded = { [weak self] velocity, targetOffset in
+            guard let strongSelf = self, !strongSelf.isDismissed else {
+                return
+            }
+            let contentOffset = targetOffset
+            let insets = strongSelf.gridNode.scrollView.contentInset
+            var modalProgress: CGFloat = 0.0
+            
+            if contentOffset.y < 0.0 && contentOffset.y >= -insets.top {
+                if contentOffset.y > -insets.top / 2.0 || velocity.y <= -100.0 {
+                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: true)
+                    modalProgress = 1.0
+                } else {
+                    strongSelf.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -insets.top), animated: true)
+                }
+            } else if contentOffset.y >= 0.0 {
+                modalProgress = 1.0
+            }
+            
+            if abs(strongSelf.modalProgress - modalProgress) > CGFloat.ulpOfOne {
+                strongSelf.modalProgress = modalProgress
+                strongSelf.expandProgressUpdated(strongSelf, .animated(duration: 0.4, curve: .spring))
             }
         }
         
@@ -326,6 +356,8 @@ private final class StickerPackContainer: ASDisplayNode {
         if updateLayout, let (layout, _, _, _) = self.validLayout {
             let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
             self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
+            
+            self.updateLayout(layout: layout, transition: .immediate)
         }
         
         let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, account: self.context.account, interaction: self.interaction)
@@ -336,7 +368,7 @@ private final class StickerPackContainer: ASDisplayNode {
         guard let (_, gridFrame, titleAreaInset, gridInsets) = self.validLayout else {
             return 0.0
         }
-        return gridFrame.minY + gridInsets.top - titleAreaInset
+        return min(self.backgroundNode.frame.minY, gridFrame.minY + gridInsets.top - titleAreaInset)
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -365,12 +397,21 @@ private final class StickerPackContainer: ASDisplayNode {
         let fillingWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         let itemWidth = floor(fillingWidth / CGFloat(itemsPerRow))
         let gridLeftInset = floor((layout.size.width - fillingWidth) / 2.0)
+        let contentHeight: CGFloat
+        if let (_, items, _) = self.currentStickerPack {
+            let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
+            contentHeight = itemWidth * CGFloat(rowCount)
+        } else {
+            contentHeight = gridFrame.size.height
+        }
         
         let initialRevealedRowCount: CGFloat = 4.5
         
         let topInset = max(0.0, layout.size.height - floor(initialRevealedRowCount * itemWidth) - insets.top - actionAreaHeight - titleAreaInset)
         
-        let gridInsets = UIEdgeInsets(top: insets.top + topInset, left: gridLeftInset, bottom: actionAreaHeight, right: layout.size.width - fillingWidth - gridLeftInset)
+        let additionalGridBottomInset = max(0.0, gridFrame.size.height - actionAreaHeight - contentHeight)
+        
+        let gridInsets = UIEdgeInsets(top: insets.top + topInset, left: gridLeftInset, bottom: actionAreaHeight + additionalGridBottomInset, right: layout.size.width - fillingWidth - gridLeftInset)
         
         let firstTime = self.validLayout == nil
         self.validLayout = (layout, gridFrame, titleAreaInset, gridInsets)
@@ -407,13 +448,6 @@ private final class StickerPackContainer: ASDisplayNode {
         
         var expandProgressTransition = transition
         var expandUpdated = false
-        
-        let modalProgress: CGFloat = unclippedBackgroundY < minBackgroundY ? 1.0 : 0.0
-        if abs(self.modalProgress - modalProgress) > CGFloat.ulpOfOne {
-            self.modalProgress = modalProgress
-            expandUpdated = true
-            expandProgressTransition = .animated(duration: 0.3, curve: .easeInOut)
-        }
         
         if abs(self.expandProgress - expandProgress) > CGFloat.ulpOfOne {
             self.expandProgress = expandProgress
@@ -478,11 +512,13 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let stickerPacks: [StickerPackReference]
     private let modalProgressUpdated: (CGFloat, ContainedViewLayoutTransition) -> Void
     private let dismissed: () -> Void
+    private let presentInGlobalOverlay: (ViewController, Any?) -> Void
+    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private let dimNode: ASDisplayNode
     private let containerContainingNode: ASDisplayNode
     
-    private var containers: [StickerPackContainer] = []
+    private var containers: [Int: StickerPackContainer] = [:]
     private var selectedStickerPackIndex: Int
     private var relativeToSelectedStickerPackTransition: CGFloat = 0.0
     
@@ -501,6 +537,8 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.selectedStickerPackIndex = initialSelectedStickerPackIndex
         self.modalProgressUpdated = modalProgressUpdated
         self.dismissed = dismissed
+        self.presentInGlobalOverlay = presentInGlobalOverlay
+        self.sendSticker = sendSticker
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -510,71 +548,9 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         
         super.init()
         
-        self.containers = self.stickerPacks.map { stickerPack in
-            return StickerPackContainer(context: context, presentationData: self.presentationData, stickerPack: stickerPack, decideNextAction: { [weak self] container, action in
-                guard let strongSelf = self, let layout = strongSelf.validLayout, let index = strongSelf.containers.index(where: { $0 === container }) else {
-                    return .dismiss
-                }
-                if index == strongSelf.containers.count - 1 {
-                    return .dismiss
-                } else {
-                    switch action {
-                    case .add:
-                        var allAdded = true
-                        for i in index + 1 ..< strongSelf.containers.count {
-                            if let (_, _, installed) = strongSelf.containers[i].currentStickerPack {
-                                if !installed {
-                                    allAdded = false
-                                }
-                            } else {
-                                allAdded = false
-                            }
-                        }
-                        if allAdded {
-                            return .dismiss
-                        }
-                    case .remove:
-                        if strongSelf.containers.count == 1 {
-                            return .dismiss
-                        }
-                    }
-                }
-                
-                strongSelf.selectedStickerPackIndex = strongSelf.selectedStickerPackIndex + 1
-                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
-                return .navigatedNext
-            }, requestDismiss: { [weak self] in
-                self?.dismiss()
-            }, expandProgressUpdated: { [weak self] container, transition in
-                guard let strongSelf = self, let layout = strongSelf.validLayout, let index = strongSelf.containers.index(where: { $0 === container }) else {
-                    return
-                }
-                if index == strongSelf.selectedStickerPackIndex {
-                    let modalProgress = strongSelf.containers[strongSelf.selectedStickerPackIndex].modalProgress
-                    strongSelf.modalProgressUpdated(modalProgress, transition)
-                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
-                }
-            }, presentInGlobalOverlay: presentInGlobalOverlay,
-            sendSticker: sendSticker)
-        }
-        
-        for container in self.containers {
-            self.containerContainingNode.addSubnode(container)
-        }
-        
         self.addSubnode(self.dimNode)
         
         self.addSubnode(self.containerContainingNode)
-        
-        self._ready.set(combineLatest(self.containers.map { $0.isReady })
-        |> map { values -> Bool in
-            for value in values {
-                if !value {
-                    return false
-                }
-            }
-            return true
-        })
     }
     
     override func didLoad() {
@@ -593,29 +569,107 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.containerContainingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let expandProgress: CGFloat
-        if self.containers.count == 1 {
+        if self.stickerPacks.count == 1 {
             expandProgress = 1.0
         } else {
-            expandProgress = self.containers[self.selectedStickerPackIndex].expandProgress
+            expandProgress = self.containers[self.selectedStickerPackIndex]?.expandProgress ?? 0.0
         }
-        let scaledInset: CGFloat = 16.0
+        let scaledInset: CGFloat = 12.0
         let scaledDistance: CGFloat = 4.0
         let minScale = (layout.size.width - scaledInset * 2.0) / layout.size.width
         let containerScale = expandProgress * 1.0 + (1.0 - expandProgress) * minScale
         
         let containerVerticalOffset: CGFloat = (1.0 - expandProgress) * scaledInset * 2.0
         
-        for i in 0 ..< self.containers.count {
-            let container = self.containers[i]
-            
+        for i in 0 ..< self.stickerPacks.count {
             let indexOffset = i - self.selectedStickerPackIndex
             var scaledOffset: CGFloat = 0.0
             scaledOffset = -CGFloat(indexOffset) * (1.0 - expandProgress) * (scaledInset * 2.0) + CGFloat(indexOffset) * scaledDistance
             
-            transition.updateFrame(node: container, frame: CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size), beginWithCurrentState: true)
-            transition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
-            if container.validLayout?.0 != layout {
-                container.updateLayout(layout: layout, transition: transition)
+            if abs(indexOffset) <= 1 {
+                let containerTransition: ContainedViewLayoutTransition
+                let container: StickerPackContainer
+                if let current = self.containers[i] {
+                    containerTransition = transition
+                    container = current
+                } else {
+                    containerTransition = .immediate
+                    let index = i
+                    container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPack: self.stickerPacks[i], decideNextAction: { [weak self] container, action in
+                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                            return .dismiss
+                        }
+                        if index == strongSelf.stickerPacks.count - 1 {
+                            return .dismiss
+                        } else {
+                            switch action {
+                            case .add:
+                                var allAdded = true
+                                for i in index + 1 ..< strongSelf.stickerPacks.count {
+                                    if let container = strongSelf.containers[index], let (_, _, installed) = container.currentStickerPack {
+                                        if !installed {
+                                            allAdded = false
+                                        }
+                                    } else {
+                                        allAdded = false
+                                    }
+                                }
+                                if allAdded {
+                                    return .dismiss
+                                }
+                            case .remove:
+                                if strongSelf.stickerPacks.count == 1 {
+                                    return .dismiss
+                                }
+                            }
+                        }
+                        
+                        strongSelf.selectedStickerPackIndex = strongSelf.selectedStickerPackIndex + 1
+                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                        return .navigatedNext
+                    }, requestDismiss: { [weak self] in
+                        self?.dismiss()
+                    }, expandProgressUpdated: { [weak self] container, transition in
+                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                            return
+                        }
+                        if index == strongSelf.selectedStickerPackIndex, let container = strongSelf.containers[strongSelf.selectedStickerPackIndex] {
+                            let modalProgress = container.modalProgress
+                            strongSelf.modalProgressUpdated(modalProgress, transition)
+                            strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                        }
+                    }, presentInGlobalOverlay: presentInGlobalOverlay,
+                    sendSticker: sendSticker)
+                    self.containerContainingNode.addSubnode(container)
+                    self.containers[i] = container
+                }
+                
+                containerTransition.updateFrame(node: container, frame: CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size), beginWithCurrentState: true)
+                containerTransition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
+                if container.validLayout?.0 != layout {
+                    container.updateLayout(layout: layout, transition: containerTransition)
+                }
+            } else {
+                if let container = self.containers[i] {
+                    container.removeFromSupernode()
+                    self.containers.removeValue(forKey: i)
+                }
+            }
+        }
+        
+        if firstTime {
+            if !self.containers.isEmpty {
+                self._ready.set(combineLatest(self.containers.map { (_, container) in container.isReady })
+                |> map { values -> Bool in
+                    for value in values {
+                        if !value {
+                            return false
+                        }
+                    }
+                    return true
+                })
+            } else {
+                self._ready.set(.single(true))
             }
         }
     }
@@ -630,7 +684,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             if self.selectedStickerPackIndex == 0 {
                 self.relativeToSelectedStickerPackTransition = min(0.0, self.relativeToSelectedStickerPackTransition)
             }
-            if self.selectedStickerPackIndex == self.containers.count - 1 {
+            if self.selectedStickerPackIndex == self.stickerPacks.count - 1 {
                 self.relativeToSelectedStickerPackTransition = max(0.0, self.relativeToSelectedStickerPackTransition)
             }
             if let layout = self.validLayout {
@@ -641,14 +695,14 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             let velocity = recognizer.velocity(in: self.view)
             if abs(translation.x) > 30.0 {
                 let deltaIndex = translation.x > 0 ? -1 : 1
-                self.selectedStickerPackIndex = max(0, min(self.containers.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
+                self.selectedStickerPackIndex = max(0, min(self.stickerPacks.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
             } else if abs(velocity.x) > 100.0 {
                 let deltaIndex = velocity.x > 0 ? -1 : 1
-                self.selectedStickerPackIndex = max(0, min(self.containers.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
+                self.selectedStickerPackIndex = max(0, min(self.stickerPacks.count - 1, Int(self.selectedStickerPackIndex + deltaIndex)))
             }
             self.relativeToSelectedStickerPackTransition = 0.0
             if let layout = self.validLayout {
-                self.containerLayoutUpdated(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+                self.containerLayoutUpdated(layout, transition: .animated(duration: 0.35, curve: .spring))
             }
         default:
             break
@@ -659,7 +713,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.dimNode.alpha = 1.0
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
-        let minInset: CGFloat = (self.containers.map { container -> CGFloat in container.topContentInset }).max() ?? 0.0
+        let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
         self.containerContainingNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
     }
     
@@ -667,10 +721,12 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.dimNode.alpha = 0.0
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
         
-        let minInset: CGFloat = (self.containers.map { container -> CGFloat in container.topContentInset }).max() ?? 0.0
+        let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
         self.containerContainingNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
             completion()
         })
+        
+        self.modalProgressUpdated(0.0, .animated(duration: 0.2, curve: .easeInOut))
     }
     
     func dismiss() {
@@ -688,9 +744,10 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             return nil
         }
         
-        let selectedContainer = self.containers[self.selectedStickerPackIndex]
-        if selectedContainer.hitTest(self.view.convert(point, to: selectedContainer.view), with: event) == nil {
-            return self.dimNode.view
+        if let selectedContainer = self.containers[self.selectedStickerPackIndex] {
+            if selectedContainer.hitTest(self.view.convert(point, to: selectedContainer.view), with: event) == nil {
+                return self.dimNode.view
+            }
         }
         
         let result = super.hitTest(point, with: event)
@@ -708,6 +765,7 @@ public final class StickerPackScreen: ViewController {
     private let context: AccountContext
     private let stickerPacks: [StickerPackReference]
     private let initialSelectedStickerPackIndex: Int
+    private weak var parentNavigationController: NavigationController?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private var controllerNode: StickerPackScreenNode {
@@ -721,10 +779,11 @@ public final class StickerPackScreen: ViewController {
     
     private var alreadyDidAppear: Bool = false
     
-    public init(context: AccountContext, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    public init(context: AccountContext, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
         self.context = context
         self.stickerPacks = stickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
+        self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         
         super.init(navigationBarPresentationData: nil)

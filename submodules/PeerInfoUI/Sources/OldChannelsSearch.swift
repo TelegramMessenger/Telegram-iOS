@@ -195,8 +195,16 @@ private final class OldChannelsSearchContainerNode: SearchDisplayControllerConte
         
         self.addSubnode(self.listNode)
         
-        let interaction = OldChannelsSearchInteraction(togglePeer: { peerId in
+        let interaction = OldChannelsSearchInteraction(togglePeer: { [weak self] peerId in
             togglePeer(peerId)
+            
+            if let strongSelf = self {
+                strongSelf.listNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ContactsPeerItemNode, let peer = itemNode.chatPeer, peer.id == peerId {
+                        strongSelf.listNode.ensureItemNodeVisible(itemNode, curve: .Spring(duration: 0.3))
+                    }
+                }
+            }
         })
         
         let queryAndFoundItems: Signal<(String, [OldChannelsSearchEntry])?, NoError> = combineLatest(self.searchQuery.get(), peers, selectedPeerIds)

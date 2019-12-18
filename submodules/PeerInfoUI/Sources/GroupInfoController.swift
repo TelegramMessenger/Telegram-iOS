@@ -1772,7 +1772,15 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                 case .groupFull:
                                     let signal = convertGroupToSupergroup(account: context.account, peerId: peerView.peerId)
                                     |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<PeerId?, NoError> in
+                                    |> `catch` { error -> Signal<PeerId?, NoError> in
+                                        switch error {
+                                        case .tooManyChannels:
+                                            Queue.mainQueue().async {
+                                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                                            }
+                                        default:
+                                            break
+                                        }
                                         return .single(nil)
                                     }
                                     |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in

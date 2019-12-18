@@ -105,6 +105,12 @@ class ChatSlowmodeItemNode: ListViewItemNode {
         self.textNodes.forEach(self.addSubnode)
     }
     
+    func forceSetValue(_ value: Int32) {
+        if let sliderView = self.sliderView {
+            sliderView.value = CGFloat(value)
+        }
+    }
+    
     func updateSliderView() {
         if let sliderView = self.sliderView, let item = self.item {
             sliderView.maximumValue = CGFloat(allowedValues.count - 1)

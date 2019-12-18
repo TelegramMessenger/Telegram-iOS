@@ -8,7 +8,7 @@ public struct ActiveSessionsContextState: Equatable {
     public var sessions: [RecentAccountSession]
 }
 
-public final class ActiveSessionsContext {
+private final class ActiveSessionsContextImpl {
     private let account: Account
     private var _state: ActiveSessionsContextState {
         didSet {
@@ -18,13 +18,14 @@ public final class ActiveSessionsContext {
         }
     }
     private let _statePromise = Promise<ActiveSessionsContextState>()
-    public var state: Signal<ActiveSessionsContextState, NoError> {
+    var state: Signal<ActiveSessionsContextState, NoError> {
         return self._statePromise.get()
     }
     
     private let disposable = MetaDisposable()
+    private var authorizationListUpdatesDisposable: Disposable?
     
-    public init(account: Account) {
+    init(account: Account) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
@@ -32,14 +33,20 @@ public final class ActiveSessionsContext {
         self._statePromise.set(.single(self._state))
         
         self.loadMore()
+        
+        self.authorizationListUpdatesDisposable = (account.stateManager.authorizationListUpdates
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            self?.loadMore()
+        })
     }
     
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
+        self.authorizationListUpdatesDisposable?.dispose()
     }
     
-    public func loadMore() {
+    func loadMore() {
         assert(Queue.mainQueue().isCurrent())
         
         if self._state.isLoadingMore {
@@ -59,7 +66,23 @@ public final class ActiveSessionsContext {
         }))
     }
     
-    public func remove(hash: Int64) -> Signal<Never, TerminateSessionError> {
+    func addSession(_ session: RecentAccountSession) {
+        var mergedSessions = self._state.sessions
+        var found = false
+        for i in 0 ..< mergedSessions.count {
+            if mergedSessions[i].hash == session.hash {
+                found = true
+                break
+            }
+        }
+        if !found {
+            mergedSessions.insert(session, at: 0)
+        }
+        
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions)
+    }
+    
+    func remove(hash: Int64) -> Signal<Never, TerminateSessionError> {
         assert(Queue.mainQueue().isCurrent())
         
         return terminateAccountSession(account: self.account, hash: hash)
@@ -82,7 +105,7 @@ public final class ActiveSessionsContext {
         }
     }
     
-    public func removeOther() -> Signal<Never, TerminateSessionError> {
+    func removeOther() -> Signal<Never, TerminateSessionError> {
         return terminateOtherAccountSessions(account: self.account)
         |> deliverOnMainQueue
         |> mapToSignal { [weak self] _ -> Signal<Never, TerminateSessionError> in
@@ -94,6 +117,68 @@ public final class ActiveSessionsContext {
             
             strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions)
             return .complete()
+        }
+    }
+}
+
+public final class ActiveSessionsContext {
+    private let impl: QueueLocalObject<ActiveSessionsContextImpl>
+    
+    public var state: Signal<ActiveSessionsContextState, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.state.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public init(account: Account) {
+        self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
+            return ActiveSessionsContextImpl(account: account)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+    
+    func addSession(_ session: RecentAccountSession) {
+        self.impl.with { impl in
+            impl.addSession(session)
+        }
+    }
+    
+    public func remove(hash: Int64) -> Signal<Never, TerminateSessionError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.remove(hash: hash).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func removeOther() -> Signal<Never, TerminateSessionError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.removeOther().start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
 }
