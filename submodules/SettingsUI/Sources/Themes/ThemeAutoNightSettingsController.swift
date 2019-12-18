@@ -68,7 +68,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     case settingInfo(PresentationTheme, String)
     
     case themeHeader(PresentationTheme, String)
-    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor])
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], [Int64: TelegramWallpaper])
     
     var section: ItemListSectionId {
         switch self {
@@ -186,8 +186,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors):
-                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors, lhsThemeChatWallpapers):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors, rhsThemeChatWallpapers) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors, lhsThemeChatWallpapers == rhsThemeChatWallpapers {
                     return true
                 } else {
                     return false
@@ -244,8 +244,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .themeHeader(theme, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
+            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, themeSpecificChatWallpapers):
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
                 }, contextAction: nil)
         }
@@ -313,7 +313,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             break
         case .system, .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
-            entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors))
+            entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors, settings.themeSpecificChatWallpapers))
     }
     
     return entries

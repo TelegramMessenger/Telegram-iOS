@@ -117,6 +117,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                 }
                                 
                                 if strongSelf.currentPresentationData?.theme.name == presentationData.theme.name {
+                                    let autoNightModeTriggered = strongSelf.currentPresentationData?.autoNightModeTriggered ?? false
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
                                         let updatedWallpaper: TelegramWallpaper
                                         if let currentSettings = currentWallpaper.settings {
@@ -124,10 +125,17 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                         } else {
                                             updatedWallpaper = wallpaper
                                         }
-                                        
+                                        let themeReference: PresentationThemeReference
+                                        if autoNightModeTriggered {
+                                            themeReference = current.automaticThemeSwitchSetting.theme
+                                        } else {
+                                            themeReference = current.theme
+                                        }
+                                        let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        themeSpecificChatWallpapers[current.theme.index] = updatedWallpaper
-                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        themeSpecificChatWallpapers[themeReference.index] = updatedWallpaper
+                                        themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColorIndex)] = updatedWallpaper
+                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })).start()
                                 }
                             }

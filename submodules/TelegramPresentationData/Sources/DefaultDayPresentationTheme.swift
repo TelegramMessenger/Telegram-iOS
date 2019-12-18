@@ -263,6 +263,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     
     return PresentationTheme(
         name: theme.name,
+        index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
         intro: intro,
@@ -705,6 +706,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
     
     return PresentationTheme(
         name: .builtin(day ? .day : .dayClassic),
+        index: PresentationThemeReference.builtin(day ? .day : .dayClassic).index,
         referenceTheme: day ? .day : .dayClassic,
         overallDarkAppearance: false,
         intro: intro,

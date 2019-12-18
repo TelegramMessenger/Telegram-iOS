@@ -156,12 +156,15 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
                 
                 let _ = (updatePresentationThemeSettingsInteractively(accountManager: accountManager, { current in
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                    let themeReference: PresentationThemeReference
                     if autoNightModeTriggered {
-                        themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
+                        themeReference = current.automaticThemeSwitchSetting.theme
                     } else {
-                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                        themeReference = current.theme
                     }
-                    return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
+                    themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColorIndex)] = wallpaper
+                    return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                 })).start()
             }
             

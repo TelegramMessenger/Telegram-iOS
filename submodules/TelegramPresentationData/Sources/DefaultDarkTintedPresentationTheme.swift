@@ -421,6 +421,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     
     return PresentationTheme(
         name: theme.name,
+        index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
         intro: intro,
@@ -782,6 +783,7 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
 
     return PresentationTheme(
         name: .builtin(.nightAccent),
+        index: PresentationThemeReference.builtin(.nightAccent).index,
         referenceTheme: .nightAccent,
         overallDarkAppearance: true,
         intro: intro,

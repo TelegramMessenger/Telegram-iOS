@@ -64,7 +64,7 @@ struct ThemeColorState {
         self.preview = false
         self.previousPatternWallpaper = nil
         self.patternWallpaper = nil
-        self.patternIntensity = 40
+        self.patternIntensity = 50
         self.motion = false
         self.defaultMessagesColor = nil
         self.messagesColors = nil
@@ -669,7 +669,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
 
             self.colorPanelNode.updateState({ _ in
-                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, preview: false)
+                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation ?? 0, preview: false)
             }, animated: animated)
             
             needsLayout = true
@@ -986,7 +986,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
         let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0), y: layout.size.height - bottomInset - 44.0), size: buttonSize)
 
-        var hasMotion: Bool = self.state.backgroundColors?.1 != nil || self.state.patternWallpaper != nil || self.state.displayPatternPanel
+        var hasMotion: Bool = self.state.patternWallpaper != nil || self.state.displayPatternPanel
         
         var patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
         var motionAlpha: CGFloat = displayOptionButtons && hasMotion ? 1.0 : 0.0

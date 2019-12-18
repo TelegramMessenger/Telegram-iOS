@@ -1723,12 +1723,17 @@ extension PresentationTheme: Codable {
             referenceTheme = .dayClassic
         }
         
+        let index: Int64
         if let decoder = decoder as? PresentationThemeDecoding {
             let serviceBackgroundColor = decoder.serviceBackgroundColor ?? defaultServiceBackgroundColor
             decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, serviceBackgroundColor: serviceBackgroundColor)
+            index = decoder.reference?.index ?? arc4random64()
+        } else {
+            index = arc4random64()
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),
+                  index: index,
                   referenceTheme: referenceTheme,
                   overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
                   intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),

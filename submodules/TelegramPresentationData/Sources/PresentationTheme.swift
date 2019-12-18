@@ -1105,6 +1105,7 @@ public enum PresentationThemeName: Equatable {
 
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
+    public let index: Int64
     public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
     public let intro: PresentationThemeIntro
@@ -1120,8 +1121,9 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
+        self.index = index
         self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
         self.intro = intro
@@ -1162,6 +1164,6 @@ public final class PresentationTheme: Equatable {
                     break
             }
         }
-        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
     }
 }
