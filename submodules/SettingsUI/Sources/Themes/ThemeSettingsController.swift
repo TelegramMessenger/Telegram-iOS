@@ -537,7 +537,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         
         let _ = (wallpaperSignal
-        |> deliverOnMainQueue).start(next: { coloredWallpaper in
+        |> deliverOnMainQueue).start(next: { presetWallpaper in
             let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
                 var currentTheme = current.theme
@@ -553,8 +553,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 var themeSpecificAccentColors = current.themeSpecificAccentColors
                 themeSpecificAccentColors[currentTheme.index] = color
                 
-                if case let .builtin(theme) = currentTheme, theme == .dayClassic || theme == .nightAccent {
-                    if let wallpaper = coloredWallpaper, let color = color {
+                if case let .builtin(theme) = currentTheme {
+                    if let wallpaper = presetWallpaper, let color = color {
                         themeSpecificChatWallpapers[currentTheme.index &+ Int64(color.index)] = wallpaper
                     } else if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
                         themeSpecificChatWallpapers[currentTheme.index] = nil

@@ -239,6 +239,7 @@ final class ThemeAccentColorController: ViewController {
                         if let coloredWallpaper = coloredWallpaper {
                             wallpaper = coloredWallpaper
                         }
+                        
                         themeSpecificChatWallpapers[currentTheme.index &+ Int64(index)] = wallpaper
                         themeSpecificCustomColors[currentTheme.index] = PresentationThemeCustomColors(colors: customColors)
                         

@@ -380,8 +380,13 @@ public class WallpaperGalleryController: ViewController {
                                         } else {
                                             themeReference = current.theme
                                         }
-                                        let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
-                                        themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColorIndex)] = wallpaper
+                                        let accentColor = current.themeSpecificAccentColors[themeReference.index]
+                                        if let accentColor = accentColor, accentColor.baseColor == .custom {
+                                            themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColor.index)] = wallpaper
+                                        } else {
+                                            themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColor?.index ?? 0)] = nil
+                                            themeSpecificChatWallpapers[themeReference.index] = wallpaper
+                                        }
                                         return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
