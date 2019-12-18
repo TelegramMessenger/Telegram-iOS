@@ -374,6 +374,19 @@ final class SharedApplicationContext {
         let apiHash: String = buildConfig.apiHash
         let languagesCategory = "ios"
         
+        let autolockDeadine: Signal<Int32?, NoError>
+        if #available(iOS 10.0, *) {
+            autolockDeadine = .single(nil)
+        } else {
+            autolockDeadine = self.context.get()
+            |> mapToSignal { context -> Signal<Int32?, NoError> in
+                guard let context = context else {
+                    return .single(nil)
+                }
+                return context.context.sharedContext.appLockContext.autolockDeadline
+            }
+        }
+        
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
@@ -383,7 +396,7 @@ final class SharedApplicationContext {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
