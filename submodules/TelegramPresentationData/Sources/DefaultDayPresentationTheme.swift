@@ -79,8 +79,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         )
     }
         
+    var incomingBubbleStrokeColor: UIColor?
     var outgoingBubbleFillColor: UIColor?
     var outgoingBubbleFillGradientColor: UIColor?
+    var outgoingBubbleHighlightedFill: UIColor?
     var outgoingBubbleStrokeColor: UIColor?
     var outgoingPrimaryTextColor: UIColor?
     var outgoingSecondaryTextColor: UIColor?
@@ -100,14 +102,19 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var outgoingSelectionBaseColor: UIColor?
     var outgoingCheckColor: UIColor?
     
+    if !day {
+        incomingBubbleStrokeColor = serviceBackgroundColor?.withAlphaComponent(0.4)
+        outgoingBubbleStrokeColor = serviceBackgroundColor?.withAlphaComponent(0.4)
+    }
+    
     if let bubbleColors = bubbleColors {
         outgoingBubbleFillColor = bubbleColors.0
         outgoingBubbleFillGradientColor = bubbleColors.1 ?? bubbleColors.0
         if day {
             outgoingBubbleStrokeColor = .clear
-        } else {
-            outgoingBubbleStrokeColor = UIColor(rgb: 0x86a9c9, alpha: 0.5)
         }
+        
+        outgoingBubbleHighlightedFill = outgoingBubbleFillColor?.withMultiplied(hue: 1.054, saturation: 1.589, brightness: 0.96)
         
         let lightnessColor = bubbleColors.0.mixedWith(bubbleColors.1 ?? bubbleColors.0, alpha: 0.5)
         if lightnessColor.lightness > 0.705 {
@@ -189,6 +196,14 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         defaultWallpaper: defaultWallpaper,
         message: chat.message.withUpdated(
             incoming: chat.message.incoming.withUpdated(
+                bubble: chat.message.incoming.bubble.withUpdated(
+                    withWallpaper: chat.message.incoming.bubble.withWallpaper.withUpdated(
+                        stroke: incomingBubbleStrokeColor
+                    ),
+                    withoutWallpaper: chat.message.incoming.bubble.withoutWallpaper.withUpdated(
+                        stroke: incomingBubbleStrokeColor
+                    )
+                ),
                 linkHighlightColor: accentColor?.withAlphaComponent(0.3),
                 accentTextColor: accentColor,
                 accentControlColor: accentColor,
@@ -209,13 +224,13 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                     withWallpaper: chat.message.outgoing.bubble.withWallpaper.withUpdated(
                         fill: outgoingBubbleFillColor,
                         gradientFill: outgoingBubbleFillGradientColor,
-                        highlightedFill: outgoingBubbleFillColor?.withMultipliedBrightnessBy(0.7),
+                        highlightedFill: outgoingBubbleHighlightedFill,
                         stroke: outgoingBubbleStrokeColor
                     ),
                     withoutWallpaper: chat.message.outgoing.bubble.withoutWallpaper.withUpdated(
                         fill: outgoingBubbleFillColor,
                         gradientFill: outgoingBubbleFillGradientColor,
-                        highlightedFill: outgoingBubbleFillColor?.withMultipliedBrightnessBy(0.7),
+                        highlightedFill: outgoingBubbleHighlightedFill,
                         stroke: outgoingBubbleStrokeColor
                     )
                 ),
@@ -448,7 +463,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
     
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5))),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: serviceBackgroundColor.withAlphaComponent(0.4)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: serviceBackgroundColor.withAlphaComponent(0.4))),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x525252, alpha: 0.6),
             linkTextColor: UIColor(rgb: 0x004bad),
@@ -469,7 +484,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
             actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596e89, alpha: 0.35)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: .clear),
             actionButtonsTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)), textSelectionColor: UIColor(rgb: 0x007ee5, alpha: 0.2), textSelectionKnobColor: UIColor(rgb: 0x007ee5)),
         outgoing: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5))),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: serviceBackgroundColor.withAlphaComponent(0.4)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: serviceBackgroundColor.withAlphaComponent(0.4))),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x008c09, alpha: 0.8),
             linkTextColor: UIColor(rgb: 0x004bad),
