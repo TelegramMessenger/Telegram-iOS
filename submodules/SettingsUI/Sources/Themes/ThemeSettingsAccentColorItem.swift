@@ -665,7 +665,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         }
         
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized {
+        if !self.initialized || transition.crossfade {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-24.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -700,9 +700,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
-                    strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                    strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                    if themeUpdated {
+                        strongSelf.listNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                    }
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.containerNode.insertSubnode(strongSelf.backgroundNode, at: 0)
