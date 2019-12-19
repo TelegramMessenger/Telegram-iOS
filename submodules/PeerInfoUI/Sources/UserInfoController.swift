@@ -1028,7 +1028,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
                                 }
                                 
-                                deleteSendMessageIntents(account: context.account, peerId: peerId)
+                                deleteSendMessageIntents(peerId: peerId)
                             })
                         ]),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -1098,7 +1098,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                             dismissImpl?()
                         }))
                         
-                        deleteSendMessageIntents(account: context.account, peerId: peerId)
+                        deleteSendMessageIntents(peerId: peerId)
                     })
                 })
             ]),

@@ -1232,14 +1232,12 @@ final class SharedApplicationContext {
             guard let strongSelf = self else {
                 return
             }
-            for peerId in loggedOutAccountPeerIds {
-                deleteAllSendMessageIntents(accountPeerId: peerId)
-            }
-            
+
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
                     if peerId == updated.account {
+                        deleteAllSendMessageIntents()
                         updated = updated.withUpdatedAccount(nil)
                         break
                     }

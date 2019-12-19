@@ -1615,7 +1615,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
         
                 for peerId in peerIds {
-                    deleteSendMessageIntents(account: strongSelf.context.account, peerId: peerId)
+                    deleteSendMessageIntents(peerId: peerId)
                 }
                 
                 let action: (Bool) -> Void = { shouldCommit in
@@ -1741,7 +1741,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     })
                     strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
                     
-                    deleteSendMessageIntents(account: strongSelf.context.account, peerId: peerId)
+                    deleteSendMessageIntents(peerId: peerId)
                 })
                 completion()
             } else {
