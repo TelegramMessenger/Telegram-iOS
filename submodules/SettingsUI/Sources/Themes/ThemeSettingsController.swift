@@ -343,10 +343,10 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 colorItems.append(contentsOf: colors.map { .color($0) })
                 
                 if let customColors = customColors {
-                    colorItems.append(contentsOf: customColors.colors.map { .custom($0) })
+                    colorItems.insert(contentsOf: customColors.colors.reversed().map { .custom($0) }, at: 0)
                 } else {
                     if let currentColor = currentColor, currentColor.baseColor == .custom {
-                        colorItems.append(.custom(currentColor))
+                        colorItems.insert(.custom(currentColor), at: 0)
                     }
                 }
                 
@@ -610,7 +610,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 wallpaper = settings.themeSpecificChatWallpapers[reference.index &+ Int64(accentColor.index)]
             }
             if wallpaper == nil {
-                settings.themeSpecificChatWallpapers[reference.index]
+                wallpaper = settings.themeSpecificChatWallpapers[reference.index]
             }
             return (accentColor, wallpaper)
         }
@@ -767,7 +767,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 wallpaper = settings.themeSpecificChatWallpapers[reference.index &+ Int64(accentColor.index)]
             }
             if wallpaper == nil {
-                settings.themeSpecificChatWallpapers[reference.index]
+                wallpaper = settings.themeSpecificChatWallpapers[reference.index]
             }
             return (accentColor, wallpaper)
         } |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in

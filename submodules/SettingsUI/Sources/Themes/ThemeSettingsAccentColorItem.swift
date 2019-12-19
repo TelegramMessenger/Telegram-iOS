@@ -49,15 +49,15 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
     
     static func <(lhs: ThemeSettingsColorEntry, rhs: ThemeSettingsColorEntry) -> Bool {
         switch lhs {
+            case .picker:
+                return true
             case let .color(lhsIndex, _, _, _):
                 switch rhs {
                     case let .color(rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
                     case .picker:
-                        return true
+                        return false
             }
-            case .picker:
-                return false
         }
     }
     
@@ -460,7 +460,7 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 11.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                 }
             })
         }
@@ -701,7 +701,6 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.layoutParams = params
                     
                     if themeUpdated {
-                        strongSelf.listNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -760,6 +759,8 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     
                     var entries: [ThemeSettingsColorEntry] = []
+                    entries.append(.picker)
+                    
                     var index: Int = 0
                     for color in item.colors {
                         switch color {
@@ -782,7 +783,6 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         
                         index += 1
                     }
-                    entries.append(.picker)
                     
                     let action: (PresentationThemeAccentColor?, Bool) -> Void = { [weak self] color, selected in
                         if let strongSelf = self, let item = strongSelf.item {
@@ -806,7 +806,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let previousEntries = strongSelf.entries ?? []
-                    let crossfade = themeUpdated || previousEntries.count != entries.count
+                    let crossfade = previousEntries.count != entries.count || (currentItem != nil && currentItem?.themeReference.index != item.themeReference.index)
                     let transition = preparedTransition(action: action, contextAction: contextAction, openColorPicker: openColorPicker, from: previousEntries, to: entries, crossfade: crossfade)
                     strongSelf.enqueueTransition(transition)
                     

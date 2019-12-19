@@ -264,6 +264,7 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
 public func editThemeController(context: AccountContext, mode: EditThemeControllerMode, navigateToChat: ((PeerId) -> Void)? = nil) -> ViewController {
     let initialState: EditThemeControllerState
     let previewThemePromise = Promise<PresentationTheme>()
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch mode {
         case let .create(existingTheme):
             let theme: PresentationTheme
@@ -272,7 +273,6 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 theme = existingTheme
                 wallpaper = theme.chat.defaultWallpaper
             } else {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 theme = presentationData.theme
                 wallpaper = presentationData.chatWallpaper
             }
@@ -293,7 +293,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     previewThemePromise.set(.single(theme.withUpdated(name: nil, defaultWallpaper: info.resolvedWallpaper)))
                 }
             } else {
-                previewThemePromise.set(.single(context.sharedContext.currentPresentationData.with { $0 }.theme))
+                previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
+                
             }
             initialState = EditThemeControllerState(mode: mode, title: info.theme.title, slug: info.theme.slug, updatedTheme: nil, updating: false)
     }

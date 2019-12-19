@@ -200,6 +200,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
     private let titleNode: TextNode
+    private var snapshotView: UIView?
     
     var item: ThemeSettingsThemeIconItem?
 
@@ -301,6 +302,21 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                 }
             })
         }
+    }
+    
+    func prepareCrossfadeTransition() {
+        self.snapshotView?.removeFromSuperview()
+        
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+            self.snapshotView = snapshotView
+        }
+    }
+    
+    func animateCrossfadeTransition() {
+        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.snapshotView?.removeFromSuperview()
+        })
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -626,11 +642,23 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
             self.snapshotView = snapshotView
         }
+        
+        self.listNode.forEachVisibleItemNode { node in
+            if let node = node as? ThemeSettingsThemeItemIconNode {
+                node.prepareCrossfadeTransition()
+            }
+        }
     }
     
     func animateCrossfadeTransition() {
         self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.snapshotView?.removeFromSuperview()
         })
+        
+        self.listNode.forEachVisibleItemNode { node in
+            if let node = node as? ThemeSettingsThemeItemIconNode {
+                node.animateCrossfadeTransition()
+            }
+        }
     }
 }
