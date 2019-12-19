@@ -318,16 +318,16 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                         colorItems.append(.default)
                         defaultColor = nil
                         
-                        let createPaper: (String, Int32, Int32?, Int32?, Int32?) -> TelegramWallpaper = { slug, topColor, bottomColor, intensity, rotation in
+                        let patternWallpaper: (String, Int32, Int32?, Int32?, Int32?) -> TelegramWallpaper = { slug, topColor, bottomColor, intensity, rotation in
                            return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: false, motion: false, color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
                         }
                         
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xf55783, bubbleColors: (0xd6f5ff, nil), wallpaper: createPaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xfce3ec, nil, 40, nil)))) // pink
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x7e5fe5, bubbleColors: (0xf5e2ff, nil), wallpaper: createPaper("nQcFYJe1mFIBAAAAcI95wtIK0fk", 0xfcccf4, 0xae85f0, 54, nil)))) // amethyst dust
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xff5fa9, bubbleColors: (0xfff4d7, nil), wallpaper: createPaper("51nnTjx8mFIBAAAAaFGJsMIvWkk", 0xf6b594, 0xebf6cd, 46, 45)))) // bubbly
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0x199972, bubbleColors: (0xfffec7, nil), wallpaper: createPaper("fqv01SQemVIBAAAApND8LDRUhRU", 0xc1e7cb, nil, 50, nil)))) // downtown
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0x5a9e29, bubbleColors: (0xdcf8c6, nil), wallpaper: createPaper("R3j69wKskFIBAAAAoUdXWCKMzCM", 0xede6dd, nil, 50, nil)))) // green
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x009eee, bubbleColors: (0x94fff9, 0xccffc7), wallpaper: createPaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xffbca6, 0xff63bd, 57, 225)))) // blue lolly
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xf55783, bubbleColors: (0xd6f5ff, nil), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xfce3ec, nil, 40, nil)))) // pink
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x7e5fe5, bubbleColors: (0xf5e2ff, nil), wallpaper: patternWallpaper("nQcFYJe1mFIBAAAAcI95wtIK0fk", 0xfcccf4, 0xae85f0, 54, nil)))) // amethyst dust
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xff5fa9, bubbleColors: (0xfff4d7, nil), wallpaper: patternWallpaper("51nnTjx8mFIBAAAAaFGJsMIvWkk", 0xf6b594, 0xebf6cd, 46, 45)))) // bubbly
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0x199972, bubbleColors: (0xfffec7, nil), wallpaper: patternWallpaper("fqv01SQemVIBAAAApND8LDRUhRU", 0xc1e7cb, nil, 50, nil)))) // downtown
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0x5a9e29, bubbleColors: (0xdcf8c6, nil), wallpaper: patternWallpaper("R3j69wKskFIBAAAAoUdXWCKMzCM", 0xede6dd, nil, 50, nil)))) // green
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x009eee, bubbleColors: (0x94fff9, 0xccffc7), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xffbca6, 0xff63bd, 57, 225)))) // blue lolly
                     }
                     if name != .day {
                         colors = colors.filter { $0 != .black }
@@ -473,7 +473,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     var updateControllersImpl: ((([UIViewController]) -> [UIViewController]) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
-    var presentCrossfadeControllerImpl: (() -> Void)?
+    var presentCrossfadeControllerImpl: ((Bool) -> Void)?
     
     var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var moreImpl: (() -> Void)?
@@ -567,6 +567,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 
                 return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
             }).start()
+            
+            presentCrossfadeControllerImpl?(true)
         })
     }, openAccentColorPicker: { themeReference, create in
         let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: themeReference, create: create))
@@ -899,12 +901,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
-        let previousThemeIndex = previousThemeReference.swap(themeReference)?.index
-        let previousAccentColor = previousAccentColor.swap(accentColor)
-        if previousThemeIndex != nil && (previousThemeIndex != themeReference.index || previousAccentColor != accentColor) {
-            presentCrossfadeControllerImpl?()
-        }
-                
         return (controllerState, (listState, arguments))
     }
     
@@ -927,7 +923,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
     }
-    presentCrossfadeControllerImpl = { [weak controller] in
+    presentCrossfadeControllerImpl = { [weak controller] hasAccentColors in
         if let controller = controller, controller.isNodeLoaded, let navigationController = controller.navigationController as? NavigationController, navigationController.topViewController === controller {
             var topOffset: CGFloat?
             var bottomOffset: CGFloat?
@@ -944,7 +940,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             if let itemNode = node as? ThemeSettingsThemeItemNode {
                                 themeItemNode = itemNode
                             }
-                        } else if itemTag.isEqual(to: ThemeSettingsEntryTag.accentColor) {
+                        } else if itemTag.isEqual(to: ThemeSettingsEntryTag.accentColor) && hasAccentColors {
                             let frame = node.convert(node.bounds, to: controller.displayNode)
                             bottomOffset = frame.maxY
                             if let itemNode = node as? ThemeSettingsAccentColorItemNode {
@@ -1014,6 +1010,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 }
             })
         }).start()
+        
+        presentCrossfadeControllerImpl?(cloudTheme == nil)
     }
     moreImpl = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

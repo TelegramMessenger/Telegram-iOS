@@ -12,6 +12,11 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         return theme
     }
     
+    var accentColor = accentColor
+    if accentColor == PresentationThemeBaseColor.blue.color {
+        accentColor = defaultDarkTintedAccentColor
+    }
+    
     var intro = theme.intro
     var passcode = theme.passcode
     var rootController = theme.rootController
@@ -51,7 +56,6 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         bubbleColors = (topColor, bottomColor)
     }
     
-    var accentColor = accentColor
     if let initialAccentColor = accentColor {
         let hsb = initialAccentColor.hsb
         accentColor = UIColor(hue: hsb.0, saturation: hsb.1, brightness: max(hsb.2, 0.18), alpha: 1.0)

@@ -342,14 +342,15 @@ final class ThemeAccentColorController: ViewController {
                     var defaultPatternWallpaper: TelegramWallpaper?
                     
                     for wallpaper in wallpapers {
-                        if case let .file(file) = wallpaper, file.slug == "JqSUrO0-mFIBAAAAWwTvLzoWGQI" {
+                        //JqSUrO0-mFIBAAAAWwTvLzoWGQI, 25
+                        if case let .file(file) = wallpaper, file.slug == "-Xc-np9y2VMCAAAARKr0yNNPYW0" {
                             defaultPatternWallpaper = wallpaper
                             break
                         }
                     }
                     
                     if let defaultPatternWallpaper = defaultPatternWallpaper {
-                        wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 25, rotation: nil))
+                        wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 40, rotation: nil))
                     }
                 }
                 

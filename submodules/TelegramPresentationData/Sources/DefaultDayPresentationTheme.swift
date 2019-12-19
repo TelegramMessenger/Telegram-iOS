@@ -103,8 +103,9 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var outgoingCheckColor: UIColor?
     
     if !day {
-        incomingBubbleStrokeColor = serviceBackgroundColor?.withAlphaComponent(0.4)
-        outgoingBubbleStrokeColor = serviceBackgroundColor?.withAlphaComponent(0.4)
+        let bubbleStrokeColor = serviceBackgroundColor?.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.5)
+        incomingBubbleStrokeColor = bubbleStrokeColor
+        outgoingBubbleStrokeColor = bubbleStrokeColor
     }
     
     if let bubbleColors = bubbleColors {
@@ -461,9 +462,11 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
+    let bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.5)
+
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: serviceBackgroundColor.withAlphaComponent(0.4)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: serviceBackgroundColor.withAlphaComponent(0.4))),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor)),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x525252, alpha: 0.6),
             linkTextColor: UIColor(rgb: 0x004bad),
@@ -484,7 +487,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
             actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596e89, alpha: 0.35)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: .clear),
             actionButtonsTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)), textSelectionColor: UIColor(rgb: 0x007ee5, alpha: 0.2), textSelectionKnobColor: UIColor(rgb: 0x007ee5)),
         outgoing: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: serviceBackgroundColor.withAlphaComponent(0.4)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: serviceBackgroundColor.withAlphaComponent(0.4))),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor)),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x008c09, alpha: 0.8),
             linkTextColor: UIColor(rgb: 0x004bad),

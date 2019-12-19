@@ -246,7 +246,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
             transition.updateTransformScale(node: self.fillNode, scale: 1.2)
             transition.updateTransformScale(node: self.centerNode, scale: 1.0)
             transition.updateAlpha(node: self.centerNode, alpha: 1.0)
-            transition.updateTransformScale(node: self.dotsNode, scale: 0.8)
+            transition.updateTransformScale(node: self.dotsNode, scale: 0.85)
             transition.updateAlpha(node: self.dotsNode, alpha: 0.0)
         }
     }

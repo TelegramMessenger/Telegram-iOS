@@ -65,7 +65,7 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
         let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
         context.translateBy(x: inset, y: inset)
         
-        let lineWidth: CGFloat = 1.0
+        var lineWidth: CGFloat = 1.0
         
         if drawWithClearColor {
             context.setBlendMode(.copy)
@@ -78,6 +78,9 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
         }
         
         if onlyOutline {
+            if knockout {
+                lineWidth = max(UIScreenPixel, 1.0 - 0.5)
+            }
             context.setLineWidth(lineWidth)
             context.setStrokeColor(strokeColor.cgColor)
         }
