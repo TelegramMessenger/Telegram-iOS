@@ -322,12 +322,22 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                            return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: false, motion: false, color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
                         }
                         
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xf55783, bubbleColors: (0xd6f5ff, nil), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xfce3ec, nil, 40, nil)))) // pink
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x7e5fe5, bubbleColors: (0xf5e2ff, nil), wallpaper: patternWallpaper("nQcFYJe1mFIBAAAAcI95wtIK0fk", 0xfcccf4, 0xae85f0, 54, nil)))) // amethyst dust
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xff5fa9, bubbleColors: (0xfff4d7, nil), wallpaper: patternWallpaper("51nnTjx8mFIBAAAAaFGJsMIvWkk", 0xf6b594, 0xebf6cd, 46, 45)))) // bubbly
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0x199972, bubbleColors: (0xfffec7, nil), wallpaper: patternWallpaper("fqv01SQemVIBAAAApND8LDRUhRU", 0xc1e7cb, nil, 50, nil)))) // downtown
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0x5a9e29, bubbleColors: (0xdcf8c6, nil), wallpaper: patternWallpaper("R3j69wKskFIBAAAAoUdXWCKMzCM", 0xede6dd, nil, 50, nil)))) // green
-                        colorItems.append(.preset(PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x009eee, bubbleColors: (0x94fff9, 0xccffc7), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xffbca6, 0xff63bd, 57, 225)))) // blue lolly
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xf55783, bubbleColors: (0xd6f5ff, nil), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xfce3ec, nil, 40, nil))))
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x7e5fe5, bubbleColors: (0xf5e2ff, nil), wallpaper: patternWallpaper("nQcFYJe1mFIBAAAAcI95wtIK0fk", 0xfcccf4, 0xae85f0, 54, nil))))
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xff5fa9, bubbleColors: (0xfff4d7, nil), wallpaper: patternWallpaper("51nnTjx8mFIBAAAAaFGJsMIvWkk", 0xf6b594, 0xebf6cd, 46, 45))))
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0x199972, bubbleColors: (0xfffec7, nil), wallpaper: patternWallpaper("fqv01SQemVIBAAAApND8LDRUhRU", 0xc1e7cb, nil, 50, nil))))
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0x5a9e29, bubbleColors: (0xdcf8c6, nil), wallpaper: patternWallpaper("R3j69wKskFIBAAAAoUdXWCKMzCM", 0xede6dd, nil, 50, nil))))
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x009eee, bubbleColors: (0x94fff9, 0xccffc7), wallpaper: patternWallpaper("p-pXcflrmFIBAAAAvXYQk-mCwZU", 0xffbca6, 0xff63bd, 57, 225))))
+                    } else if name == .day {
+                        colorItems.append(.color(.blue))
+                        colors = colors.filter { $0 != .blue }
+                        
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x007aff, bubbleColors: (0x007aff, 0xff53f4), wallpaper: nil)))
+                    } else if name == .night {
+                        colorItems.append(.color(.blue))
+                        colors = colors.filter { $0 != .blue }
+                        
+                        colorItems.append(.preset(PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x007aff, bubbleColors: (0x007aff, 0xff53f4), wallpaper: nil)))
                     }
                     if name != .day {
                         colors = colors.filter { $0 != .black }
