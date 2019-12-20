@@ -195,6 +195,8 @@ public func updateChannelAdminRights(account: Account, peerId: PeerId, adminId: 
                             )
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
                             return .fail(.addMemberError(.restricted))
+                        } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                            return .fail(.addMemberError(.tooMuchJoined))
                         }
                         return .fail(.generic)
                     }
