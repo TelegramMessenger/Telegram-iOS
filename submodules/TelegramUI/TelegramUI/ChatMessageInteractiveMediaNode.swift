@@ -1317,8 +1317,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func transitionNode() -> (ASDisplayNode, () -> (UIView?, UIView?))? {
-        return (self, { [weak self] in
+    func transitionNode() -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        let bounds: CGRect
+        if let currentImageArguments = self.currentImageArguments {
+            bounds = currentImageArguments.imageRect
+        } else {
+            bounds = self.bounds
+        }
+        return (self, bounds, { [weak self] in
             var badgeNodeHidden: Bool?
             if let badgeNode = self?.badgeNode {
                 badgeNodeHidden = badgeNode.isHidden

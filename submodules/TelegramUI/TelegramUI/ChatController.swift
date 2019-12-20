@@ -438,7 +438,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, transitionNode: { messageId, media in
-                var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
                     strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
@@ -7401,7 +7401,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let (message, content) = result {
             switch content {
                 case let .media(media):
-                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
                             if let result = itemNode.transitionNode(id: message.id, media: media) {
@@ -7472,7 +7472,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(animated: false, transitionArguments: { [weak self] messageId, media in
                 if let strongSelf = self {
-                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
                             if let result = itemNode.transitionNode(id: messageId, media: media) {
@@ -7586,7 +7586,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.dismissInput()
         self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
             if let strongSelf = self {
-                var transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView {
                         if let result = itemNode.transitionNode(id: messageId, media: media) {
@@ -8077,7 +8077,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))? {
-        var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+        var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 if let result = itemNode.transitionNode(id: messageId, media: media) {
@@ -8085,7 +8085,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }
-        if let (node, get) = selectedNode {
+        if let (node, contentBounds, get) = selectedNode {
             return ({ [weak self] view in
                 guard let strongSelf = self else {
                     return

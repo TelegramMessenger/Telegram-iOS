@@ -149,9 +149,9 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if media == self.media {
-            return (self, { [weak self] in
+            return (self, self.bounds, { [weak self] in
                 return (self?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {

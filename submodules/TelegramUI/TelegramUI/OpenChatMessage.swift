@@ -270,7 +270,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 
                 params.dismissInput()
                 params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
                         selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
                     }

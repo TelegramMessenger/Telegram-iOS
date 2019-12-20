@@ -1063,12 +1063,17 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
-                                if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                    var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                    if case .group = channel.info {
-                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                if case let .addMemberError(error) = error, let admin = adminView.peers[adminView.peerId] {
+                                    if case .restricted = error {
+                                        var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        if case .group = channel.info {
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        }
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    } else if case .tooMuchJoined = error {
+                                        let text = presentationData.strings.Invite_ChannelsTooMuch
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 dismissImpl?()
                             }, completed: {

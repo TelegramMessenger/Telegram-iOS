@@ -54,7 +54,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let node = self.contentNode as? InstantPageNode {
             return node.transitionNode(media: media)
         }
@@ -363,7 +363,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         for node in self.itemNodes {
             if let transitionNode = node.transitionNode(media: media) {
                 return transitionNode
@@ -422,7 +422,7 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return self.pagerNode.transitionNode(media: media)
     }
     
