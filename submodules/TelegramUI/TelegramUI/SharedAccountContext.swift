@@ -654,7 +654,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.updateNotificationTokensRegistration()
         
-        if applicationBindings.isMainApp {
+        if applicationBindings.isMainApp && false {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
             |> map { primary, _, _ in
                 return primary
