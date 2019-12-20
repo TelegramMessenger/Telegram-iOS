@@ -1380,7 +1380,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            self.valueBox.remove(self.table, key: self.key(index), secure: false)
+            self.valueBox.remove(self.table, key: self.key(index), secure: true)
             
             let updatedIndex = message.index
             
