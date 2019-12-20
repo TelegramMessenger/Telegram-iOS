@@ -448,8 +448,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        super.present(viewControllerToPresent, animated: flag, completion: completion)
-        return
+        self.view.window?.rootViewController?.present(viewControllerToPresent, animated: flag, completion: completion)
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
