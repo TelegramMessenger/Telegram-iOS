@@ -66,7 +66,7 @@ final class MessageHistoryTextIndexTable {
     }
     
     func remove(messageId: MessageId) {
-        self.valueBox.fullTextRemove(self.table, itemId: itemId(messageId))
+        self.valueBox.fullTextRemove(self.table, itemId: itemId(messageId), secure: true)
     }
     
     func search(peerId: PeerId?, text: String, tags: MessageTags?) -> [MessageId] {

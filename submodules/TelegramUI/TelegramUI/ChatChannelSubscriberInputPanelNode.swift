@@ -175,7 +175,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             self.presentationInterfaceState = interfaceState
             
             if previousState?.theme !== interfaceState.theme {
-                self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme)
+                self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme, diameter: 20.0)
             }
             
             if previousState?.peerDiscussionId != interfaceState.peerDiscussionId {

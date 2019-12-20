@@ -270,7 +270,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 
                 params.dismissInput()
                 params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
                         selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
                     }
@@ -304,13 +304,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
-                if true {
-                    let controller = StickerPackScreen(context: params.context, stickerPacks: [reference], selectedStickerPackIndex: 0, sendSticker: params.sendSticker)
-                    params.dismissInput()
-                    params.present(controller, nil)
-                    return true
-                }
-                let controller = StickerPackScreen(context: params.context, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker)
+                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], sendSticker: params.sendSticker)
                 params.dismissInput()
                 params.present(controller, nil)
                 return true

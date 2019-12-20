@@ -591,10 +591,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 let badgeTextColor: UIColor
                 switch badge.type {
                     case .inactive:
-                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme)
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme, diameter: 20.0)
                         badgeTextColor = item.presentationData.theme.chatList.unreadBadgeInactiveTextColor
                     case .active:
-                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme)
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme, diameter: 20.0)
                         badgeTextColor = item.presentationData.theme.chatList.unreadBadgeActiveTextColor
                 }
                 let badgeAttributedString = NSAttributedString(string: badge.count > 0 ? "\(badge.count)" : " ", font: badgeFont, textColor: badgeTextColor)

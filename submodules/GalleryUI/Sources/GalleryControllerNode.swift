@@ -11,7 +11,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     public let footerNode: GalleryFooterNode
     public var currentThumbnailContainerNode: GalleryThumbnailContainerNode?
     public var overlayNode: ASDisplayNode?
-    public var transitionDataForCentralItem: (() -> ((ASDisplayNode, () -> (UIView?, UIView?))?, (UIView) -> Void)?)?
+    public var transitionDataForCentralItem: (() -> ((ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, (UIView) -> Void)?)?
     public var dismiss: (() -> Void)?
     
     public var containerLayout: (CGFloat, ContainerViewLayout)?

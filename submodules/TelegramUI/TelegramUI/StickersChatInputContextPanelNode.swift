@@ -148,7 +148,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 switch attribute {
                                                 case let .Sticker(_, packReference, _):
                                                     if let packReference = packReference {
-                                                        let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                                                 return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
                                                             } else {

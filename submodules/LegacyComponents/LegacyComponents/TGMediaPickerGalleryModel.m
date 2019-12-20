@@ -38,6 +38,7 @@
     bool _inhibitDocumentCaptions;
     NSString *_recipientName;
     bool _hasCamera;
+    TGMediaVideoConversionPreset _defaultVideoPreset;
 }
 
 @property (nonatomic, weak) TGPhotoEditorController *editorController;
@@ -46,7 +47,7 @@
 
 @implementation TGMediaPickerGalleryModel
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer onlyCrop:(bool)onlyCrop inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer onlyCrop:(bool)onlyCrop inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset
 {
     self = [super init];
     if (self != nil)
@@ -66,6 +67,7 @@
         _hasSelectionPanel = hasSelectionPanel;
         _inhibitDocumentCaptions = inhibitDocumentCaptions;
         _recipientName = recipientName;
+        _defaultVideoPreset = defaultVideoPreset;
         _hasCamera = hasCamera;
         
         __weak TGMediaPickerGalleryModel *weakSelf = self;
@@ -182,7 +184,7 @@
     if (_interfaceView == nil)
     {
         __weak TGMediaPickerGalleryModel *weakSelf = self;
-        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:_initialFocusItem selectionContext:_selectionContext editingContext:_editingContext hasSelectionPanel:_hasSelectionPanel hasCameraButton:_hasCamera recipientName:_recipientName];
+        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:_initialFocusItem selectionContext:_selectionContext editingContext:_editingContext hasSelectionPanel:_hasSelectionPanel hasCameraButton:_hasCamera recipientName:_recipientName defaultVideoPreset:_defaultVideoPreset];
         [_interfaceView setSuggestionContext:_suggestionContext];
         _interfaceView.hasCaptions = _hasCaptions;
         _interfaceView.allowCaptionEntities = _allowCaptionEntities;
@@ -385,7 +387,7 @@
         self.storeOriginalImageForItem(item.editableMediaItem, screenImage);
     
     TGPhotoEditorControllerIntent intent = isVideo ? TGPhotoEditorControllerVideoIntent : TGPhotoEditorControllerGenericIntent;
-    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:item.editableMediaItem intent:intent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab];
+    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:item.editableMediaItem intent:intent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab defaultVideoPreset:_defaultVideoPreset];
     controller.editingContext = _editingContext;
     self.editorController = controller;
     controller.suggestionContext = self.suggestionContext;

@@ -227,7 +227,7 @@
         TGMediaAssetsControllerIntent assetsIntent = (intent == TGPassportAttachIntentMultiple) ? TGMediaAssetsControllerPassportMultipleIntent : TGMediaAssetsControllerPassportIntent;
         
         [strongParentController presentWithContext:^UIViewController *(id<LegacyComponentsContext> context) {
-            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil saveEditedPhotos:false allowGrouping:false selectionLimit:10];
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:assetsIntent recipientName:nil defaultVideoPreset:TGMediaVideoConversionPresetCompressedDefault saveEditedPhotos:false allowGrouping:false selectionLimit:10];
             controller.onlyCrop = true;
             __weak TGMediaAssetsController *weakController = controller;
             controller.singleCompletionBlock = ^(id<TGMediaEditableItem> currentItem, TGMediaEditingContext *editingContext) {

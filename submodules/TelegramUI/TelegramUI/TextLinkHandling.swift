@@ -58,7 +58,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
-                        controller.present(StickerPackScreen(context: context, stickerPacks: [.name(name)], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
+                        let packReference: StickerPackReference = .name(name)
+                        controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .instantView(webpage, anchor):
                         (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                     case let .join(link):

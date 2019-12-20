@@ -89,12 +89,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
-            if true {
+            if false {
+                var mainStickerPack: StickerPackReference?
                 var stickerPacks: [StickerPackReference] = []
-                var initialIndex: Int = 0
                 if let message = contentContext as? Message {
                     let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
-                    var foundMain = false
                     if let matches = dataDetector?.matches(in: message.text, options: [], range: NSRange(message.text.startIndex ..< message.text.endIndex, in: message.text)) {
                         for match in matches {
                             guard let stringRange = Range(match.range, in: message.text) else {
@@ -104,29 +103,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             if let resultName = parseStickerPackUrl(urlText) {
                                 stickerPacks.append(.name(resultName))
                                 if resultName == name {
-                                    foundMain = true
-                                    initialIndex = stickerPacks.count - 1
+                                    mainStickerPack = .name(resultName)
                                 }
                             }
                         }
-                        if !foundMain {
+                        if mainStickerPack == nil {
+                            mainStickerPack = .name(name)
                             stickerPacks.insert(.name(name), at: 0)
-                            initialIndex = 0
                         }
                     } else {
+                        mainStickerPack = .name(name)
                         stickerPacks = [.name(name)]
-                        initialIndex = 0
                     }
                 } else {
+                    mainStickerPack = .name(name)
                     stickerPacks = [.name(name)]
-                    initialIndex = 0
                 }
-                if !stickerPacks.isEmpty {
-                    let controller = StickerPackScreen(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: initialIndex, sendSticker: sendSticker)
+                if let mainStickerPack = mainStickerPack, !stickerPacks.isEmpty {
+                    let controller = StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, sendSticker: sendSticker)
                     present(controller, nil)
                 }
             } else {
-                let controller = StickerPackScreen(context: context, stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
+                let controller = StickerPackScreen(context: context, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
                 present(controller, nil)
             }
         case let .instantView(webpage, anchor):

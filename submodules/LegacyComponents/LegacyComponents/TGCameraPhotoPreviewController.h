@@ -1,5 +1,6 @@
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/LegacyComponentsContext.h>
+#import <LegacyComponents/TGVideoEditAdjustments.h>
 
 @class PGCameraShotMetadata;
 @class PGPhotoEditorValues;
@@ -26,8 +27,8 @@
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos;
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset;
 
 
 @end

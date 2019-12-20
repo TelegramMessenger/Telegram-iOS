@@ -10,6 +10,6 @@
 
 @property (nonatomic, readonly) TGMediaVideoConversionPreset preset;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView defaultPreset:(TGMediaVideoConversionPreset)defaultPreset;
 
 @end

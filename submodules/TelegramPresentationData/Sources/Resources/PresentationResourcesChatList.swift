@@ -19,8 +19,8 @@ private func generateStatusCheckImage(theme: PresentationTheme, single: Bool) ->
     })
 }
 
-private func generateBadgeBackgroundImage(theme: PresentationTheme, active: Bool, icon: UIImage? = nil) -> UIImage? {
-    return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
+private func generateBadgeBackgroundImage(theme: PresentationTheme, diameter: CGFloat, active: Bool, icon: UIImage? = nil) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if active {
             context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
@@ -31,7 +31,7 @@ private func generateBadgeBackgroundImage(theme: PresentationTheme, active: Bool
         if let icon = icon, let cgImage = icon.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - icon.size.width) / 2.0), y: floor((size.height - icon.size.height) / 2.0)), size: icon.size))
         }
-    })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10)
+    })?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
 private func generateClockFrameImage(color: UIColor) -> UIImage? {
@@ -169,32 +169,32 @@ public struct PresentationResourcesChatList {
         })
     }
     
-    public static func badgeBackgroundActive(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListBadgeBackgroundActive.rawValue, { theme in
-            return generateBadgeBackgroundImage(theme: theme, active: true)
+    public static func badgeBackgroundActive(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatListBadgeBackgroundActive(diameter), { theme in
+            return generateBadgeBackgroundImage(theme: theme, diameter: diameter, active: true)
         })
     }
     
-    public static func badgeBackgroundInactive(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListBadgeBackgroundInactive.rawValue, { theme in
-            return generateBadgeBackgroundImage(theme: theme, active: false)
+    public static func badgeBackgroundInactive(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatListBadgeBackgroundInactive(diameter), { theme in
+            return generateBadgeBackgroundImage(theme: theme, diameter: diameter, active: false)
         })
     }
     
-    public static func badgeBackgroundMention(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListBadgeBackgroundMention.rawValue, { theme in
-            return generateBadgeBackgroundImage(theme: theme, active: true, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeActiveTextColor))
+    public static func badgeBackgroundMention(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatListBadgeBackgroundMention(diameter), { theme in
+            return generateBadgeBackgroundImage(theme: theme, diameter: diameter, active: true, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeActiveTextColor))
         })
     }
     
-    public static func badgeBackgroundInactiveMention(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListBadgeBackgroundInactiveMention.rawValue, { theme in
-            return generateBadgeBackgroundImage(theme: theme, active: false, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeInactiveTextColor))
+    public static func badgeBackgroundInactiveMention(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatListBadgeBackgroundInactiveMention(diameter), { theme in
+            return generateBadgeBackgroundImage(theme: theme, diameter: diameter, active: false, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/MentionBadgeIcon"), color: theme.chatList.unreadBadgeInactiveTextColor))
         })
     }
     
-    public static func badgeBackgroundPinned(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListBadgeBackgroundPinned.rawValue, { theme in
+    public static func badgeBackgroundPinned(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatListBadgeBackgroundPinned(diameter), { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPinnedIcon"), color: theme.chatList.pinnedBadgeColor)
         })
     }

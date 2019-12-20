@@ -26,11 +26,6 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     private var animatedIn = false
     private var dismissed = false
     
-    private let _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
-        return self._ready
-    }
-    
     private let context: AccountContext
     private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
@@ -79,15 +74,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         self.statusBar.statusBarStyle = .Ignore
         
-        #if false && DEBUG
-        self.stickerPackContents.set(.single(.fetching)
-        |> then(
-            loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true)
-            |> delay(1.0, queue: .mainQueue())
-        ))
-        #else
         self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
-        #endif
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -122,7 +109,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
             }
         }
-        self.displayNode = StickerPackPreviewControllerNode(controller: self, context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
+        self.displayNode = StickerPackPreviewControllerNode(context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
             }

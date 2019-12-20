@@ -11,6 +11,47 @@ import DeviceAccess
 import AccountContext
 import LegacyUI
 
+public func defaultVideoPresetForContext(_ context: AccountContext) -> TGMediaVideoConversionPreset {
+    var networkType: NetworkType = .wifi
+    let _ = (context.account.networkType
+    |> take(1)).start(next: { value in
+        networkType = value
+    })
+    
+    let autodownloadSettings = context.sharedContext.currentAutodownloadSettings.with { $0 }
+    let presetSettings: AutodownloadPresetSettings
+    switch networkType {
+    case .wifi:
+        presetSettings = autodownloadSettings.highPreset
+    default:
+        presetSettings = autodownloadSettings.mediumPreset
+    }
+    
+    let effectiveValue: Int
+    if presetSettings.videoUploadMaxbitrate == 0 {
+        effectiveValue = 0
+    } else {
+        effectiveValue = Int(presetSettings.videoUploadMaxbitrate) * 5 / 100
+    }
+    
+    switch effectiveValue {
+    case 0:
+        return TGMediaVideoConversionPresetCompressedMedium
+    case 1:
+        return TGMediaVideoConversionPresetCompressedVeryLow
+    case 2:
+        return TGMediaVideoConversionPresetCompressedLow
+    case 3:
+        return TGMediaVideoConversionPresetCompressedMedium
+    case 4:
+        return TGMediaVideoConversionPresetCompressedHigh
+    case 5:
+        return TGMediaVideoConversionPresetCompressedVeryLow
+    default:
+        return TGMediaVideoConversionPresetCompressedMedium
+    }
+}
+
 public struct LegacyAttachmentMenuMediaEditing: OptionSet {
     public var rawValue: Int32
     
@@ -62,6 +103,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         carouselItemView = carouselItem
         carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
         carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        carouselItem.defaultVideoPreset = defaultVideoPresetForContext(context)
         carouselItem.cameraPressed = { [weak controller] cameraView in
             if let controller = controller {
                 DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
@@ -218,7 +260,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEdit
     
     legacyController.enableSizeClassSignal = true
 
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, defaultVideoPreset: defaultVideoPresetForContext(context), completed: { selectionContext, editingContext, currentItem in
         let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
         sendMessagesWithSignals(signals)
     }, dismissed: { [weak legacyController] in

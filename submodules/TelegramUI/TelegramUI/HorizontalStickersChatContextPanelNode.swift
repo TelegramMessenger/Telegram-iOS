@@ -191,7 +191,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                             switch attribute {
                                             case let .Sticker(_, packReference, _):
                                                 if let packReference = packReference {
-                                                    let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                                             return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
                                                         } else {
@@ -318,6 +318,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
+        self.layer.allowsGroupOpacity = true
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })

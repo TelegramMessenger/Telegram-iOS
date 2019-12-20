@@ -40,7 +40,12 @@ public struct TransformImageArguments: Equatable {
     
     public var drawingRect: CGRect {
         let cornersExtendedEdges = self.corners.extendedEdges
-        return CGRect(x: cornersExtendedEdges.left + self.intrinsicInsets.left, y: cornersExtendedEdges.top + self.intrinsicInsets.top, width: self.boundingSize.width, height: self.boundingSize.height);
+        return CGRect(x: cornersExtendedEdges.left + self.intrinsicInsets.left, y: cornersExtendedEdges.top + self.intrinsicInsets.top, width: self.boundingSize.width, height: self.boundingSize.height)
+    }
+    
+    public var imageRect: CGRect {
+        let drawingRect = self.drawingRect
+        return CGRect(x: drawingRect.minX + floor((drawingRect.width - self.imageSize.width) / 2.0), y: drawingRect.minX + floor((drawingRect.height - self.imageSize.height) / 2.0), width: self.imageSize.width, height: self.imageSize.height)
     }
     
     public var insets: UIEdgeInsets {

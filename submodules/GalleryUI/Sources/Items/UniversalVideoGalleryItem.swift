@@ -747,7 +747,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
@@ -773,8 +773,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
             let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
-            let (maybeSurfaceCopyView, _) = node.1()
-            let (maybeCopyView, copyViewBackgrond) = node.1()
+            let (maybeSurfaceCopyView, _) = node.2()
+            let (maybeCopyView, copyViewBackgrond) = node.2()
             copyViewBackgrond?.alpha = 0.0
             let surfaceCopyView = maybeSurfaceCopyView!
             let copyView = maybeCopyView!
@@ -859,7 +859,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
@@ -875,8 +875,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = true
         var copyCompleted = false
         
-        let (maybeSurfaceCopyView, _) = node.1()
-        let (maybeCopyView, copyViewBackgrond) = node.1()
+        let (maybeSurfaceCopyView, _) = node.2()
+        let (maybeCopyView, copyViewBackgrond) = node.2()
         copyViewBackgrond?.alpha = 0.0
         let surfaceCopyView = maybeSurfaceCopyView!
         let copyView = maybeCopyView!
@@ -1169,14 +1169,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { id, media in
                             if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                                return GalleryTransitionArguments(transitionNode: (overlayNode, { [weak overlayNode] in
+                                return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
                                     return (overlayNode?.view.snapshotContentTree(), nil)
                                 }), addToTransitionSurface: { [weak overlaySupernode, weak overlayNode] view in
                                     overlaySupernode?.view.addSubview(view)
                                     overlayNode?.canAttachContent = false
                                 })
                             } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
-                                return GalleryTransitionArguments(transitionNode: (info.1, {
+                                return GalleryTransitionArguments(transitionNode: (info.1, info.1.bounds, {
                                     return info.2()
                                 }), addToTransitionSurface: info.0)
                             }

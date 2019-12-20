@@ -58,6 +58,16 @@ final class UnauthorizedApplicationContext {
                 return .never
             }
         })
+        
+        DeviceAccess.authorizeAccess(to: .cellularData, presentationData: sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
+            if let strongSelf = self {
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
+            }
+        }, openSettings: {
+            sharedContext.applicationBindings.openSettings()
+        }, { result in
+            ApplicationSpecificNotice.setPermissionWarning(accountManager: sharedContext.accountManager, permission: .cellularData, value: 0)
+        })
     }
 }
 
