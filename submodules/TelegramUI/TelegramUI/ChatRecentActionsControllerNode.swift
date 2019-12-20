@@ -700,6 +700,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if !channel.hasPermission(.banMembers) {
                     canBan = false
                 }
+                if case .broadcast = channel.info {
+                    canBan = false
+                }
             }
             for member in adminsState.list {
                 if member.peer.id == author.id {
