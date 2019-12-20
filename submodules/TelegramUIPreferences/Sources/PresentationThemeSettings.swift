@@ -177,7 +177,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             acc = (acc &* 20261) &+ high
             acc = (acc &* 20261) &+ low
             
-            return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+            return Int32(bitPattern: acc & UInt32(0x7fffffff))
         }
         
         switch self {
@@ -193,6 +193,18 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
+    }
+}
+
+public func coloredThemeIndex(reference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?) -> Int64 {
+    if let accentColor = accentColor {
+        if case let .builtin(theme) = reference {
+            return reference.index * 1000 &+ Int64(accentColor.index)
+        } else {
+            return reference.index &+ Int64(accentColor.index)
+        }
+    } else {
+        return reference.index
     }
 }
 

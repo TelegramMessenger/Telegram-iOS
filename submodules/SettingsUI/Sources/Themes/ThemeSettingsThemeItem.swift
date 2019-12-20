@@ -604,7 +604,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         let accentColor = item.themeSpecificAccentColors[theme.index]
                         var wallpaper: TelegramWallpaper?
                         if let accentColor = accentColor {
-                            wallpaper = item.themeSpecificChatWallpapers[theme.index &+ Int64(accentColor.index)]
+                            wallpaper = item.themeSpecificChatWallpapers[coloredThemeIndex(reference: theme, accentColor: accentColor)]
                         }
                         entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1

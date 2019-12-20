@@ -200,6 +200,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.blurredNode.image = image
                 strongSelf.blurredNode.blurView.blurRadius = 45.0
+                strongSelf.ready.set(.single(true))
             }
         }
         
@@ -248,9 +249,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
-                strongSelf.remoteChatBackgroundNode.imageUpdated = { [weak self] _ in
-                    self?.ready.set(.single(true))
-                }
 
                 strongSelf.fetchDisposable.set(freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file.file)).start())
                 

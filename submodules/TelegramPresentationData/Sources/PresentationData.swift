@@ -242,7 +242,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
         let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors) ?? defaultPresentationTheme
         
-        let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[effectiveTheme.index &+ Int64(effectiveColors?.index ?? 0)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
+        
+        let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
@@ -507,7 +508,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
         let effectiveColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
-        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index &+ Int64(effectiveColors?.index ?? 0)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
         
         let currentWallpaper: TelegramWallpaper
         if let themeSpecificWallpaper = themeSpecificWallpaper {
@@ -533,7 +534,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
-                            let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[automaticTheme.index &+ Int64(effectiveColors?.index ?? 0)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                            let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
                             
                             if let themeSpecificWallpaper = themeSpecificWallpaper {
                                 effectiveChatWallpaper = themeSpecificWallpaper

@@ -103,14 +103,30 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     var outgoingCheckColor: UIColor?
     
     if !day {
-        let bubbleStrokeColor = serviceBackgroundColor?.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.5)
+        let bubbleStrokeColor = serviceBackgroundColor?.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
         incomingBubbleStrokeColor = bubbleStrokeColor
         outgoingBubbleStrokeColor = bubbleStrokeColor
     }
     
     if let bubbleColors = bubbleColors {
-        outgoingBubbleFillColor = bubbleColors.0
-        outgoingBubbleFillGradientColor = bubbleColors.1 ?? bubbleColors.0
+        var topBubbleColor = bubbleColors.0
+        var bottomBubbleColor = bubbleColors.1 ?? bubbleColors.0
+
+        if topBubbleColor.rgb != bottomBubbleColor.rgb {
+            let topBubbleColorLightness = topBubbleColor.lightness
+            let bottomBubbleColorLightness = bottomBubbleColor.lightness
+            if abs(topBubbleColorLightness - bottomBubbleColorLightness) > 0.7 {
+                if topBubbleColorLightness > bottomBubbleColorLightness {
+                    topBubbleColor = topBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
+                } else {
+                    bottomBubbleColor = bottomBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
+                }
+            }
+        }
+        
+        outgoingBubbleFillColor = topBubbleColor
+        outgoingBubbleFillGradientColor = bottomBubbleColor
+
         if day {
             outgoingBubbleStrokeColor = .clear
         }
@@ -462,7 +478,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
         onlineDotColor: UIColor(rgb: 0x4cc91f)
     )
     
-    let bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.5)
+    let bubbleStrokeColor = serviceBackgroundColor.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
 
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(

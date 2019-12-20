@@ -240,7 +240,7 @@ final class ThemeAccentColorController: ViewController {
                             wallpaper = coloredWallpaper
                         }
                         
-                        themeSpecificChatWallpapers[currentTheme.index &+ Int64(index)] = wallpaper
+                        themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: color)] = wallpaper
                         themeSpecificCustomColors[currentTheme.index] = PresentationThemeCustomColors(colors: customColors)
                         
                         return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificCustomColors: themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
@@ -321,7 +321,7 @@ final class ThemeAccentColorController: ViewController {
                 }
                 accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
                 var wallpaper: TelegramWallpaper
-                if let index = themeSpecificAccentColor?.index, let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index &+ Int64(index)] {
+                if let accentColor = themeSpecificAccentColor, let customWallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] {
                     wallpaper = customWallpaper
                 } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                     wallpaper = customWallpaper

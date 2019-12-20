@@ -5224,3 +5224,5 @@ Any member of this group will be able to see messages in the channel.";
 "OldChannels.InactiveYear_any" = "inactive %@ years";
 
 "PrivacySettings.WebSessions" = "Active Websites";
+
+"Appearance.ShareThemeColor" = "Share";
