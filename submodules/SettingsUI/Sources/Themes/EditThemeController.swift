@@ -261,7 +261,7 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     return entries
 }
 
-public func editThemeController(context: AccountContext, mode: EditThemeControllerMode, navigateToChat: ((PeerId) -> Void)? = nil) -> ViewController {
+public func editThemeController(context: AccountContext, mode: EditThemeControllerMode, navigateToChat: ((PeerId) -> Void)? = nil, completion: ((PresentationThemeReference) -> Void)? = nil) -> ViewController {
     let initialState: EditThemeControllerState
     let previewThemePromise = Promise<PresentationTheme>()
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

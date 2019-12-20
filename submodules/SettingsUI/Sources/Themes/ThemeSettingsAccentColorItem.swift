@@ -667,7 +667,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized || transition.crossfade {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
-                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-24.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
+                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-56.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }
         }

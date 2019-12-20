@@ -658,7 +658,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         secondColor = nil
                     }
                 case .messages:
-                    defaultColor = self.state.defaultMessagesColor ?? (self.state.accentColor ?? defaultDayAccentColor)
+                    if let defaultMessagesColor = self.state.defaultMessagesColor {
+                        defaultColor = defaultMessagesColor
+                    } else if let themeReference = self.mode.themeReference, case let .builtin(theme) = themeReference, theme == .nightAccent {
+                        defaultColor = self.state.accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                    } else {
+                        defaultColor = self.state.accentColor
+                    }
                     if let messagesColors = self.state.messagesColors {
                         firstColor = messagesColors.0
                         secondColor = messagesColors.1
@@ -707,6 +713,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             animationCurve = .easeInOut
             animationDuration = 0.3
+            needsLayout = true
+        }
+        
+        if (previousState.patternWallpaper == nil) != (self.state.patternWallpaper == nil) {
             needsLayout = true
         }
         

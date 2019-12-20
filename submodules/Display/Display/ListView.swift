@@ -858,7 +858,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var bottomItemEdge: CGFloat = 0.0
         
         for i in 0 ..< self.itemNodes.count {
-            if let index = itemNodes[i].index {
+            if let index = self.itemNodes[i].index {
                 if index == 0 {
                     topItemFound = true
                 }
@@ -873,12 +873,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if topItemFound {
-            topItemEdge = itemNodes[0].apparentFrame.origin.y
+            topItemEdge = self.itemNodes[0].apparentFrame.origin.y
         }
         
         var bottomItemNode: ListViewItemNode?
         for i in (0 ..< self.itemNodes.count).reversed() {
-            if let index = itemNodes[i].index {
+            if let index = self.itemNodes[i].index {
                 if index == self.items.count - 1 {
                     bottomItemNode = itemNodes[i]
                     bottomItemFound = true
@@ -888,7 +888,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if bottomItemFound {
-            bottomItemEdge = itemNodes[itemNodes.count - 1].apparentFrame.maxY
+            bottomItemEdge = self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY
         }
         
         if topItemFound && bottomItemFound {
@@ -949,7 +949,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     } else {
                         offset = effectiveInsets.top + areaHeight - overscroll - bottomItemEdge
                     }
-                } else if topItemEdge > effectiveInsets.top - overscroll && /*snapTopItem*/ !self.isTracking {
+                } else if topItemEdge > effectiveInsets.top - overscroll {
                     offset = (effectiveInsets.top - overscroll) - topItemEdge
                 }
             }
@@ -2569,7 +2569,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
                 }
                 
-                let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, isExperimentalSnapToScrollToItem: isExperimentalSnapToScrollToItem, insetDeltaOffsetFix: insetDeltaOffsetFix)
+                let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil && scrollToItem?.directionHint != .Down, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, isExperimentalSnapToScrollToItem: isExperimentalSnapToScrollToItem, insetDeltaOffsetFix: insetDeltaOffsetFix)
                 
                 if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
                     offsetFix += snappedTopInset
@@ -2639,7 +2639,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 self.visibleSize = updateSizeAndInsets.size
                 
-                if !self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, insetDeltaOffsetFix: 0.0).offset.isZero {
+                if !self.snapToBounds(snapTopItem: scrollToItem != nil && scrollToItem?.directionHint != .Down, stackFromBottom: self.stackFromBottom, insetDeltaOffsetFix: 0.0).offset.isZero {
                     self.updateVisibleContentOffset()
                 }
             }
@@ -2693,18 +2693,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.scroller.contentOffset = self.lastContentOffset
             self.ignoreScrollingEvents = wasIgnoringScrollingEvents
         } else {
-            let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, scrollToItem: scrollToItem, insetDeltaOffsetFix: 0.0)
-            
+            let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil && scrollToItem?.directionHint != .Down, stackFromBottom: self.stackFromBottom, updateSizeAndInsets: updateSizeAndInsets, scrollToItem: scrollToItem, insetDeltaOffsetFix: 0.0)
+
             if !snappedTopInset.isZero && previousApparentFrames.isEmpty {
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: snappedTopInset), within: self.visibleSize)
                 }
             }
-            
+
             if !snapToBoundsOffset.isZero {
                 self.updateVisibleContentOffset()
             }
-            
+
             if let snapshotView = snapshotView {
                 snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: snapshotView.frame.size)
                 self.view.addSubview(snapshotView)
@@ -3808,7 +3808,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
                     self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 } else if node.frame.minY < self.insets.top && overflow > 0.0 {
-                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: true, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(-overflow), animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 }
             } else {
                 if self.experimentalSnapScrollToItem {
