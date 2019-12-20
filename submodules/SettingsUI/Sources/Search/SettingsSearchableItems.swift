@@ -527,7 +527,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         }),
         SettingsSearchableItem(id: .privacy(7), title: passcodeTitle, alternate: passcodeAlternate, icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             let _ = passcodeOptionsAccessController(context: context, pushController: { c in 
-                
+                present(.push, c)
             }, completion: { animated in
                 let controller = passcodeOptionsController(context: context)
                 if animated {
@@ -537,7 +537,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
                 }
             }).start(next: { controller in
                 if let controller = controller {
-                    present(.modal, controller)
+                    present(.push, controller)
                 }
             })
         }),
