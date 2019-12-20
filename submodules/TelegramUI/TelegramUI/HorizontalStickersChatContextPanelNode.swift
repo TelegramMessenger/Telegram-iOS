@@ -319,6 +319,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
+        self.layer.allowsGroupOpacity = true
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })
