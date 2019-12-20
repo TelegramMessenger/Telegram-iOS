@@ -1020,6 +1020,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             
             if let file = self.media as? TelegramMediaFile, file.isAnimated {
                 muted = false
+                
+                if case .Fetching = fetchStatus, message.flags.isSending, file.resource is CloudDocumentMediaResource {
+                    fetchStatus = .Local
+                }
             }
             
             if message.flags.contains(.Unsent) {
