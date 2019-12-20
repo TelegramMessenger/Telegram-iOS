@@ -129,6 +129,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
+    public let currentAutodownloadSettings: Atomic<AutodownloadSettings>
+    private let _autodownloadSettings = Promise<AutodownloadSettings>()
+    private var currentAutodownloadSettingsDisposable = MetaDisposable()
+    
     public let currentMediaInputSettings: Atomic<MediaInputSettings>
     private var mediaInputSettingsDisposable: Disposable?
     
@@ -180,6 +184,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self._currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentAutodownloadSettings = Atomic(value: initialPresentationDataAndSettings.autodownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
@@ -193,6 +198,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
                 let automaticDownloadSettings: MediaAutoDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings ?? .defaultSettings
                 return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+            }
+        ))
+        
+        self._autodownloadSettings.set(.single(initialPresentationDataAndSettings.autodownloadSettings)
+        |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
+            |> map { sharedData in
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                return autodownloadSettings
             }
         ))
         
@@ -264,6 +277,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.automaticMediaDownloadSettingsDisposable.set(self._automaticMediaDownloadSettings.get().start(next: { [weak self] next in
             if let strongSelf = self {
                 let _ = strongSelf.currentAutomaticMediaDownloadSettings.swap(next)
+            }
+        }))
+        
+        self.currentAutodownloadSettingsDisposable.set(self._autodownloadSettings.get().start(next: { [weak self] next in
+            if let strongSelf = self {
+                let _ = strongSelf.currentAutodownloadSettings.swap(next)
             }
         }))
         
@@ -644,6 +663,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.registeredNotificationTokensDisposable.dispose()
         self.presentationDataDisposable.dispose()
         self.automaticMediaDownloadSettingsDisposable.dispose()
+        self.currentAutodownloadSettingsDisposable.dispose()
         self.inAppNotificationSettingsDisposable?.dispose()
         self.mediaInputSettingsDisposable?.dispose()
         self.callDisposable?.dispose()

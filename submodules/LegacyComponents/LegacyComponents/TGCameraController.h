@@ -2,6 +2,7 @@
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/LegacyComponentsContext.h>
 #import <LegacyComponents/TGMediaSelectionContext.h>
+#import <LegacyComponents/TGVideoEditAdjustments.h>
 
 @class PGCamera;
 @class TGCameraPreviewView;
@@ -45,6 +46,7 @@ typedef enum {
 @property (nonatomic, strong) NSArray *forcedEntities;
 
 @property (nonatomic, strong) NSString *recipientName;
+@property (nonatomic, assign) TGMediaVideoConversionPreset defaultVideoPreset;
 
 @property (nonatomic, copy) void(^finishedWithResults)(TGOverlayController *controller, TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime);
 @property (nonatomic, copy) void(^finishedWithPhoto)(TGOverlayController *controller, UIImage *resultImage, NSString *caption, NSArray *entities, NSArray *stickers, NSNumber *timer);

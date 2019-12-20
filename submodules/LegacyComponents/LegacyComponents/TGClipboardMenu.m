@@ -9,7 +9,7 @@
 
 @implementation TGClipboardMenu
 
-+ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
++ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     bool centered = false;
     if (sourceRect == nil)
@@ -46,6 +46,7 @@
     previewItem.allowCaptions = hasCaption;
     previewItem.hasTimer = hasTimer;
     previewItem.recipientName = recipientName;
+    previewItem.defaultVideoPreset = defaultVideoPreset;
     previewItem.sendPressed = ^(UIImage *currentItem)
     {
         __strong TGClipboardPreviewItemView *strongPreviewItem = weakPreviewItem;

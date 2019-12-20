@@ -407,6 +407,7 @@ public protocol SharedAccountContext: class {
     
     var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
     var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
+    var currentAutodownloadSettings: Atomic<AutodownloadSettings> { get }
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }

@@ -801,7 +801,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     if ([cell isKindOfClass:[TGAttachmentAssetCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder];
+    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName defaultVideoPreset:self.defaultVideoPreset hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder];
     mixin.presentScheduleController = self.presentScheduleController;
     __weak TGAttachmentCarouselItemView *weakSelf = self;
     mixin.thumbnailSignalForItem = ^SSignal *(id item)
@@ -864,7 +864,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     {
         id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
         
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab defaultVideoPreset:_defaultVideoPreset];
         controller.editingContext = _editingContext;
         controller.dontHideStatusBar = true;
         
