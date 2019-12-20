@@ -764,7 +764,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     }
 }
 
-public final class StickerPackScreen: ViewController {
+public final class StickerPackScreenImpl: ViewController {
     private let context: AccountContext
     private let stickerPacks: [StickerPackReference]
     private let initialSelectedStickerPackIndex: Int
@@ -840,4 +840,10 @@ public final class StickerPackScreen: ViewController {
         
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
     }
+}
+
+public func StickerPackScreen(context: AccountContext, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) -> ViewController {
+    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: .default, parentNavigationController: parentNavigationController)
+    controller.sendSticker = sendSticker
+    return controller
 }

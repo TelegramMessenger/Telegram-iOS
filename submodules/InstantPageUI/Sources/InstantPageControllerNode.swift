@@ -891,7 +891,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
             if let strongSelf = self {
                 for (_, itemNode) in strongSelf.visibleItemsWithNodes {
-                    if let (node, _) = itemNode.transitionNode(media: media) {
+                    if let (node, _, _) = itemNode.transitionNode(media: media) {
                         return (strongSelf.scrollNode, node.convert(node.bounds, to: strongSelf.scrollNode), strongSelf, strongSelf.bounds)
                     }
                 }

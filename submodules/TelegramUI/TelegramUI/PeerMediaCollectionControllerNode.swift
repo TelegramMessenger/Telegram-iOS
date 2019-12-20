@@ -508,14 +508,14 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         return nil
     }
     
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
             if let transitionNode = searchContentNode.transitionNodeForGallery(messageId: messageId, media: media) {
                 return transitionNode
             }
         }
         
-        var transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+        var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 if let result = itemNode.transitionNode(id: messageId, media: media) {

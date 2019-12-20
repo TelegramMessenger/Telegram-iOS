@@ -69,7 +69,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 
 @implementation TGPhotoQualityController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView defaultPreset:(TGMediaVideoConversionPreset)defaultPreset
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -89,11 +89,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         }
         else
         {
-            NSNumber *presetValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_preferredVideoPreset_v0"];
-            if (presetValue != nil)
-                value = [presetValue integerValue];
-            else
-                value = TGMediaVideoConversionPresetCompressedMedium;
+            value = defaultPreset;
         }
         
         _disposable = [[SMetaDisposable alloc] init];

@@ -1908,11 +1908,22 @@ public extension Api {
     
     }
     public enum AutoDownloadSettings: TypeConstructorDescription {
-        case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32)
+        case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, videoUploadMaxbitrate: Int32)
+        case autoDownloadSettingsLegacy(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
+                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax, let videoUploadMaxbitrate):
+                    if boxed {
+                        buffer.appendInt32(-532532493)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(photoSizeMax, buffer: buffer, boxed: false)
+                    serializeInt32(videoSizeMax, buffer: buffer, boxed: false)
+                    serializeInt32(fileSizeMax, buffer: buffer, boxed: false)
+                    serializeInt32(videoUploadMaxbitrate, buffer: buffer, boxed: false)
+                    break
+                case .autoDownloadSettingsLegacy(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
                     if boxed {
                         buffer.appendInt32(-767099577)
                     }
@@ -1926,12 +1937,37 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
-                return ("autoDownloadSettings", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax)])
+                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax, let videoUploadMaxbitrate):
+                return ("autoDownloadSettings", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax), ("videoUploadMaxbitrate", videoUploadMaxbitrate)])
+                case .autoDownloadSettingsLegacy(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
+                return ("autoDownloadSettingsLegacy", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax)])
     }
     }
     
         public static func parse_autoDownloadSettings(_ reader: BufferReader) -> AutoDownloadSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.AutoDownloadSettings.autoDownloadSettings(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!, videoUploadMaxbitrate: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_autoDownloadSettingsLegacy(_ reader: BufferReader) -> AutoDownloadSettings? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -1945,7 +1981,7 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.AutoDownloadSettings.autoDownloadSettings(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!)
+                return Api.AutoDownloadSettings.autoDownloadSettingsLegacy(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!)
             }
             else {
                 return nil

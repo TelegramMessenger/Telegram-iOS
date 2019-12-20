@@ -3,6 +3,7 @@
 #import <LegacyComponents/TGMediaAsset.h>
 
 #import <LegacyComponents/TGMediaAssetsUtils.h>
+#import <LegacyComponents/TGVideoEditAdjustments.h>
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
@@ -52,6 +53,7 @@
 @property (nonatomic, assign) bool collapsed;
 
 @property (nonatomic, strong) NSString *recipientName;
+@property (nonatomic, assign) TGMediaVideoConversionPreset defaultVideoPreset;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
 

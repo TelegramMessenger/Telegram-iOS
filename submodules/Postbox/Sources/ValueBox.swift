@@ -82,7 +82,7 @@ public protocol ValueBox {
     func removeRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey)
     func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String)
     func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool)
-    func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String)
+    func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String, secure: Bool)
     func removeAllFromTable(_ table: ValueBoxTable)
     func removeTable(_ table: ValueBoxTable)
     func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable)

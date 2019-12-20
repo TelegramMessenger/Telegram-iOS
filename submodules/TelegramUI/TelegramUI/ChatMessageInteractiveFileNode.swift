@@ -912,9 +912,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let iconNode = self.iconNode, let file = self.file, file.isEqual(to: media) {
-            return (iconNode, { [weak iconNode] in
+            return (iconNode, iconNode.bounds, { [weak iconNode] in
                 return (iconNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {

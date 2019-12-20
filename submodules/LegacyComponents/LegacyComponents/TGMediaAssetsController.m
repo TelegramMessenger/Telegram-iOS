@@ -58,12 +58,12 @@
 
 @implementation TGMediaAssetsController
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit
 {
-    return [self controllerWithContext:context assetGroup:assetGroup intent:intent recipientName:recipientName saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping inhibitSelection:false selectionLimit:selectionLimit];
+    return [self controllerWithContext:context assetGroup:assetGroup intent:intent recipientName:recipientName defaultVideoPreset:defaultVideoPreset saveEditedPhotos:saveEditedPhotos allowGrouping:allowGrouping inhibitSelection:false selectionLimit:selectionLimit];
 }
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit
 {
     if (intent != TGMediaAssetsControllerSendMediaIntent)
         allowGrouping = false;
@@ -106,7 +106,7 @@
         
         if ([group isKindOfClass:[TGMediaAssetGroup class]])
         {
-            pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:inhibitSelection ? nil : strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
+            pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:inhibitSelection ? nil : strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos defaultVideoPreset:defaultVideoPreset];
             pickerController.pallete = strongController.pallete;
         }
         pickerController.suggestionContext = strongController.suggestionContext;
@@ -118,6 +118,7 @@
         pickerController.liveVideoUploadEnabled = strongController.liveVideoUploadEnabled;
         pickerController.catchToolbarView = catchToolbarView;
         pickerController.recipientName = recipientName;
+        pickerController.defaultVideoPreset = defaultVideoPreset;
         pickerController.hasTimer = strongController.hasTimer;
         pickerController.onlyCrop = strongController.onlyCrop;
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
@@ -128,7 +129,7 @@
     };
     [groupsController loadViewIfNeeded];
     
-    TGMediaAssetsPickerController *pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary assetGroup:assetGroup intent:intent selectionContext:inhibitSelection ? nil : assetsController->_selectionContext editingContext:assetsController->_editingContext saveEditedPhotos:saveEditedPhotos];
+    TGMediaAssetsPickerController *pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:context assetsLibrary:assetsController.assetsLibrary assetGroup:assetGroup intent:intent selectionContext:inhibitSelection ? nil : assetsController->_selectionContext editingContext:assetsController->_editingContext saveEditedPhotos:saveEditedPhotos defaultVideoPreset:defaultVideoPreset];
     pickerController.pallete = assetsController.pallete;
     pickerController.catchToolbarView = catchToolbarView;
     

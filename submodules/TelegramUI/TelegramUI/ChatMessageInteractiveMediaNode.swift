@@ -1028,6 +1028,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             
             if let file = self.media as? TelegramMediaFile, file.isAnimated {
                 muted = false
+                
+                if case .Fetching = fetchStatus, message.flags.isSending, file.resource is CloudDocumentMediaResource {
+                    fetchStatus = .Local
+                }
             }
             
             if message.flags.contains(.Unsent) {
@@ -1321,8 +1325,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func transitionNode() -> (ASDisplayNode, () -> (UIView?, UIView?))? {
-        return (self, { [weak self] in
+    func transitionNode() -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        let bounds: CGRect
+        if let currentImageArguments = self.currentImageArguments {
+            bounds = currentImageArguments.imageRect
+        } else {
+            bounds = self.bounds
+        }
+        return (self, bounds, { [weak self] in
             var badgeNodeHidden: Bool?
             if let badgeNode = self?.badgeNode {
                 badgeNodeHidden = badgeNode.isHidden
