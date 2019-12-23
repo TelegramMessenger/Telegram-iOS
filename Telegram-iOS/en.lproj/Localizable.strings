@@ -505,6 +505,7 @@
 "Notification.JoinedChat" = "%@ joined the group";
 "Notification.JoinedChannel" = "%@ joined the channel";
 "Notification.Invited" = "%@ invited %@";
+"Notification.InvitedMultiple" = "%@ invited %@";
 "Notification.LeftChat" = "%@ left the group";
 "Notification.LeftChannel" = "%@ left the channel";
 "Notification.Kicked" = "%@ removed %@";
@@ -2561,6 +2562,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.InfoPanelTitle" = "What Is This?";
 "Channel.AdminLog.InfoPanelAlertTitle" = "What is the event log?";
 "Channel.AdminLog.InfoPanelAlertText" = "This is a list of all service actions taken by the group's members and admins in the last 48 hours.";
+"Channel.AdminLog.InfoPanelChannelAlertText" = "This is a list of all service actions taken by the channel's admins in the last 48 hours.";
 
 "Channel.AdminLog.BanReadMessages" = "Read Messages";
 "Channel.AdminLog.BanSendMessages" = "Send Messages";
