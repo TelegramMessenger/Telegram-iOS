@@ -486,12 +486,12 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
                     switch parameter {
-                        case let .slug(slug, options, color, intensity):
-                            source = .slug(slug, content.file, options, color, intensity, message)
+                        case let .slug(slug, options, firstColor, secondColor, intensity, rotation):
+                            source = .slug(slug, content.file, options, firstColor, secondColor, intensity, rotation, message)
                         case let .color(color):
-                            source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil, message)
-                        case let .gradient(topColor, bottomColor):
-                            source = .wallpaper(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings()), nil, nil, nil, message)
+                            source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil, nil, nil, message)
+                        case let .gradient(topColor, bottomColor, rotation):
+                            source = .wallpaper(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings(rotation: rotation)), nil, nil, nil, nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)

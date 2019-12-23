@@ -177,19 +177,31 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
                     } else if component.count == 13, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                        var rotation: Int32?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "rotation" {
+                                        rotation = Int32(value)
+                                    }
+                                }
+                            }
+                        }
                         let components = component.components(separatedBy: "-")
                         if components.count == 2, let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1])  {
-                            parameter = .gradient(topColor, bottomColor)
+                            parameter = .gradient(topColor, bottomColor, rotation)
                         } else {
                             return nil
                         }
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
-                        var color: UIColor?
+                        var topColor: UIColor?
+                        var bottomColor: UIColor?
+                        var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
-                                if let value = queryItem.value{
+                                if let value = queryItem.value {
                                     if queryItem.name == "mode" {
                                         for option in value.components(separatedBy: "+") {
                                             switch option.lowercased() {
@@ -202,14 +214,24 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             }
                                         }
                                     } else if queryItem.name == "bg_color" {
-                                        color = UIColor(hexString: value)
+                                        if value.count == 6, value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
+                                            topColor = color
+                                        } else if value.count == 13, value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                                            let components = value.components(separatedBy: "-")
+                                            if components.count == 2, let topColorValue = UIColor(hexString: components[0]), let bottomColorValue = UIColor(hexString: components[1]) {
+                                                topColor = topColorValue
+                                                bottomColor = bottomColorValue
+                                            }
+                                        }
                                     } else if queryItem.name == "intensity" {
                                         intensity = Int32(value)
+                                    } else if queryItem.name == "rotation" {
+                                        rotation = Int32(value)
                                     }
                                 }
                             }
                         }
-                        parameter = .slug(component, options, color, intensity)
+                        parameter = .slug(component, options, topColor, bottomColor, intensity, rotation)
                     }
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {

@@ -10,6 +10,32 @@ public enum PresentationBuiltinThemeReference: Int32 {
     case night = 1
     case day = 2
     case nightAccent = 3
+    
+    public init(baseTheme: TelegramBaseTheme) {
+        switch baseTheme {
+            case .classic:
+                self = .dayClassic
+            case .day:
+                self = .day
+            case .night:
+                self = .night
+            case .tinted:
+                self = .nightAccent
+        }
+    }
+    
+    public var baseTheme: TelegramBaseTheme {
+        switch self {
+            case .dayClassic:
+                return .classic
+            case .day:
+                return .day
+            case .night:
+                return .night
+            case .nightAccent:
+                return .tinted
+        }
+    }
 }
 
 public struct WallpaperPresentationOptions: OptionSet {

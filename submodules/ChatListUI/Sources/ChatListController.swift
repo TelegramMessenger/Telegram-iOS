@@ -1198,11 +1198,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 
                 let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
                 
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                     guard let strongSelf = self else {
-                        return
+                        return false
                     }
-                    if shouldCommit {
+                    if value == .commit {
                         let context = strongSelf.context
                         let presentationData = strongSelf.presentationData
                         let progressSignal = Signal<Never, NoError> { subscriber in
@@ -1230,7 +1230,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         }
                         let _ = (signal
                         |> deliverOnMainQueue).start()
-                    } else {
+                        return true
+                    } else if value == .undo {
                         strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
                         strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
                             var state = state
@@ -1240,7 +1241,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             return state
                         })
                         self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds.first!)
+                        return true
                     }
+                    return false
                 }), in: .current)
                 
                 strongSelf.donePressed()
@@ -1310,11 +1313,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             })
             
             if value {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                     guard let strongSelf = self else {
-                        return
+                        return false
                     }
-                    if !shouldCommit {
+                    if value == .undo {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
                             var updatedValue = false
                             updateChatArchiveSettings(transaction: transaction, { settings in
@@ -1325,10 +1328,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             })
                             return updatedValue
                         }).start()
+                        return true
                     }
+                    return false
                 }), in: .current)
             } else {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false
                 }), in: .current)
             }
         })
@@ -1422,11 +1427,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 return true
                             })
                             
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                                 guard let strongSelf = self else {
-                                    return
+                                    return false
                                 }
-                                if shouldCommit {
+                                if value == .commit {
                                     let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
@@ -1437,13 +1442,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                             return state
                                         })
                                     })
-                                } else {
+                                    return true
+                                } else if value == .undo {
                                     strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
                                         var state = state
                                         state.pendingClearHistoryPeerIds.remove(peer.peerId)
                                         return state
                                     })
+                                    return true
                                 }
+                                return false
                             }), in: .current)
                         }
                         
@@ -1618,11 +1626,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     deleteSendMessageIntents(peerId: peerId)
                 }
                 
-                let action: (Bool) -> Void = { shouldCommit in
+                let action: (UndoOverlayAction) -> Bool = { value in
                     guard let strongSelf = self else {
-                        return
+                        return false
                     }
-                    if !shouldCommit {
+                    if value == .undo {
                         strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerIds[0])
                         let _ = (postbox.transaction { transaction -> Void in
                             for peerId in peerIds {
@@ -1635,6 +1643,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             }
                             strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
                         })
+                        return true
+                    } else {
+                        return false
                     }
                 }
         
@@ -1721,11 +1732,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             return true
         })
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let strongSelf = self else {
-                return
+                return false
             }
-            if shouldCommit {
+            if value == .commit {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                 if let channel = chatPeer as? TelegramChannel {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
@@ -1744,7 +1755,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     deleteSendMessageIntents(peerId: peerId)
                 })
                 completion()
-            } else {
+                return true
+            } else if value == .undo {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                 strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
                     var state = state
@@ -1752,7 +1764,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     return state
                 })
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                return true
             }
+            return false
         }), in: .current)
     }
     

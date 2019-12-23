@@ -14,17 +14,23 @@ public enum UndoOverlayContent {
     case actionSucceeded(title: String, text: String, cancel: String)
 }
 
+public enum UndoOverlayAction {
+    case info
+    case undo
+    case commit
+}
+
 public final class UndoOverlayController: ViewController {
     private let presentationData: PresentationData
     public let content: UndoOverlayContent
     private let elevatedLayout: Bool
     private let animateInAsReplacement: Bool
-    private var action: (Bool) -> Void
+    private var action: (UndoOverlayAction) -> Bool
     
     private var didPlayPresentationAnimation = false
     private var dismissed = false
     
-    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
@@ -42,7 +48,7 @@ public final class UndoOverlayController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, action: { [weak self] value in
-            self?.action(value)
+            return self?.action(value) ?? false
         }, dismiss: { [weak self] in
             self?.dismiss()
         })
@@ -50,12 +56,12 @@ public final class UndoOverlayController: ViewController {
     }
     
     public func dismissWithCommitAction() {
-        self.action(true)
+        self.action(.commit)
         self.dismiss()
     }
     
     public func dismissWithCommitActionAndReplacementAnimation() {
-        self.action(true)
+        self.action(.commit)
         (self.displayNode as! UndoOverlayControllerNode).animateOutWithReplacement(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
