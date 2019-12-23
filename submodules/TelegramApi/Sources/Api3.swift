@@ -5835,41 +5835,6 @@ public extension Api {
                     })
                 }
             
-                public static func createTheme(slug: String, title: String, document: Api.InputDocument) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(729808255)
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    document.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.createTheme", parameters: [("slug", slug), ("title", title), ("document", document)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Theme?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Theme
-                        }
-                        return result
-                    })
-                }
-            
-                public static func updateTheme(flags: Int32, format: String, theme: Api.InputTheme, slug: String?, title: String?, document: Api.InputDocument?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(999203330)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(format, buffer: buffer, boxed: false)
-                    theme.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(slug!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "account.updateTheme", parameters: [("flags", flags), ("format", format), ("theme", theme), ("slug", slug), ("title", title), ("document", document)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Theme?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Theme
-                        }
-                        return result
-                    })
-                }
-            
                 public static func saveTheme(theme: Api.InputTheme, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-229175188)
@@ -5955,6 +5920,44 @@ public extension Api {
                         var result: Api.account.ContentSettings?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.ContentSettings
+                        }
+                        return result
+                    })
+                }
+            
+                public static func createTheme(flags: Int32, slug: String, title: String, document: Api.InputDocument, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1683113716)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    document.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.createTheme", parameters: [("flags", flags), ("slug", slug), ("title", title), ("document", document), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Theme?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Theme
+                        }
+                        return result
+                    })
+                }
+            
+                public static func updateTheme(flags: Int32, format: String, theme: Api.InputTheme, slug: String?, title: String?, document: Api.InputDocument?, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1555261397)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(format, buffer: buffer, boxed: false)
+                    theme.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(slug!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.updateTheme", parameters: [("flags", flags), ("format", format), ("theme", theme), ("slug", slug), ("title", title), ("document", document), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Theme?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Theme
                         }
                         return result
                     })
