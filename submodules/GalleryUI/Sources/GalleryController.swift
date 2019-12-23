@@ -222,10 +222,10 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
 }
 
 public final class GalleryTransitionArguments {
-    public let transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))
+    public let transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))
     public let addToTransitionSurface: (UIView) -> Void
     
-    public init(transitionNode: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: @escaping (UIView) -> Void) {
+    public init(transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: @escaping (UIView) -> Void) {
         self.transitionNode = transitionNode
         self.addToTransitionSurface = addToTransitionSurface
     }

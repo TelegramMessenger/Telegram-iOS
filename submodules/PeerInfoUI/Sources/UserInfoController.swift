@@ -1028,7 +1028,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                                     let _ = reportPeer(account: context.account, peerId: peerId, reason: .spam).start()
                                 }
                                 
-                                deleteSendMessageIntents(account: context.account, peerId: peerId)
+                                deleteSendMessageIntents(peerId: peerId)
                             })
                         ]),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -1098,7 +1098,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                             dismissImpl?()
                         }))
                         
-                        deleteSendMessageIntents(account: context.account, peerId: peerId)
+                        deleteSendMessageIntents(peerId: peerId)
                     })
                 })
             ]),
@@ -1463,7 +1463,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: ((ASDisplayNode, () -> (UIView?, UIView?)), CGRect)?
+            var result: ((ASDisplayNode, CGRect, () -> (UIView?, UIView?)), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()

@@ -767,7 +767,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             var hasAnimation = true
                             var transition: ContainedViewLayoutTransition = .immediate
                             switch animation {
-                                case .None:
+                                case .None, .Crossfade:
                                     hasAnimation = false
                                 case let .System(duration):
                                     hasAnimation = true
@@ -960,13 +960,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return false
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let contentImageNode = self.contentImageNode, let image = self.media as? TelegramMediaImage, image.isEqual(to: media) {
-            return (contentImageNode, { [weak contentImageNode] in
+            return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else if let contentImageNode = self.contentImageNode, let file = self.media as? TelegramMediaFile, file.isEqual(to: media) {
-            return (contentImageNode, { [weak contentImageNode] in
+            return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }

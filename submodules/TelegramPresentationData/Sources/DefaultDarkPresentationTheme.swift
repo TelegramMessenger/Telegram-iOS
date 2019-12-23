@@ -99,10 +99,25 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     var outgoingCheckColor: UIColor?
    
     if let bubbleColors = bubbleColors {
-        outgoingBubbleFillColor = bubbleColors.0
-        outgoingBubbleFillGradientColor = bubbleColors.1 ?? bubbleColors.0
+        var topBubbleColor = bubbleColors.0
+        var bottomBubbleColor = bubbleColors.1 ?? bubbleColors.0
+
+        if topBubbleColor.rgb != bottomBubbleColor.rgb {
+            let topBubbleColorLightness = topBubbleColor.lightness
+            let bottomBubbleColorLightness = bottomBubbleColor.lightness
+            if abs(topBubbleColorLightness - bottomBubbleColorLightness) > 0.7 {
+                if topBubbleColorLightness > bottomBubbleColorLightness {
+                    topBubbleColor = topBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
+                } else {
+                    bottomBubbleColor = bottomBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
+                }
+            }
+        }
+        
+        outgoingBubbleFillColor = topBubbleColor
+        outgoingBubbleFillGradientColor = bottomBubbleColor
      
-        let lightnessColor = bubbleColors.0.mixedWith(bubbleColors.1 ?? bubbleColors.0, alpha: 0.5)
+        let lightnessColor = topBubbleColor.mixedWith(bottomBubbleColor, alpha: 0.5)
         if lightnessColor.lightness > 0.7 {
             outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
             outgoingSecondaryTextColor = UIColor(rgb: 0x000000, alpha: 0.5)

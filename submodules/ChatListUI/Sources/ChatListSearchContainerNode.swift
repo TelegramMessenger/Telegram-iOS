@@ -867,14 +867,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
                 existingPeerIds.removeAll()
                 
-                let localExpandType: ChatListSearchSectionExpandType
+                let localExpandType: ChatListSearchSectionExpandType = .none
                 let globalExpandType: ChatListSearchSectionExpandType
-                if totalNumberOfLocalPeers > 5 {
-                    localExpandType = searchState.expandLocalSearch ? .collapse : .expand
-                } else {
-                    localExpandType = .none
-                }
-                if totalNumberOfGlobalPeers > 5 {
+                if totalNumberOfGlobalPeers > 3 {
                     globalExpandType = searchState.expandGlobalSearch ? .collapse : .expand
                 } else {
                     globalExpandType = .none
@@ -925,7 +920,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 var numberOfGlobalPeers = 0
                 index = 0
                 for peer in foundRemotePeers.1 {
-                    if case .expand = globalExpandType, numberOfGlobalPeers >= 5 {
+                    if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
                         break
                     }
                     

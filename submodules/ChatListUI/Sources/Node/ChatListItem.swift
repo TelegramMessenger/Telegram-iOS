@@ -654,7 +654,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
             let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
-            let badgeFont = Font.regular(14.0)
+            let badgeFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
             let account = item.context.account
             var message: Message?
@@ -777,8 +777,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let enableChatListPhotos = item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos
             
-            let avatarDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0)
+            let avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             let avatarLeftInset = 18.0 + avatarDiameter
+            
+            let badgeDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 20.0 / 17.0)
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
@@ -995,10 +997,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 } else {
                     let badgeTextColor: UIColor
                     if unreadCount.muted {
-                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme)
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme, diameter: badgeDiameter)
                         badgeTextColor = theme.unreadBadgeInactiveTextColor
                     } else {
-                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme)
+                        currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme, diameter: badgeDiameter)
                         badgeTextColor = theme.unreadBadgeActiveTextColor
                     }
                     let unreadCountText = compactNumericCountString(Int(unreadCount.count), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -1012,7 +1014,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if let mutedCount = unreadCount.mutedCount, mutedCount > 0 {
                         let mutedUnreadCountText = compactNumericCountString(Int(mutedCount), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
-                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme)
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme, diameter: badgeDiameter)
                         mentionBadgeContent = .text(NSAttributedString(string: mutedUnreadCountText, font: badgeFont, textColor: theme.unreadBadgeInactiveTextColor))
                     }
                 }
@@ -1024,13 +1026,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !isPeerGroup {
                 if totalMentionCount > 0 {
                     if Namespaces.PeerGroup.archive == item.peerGroupId {
-                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveMention(item.presentationData.theme)
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveMention(item.presentationData.theme, diameter: badgeDiameter)
                     } else {
-                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme, diameter: badgeDiameter)
                     }
                     mentionBadgeContent = .mention
                 } else if item.index.pinningIndex != nil && !isAd && currentBadgeBackgroundImage == nil {
-                    currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
+                    currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme, diameter: badgeDiameter)
                 }
             }
             
@@ -1105,9 +1107,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (badgeLayout, badgeApply) = badgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), currentBadgeBackgroundImage, badgeContent)
+            let (badgeLayout, badgeApply) = badgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), badgeDiameter, badgeFont, currentBadgeBackgroundImage, badgeContent)
             
-            let (mentionBadgeLayout, mentionBadgeApply) = mentionBadgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), currentMentionBadgeImage, mentionBadgeContent)
+            let (mentionBadgeLayout, mentionBadgeApply) = mentionBadgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), badgeDiameter, badgeFont, currentMentionBadgeImage, mentionBadgeContent)
             
             var badgeSize: CGFloat = 0.0
             if !badgeLayout.width.isZero {
@@ -1656,7 +1658,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
             }
             
-            let avatarDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0)
+            let avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             let avatarLeftInset = 18.0 + avatarDiameter
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset

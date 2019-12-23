@@ -275,6 +275,8 @@ public class WallpaperGalleryController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.patternPanelNode?.updateTheme(self.presentationData.theme)
+        self.patternPanelNode?.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil) : nil
     }
     
     func dismiss(forceAway: Bool) {
@@ -380,8 +382,13 @@ public class WallpaperGalleryController: ViewController {
                                         } else {
                                             themeReference = current.theme
                                         }
-                                        let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
-                                        themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColorIndex)] = wallpaper
+                                        let accentColor = current.themeSpecificAccentColors[themeReference.index]
+                                        if let accentColor = accentColor, accentColor.baseColor == .custom {
+                                            themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = wallpaper
+                                        } else {
+                                            themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = nil
+                                            themeSpecificChatWallpapers[themeReference.index] = wallpaper
+                                        }
                                         return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
@@ -697,6 +704,7 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
                 }
             }
+            patternPanelNode.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil) : nil
             self.patternPanelNode = patternPanelNode
             currentPatternPanelNode = patternPanelNode
             self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)

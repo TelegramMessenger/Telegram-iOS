@@ -202,8 +202,8 @@ public class ShareRootControllerImpl {
             if #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let userId = Int32(string) {
-                        immediatePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                    if let peerId = Int64(string) {
+                        immediatePeerId = PeerId(peerId)
                     }
                 }
             }

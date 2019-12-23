@@ -146,7 +146,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         switch entry.entry.event.action {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
-                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
                                     return true
                                 }
                             default:
@@ -161,7 +161,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, present: { c, a in
                     self?.presentController(c, a)
                 }, transitionNode: { messageId, media in
-                    var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {
@@ -700,6 +700,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if !channel.hasPermission(.banMembers) {
                     canBan = false
                 }
+                if case .broadcast = channel.info {
+                    canBan = false
+                }
             }
             for member in adminsState.list {
                 if member.peer.id == author.id {
@@ -779,7 +782,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
-                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, stickerPacks: [.name(name)], parentNavigationController: strongSelf.getNavigationController()), nil)
+                        let packReference: StickerPackReference = .name(name)
+                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):

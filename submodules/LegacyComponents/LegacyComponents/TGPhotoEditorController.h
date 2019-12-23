@@ -51,7 +51,7 @@ typedef enum {
 @property (nonatomic, assign) bool dontHideStatusBar;
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset;
 
 - (void)dismissEditor;
 - (void)applyEditor;

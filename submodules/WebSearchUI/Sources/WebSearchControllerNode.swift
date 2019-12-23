@@ -711,7 +711,7 @@ class WebSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if let transitionNode = transitionNode {
-                                return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
+                                return GalleryTransitionArguments(transitionNode: (transitionNode, transitionNode.bounds, { [weak transitionNode] in
                                         return (transitionNode?.transitionView().snapshotContentTree(unhide: true), nil)
                                 }), addToTransitionSurface: { view in
                                     if let strongSelf = self {

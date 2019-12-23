@@ -4676,6 +4676,11 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
 "Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
 
+"Appearance.ThemePreview.Chat.4.Text" = "For relaxing times, make it Suntory time. 😎";
+"Appearance.ThemePreview.Chat.5.Text" = "He wants you to turn, look in camera. O.K.?";
+"Appearance.ThemePreview.Chat.6.Text" = "That’s all he said?";
+"Appearance.ThemePreview.Chat.7.Text" = "Yes, turn to camera.";
+
 "GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
 
 "Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
@@ -5201,7 +5206,8 @@ Any member of this group will be able to see messages in the channel.";
 "OldChannels.NoticeCreateText" = "Sorry, you are member of too many groups and channels.\nPlease leave some before creating a new one.";
 "OldChannels.NoticeUpgradeText" = "Sorry, you are a member of too many groups and channels.\nFor technical reasons, you need to leave some first before changing this setting in your groups.";
 "OldChannels.ChannelsHeader" = "MOST INACTIVE";
-"OldChannels.Leave" = "Leave";
+"OldChannels.Leave_1" = "Leave %@ Chat";
+"OldChannels.Leave_any" = "Leave %@ Chats";
 
 "OldChannels.ChannelFormat" = "channel, ";
 "OldChannels.GroupEmptyFormat" = "group, ";
@@ -5218,3 +5224,5 @@ Any member of this group will be able to see messages in the channel.";
 "OldChannels.InactiveYear_any" = "inactive %@ years";
 
 "PrivacySettings.WebSessions" = "Active Websites";
+
+"Appearance.ShareThemeColor" = "Share";

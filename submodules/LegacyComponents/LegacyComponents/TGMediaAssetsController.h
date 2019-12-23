@@ -6,6 +6,8 @@
 
 #import <LegacyComponents/TGMediaAssetsUtils.h>
 
+#import <LegacyComponents/TGVideoEditAdjustments.h>
+
 @class TGMediaAssetsPickerController;
 @class TGViewController;
 
@@ -91,8 +93,8 @@ typedef enum
 
 - (void)dismiss;
 
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit;
-+ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping selectionLimit:(int)selectionLimit;
++ (instancetype)controllerWithContext:(id<LegacyComponentsContext>)context assetGroup:(TGMediaAssetGroup *)assetGroup intent:(TGMediaAssetsControllerIntent)intent recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping inhibitSelection:(bool)inhibitSelection selectionLimit:(int)selectionLimit;
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 

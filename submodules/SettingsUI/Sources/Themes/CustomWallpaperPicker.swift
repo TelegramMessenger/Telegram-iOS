@@ -162,8 +162,13 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
                     } else {
                         themeReference = current.theme
                     }
-                    let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
-                    themeSpecificChatWallpapers[themeReference.index &+ Int64(accentColorIndex)] = wallpaper
+                    let accentColor = current.themeSpecificAccentColors[themeReference.index]
+                    if let accentColor = accentColor, accentColor.baseColor == .custom {
+                        themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = wallpaper
+                    } else {
+                        themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] = nil
+                        themeSpecificChatWallpapers[themeReference.index] = wallpaper
+                    }
                     return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                 })).start()
             }

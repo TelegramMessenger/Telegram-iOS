@@ -274,19 +274,19 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
             }
             let accountPeerId = context.account.peerId
             if previous.contacts && !updated.contacts {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .contact)
+                deleteAllSendMessageIntents()
             }
             if previous.savedMessages && !updated.savedMessages {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .savedMessages)
+                deleteAllSendMessageIntents()
             }
             if previous.privateChats && !updated.privateChats {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .privateChat)
+                deleteAllSendMessageIntents()
             }
             if previous.groups && !updated.groups {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .group)
+                deleteAllSendMessageIntents()
             }
             if previous.account != updated.account, let previousAccount = previous.account {
-                deleteAllSendMessageIntents(accountPeerId: previousAccount)
+                deleteAllSendMessageIntents()
             }
         })
     }, resetAll: {

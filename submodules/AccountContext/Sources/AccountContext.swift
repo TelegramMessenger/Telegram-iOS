@@ -387,6 +387,7 @@ public enum CreateGroupMode {
 
 public protocol AppLockContext: class {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
+    var autolockDeadline: Signal<Int32?, NoError> { get }
     
     func lock()
     func unlock()
@@ -407,6 +408,7 @@ public protocol SharedAccountContext: class {
     
     var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
     var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
+    var currentAutodownloadSettings: Atomic<AutodownloadSettings> { get }
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }

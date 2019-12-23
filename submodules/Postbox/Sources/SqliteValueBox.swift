@@ -1764,8 +1764,14 @@ public final class SqliteValueBox: ValueBox {
         statement.reset()
     }
     
-    public func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String) {
+    public func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String, secure: Bool) {
         if let _ = self.fullTextTables[table.id] {
+            if secure != self.secureDeleteEnabled {
+                self.secureDeleteEnabled = secure
+                let result = database.execute("PRAGMA secure_delete=\(secure ? 1 : 0)")
+                precondition(result)
+            }
+            
             guard let itemIdData = itemId.data(using: .utf8) else {
                 return
             }

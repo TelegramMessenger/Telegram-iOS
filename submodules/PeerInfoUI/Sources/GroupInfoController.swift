@@ -1769,6 +1769,26 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                         return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
                                     }
                                     return .complete()
+                                case .tooManyChannels:
+                                    let _ = (context.account.postbox.loadedPeerWithId(memberId)
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    })
+                                
+                                    updateState { state in
+                                        var temporaryParticipants = state.temporaryParticipants
+                                        for i in 0 ..< temporaryParticipants.count {
+                                            if temporaryParticipants[i].peer.id == memberId {
+                                                temporaryParticipants.remove(at: i)
+                                                break
+                                            }
+                                        }
+                                        var successfullyAddedParticipantIds = state.successfullyAddedParticipantIds
+                                        successfullyAddedParticipantIds.remove(memberId)
+                                        
+                                        return state.withUpdatedTemporaryParticipants(temporaryParticipants).withUpdatedSuccessfullyAddedParticipantIds(successfullyAddedParticipantIds)
+                                    }
+                                    return .complete()
                                 case .groupFull:
                                     let signal = convertGroupToSupergroup(account: context.account, peerId: peerView.peerId)
                                     |> map(Optional.init)
@@ -2467,7 +2487,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {
-            var result: ((ASDisplayNode, () -> (UIView?, UIView?)), CGRect)?
+            var result: ((ASDisplayNode, CGRect, () -> (UIView?, UIView?)), CGRect)?
             controller.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
                     result = itemNode.avatarTransitionNode()

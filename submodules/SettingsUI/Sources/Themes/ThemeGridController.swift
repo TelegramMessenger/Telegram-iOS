@@ -188,9 +188,8 @@ final class ThemeGridController: ViewController {
                                 } else {
                                     themeReference = current.theme
                                 }
-                                let accentColorIndex = current.themeSpecificAccentColors[themeReference.index]?.index ?? 0
-                                themeSpecificChatWallpapers[current.theme.index] = nil
-                                themeSpecificChatWallpapers[current.theme.index &+ Int64(accentColorIndex)] = nil
+                                themeSpecificChatWallpapers[themeReference.index] = nil
+                                themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: current.themeSpecificAccentColors[themeReference.index])] = nil
                                 return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                             })).start()
                             break

@@ -810,7 +810,7 @@ struct ListViewState {
             i += 1
             if node.index == itemIndex {
                 switch animation {
-                case .None:
+                case .None, .Crossfade:
                     let offsetDirection: ListViewInsertionOffsetDirection
                     if let direction = direction {
                         offsetDirection = ListViewInsertionOffsetDirection(direction)

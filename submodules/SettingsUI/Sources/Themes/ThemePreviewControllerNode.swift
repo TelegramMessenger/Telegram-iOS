@@ -33,6 +33,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
     private let isPreview: Bool
+        
+    private let ready: Promise<Bool>
     
     public let wallpaperPromise = Promise<TelegramWallpaper>()
     
@@ -65,10 +67,12 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var statusDisposable: Disposable?
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool) {
+    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, ready: Promise<Bool>) {
         self.context = context
         self.previewTheme = previewTheme
         self.isPreview = isPreview
+        
+        self.ready = ready
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -101,6 +105,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let wallpaper = initialWallpaper ?? previewTheme.chat.defaultWallpaper
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        if self.instantChatBackgroundNode.image != nil {
+            self.ready.set(.single(true))
+        }
         if case .gradient = wallpaper {
             self.instantChatBackgroundNode.imageContentMode = .scaleToFill
         }
@@ -108,7 +115,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()
-        self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
         self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.blurredNode = BlurredImageNode()
@@ -194,6 +200,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.blurredNode.image = image
                 strongSelf.blurredNode.blurView.blurRadius = 45.0
+                strongSelf.ready.set(.single(true))
             }
         }
         
@@ -230,7 +237,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let fileReference = FileMediaReference.standalone(media: file.file)
                 if file.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
-                } else {
+                } else if strongSelf.instantChatBackgroundNode.image == nil {
                     signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
                         |> afterNext { next in
                             if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
@@ -238,6 +245,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
                             }
                     }
+                } else {
+                    signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
 
@@ -444,25 +453,41 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         
-        let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
-        messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+        var sampleMessages: [Message] = []
+  
+        let message1 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_4_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message1)
         
-        let message1 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        let message2 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_5_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message2)
         
-        let message2 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        let message3 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_6_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message3)
+        
+        let message4 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message4)
+        
+        let message5 = Message(stableId: 5, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 5), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66004, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        messages[message5.id] = message5
+        sampleMessages.append(message5)
         
         let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: MemoryBuffer(data: Data(base64Encoded: waveformBase64)!))]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: voiceAttributes)
         
-        let message3 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message3, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local)))
+        let message6 = Message(stableId: 6, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 6), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66005, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message6)
         
-        let message4 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
+        let message7 = Message(stableId: 7, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 7), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66006, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: message5.id)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message7)
         
+        let message8 = Message(stableId: 8, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 8), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66007, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        sampleMessages.append(message8)
+        
+        items = sampleMessages.reversed().map { message in
+            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil)
+        }
+                
         let width: CGFloat
         if case .regular = layout.metrics.widthClass {
             width = layout.size.width / 2.0

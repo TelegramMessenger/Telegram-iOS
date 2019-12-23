@@ -783,22 +783,25 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             guard let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] else {
                 return
             }
+            var mainStickerPack: StickerPackReference?
             var packs: [StickerPackReference] = []
-            var selectedIndex: Int = 0
-            var foundSelected = false
             for entry in entries {
                 if let listInfo = entry.info as? StickerPackCollectionInfo {
+                    let packReference: StickerPackReference = .id(id: listInfo.id.id, accessHash: listInfo.accessHash)
                     if listInfo.id == info.id {
-                        foundSelected = true
-                        selectedIndex = packs.count
+                        mainStickerPack = packReference
                     }
-                    packs.append(.id(id: listInfo.id.id, accessHash: listInfo.accessHash))
+                    packs.append(packReference)
                 }
             }
-            if !foundSelected {
-                packs.insert(.id(id: info.id.id, accessHash: info.accessHash), at: 0)
+            if mainStickerPack == nil {
+                let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                mainStickerPack = packReference
+                packs.insert(packReference, at: 0)
             }
-            presentControllerImpl?(StickerPackScreen(context: context, stickerPacks: packs, selectedStickerPackIndex: selectedIndex, parentNavigationController: controller?.navigationController as? NavigationController), nil)
+            if let mainStickerPack = mainStickerPack {
+                presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController), nil)
+            }
         })
     }
     pushControllerImpl = { [weak controller] c in

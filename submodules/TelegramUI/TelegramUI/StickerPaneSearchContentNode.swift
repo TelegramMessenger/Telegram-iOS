@@ -217,8 +217,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
-                
-                let controller = StickerPackScreen(context: strongSelf.context, stickerPacks: [.id(id: info.id.id, accessHash: info.accessHash)], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
+                let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
                         return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
                     } else {
