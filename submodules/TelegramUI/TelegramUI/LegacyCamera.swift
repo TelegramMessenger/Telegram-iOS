@@ -28,7 +28,6 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     } else {
         controller = TGCameraController()
     }
-    controller.defaultVideoPreset = defaultVideoPresetForContext(context)
     
     controller.presentScheduleController = { done in
         presentSchedulePicker { time in

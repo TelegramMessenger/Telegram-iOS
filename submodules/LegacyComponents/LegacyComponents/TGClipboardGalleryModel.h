@@ -6,7 +6,6 @@
 #import <LegacyComponents/TGPhotoEditorController.h>
 
 #import <LegacyComponents/LegacyComponentsContext.h>
-#import <LegacyComponents/TGVideoEditAdjustments.h>
 
 @interface TGClipboardGalleryModel : TGModernGalleryModel
 
@@ -27,6 +26,6 @@
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images focusIndex:(NSUInteger)focusIndex selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSelectionPanel:(bool)hasSelectionPanel recipientName:(NSString *)recipientName;
 
 @end

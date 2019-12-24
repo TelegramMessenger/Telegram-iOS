@@ -36,7 +36,6 @@
     {
         _selectionContext = selectionContext;
         _editingContext = editingContext;
-        _defaultVideoPreset = TGMediaVideoConversionPresetCompressedDefault;
     }
     return self;
 }

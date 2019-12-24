@@ -92,8 +92,6 @@
     id<LegacyComponentsContext> _context;
     
     bool _ignoreSelectionUpdates;
-    
-    TGMediaVideoConversionPreset _defaultVideoPreset;
 }
 
 @property (nonatomic, strong) ASHandle *actionHandle;
@@ -105,7 +103,7 @@
 
 @synthesize safeAreaInset = _safeAreaInset;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -117,8 +115,6 @@
         _editingContext = editingContext;
         
         _hasSwipeGesture = true;
-        
-        _defaultVideoPreset = defaultVideoPreset;
         
         _itemHeaderViews = [[NSMutableArray alloc] init];
         _itemFooterViews = [[NSMutableArray alloc] init];
@@ -854,7 +850,11 @@
         }
         else
         {
-            preset = _defaultVideoPreset;
+            NSNumber *presetValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_preferredVideoPreset_v0"];
+            if (presetValue != nil)
+                preset = (TGMediaVideoConversionPreset)[presetValue integerValue];
+            else
+                preset = TGMediaVideoConversionPresetCompressedMedium;
         }
         
         TGMediaVideoConversionPreset bestPreset = [TGMediaVideoConverter bestAvailablePresetForDimensions:dimensions];

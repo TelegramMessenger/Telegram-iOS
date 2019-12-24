@@ -80,8 +80,6 @@
     bool _saveEditedPhotos;
     
     id<LegacyComponentsContext> _context;
-    
-    TGMediaVideoConversionPreset _defaultVideoPreset;
 }
 
 @property (nonatomic, weak) TGPhotoEditorController *editorController;
@@ -90,12 +88,12 @@
 
 @implementation TGCameraPhotoPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos
 {
-    return [self initWithContext:context image:image metadata:metadata recipientName:recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"MediaPicker.Send") saveCapturedMedia:saveCapturedMedia saveEditedPhotos:saveEditedPhotos defaultVideoPreset:defaultVideoPreset];
+    return [self initWithContext:context image:image metadata:metadata recipientName:recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"MediaPicker.Send") saveCapturedMedia:saveCapturedMedia saveEditedPhotos:saveEditedPhotos];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -105,7 +103,6 @@
         _metadata = metadata;
         _imageSize = image.size;
         _recipientName = recipientName;
-        _defaultVideoPreset = defaultVideoPreset;
         
         _editingContext = [[TGMediaEditingContext alloc] init];
         
@@ -887,7 +884,7 @@
     PGPhotoEditorValues *editorValues = (PGPhotoEditorValues *)[_editingContext adjustmentsForItem:_image];
     NSString *caption = [_editingContext captionForItem:_image];
     
-    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableMediaItem intent:TGPhotoEditorControllerFromCameraIntent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_portraitToolbarView.currentTabs selectedTab:tab defaultVideoPreset:_defaultVideoPreset];
+    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableMediaItem intent:TGPhotoEditorControllerFromCameraIntent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_portraitToolbarView.currentTabs selectedTab:tab];
     controller.editingContext = _editingContext;
     self.editorController = controller;
     controller.metadata = _metadata;

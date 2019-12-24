@@ -2,8 +2,6 @@
 
 #import <LegacyComponents/TGSuggestionContext.h>
 
-#import <LegacyComponents/TGVideoEditAdjustments.h>
-
 @class TGMediaPickerLayoutMetrics;
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
@@ -29,7 +27,6 @@
 @property (nonatomic, assign) bool onlyCrop;
 @property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, strong) NSString *recipientName;
-@property (nonatomic, assign) TGMediaVideoConversionPreset defaultVideoPreset;
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;

@@ -11,7 +11,6 @@
 @property (nonatomic, assign) bool allowCaptions;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, strong) NSString *recipientName;
-@property (nonatomic, assign) TGMediaVideoConversionPreset defaultVideoPreset;
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;

@@ -88,8 +88,6 @@
     TGMessageImageViewOverlayView *_progressView;
     
     id<LegacyComponentsContext> _context;
-    
-    TGMediaVideoConversionPreset _defaultVideoPreset;
 }
 
 @property (nonatomic, weak) UIImage *fullSizeImage;
@@ -100,7 +98,7 @@
 
 @synthesize actionHandle = _actionHandle;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab defaultVideoPreset:(TGMediaVideoConversionPreset)defaultVideoPreset
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -121,8 +119,6 @@
         _caption = caption;
         _initialAdjustments = adjustments;
         _screenImage = screenImage;
-        
-        _defaultVideoPreset = defaultVideoPreset;
         
         _queue = [[SQueue alloc] init];
         _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:(intent == TGPhotoEditorControllerVideoIntent) enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
@@ -1118,7 +1114,7 @@
         {
             _ignoreDefaultPreviewViewTransitionIn = true;
             
-            TGPhotoQualityController *qualityController = [[TGPhotoQualityController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView defaultPreset:_defaultVideoPreset];
+            TGPhotoQualityController *qualityController = [[TGPhotoQualityController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             qualityController.item = _item;
             qualityController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             qualityController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
