@@ -55,6 +55,10 @@ final class ViewTracker {
     private var multiplePeersViews = Bag<(MutableMultiplePeersView, ValuePipe<MultiplePeersView>)>()
     private var itemCollectionsViews = Bag<(MutableItemCollectionsView, ValuePipe<ItemCollectionsView>)>()
     
+    
+    private var failedMessageIdsViews = Bag<(MutableFailedMessageIdsView, ValuePipe<FailedMessageIdsView>)>()
+
+    
     init(queue: Queue, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadState: @escaping () -> ChatListTotalUnreadState, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.renderMessage = renderMessage
@@ -438,6 +442,12 @@ final class ViewTracker {
                 pipe.putNext(mutableView.immutableView())
             }
         }
+        
+        for (view, pipe) in self.failedMessageIdsViews.copyItems() {
+            if view.replay(postbox: postbox, transaction: transaction) {
+                pipe.putNext(view.immutableView())
+            }
+        }
     }
     
     private func updateTrackedChatListHoles() {
@@ -584,4 +594,17 @@ final class ViewTracker {
             return disposable
         }
     }
+    
+    func addFailedMessageIdsView(_ view: MutableFailedMessageIdsView) -> (Bag<(MutableFailedMessageIdsView, ValuePipe<FailedMessageIdsView>)>.Index, Signal<FailedMessageIdsView, NoError>) {
+        let record = (view, ValuePipe<FailedMessageIdsView>())
+        let index = self.failedMessageIdsViews.add(record)
+        
+        return (index, record.1.signal())
+    }
+    
+    func removeFailedMessageIdsView(_ index: Bag<(MutableFailedMessageIdsView, ValuePipe<PeerId?>)>.Index) {
+        self.failedMessageIdsViews.remove(index)
+    }
+    
+    
 }
