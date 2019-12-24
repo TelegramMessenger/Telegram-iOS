@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-public func addStickerPackInteractively(postbox: Postbox, info: StickerPackCollectionInfo, items: [ItemCollectionItem]) -> Signal<Void, NoError> {
+public func addStickerPackInteractively(postbox: Postbox, info: StickerPackCollectionInfo, items: [ItemCollectionItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
         switch info.id.namespace {
@@ -23,7 +23,11 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
                 updatedInfos.remove(at: index)
                 updatedInfos.insert(currentInfo, at: 0)
             } else {
-                updatedInfos.insert(info, at: 0)
+                if let positionInList = positionInList, positionInList <= updatedInfos.count {
+                    updatedInfos.insert(info, at: positionInList)
+                } else {
+                    updatedInfos.insert(info, at: 0)
+                }
                 transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
             }
             transaction.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
@@ -36,8 +40,8 @@ public enum RemoveStickerPackOption {
     case archive
 }
 
-public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
+public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionId, option: RemoveStickerPackOption) -> Signal<(Int, [ItemCollectionItem])?, NoError> {
+    return postbox.transaction { transaction -> (Int, [ItemCollectionItem])? in
         let namespace: SynchronizeInstalledStickerPacksOperationNamespace?
         switch id.namespace {
             case Namespaces.ItemCollection.CloudStickerPacks:
@@ -55,8 +59,14 @@ public func removeStickerPackInteractively(postbox: Postbox, id: ItemCollectionI
                 case .archive:
                     content = .archive([id])
             }
+            let index = transaction.getItemCollectionsInfos(namespace: id.namespace).index(where: { $0.0 == id })
+            let items = transaction.getItemCollectionItems(collectionId: id)
+            
             addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: content)
             transaction.removeItemCollection(collectionId: id)
+            return index.flatMap { ($0, items) }
+        } else {
+            return nil
         }
     }
 }

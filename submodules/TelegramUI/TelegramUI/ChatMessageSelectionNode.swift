@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
 import CheckNode
+import SyncCore
 
 final class ChatMessageSelectionNode: ASDisplayNode {
     private let toggle: (Bool) -> Void
@@ -10,9 +11,17 @@ final class ChatMessageSelectionNode: ASDisplayNode {
     private(set) var selected = false
     private let checkNode: CheckNode
     
-    init(theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
+    init(wallpaper: TelegramWallpaper, theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {
         self.toggle = toggle
-        self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: .overlay)
+        
+        let style: CheckNodeStyle
+        if wallpaper == theme.chat.defaultWallpaper, case .color = wallpaper {
+            style = .plain
+        } else {
+            style = .overlay
+        }
+        
+        self.checkNode = CheckNode(strokeColor: theme.list.itemCheckColors.strokeColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: style)
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()

@@ -505,6 +505,7 @@
 "Notification.JoinedChat" = "%@ joined the group";
 "Notification.JoinedChannel" = "%@ joined the channel";
 "Notification.Invited" = "%@ invited %@";
+"Notification.InvitedMultiple" = "%@ invited %@";
 "Notification.LeftChat" = "%@ left the group";
 "Notification.LeftChannel" = "%@ left the channel";
 "Notification.Kicked" = "%@ removed %@";
@@ -2561,6 +2562,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.InfoPanelTitle" = "What Is This?";
 "Channel.AdminLog.InfoPanelAlertTitle" = "What is the event log?";
 "Channel.AdminLog.InfoPanelAlertText" = "This is a list of all service actions taken by the group's members and admins in the last 48 hours.";
+"Channel.AdminLog.InfoPanelChannelAlertText" = "This is a list of all service actions taken by the channel's admins in the last 48 hours.";
 
 "Channel.AdminLog.BanReadMessages" = "Read Messages";
 "Channel.AdminLog.BanSendMessages" = "Send Messages";
@@ -5158,6 +5160,8 @@ Any member of this group will be able to see messages in the channel.";
 "AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
 "AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
 "AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
+"AuthSessions.AddedDeviceTitle" = "Loggin Successful";
+"AuthSessions.AddedDeviceTerminate" = "Terminate";
 
 "Map.SendThisPlace" = "Send This Place";
 "Map.SetThisPlace" = "Set This Place";
@@ -5230,3 +5234,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Theme.ThemeChanged" = "Color Theme Changed";
 "Theme.ThemeChangedText" = "You can change it back in\n[Settings > Appearance]().";
+
+"StickerPackActionInfo.AddedTitle" = "Stickers Added";
+"StickerPackActionInfo.AddedText" = "%@ has been added to your stickers.";
+"StickerPackActionInfo.RemovedTitle" = "Stickers Removed";
+"StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";

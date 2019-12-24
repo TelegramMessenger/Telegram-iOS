@@ -128,8 +128,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     private let mode: NavigationControllerMode
     private var theme: NavigationControllerTheme
     
-    public private(set) weak var overlayPresentingController: ViewController?
-    
     var inCallNavigate: (() -> Void)?
     private var inCallStatusBar: StatusBar?
     private var globalScrollToTopNode: ScrollToTopNode?
@@ -137,8 +135,11 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var rootModalFrame: NavigationModalFrame?
     private var modalContainers: [NavigationModalContainer] = []
     private var overlayContainers: [NavigationOverlayContainer] = []
+    
     private var globalOverlayContainers: [NavigationOverlayContainer] = []
     private var globalOverlayContainerParent: GlobalOverlayContainerParent?
+    public var globalOverlayControllersUpdated: (() -> Void)?
+    
     private var validLayout: ContainerViewLayout?
     private var validStatusBarStyle: NavigationStatusBarStyle?
     private var validStatusBarHidden: Bool = false
@@ -451,6 +452,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var topVisibleOverlayContainerWithStatusBar: NavigationOverlayContainer?
         
+        var notifyGlobalOverlayControllersUpdated = false
+        
         var modalStyleOverlayTransitionFactor: CGFloat = 0.0
         var previousGlobalOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.globalOverlayContainers.count).reversed() {
@@ -475,6 +478,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.globalOverlayContainerParent?.addSubnode(overlayContainer)
                 }
                 overlayContainer.transitionIn()
+                notifyGlobalOverlayControllersUpdated = true
             }
             
             if overlayContainer.supernode != nil {
@@ -920,6 +924,10 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         self.isUpdatingContainers = false
+        
+        if notifyGlobalOverlayControllersUpdated {
+            self.globalOverlayControllersUpdated?()
+        }
     }
     
     private func controllerRemoved(_ controller: ViewController) {
@@ -1131,6 +1139,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if overlayContainer.controller === controller {
                         overlayContainer.removeFromSupernode()
                         strongSelf.globalOverlayContainers.remove(at: i)
+                        strongSelf.globalOverlayControllersUpdated?()
                         break
                     }
                 }
@@ -1289,6 +1298,26 @@ open class NavigationController: UINavigationController, ContainableController, 
             })
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
+    }
+    
+    public var overlayControllers: [ViewController] {
+        return self.overlayContainers.compactMap { container in
+            if container.isReady {
+                return container.controller
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public var globalOverlayControllers: [ViewController] {
+        return self.globalOverlayContainers.compactMap { container in
+            if container.isReady {
+                return container.controller
+            } else {
+                return nil
             }
         }
     }

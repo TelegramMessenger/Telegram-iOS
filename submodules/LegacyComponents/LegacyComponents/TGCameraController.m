@@ -1247,7 +1247,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }];
         
         bool hasCamera = !self.inhibitMultipleCapture && ((_intent == TGCameraControllerGenericIntent && !_shortcut) || (_intent == TGCameraControllerPassportMultipleIntent));
-        TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName defaultVideoPreset:self.defaultVideoPreset];
+        TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
         model.inhibitMute = self.inhibitMute;
         model.controller = galleryController;
         model.suggestionContext = self.suggestionContext;
@@ -1651,7 +1651,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             if (_intent == TGCameraControllerSignupAvatarIntent) {
                 intent = TGPhotoEditorControllerSignupAvatarIntent;
             }
-            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab defaultVideoPreset:_defaultVideoPreset];
+            TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:windowContext item:image intent:(TGPhotoEditorControllerFromCameraIntent | intent) adjustments:nil caption:nil screenImage:image availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
             __weak TGPhotoEditorController *weakController = controller;
             controller.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
             {
@@ -1735,7 +1735,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             
         default:
         {
-            TGCameraPhotoPreviewController *controller = _shortcut ? [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"Common.Next") saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos defaultVideoPreset:_defaultVideoPreset] : [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos defaultVideoPreset:_defaultVideoPreset];
+            TGCameraPhotoPreviewController *controller = _shortcut ? [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName backButtonTitle:TGLocalized(@"Camera.Retake") doneButtonTitle:TGLocalized(@"Common.Next") saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos] : [[TGCameraPhotoPreviewController alloc] initWithContext:windowContext image:image metadata:metadata recipientName:self.recipientName saveCapturedMedia:_saveCapturedMedia saveEditedPhotos:_saveEditedPhotos];
             controller.allowCaptions = self.allowCaptions;
             controller.shouldStoreAssets = self.shouldStoreCapturedAssets;
             controller.suggestionContext = self.suggestionContext;

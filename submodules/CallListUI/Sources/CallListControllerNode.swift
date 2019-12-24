@@ -254,7 +254,7 @@ final class CallListControllerNode: ASDisplayNode {
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
             if let strongSelf = self {
-                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messageIds, type: .forLocalPeer).start()
+                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messageIds, type: .forLocalPeer).start()
             }
         }, updateShowCallsTab: { [weak self] value in
             if let strongSelf = self {

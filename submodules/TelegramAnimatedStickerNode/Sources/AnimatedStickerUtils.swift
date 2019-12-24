@@ -183,13 +183,12 @@ private let threadPool: ThreadPool = {
 }()
 
 @available(iOS 9.0, *)
-public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<String, NoError> {
+public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<Data, NoError> {
     return Signal({ subscriber in
         let cancelled = Atomic<Bool>(value: false)
         
         threadPool.addTask(ThreadPoolTask({ _ in
             if cancelled.with({ $0 }) {
-               //print("cancelled 1")
                 return
             }
             
@@ -206,12 +205,6 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                     let endFrame = Int(player.frameCount)
                     
                     if cancelled.with({ $0 }) {
-                        //print("cancelled 2")
-                        return
-                    }
-                    
-                    let path = NSTemporaryDirectory() + "\(arc4random64()).lz4v"
-                    guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
                         return
                     }
                     
@@ -219,16 +212,19 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                     
                     var currentFrame: Int32 = 0
                     
+                    let writeBuffer = WriteBuffer()
+                    var numberOfFramesCommitted = 0
+                    
                     var fps: Int32 = player.frameRate
                     var frameCount: Int32 = player.frameCount
-                    let _ = fileContext.write(&fps, count: 4)
-                    let _ = fileContext.write(&frameCount, count: 4)
+                    writeBuffer.write(&fps, length: 4)
+                    writeBuffer.write(&frameCount, length: 4)
                     var widthValue: Int32 = Int32(size.width)
                     var heightValue: Int32 = Int32(size.height)
                     var bytesPerRowValue: Int32 = Int32(bytesPerRow)
-                    let _ = fileContext.write(&widthValue, count: 4)
-                    let _ = fileContext.write(&heightValue, count: 4)
-                    let _ = fileContext.write(&bytesPerRowValue, count: 4)
+                    writeBuffer.write(&widthValue, length: 4)
+                    writeBuffer.write(&heightValue, length: 4)
+                    writeBuffer.write(&bytesPerRowValue, length: 4)
                     
                     let frameLength = bytesPerRow * Int(size.height)
                     assert(frameLength % 16 == 0)
@@ -262,7 +258,6 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                     
                     while currentFrame < endFrame {
                         if cancelled.with({ $0 }) {
-                            //print("cancelled 3")
                             return
                         }
                         
@@ -298,8 +293,8 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                             let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
                             var frameLengthValue: Int32 = Int32(length)
-                            let _ = fileContext.write(&frameLengthValue, count: 4)
-                            let _ = fileContext.write(bytes, count: length)
+                            writeBuffer.write(&frameLengthValue, length: 4)
+                            writeBuffer.write(bytes, length: length)
                         }
                         
                         let tmp = previousYuvaFrameData
@@ -309,16 +304,33 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         compressionTime += CACurrentMediaTime() - compressionStartTime
                         
                         currentFrame += 1
+                        
+                        numberOfFramesCommitted += 1
+                        
+                        if numberOfFramesCommitted >= 5 {
+                            numberOfFramesCommitted = 0
+                            
+                            subscriber.putNext(writeBuffer.makeData())
+                            writeBuffer.reset()
+                            
+                            /*#if DEBUG
+                            usleep(500000)
+                            #endif*/
+                        }
+                        
                     }
                     
-                    subscriber.putNext(path)
+                    if writeBuffer.length != 0 {
+                        subscriber.putNext(writeBuffer.makeData())
+                    }
+                    
                     subscriber.putCompletion()
-                    print("animation render time \(CACurrentMediaTime() - startTime)")
+                    /*print("animation render time \(CACurrentMediaTime() - startTime)")
                     print("of which drawing time \(drawingTime)")
                     print("of which appending time \(appendingTime)")
                     print("of which delta time \(deltaTime)")
                     
-                    print("of which compression time \(compressionTime)")
+                    print("of which compression time \(compressionTime)")*/
                 }
             }
         }))

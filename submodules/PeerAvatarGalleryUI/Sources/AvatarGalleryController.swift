@@ -453,7 +453,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     }
                 } else {
                     if let messageId = messageId {
-                        let _ = deleteMessagesInteractively(postbox: self.context.account.postbox, messageIds: [messageId], type: .forEveryone).start()
+                        let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
                     }
                     
                     if entry == self.entries.first {

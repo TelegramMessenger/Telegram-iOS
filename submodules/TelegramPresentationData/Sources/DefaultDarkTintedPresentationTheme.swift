@@ -676,6 +676,7 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
     
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: mainBackgroundColor,
+        panelBackgroundColorNoWallpaper: accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18),
         panelSeparatorColor: mainSeparatorColor,
         panelControlAccentColor: accentColor,
         panelControlColor: mainSecondaryTextColor.withAlphaComponent(0.5),

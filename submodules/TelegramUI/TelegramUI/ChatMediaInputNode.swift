@@ -446,7 +446,7 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
@@ -459,7 +459,12 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
-        self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        
+        if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+        } else {
+            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        }
         
         self.collectionListSeparator = ASDisplayNode()
         self.collectionListSeparator.isLayerBacked = true
@@ -913,12 +918,17 @@ final class ChatMediaInputNode: ChatInputNode {
         self.searchContainerNodeLoadedDisposable.dispose()
     }
     
-    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    private func updateThemeAndStrings(chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme || self.strings !== strings {
             self.theme = theme
             self.strings = strings
             
-            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+            if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+                self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+            } else {
+                self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+            }
+            
             self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
             self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
             
@@ -1332,7 +1342,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
-            self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+            self.updateThemeAndStrings(chatWallpaper: interfaceState.chatWallpaper, theme: interfaceState.theme, strings: interfaceState.strings)
         }
         
         var displaySearch = false

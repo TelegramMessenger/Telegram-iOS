@@ -1313,6 +1313,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 if let theme = TelegramTheme(apiTheme: theme) {
                     updatedState.updateTheme(theme)
                 }
+            case let .updateMessageID(id, randomId):
+                updatedState.updatedOutgoingUniqueMessageIds[randomId] = id
             default:
                 break
         }
@@ -2094,7 +2096,7 @@ private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into 
     }
 }
 
-func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState, removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId]) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
@@ -2977,6 +2979,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)
+    
+    for (uniqueId, messageIdValue) in finalState.state.updatedOutgoingUniqueMessageIds {
+        if let peerId = removePossiblyDeliveredMessagesUniqueIds[uniqueId] {
+            let messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageIdValue)
+            deleteMessagesInteractively(transaction: transaction, stateManager: nil, postbox: postbox, messageIds: [messageId], type: .forEveryone, deleteAllInGroup: false, removeIfPossiblyDelivered: false)
+        }
+    }
     
     return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil)
 }

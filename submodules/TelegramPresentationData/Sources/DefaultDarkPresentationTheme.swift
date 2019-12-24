@@ -420,6 +420,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
 
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: UIColor(rgb: 0x1c1c1d),
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000),
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelControlAccentColor: UIColor(rgb: 0xffffff),
         panelControlColor: UIColor(rgb: 0x808080),

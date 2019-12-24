@@ -74,6 +74,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -87,10 +88,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
+    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
         self.context = context
         self.openShare = openShare
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.actionPerformed = actionPerformed
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -509,23 +511,27 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     @objc func installActionButtonPressed() {
-        let dismissOnAction: Bool
-        if let initiallyInstalled = self.stickerPackInitiallyInstalled, initiallyInstalled {
-            dismissOnAction = false
-        } else {
-            dismissOnAction = true
-        }
+        let dismissOnAction = true
         if let stickerPack = self.stickerPack, let stickerSettings = self.stickerSettings {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
-                        let _ = removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete).start()
-                        self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
+                        let _ = (removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete)
+                        |> deliverOnMainQueue).start(next: { [weak self] indexAndItems in
+                            guard let strongSelf = self, let (positionInList, _) = indexAndItems else {
+                                return
+                            }
+                            strongSelf.actionPerformed?(info, items, .remove(positionInList: positionInList))
+                        })
+                        if !dismissOnAction {
+                            self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
+                        }
                     } else {
                         let _ = addStickerPackInteractively(postbox: self.context.account.postbox, info: info, items: items).start()
                         if !dismissOnAction {
                             self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
                         }
+                        self.actionPerformed?(info, items, .add)
                     }
                     if dismissOnAction {
                         self.cancelButtonPressed()

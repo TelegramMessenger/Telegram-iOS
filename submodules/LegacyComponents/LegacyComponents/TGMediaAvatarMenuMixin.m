@@ -445,7 +445,7 @@
             if (strongSelf == nil)
                 return nil;
             
-            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil defaultVideoPreset:TGMediaVideoConversionPresetCompressedDefault saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false selectionLimit:10];
+            TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false selectionLimit:10];
             __weak TGMediaAssetsController *weakController = controller;
             controller.avatarCompletionBlock = ^(UIImage *resultImage)
             {

@@ -260,17 +260,17 @@ public final class TextSelectionNode: ASDisplayNode {
             
             let mappedPoint = strongSelf.view.convert(point, to: strongSelf.textNode.view)
             if let stringIndex = strongSelf.textNode.attributesAtPoint(mappedPoint, orNearest: true)?.0 {
-                var updatedMin = currentRange.0
-                var updatedMax = currentRange.1
+                var updatedLeft = currentRange.0
+                var updatedRight = currentRange.1
                 switch knob {
                 case .left:
-                    updatedMin = stringIndex
+                    updatedLeft = stringIndex
                 case .right:
-                    updatedMax = stringIndex
+                    updatedRight = stringIndex
                 }
-                let updatedRange = NSRange(location: min(updatedMin, updatedMax), length: max(updatedMin, updatedMax) - min(updatedMin, updatedMax))
-                if strongSelf.currentRange?.0 != updatedMin || strongSelf.currentRange?.1 != updatedMax {
-                    strongSelf.currentRange = (updatedMin, updatedMax)
+                if strongSelf.currentRange?.0 != updatedLeft || strongSelf.currentRange?.1 != updatedRight {
+                    strongSelf.currentRange = (updatedLeft, updatedRight)
+                    let updatedRange = NSRange(location: min(updatedLeft, updatedRight), length: max(updatedLeft, updatedRight) - min(updatedLeft, updatedRight))
                     strongSelf.updateSelection(range: updatedRange, animateIn: false)
                 }
                 
@@ -301,12 +301,12 @@ public final class TextSelectionNode: ASDisplayNode {
                 let inputRange = CFRangeMake(0, string.length)
                 let flag = UInt(kCFStringTokenizerUnitWord)
                 let locale = CFLocaleCopyCurrent()
-                let tokenizer = CFStringTokenizerCreate( kCFAllocatorDefault, string as CFString, inputRange, flag, locale)
+                let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, string as CFString, inputRange, flag, locale)
                 var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
                 
                 while !tokenType.isEmpty {
                     let currentTokenRange = CFStringTokenizerGetCurrentTokenRange(tokenizer)
-                    if currentTokenRange.location <= stringIndex && currentTokenRange.location + currentTokenRange.length > stringIndex  {
+                    if currentTokenRange.location <= stringIndex && currentTokenRange.location + currentTokenRange.length > stringIndex {
                         resultRange = NSRange(location: currentTokenRange.location, length: currentTokenRange.length)
                         break
                     }
@@ -377,7 +377,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func pretendExtendSelection(to index: Int) {
-        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString, let endRangeRect = cachedLayout.rangeRects(in: NSRange(location: index, length: 1))?.first else {
+        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString, let endRangeRect = cachedLayout.rangeRects(in: NSRange(location: index, length: 1))?.rects.first else {
             return
         }
         let startPoint = self.rightKnob.frame.center
@@ -397,15 +397,15 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     private func updateSelection(range: NSRange?, animateIn: Bool) {
-        var rects: [CGRect]?
+        var rects: (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)?
         
         if let range = range {
             rects = self.textNode.rangeRects(in: range)
         }
         
-        self.currentRects = rects
+        self.currentRects = rects?.rects
         
-        if let rects = rects, !rects.isEmpty {
+        if let (rects, startEdge, endEdge) = rects, !rects.isEmpty {
             let highlightOverlay: LinkHighlightingNode
             if let current = self.highlightOverlay {
                 highlightOverlay = current
@@ -421,8 +421,8 @@ public final class TextSelectionNode: ASDisplayNode {
             highlightOverlay.frame = self.bounds
             highlightOverlay.updateRects(rects)
             if let image = self.leftKnob.image {
-                self.leftKnob.frame = CGRect(origin: CGPoint(x: floor(rects[0].minX - 1.0 - image.size.width / 2.0), y: rects[0].minY - 1.0 - self.theme.knobDiameter), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + rects[0].height + 2.0))
-                self.rightKnob.frame = CGRect(origin: CGPoint(x: floor(rects[rects.count - 1].maxX + 1.0 - image.size.width / 2.0), y: rects[rects.count - 1].maxY + 1.0 - (rects[0].height + 2.0)), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + rects[0].height + 2.0))
+                self.leftKnob.frame = CGRect(origin: CGPoint(x: floor(startEdge.x - image.size.width / 2.0), y: startEdge.y + 1.0 - 12.0), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + startEdge.height + 2.0))
+                self.rightKnob.frame = CGRect(origin: CGPoint(x: floor(endEdge.x + 1.0 - image.size.width / 2.0), y: endEdge.y + endEdge.height + 3.0 - (endEdge.height + 2.0)), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + endEdge.height + 2.0))
             }
             if self.leftKnob.alpha.isZero {
                 highlightOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)

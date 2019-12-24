@@ -23,6 +23,7 @@ import WatchBridge
 import SettingsUI
 import AppLock
 import AccountUtils
+import ContextUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -148,6 +149,21 @@ final class AuthorizedApplicationContext {
         self.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
         
         self.rootController = TelegramRootController(context: context)
+        
+        self.rootController.globalOverlayControllersUpdated = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var hasContext = false
+            for controller in strongSelf.rootController.globalOverlayControllers {
+                if controller is ContextController {
+                    hasContext = true
+                    break
+                }
+            }
+            
+            strongSelf.notificationController.updateIsTemporaryHidden(hasContext)
+        }
         
         if KeyShortcutsController.isAvailable {
             let keyShortcutsController = KeyShortcutsController { [weak self] f in

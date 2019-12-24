@@ -20,6 +20,7 @@ import SettingsUI
 import AlertUI
 import PresentationDataUtils
 import ShareController
+import UndoUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -304,7 +305,31 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], sendSticker: params.sendSticker)
+                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], sendSticker: params.sendSticker, actionPerformed: { info, items, action in
+                    let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
+                    var animateInAsReplacement = false
+                    if let navigationController = params.navigationController {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    switch action {
+                    case .add:
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }))
+                    case let .remove(positionInList):
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = addStickerPackInteractively(postbox: params.context.account.postbox, info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }))
+                    }
+                })
                 params.dismissInput()
                 params.present(controller, nil)
                 return true

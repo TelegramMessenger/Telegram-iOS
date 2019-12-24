@@ -245,7 +245,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                                     c.dismiss(completion: {
                                                         if let strongSelf = self {
                                                             strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
                                                         }
                                                     })
                                                 })))
@@ -264,7 +264,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                                     c.dismiss(completion: {
                                                         if let strongSelf = self {
                                                             strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
                                                         }
                                                     })
                                                 })))
@@ -894,7 +894,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                         }))
                     }
@@ -911,7 +911,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
                             }
                         }))
                     }

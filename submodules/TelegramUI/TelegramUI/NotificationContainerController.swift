@@ -101,4 +101,15 @@ public final class NotificationContainerController: ViewController {
     public func removeItems(_ f: (NotificationItem) -> Bool) {
         self.controllerNode.removeItems(f)
     }
+    
+    public func updateIsTemporaryHidden(_ value: Bool) {
+        if self.isNodeLoaded {
+            if value != (self.controllerNode.alpha == 0.0) {
+                let fromAlpha: CGFloat = value ? 1.0 : 0.0
+                let toAlpha: CGFloat = value ? 0.0 : 1.0
+                self.controllerNode.alpha = toAlpha
+                self.controllerNode.layer.animateAlpha(from: fromAlpha, to: toAlpha, duration: 0.2)
+            }
+        }
+    }
 }

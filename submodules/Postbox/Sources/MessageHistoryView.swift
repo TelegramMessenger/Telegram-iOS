@@ -420,26 +420,29 @@ final class MutableMessageHistoryView {
                         break
                     }
                 }
-                if addCount == 2 && removeCount == 2 {
-                    assert(true)
-                }
                 for operation in operationSet {
                     switch operation {
                     case let .InsertMessage(message):
                         if unwrappedTag.isEmpty || message.tags.contains(unwrappedTag) {
-                            if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
-                                hasChanges = true
+                            if self.namespaces.contains(message.id.namespace) {
+                                if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
+                                    hasChanges = true
+                                }
                             }
                         }
                     case let .Remove(indicesAndTags):
                         for (index, _) in indicesAndTags {
-                            if loadedState.remove(index: index) {
-                                hasChanges = true
+                            if self.namespaces.contains(index.id.namespace) {
+                                if loadedState.remove(index: index) {
+                                    hasChanges = true
+                                }
                             }
                         }
                     case let .UpdateEmbeddedMedia(index, buffer):
-                        if loadedState.updateEmbeddedMedia(index: index, buffer: buffer) {
-                            hasChanges = true
+                        if self.namespaces.contains(index.id.namespace) {
+                            if loadedState.updateEmbeddedMedia(index: index, buffer: buffer) {
+                                hasChanges = true
+                            }
                         }
                     case let .UpdateGroupInfos(groupInfos):
                         if loadedState.updateGroupInfo(mapping: groupInfos) {

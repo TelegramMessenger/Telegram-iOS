@@ -154,7 +154,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
             return context.account.postbox.transaction { transaction -> [Peer] in
                 var result: [Peer] = []
                 for id in peerIds {
-                    if let peer = transaction.getPeer(id) {
+                    if let peer = transaction.getPeer(id.id) {
                         result.append(peer)
                     }
                 }

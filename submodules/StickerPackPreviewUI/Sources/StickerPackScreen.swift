@@ -842,8 +842,13 @@ public final class StickerPackScreenImpl: ViewController {
     }
 }
 
-public func StickerPackScreen(context: AccountContext, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) -> ViewController {
-    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: .default, parentNavigationController: parentNavigationController)
+public enum StickerPackScreenPerformedAction {
+    case add
+    case remove(positionInList: Int)
+}
+
+public func StickerPackScreen(context: AccountContext, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) -> ViewController {
+    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: .default, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
     controller.sendSticker = sendSticker
     return controller
 }

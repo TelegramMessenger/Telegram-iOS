@@ -19,6 +19,8 @@ static_library(
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

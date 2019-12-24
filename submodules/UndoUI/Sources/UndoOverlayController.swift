@@ -2,6 +2,9 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
+import SyncCore
+import Postbox
+import TelegramCore
 
 public enum UndoOverlayContent {
     case removedChat(text: String)
@@ -12,6 +15,7 @@ public enum UndoOverlayContent {
     case emoji(path: String, text: String)
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String, text: String, cancel: String)
+    case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, account: Account)
 }
 
 public enum UndoOverlayAction {
