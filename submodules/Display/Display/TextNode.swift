@@ -13,6 +13,18 @@ private final class TextNodeStrikethrough {
     }
 }
 
+public struct TextRangeRectEdge: Equatable {
+    public var x: CGFloat
+    public var y: CGFloat
+    public var height: CGFloat
+    
+    public init(x: CGFloat, y: CGFloat, height: CGFloat) {
+        self.x = x
+        self.y = y
+        self.height = height
+    }
+}
+
 private final class TextNodeLine {
     let line: CTLine
     let frame: CGRect
@@ -589,11 +601,13 @@ public final class TextNodeLayout: NSObject {
         return nil
     }
     
-    public func rangeRects(in range: NSRange) -> [CGRect]? {
+    public func rangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)? {
         guard let _ = self.attributedString, range.length != 0 else {
             return nil
         }
         var rects: [(CGRect, CGRect)] = []
+        var startEdge: TextRangeRectEdge?
+        var endEdge: TextRangeRectEdge?
         for line in self.lines {
             let lineRange = NSIntersectionRange(range, line.range)
             if lineRange.length != 0 {
@@ -616,11 +630,34 @@ public final class TextNodeLayout: NSObject {
                 
                 let width = max(0.0, abs(rightOffset - leftOffset))
                 
+                if line.range.contains(range.lowerBound) {
+                    let offsetX = floor(CTLineGetOffsetForStringIndex(line.line, range.lowerBound, nil))
+                    startEdge = TextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
+                }
+                if line.range.contains(range.upperBound - 1) {
+                    let offsetX: CGFloat
+                    if line.range.upperBound == range.upperBound {
+                        offsetX = lineFrame.maxX
+                    } else {
+                        var secondaryOffset: CGFloat = 0.0
+                        let primaryOffset = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound - 1, &secondaryOffset))
+                        secondaryOffset = floor(secondaryOffset)
+                        let nextOffet = floor(CTLineGetOffsetForStringIndex(line.line, range.upperBound, &secondaryOffset))
+                        
+                        if primaryOffset != secondaryOffset {
+                            offsetX = secondaryOffset
+                        } else {
+                            offsetX = nextOffet
+                        }
+                    }
+                    endEdge = TextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
+                }
+                
                 rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
             }
         }
-        if !rects.isEmpty {
-            return rects.map { $1 }
+        if !rects.isEmpty, let startEdge = startEdge, let endEdge = endEdge {
+            return (rects.map { $1 }, startEdge, endEdge)
         }
         return nil
     }
@@ -768,7 +805,7 @@ public class TextNode: ASDisplayNode {
         }
     }
     
-    public func rangeRects(in range: NSRange) -> [CGRect]? {
+    public func rangeRects(in range: NSRange) -> (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.rangeRects(in: range)
         } else {
