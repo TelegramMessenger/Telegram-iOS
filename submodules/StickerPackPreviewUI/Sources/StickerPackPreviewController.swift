@@ -63,10 +63,13 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         }
     }
     
-    public init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
+    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    
+    public init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController
+        self.actionPerformed = actionPerformed
         
         self.stickerPack = stickerPack
         
@@ -133,7 +136,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
                 }
             }))
-        })
+        }, actionPerformed: self.actionPerformed)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

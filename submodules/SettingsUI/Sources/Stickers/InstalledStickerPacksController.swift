@@ -13,6 +13,7 @@ import TextFormat
 import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
+import UndoUI
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
@@ -494,6 +495,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     let archivedPromise = Promise<[ArchivedStickerPackItem]?>()
 
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
+    var navigationControllerImpl: (() -> NavigationController?)?
     
     let arguments = InstalledStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
         presentStickerPackController?(info)
@@ -511,6 +513,31 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
+        let removeAction: (RemoveStickerPackOption) -> Void = { action in
+            let _ = (removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: .archive)
+            |> deliverOnMainQueue).start(next: { indexAndItems in
+                guard let (positionInList, items) = indexAndItems else {
+                    return
+                }
+                
+                var animateInAsReplacement = false
+                if let navigationController = navigationControllerImpl?() {
+                    for controller in navigationController.overlayControllers {
+                        if let controller = controller as? UndoOverlayController {
+                            controller.dismissWithCommitActionAndReplacementAnimation()
+                            animateInAsReplacement = true
+                        }
+                    }
+                }
+                
+                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).0, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, account: context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                    if case .undo = action {
+                        let _ = addStickerPackInteractively(postbox: context.account.postbox, info: archivedItem.info, items: items, positionInList: positionInList).start()
+                    }
+                    return true
+                }))
+            })
+        }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: presentationData.strings.StickerSettings_ContextInfo),
@@ -524,12 +551,12 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                         archivedPromise.set(.single(packs))
                         updatedPacks(packs)
                     })
-
-                    let _ = removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: .archive).start()
+                    
+                    removeAction(.archive)
                 }),
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
-                    let _ = removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: .delete).start()
+                    removeAction(.delete)
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -800,9 +827,36 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController), nil)
+                presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var animateInAsReplacement = false
+                    if let navigationController = navigationControllerImpl?() {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    switch action {
+                    case .add:
+                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }))
+                    case let .remove(positionInList):
+                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, account: context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }))
+                    }
+                }), nil)
             }
         })
+    }
+    navigationControllerImpl = { [weak controller] in
+        return controller?.navigationController as? NavigationController
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
