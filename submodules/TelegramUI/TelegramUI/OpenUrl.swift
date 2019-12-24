@@ -546,7 +546,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             } else if parsedUrl.host == "bg" {
                 if let components = URLComponents(string: "/?" + query) {
                     var parameter: String?
-                    var mode = ""
+                    var query: [String] = []
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -557,13 +557,23 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 } else if queryItem.name == "gradient" {
                                     parameter = value
                                 } else if queryItem.name == "mode" {
-                                    mode = "?mode=\(value)"
+                                    query.append("mode=\(value)")
+                                } else if queryItem.name == "bg_color" {
+                                    query.append("bg_color=\(value)")
+                                } else if queryItem.name == "intensity" {
+                                    query.append("intensity=\(value)")
+                                } else if queryItem.name == "rotation" {
+                                    query.append("rotation=\(value)")
                                 }
                             }
                         }
                     }
+                    var queryString = ""
+                    if !query.isEmpty {
+                        queryString = "?\(query.joined(separator: "&"))"
+                    }
                     if let parameter = parameter {
-                        convertedUrl = "https://t.me/bg/\(parameter)\(mode)"
+                        convertedUrl = "https://t.me/bg/\(parameter)\(queryString)"
                     }
                 }
             } else if parsedUrl.host == "addtheme" {

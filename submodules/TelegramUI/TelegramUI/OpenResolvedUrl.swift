@@ -249,26 +249,30 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
-            var color: UIColor?
+            var topColor: UIColor?
+            var bottomColor: UIColor?
             var intensity: Int32?
+            var rotation: Int32?
             switch parameter {
-                case let .slug(slug, wallpaperOptions, patternColor, patternIntensity):
+                case let .slug(slug, wallpaperOptions, firstColor, secondColor, intensityValue, rotationValue):
                     signal = getWallpaper(account: context.account, slug: slug)
                     options = wallpaperOptions
-                    color = patternColor
-                    intensity = patternIntensity
+                    topColor = firstColor
+                    bottomColor = secondColor
+                    intensity = intensityValue
+                    rotation = rotationValue
                     controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
                     signal = .single(.color(Int32(color.rgb)))
-                case let .gradient(topColor, bottomColor):
+                case let .gradient(topColor, bottomColor, rotation):
                     signal = .single(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings()))
             }
             
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, color, intensity, nil))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, topColor, bottomColor, intensity, rotation, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
@@ -316,8 +320,6 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return disposables
                 }
             }
-            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-            present(controller, nil)
             
             var cancelImpl: (() -> Void)?
             let progressSignal = Signal<Never, NoError> { subscriber in
@@ -345,14 +347,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     progressDisposable.dispose()
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
-                controller?.dismiss()
-                
+            |> deliverOnMainQueue).start(next: { dataAndTheme in
                 if let theme = makePresentationTheme(data: dataAndTheme.0) {
                     let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
                     navigationController?.pushViewController(previewController)
                 }
-            }, error: { [weak controller] error in
+            }, error: { error in
                 let errorText: String
                 switch error {
                     case .generic, .slugInvalid:
@@ -361,7 +361,6 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         errorText = presentationData.strings.Theme_Unsupported
                 }
                 present(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                controller?.dismiss()
             }))
             dismissInput()
         case let .wallet(address, amount, comment):

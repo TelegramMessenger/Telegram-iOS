@@ -188,7 +188,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
 }
 
 public enum EditThemeControllerMode: Equatable {
-    case create(PresentationTheme?)
+    case create(PresentationTheme?, TelegramThemeSettings?)
     case edit(PresentationCloudTheme)
 }
 
@@ -264,17 +264,20 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
 public func editThemeController(context: AccountContext, mode: EditThemeControllerMode, navigateToChat: ((PeerId) -> Void)? = nil, completion: ((PresentationThemeReference) -> Void)? = nil) -> ViewController {
     let initialState: EditThemeControllerState
     let previewThemePromise = Promise<PresentationTheme>()
+    let settingsPromise = Promise<TelegramThemeSettings?>(nil)
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch mode {
-        case let .create(existingTheme):
+        case let .create(existingTheme, settings):
             let theme: PresentationTheme
             let wallpaper: TelegramWallpaper
             if let existingTheme = existingTheme {
                 theme = existingTheme
                 wallpaper = theme.chat.defaultWallpaper
+                settingsPromise.set(.single(settings))
             } else {
                 theme = presentationData.theme
                 wallpaper = presentationData.chatWallpaper
+                settingsPromise.set(.single(nil))
             }
             initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
             previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
@@ -292,6 +295,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 } else {
                     previewThemePromise.set(.single(theme.withUpdated(name: nil, defaultWallpaper: info.resolvedWallpaper)))
                 }
+                settingsPromise.set(.single(info.theme.settings))
             } else {
                 previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
                 
@@ -313,16 +317,18 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in
         updateState(f)
     }, openColors: {
-        let _ = (previewThemePromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { theme in
+        let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
+        |> take(1)).start(next: { theme, previousSettings in
             var controllerDismissImpl: (() -> Void)?
-            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme in
+            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
                 updateState { current in
                     var state = current
                     previewThemePromise.set(.single(updatedTheme))
                     state.updatedTheme = updatedTheme
                     return state
+                }
+                if previousSettings != nil {
+                    settingsPromise.set(.single(settings))
                 }
                 controllerDismissImpl?()
             }))
@@ -371,6 +377,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                             return state
                         }
                     }
+                    settingsPromise.set(.single(nil))
                 }
                 else {
                     presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_FileReadError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
@@ -420,8 +427,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     return state
                 }
                 
-                let _ = (previewThemePromise.get()
-                |> deliverOnMainQueue).start(next: { previewTheme in
+                let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
+                |> take(1)).start(next: { previewTheme, settings in
                     let saveThemeTemplateFile: (String, LocalFileMediaResource, @escaping () -> Void) -> Void = { title, resource, completion in
                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: resource.fileId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgtheme-ios", size: nil, attributes: [.FileName(fileName: "\(title).tgios-theme")])
                         let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
@@ -494,7 +501,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     switch mode {
                         case .create:
                             if let themeResource = themeResource {
-                                let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
+                                let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData, settings: settings)
                                 |> deliverOnMainQueue).start(next: { next in
                                     if case let .result(resultTheme) = next {
                                         let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -528,7 +535,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 })
                             }
                         case let .edit(info):
-                            let _ = (updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource)
+                            let _ = (updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource, settings: settings)
                             |> deliverOnMainQueue).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
