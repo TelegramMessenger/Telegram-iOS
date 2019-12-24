@@ -46,7 +46,7 @@ public func defaultVideoPresetForContext(_ context: AccountContext) -> TGMediaVi
     case 4:
         return TGMediaVideoConversionPresetCompressedHigh
     case 5:
-        return TGMediaVideoConversionPresetCompressedVeryLow
+        return TGMediaVideoConversionPresetCompressedVeryHigh
     default:
         return TGMediaVideoConversionPresetCompressedMedium
     }
