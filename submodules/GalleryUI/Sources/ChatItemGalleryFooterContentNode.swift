@@ -812,7 +812,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
-                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
                     }))
@@ -827,13 +827,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
-                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
+                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
                     }))
                 }
                 if !ask && items.count == 1 {
-                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messages.map { $0.id }, type: .forEveryone).start()
+                    let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
