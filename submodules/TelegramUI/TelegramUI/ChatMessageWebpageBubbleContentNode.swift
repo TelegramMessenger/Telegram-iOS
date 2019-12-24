@@ -247,11 +247,15 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
                         }
                     } else if webpage.type == "telegram_background" {
-                        var patternColor: UIColor?
-                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
-                            patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
+                        var topColor: UIColor?
+                        var bottomColor: UIColor?
+                        var rotation: Int32?
+                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, firstColor, secondColor, intensity, rotationValue) = wallpaper {
+                            topColor = firstColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
+                            bottomColor = secondColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
+                            rotation = rotationValue
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, nil, 0, false, false))
+                        let media = WallpaperPreviewMedia(content: .file(file, topColor, bottomColor, rotation, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -279,22 +283,30 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
-                        if let text = webpage.text {
-                            let colorCodeRange = text.range(of: "#")
-                            if colorCodeRange != nil {
-                                let components = text.replacingOccurrences(of: "#", with: "").components(separatedBy: "-")
-                                if components.count == 2, let topColorCode = components.first, let bottomColorCode = components.last {
-                                    if let topColor = UIColor(hexString: topColorCode), let bottomColor = UIColor(hexString: bottomColorCode) {
-                                        let media = WallpaperPreviewMedia(content: .gradient(topColor, bottomColor, 0))
-                                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
-                                    }
-                                } else if components.count == 1, let colorCode = components.first {
-                                    if let color = UIColor(hexString: colorCode) {
-                                        let media = WallpaperPreviewMedia(content: .color(color))
-                                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
-                                    }
-                                }
+                        var topColor: UIColor?
+                        var bottomColor: UIColor?
+                        var rotation: Int32?
+                        if let wallpaper = parseWallpaperUrl(webpage.url) {
+                            if case let .color(color) = wallpaper {
+                                topColor = color
+                            } else if case let .gradient(topColorValue, bottomColorValue, rotationValue) = wallpaper {
+                                topColor = topColorValue
+                                bottomColor = bottomColorValue
+                                rotation = rotationValue
                             }
+                        }
+                        
+                        var content: WallpaperPreviewMediaContent?
+                        if let topColor = topColor {
+                            if let bottomColor = bottomColor {
+                                content = .gradient(topColor, bottomColor, rotation)
+                            } else {
+                                content = .color(topColor)
+                            }
+                        }
+                        if let content = content {
+                            let media = WallpaperPreviewMedia(content: content)
+                            mediaAndFlags = (media, [])
                         }
                     } else if type == "telegram_theme" {
                         var file: TelegramMediaFile?
