@@ -1393,6 +1393,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.performAnimateInAsOverlay(from: scheduledAnimateInAsOverlayFromNode, transition: animatedTransition)
         }
         
+        self.updatePlainInputSeparator(transition: transition)
+        
         self.derivedLayoutState = ChatControllerNodeDerivedLayoutState(inputContextPanelsFrame: inputContextPanelsFrame, inputContextPanelsOverMainPanelFrame: inputContextPanelsOverMainPanelFrame, inputNodeHeight: inputNodeHeightAndOverflow?.0, upperInputPositionBound: inputNodeHeightAndOverflow?.0 != nil ? self.upperInputPositionBound : nil)
         
         //self.notifyTransitionCompletionListeners(transition: transition)
@@ -1460,9 +1462,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self.usePlainInputSeparator = false
                     self.plainInputSeparatorAlpha = nil
                 }
-                if let plainInputSeparatorAlpha = self.plainInputSeparatorAlpha {
-                    self.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, animated: false)
-                }
+                self.updatePlainInputSeparator(transition: .immediate)
                 self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
             }
             
@@ -2295,25 +2295,26 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.enablePredictiveInput = value
     }
     
-    func updatePlainInputSeparatorAlpha(_ value: CGFloat, animated: Bool) {
-        if self.usePlainInputSeparator {
-            if let plainInputSeparatorAlpha = self.plainInputSeparatorAlpha {
-                if plainInputSeparatorAlpha != value {
-                    self.plainInputSeparatorAlpha = value
-                    if animated {
-                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-                        transition.updateAlpha(node: self.inputPanelBackgroundSeparatorNode, alpha: value, beginWithCurrentState: true)
-                    } else {
-                        self.inputPanelBackgroundSeparatorNode.alpha = value
-                    }
-                }
-            } else {
-                self.plainInputSeparatorAlpha = value
-                self.inputPanelBackgroundSeparatorNode.alpha = value
-            }
-        } else if self.updatePlainInputSeparatorAlpha != nil {
-            self.plainInputSeparatorAlpha = nil
-            self.inputPanelBackgroundSeparatorNode.alpha = 1.0
+    func updatePlainInputSeparatorAlpha(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.plainInputSeparatorAlpha != value {
+            let immediate = self.plainInputSeparatorAlpha == nil
+            self.plainInputSeparatorAlpha = value
+            self.updatePlainInputSeparator(transition: immediate ? .immediate : transition)
+        }
+    }
+    
+    func updatePlainInputSeparator(transition: ContainedViewLayoutTransition) {
+        let resolvedValue: CGFloat
+        if self.accessoryPanelNode != nil {
+            resolvedValue = 1.0
+        } else if self.usePlainInputSeparator {
+            resolvedValue = self.plainInputSeparatorAlpha ?? 0.0
+        } else {
+            resolvedValue = 1.0
+        }
+        
+        if resolvedValue != self.inputPanelBackgroundSeparatorNode.alpha {
+            transition.updateAlpha(node: self.inputPanelBackgroundSeparatorNode, alpha: resolvedValue, beginWithCurrentState: true)
         }
     }
 }

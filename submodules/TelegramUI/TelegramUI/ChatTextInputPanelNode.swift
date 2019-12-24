@@ -1503,7 +1503,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func _showTextStyleOptions(_ sender: Any) {
         if let textInputNode = self.textInputNode {
-            self.inputMenu.format(view: textInputNode.view, rect: textInputNode.selectionRect.insetBy(dx: 0.0, dy: -1.0))
+            self.inputMenu.format(view: textInputNode.view, rect: textInputNode.selectionRect.offsetBy(dx: 0.0, dy: -textInputNode.textView.contentOffset.y).insetBy(dx: 0.0, dy: -1.0))
         }
     }
     
