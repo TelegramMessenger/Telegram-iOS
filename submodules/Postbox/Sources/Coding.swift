@@ -148,7 +148,7 @@ public final class WriteBuffer: MemoryBuffer {
         self.offset = 0
     }
     
-    public func write(_ data: UnsafeRawPointer, offset: Int, length: Int) {
+    public func write(_ data: UnsafeRawPointer, offset: Int = 0, length: Int) {
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
             if self.length == 0 {

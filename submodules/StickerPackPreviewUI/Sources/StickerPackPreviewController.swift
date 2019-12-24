@@ -166,8 +166,28 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
             }
             
             switch next {
-                case let .result(_, items, _):
+                case let .result(info, items, _):
                     var preloadSignals: [Signal<Bool, NoError>] = []
+                    
+                    if let thumbnail = info.thumbnail {
+                        let signal = Signal<Bool, NoError> { subscriber in
+                            let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
+                            let data = account.postbox.mediaBox.resourceData(thumbnail.resource, option: .incremental(waitUntilFetchStatus: false)).start(next: { data in
+                                if data.complete {
+                                    subscriber.putNext(true)
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putNext(false)
+                                }
+                            })
+                            return ActionDisposable {
+                                fetched.dispose()
+                                data.dispose()
+                            }
+                        }
+                        preloadSignals.append(signal)
+                    }
+                    
                     let topItems = items.prefix(16)
                     for item in topItems {
                         if let item = item as? StickerPackItem, item.file.isAnimatedSticker {

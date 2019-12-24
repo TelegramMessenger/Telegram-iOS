@@ -530,6 +530,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             })
         }
         
+        self.animatedStickerNode?.visibility = true
+        
         self.checkTimer()
     }
     
