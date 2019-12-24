@@ -724,7 +724,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
                 let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
-                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: interfaceState.theme.chat.inputPanel.panelBackgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
+                
+                let backgroundColor: UIColor
+                if interfaceState.theme.chat.defaultWallpaper == interfaceState.chatWallpaper, case .color = interfaceState.chatWallpaper {
+                    backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                } else {
+                    backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColor
+                }
+                
+                self.textInputBackgroundNode.image = textInputBackgroundImage(backgroundColor: backgroundColor, strokeColor: interfaceState.theme.chat.inputPanel.inputStrokeColor, diameter: minimalInputHeight)
                 
                 self.searchLayoutClearButton.setImage(PresentationResourcesChat.chatInputTextFieldClearImage(interfaceState.theme), for: [])
                 

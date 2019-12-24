@@ -2687,6 +2687,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
             if let strongSelf = self {
                 let offsetAlpha: CGFloat
+                let plainInputSeparatorAlpha: CGFloat
                 switch offset {
                     case let .known(offset):
                         if offset < 40.0 {
@@ -2694,13 +2695,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             offsetAlpha = 1.0
                         }
+                        if offset < 4.0 {
+                            plainInputSeparatorAlpha = 0.0
+                        } else {
+                            plainInputSeparatorAlpha = 1.0
+                        }
                     case .unknown:
                         offsetAlpha = 1.0
+                        plainInputSeparatorAlpha = 1.0
                     case .none:
                         offsetAlpha = 0.0
+                        plainInputSeparatorAlpha = 0.0
                 }
                 
                 strongSelf.chatDisplayNode.navigateButtons.displayDownButton = !offsetAlpha.isZero
+                strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, animated: true)
             }
         }
         
@@ -5079,14 +5088,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         statusText = strongSelf.presentationData.strings.Undo_ChatCleared
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: true, action: { shouldCommit in
-                        if shouldCommit {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: true, action: { value in
+                        if value == .commit {
                             let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
                                 self?.chatDisplayNode.historyNode.historyAppearsCleared = false
                             })
-                        } else {
+                            return true
+                        } else if value == .undo {
                             self?.chatDisplayNode.historyNode.historyAppearsCleared = false
+                            return true
                         }
+                        return false
                     }), in: .current)
                 }
                 
@@ -5349,7 +5361,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let layout = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: true, action: { _ in }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: true, action: { _ in return false }), in: .current)
                                     }
                                 }))
 

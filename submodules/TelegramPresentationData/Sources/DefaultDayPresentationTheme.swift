@@ -629,6 +629,7 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
     
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: UIColor(rgb: 0xf7f7f7),
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff),
         panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: UIColor(rgb: 0x007ee5),
         panelControlColor: UIColor(rgb: 0x858e99),

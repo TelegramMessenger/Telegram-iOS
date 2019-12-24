@@ -770,7 +770,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 selectionNode.updateSelected(selected, animated: animated)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
-                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { [weak self] value in
+                let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         item.controllerInteraction.toggleMessagesSelection([item.message.id], value)
                     }

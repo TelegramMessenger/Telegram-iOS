@@ -1318,6 +1318,7 @@ extension PresentationThemeChatInputPanelMediaRecordingControl: Codable {
 extension PresentationThemeChatInputPanel: Codable {
     enum CodingKeys: String, CodingKey {
         case panelBg
+        case panelBgNoWallpaper
         case panelSeparator
         case panelControlAccent
         case panelControl
@@ -1338,7 +1339,10 @@ extension PresentationThemeChatInputPanel: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(panelBackgroundColor: try decodeColor(values, .panelBg),
+        let panelBackgroundColor = try decodeColor(values, .panelBg)
+        let panelBackgroundColorNoWallpaper = try decodeColor(values, .panelBgNoWallpaper)
+        self.init(panelBackgroundColor: panelBackgroundColor,
+                  panelBackgroundColorNoWallpaper: panelBackgroundColorNoWallpaper ?? panelBackgroundColor,
                   panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelControlAccentColor: try decodeColor(values, .panelControlAccent),
                   panelControlColor: try decodeColor(values, .panelControl),

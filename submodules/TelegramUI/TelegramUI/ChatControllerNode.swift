@@ -92,6 +92,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let inputPanelBackgroundNode: ASDisplayNode
     private let inputPanelBackgroundSeparatorNode: ASDisplayNode
+    private var plainInputSeparatorAlpha: CGFloat?
+    private var usePlainInputSeparator: Bool
     
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
@@ -225,7 +227,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
-        self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+        if self.chatPresentationInterfaceState.chatWallpaper == self.chatPresentationInterfaceState.theme.chat.defaultWallpaper, case .color = self.chatPresentationInterfaceState.chatWallpaper {
+            self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+            self.usePlainInputSeparator = true
+        } else {
+            self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+            self.usePlainInputSeparator = false
+            self.plainInputSeparatorAlpha = nil
+        }
         self.inputPanelBackgroundNode.isLayerBacked = true
         
         self.inputPanelBackgroundSeparatorNode = ASDisplayNode()
@@ -1443,7 +1452,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.navigateButtons.updateTheme(theme: chatPresentationInterfaceState.theme)
             
             if themeUpdated {
-                self.inputPanelBackgroundNode.backgroundColor = chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                if self.chatPresentationInterfaceState.chatWallpaper == self.chatPresentationInterfaceState.theme.chat.defaultWallpaper, case .color = self.chatPresentationInterfaceState.chatWallpaper {
+                    self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+                    self.usePlainInputSeparator = true
+                } else {
+                    self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
+                    self.usePlainInputSeparator = false
+                    self.plainInputSeparatorAlpha = nil
+                }
+                if let plainInputSeparatorAlpha = self.plainInputSeparatorAlpha {
+                    self.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, animated: false)
+                }
                 self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
             }
             
@@ -1657,7 +1676,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
                 peerId = id
             }
-            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
+            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                         if case let .media(_, expanded) = state.inputMode {
@@ -2274,5 +2293,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func setEnablePredictiveTextInput(_ value: Bool) {
         self.textInputPanelNode?.enablePredictiveInput = value
+    }
+    
+    func updatePlainInputSeparatorAlpha(_ value: CGFloat, animated: Bool) {
+        if self.usePlainInputSeparator {
+            if let plainInputSeparatorAlpha = self.plainInputSeparatorAlpha {
+                if plainInputSeparatorAlpha != value {
+                    self.plainInputSeparatorAlpha = value
+                    if animated {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                        transition.updateAlpha(node: self.inputPanelBackgroundSeparatorNode, alpha: value, beginWithCurrentState: true)
+                    } else {
+                        self.inputPanelBackgroundSeparatorNode.alpha = value
+                    }
+                }
+            } else {
+                self.plainInputSeparatorAlpha = value
+                self.inputPanelBackgroundSeparatorNode.alpha = value
+            }
+        } else if self.updatePlainInputSeparatorAlpha != nil {
+            self.plainInputSeparatorAlpha = nil
+            self.inputPanelBackgroundSeparatorNode.alpha = 1.0
+        }
     }
 }
