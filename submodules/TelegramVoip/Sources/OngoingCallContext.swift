@@ -170,7 +170,7 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -179,34 +179,42 @@ public final class OngoingCallContext {
         self.callSessionManager = callSessionManager
         
         let queue = self.queue
-        self.queue.async {
-            var voipProxyServer: VoipProxyServer?
-            if let proxyServer = proxyServer {
-                switch proxyServer.connection {
+        
+        cleanupCallLogs(account: account)
+        
+        let logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
+        self.audioSessionDisposable.set((audioSessionActive
+        |> filter { $0 }
+        |> take(1)
+        |> deliverOn(queue)).start(next: { [weak self] _ in
+            if let strongSelf = self {
+                var voipProxyServer: VoipProxyServer?
+                if let proxyServer = proxyServer {
+                    switch proxyServer.connection {
                     case let .socks5(username, password):
                         voipProxyServer = VoipProxyServer(host: proxyServer.host, port: proxyServer.port, username: username, password: password)
                     case .mtp:
                         break
+                    }
                 }
+                let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                
+                strongSelf.contextRef = Unmanaged.passRetained(context)
+                context.stateChanged = { state in
+                    self?.contextState.set(.single(state))
+                }
+                context.signalBarsChanged = { signalBars in
+                    self?.receptionPromise.set(.single(signalBars))
+                }
+                
+                strongSelf.networkTypeDisposable = (updatedNetworkType
+                |> deliverOn(queue)).start(next: { networkType in
+                    self?.withContext { context in
+                        context.setNetworkType(ongoingNetworkTypeForType(networkType))
+                    }
+                })
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data)
-            self.contextRef = Unmanaged.passRetained(context)
-            context.stateChanged = { [weak self] state in
-                self?.contextState.set(.single(state))
-            }
-            context.signalBarsChanged = { [weak self] signalBars in
-                self?.receptionPromise.set(.single(signalBars))
-            }
-        }
-        
-        self.networkTypeDisposable = (updatedNetworkType
-        |> deliverOn(self.queue)).start(next: { [weak self] networkType in
-            self?.withContext { context in
-                context.setNetworkType(ongoingNetworkTypeForType(networkType))
-            }
-        })
-        
-        cleanupCallLogs(account: account)
+        }))
     }
     
     deinit {
@@ -226,19 +234,6 @@ public final class OngoingCallContext {
                 f(context)
             }
         }
-    }
-    
-    public func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
-        let logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
-        self.audioSessionDisposable.set((audioSessionActive
-        |> filter { $0 }
-        |> take(1)).start(next: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.withContext { context in
-                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
-                }
-            }
-        }))
     }
     
     public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
@@ -285,15 +280,6 @@ public final class OngoingCallContext {
             return EmptyDisposable
         }
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
-    }
-    
-    public func needsRating(_ completion: @escaping (Bool) -> Void) {
-        self.withContext { context in
-            let needsRating = context.needRate()
-            Queue.mainQueue().async {
-                completion(needsRating)
-            }
-        }
     }
 }
 

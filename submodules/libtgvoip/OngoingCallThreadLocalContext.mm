@@ -1,14 +1,8 @@
 #import "OngoingCallThreadLocalContext.h"
 
-#import "VoIPController.h"
-#import "VoIPServerConfig.h"
-#import "os/darwin/SetupLogging.h"
+#import "TgVoip.h"
 
-#ifdef BUCK
 #import <MtProtoKit/MtProtoKit.h>
-#else
-#import <MtProtoKitDynamic/MtProtoKitDynamic.h>
-#endif
 
 static void TGCallAesIgeEncrypt(uint8_t *inBytes, uint8_t *outBytes, size_t length, uint8_t *key, uint8_t *iv) {
     MTAesEncryptRaw(inBytes, outBytes, length, key, iv);
@@ -131,33 +125,18 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     NSTimeInterval _callRingTimeout;
     NSTimeInterval _callConnectTimeout;
     NSTimeInterval _callPacketTimeout;
-    int32_t _dataSavingMode;
     
-    tgvoip::VoIPController *_controller;
+    TgVoip *_tgVoip;
     
     OngoingCallState _state;
     int32_t _signalBars;
     NSData *_lastDerivedState;
 }
 
-- (void)controllerStateChanged:(int)state;
+- (void)controllerStateChanged:(TgVoipState)state;
 - (void)signalBarsChanged:(int32_t)signalBars;
 
 @end
-
-static void controllerStateCallback(tgvoip::VoIPController *controller, int state) {
-    int32_t contextId = (int32_t)((intptr_t)controller->implData);
-    withContext(contextId, ^(OngoingCallThreadLocalContext *context) {
-        [context controllerStateChanged:state];
-    });
-}
-
-static void signalBarsCallback(tgvoip::VoIPController *controller, int signalBars) {
-    int32_t contextId = (int32_t)((intptr_t)controller->implData);
-    withContext(contextId, ^(OngoingCallThreadLocalContext *context) {
-        [context signalBarsChanged:(int32_t)signalBars];
-    });
-}
 
 @implementation VoipProxyServer
 
@@ -174,51 +153,58 @@ static void signalBarsCallback(tgvoip::VoIPController *controller, int signalBar
 
 @end
 
-static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
+static TgVoipNetworkType callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     switch (type) {
-        case OngoingCallNetworkTypeWifi:
-            return tgvoip::NET_TYPE_WIFI;
-        case OngoingCallNetworkTypeCellularGprs:
-            return tgvoip::NET_TYPE_GPRS;
-        case OngoingCallNetworkTypeCellular3g:
-            return tgvoip::NET_TYPE_3G;
-        case OngoingCallNetworkTypeCellularLte:
-            return tgvoip::NET_TYPE_LTE;
-        default:
-            return tgvoip::NET_TYPE_WIFI;
+    case OngoingCallNetworkTypeWifi:
+        return TgVoipNetworkType::WiFi;
+    case OngoingCallNetworkTypeCellularGprs:
+        return TgVoipNetworkType::Gprs;
+    case OngoingCallNetworkTypeCellular3g:
+        return TgVoipNetworkType::ThirdGeneration;
+    case OngoingCallNetworkTypeCellularLte:
+        return TgVoipNetworkType::Lte;
+    default:
+        return TgVoipNetworkType::ThirdGeneration;
     }
 }
 
-static int callControllerDataSavingForType(OngoingCallDataSaving type) {
+static TgVoipDataSaving callControllerDataSavingForType(OngoingCallDataSaving type) {
     switch (type) {
-        case OngoingCallDataSavingNever:
-            return tgvoip::DATA_SAVING_NEVER;
-        case OngoingCallDataSavingCellular:
-            return tgvoip::DATA_SAVING_MOBILE;
-        case OngoingCallDataSavingAlways:
-            return tgvoip::DATA_SAVING_ALWAYS;
-        default:
-            return tgvoip::DATA_SAVING_NEVER;
+    case OngoingCallDataSavingNever:
+        return TgVoipDataSaving::Never;
+    case OngoingCallDataSavingCellular:
+        return TgVoipDataSaving::Mobile;
+    case OngoingCallDataSavingAlways:
+        return TgVoipDataSaving::Always;
+    default:
+        return TgVoipDataSaving::Never;
     }
 }
 
 @implementation OngoingCallThreadLocalContext
 
+static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
+
 + (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
-    TGVoipLoggingFunction = loggingFunction;
+    InternalVoipLoggingFunction = loggingFunction;
+    TgVoip::setLoggingFunction([](std::string const &string) {
+        if (InternalVoipLoggingFunction) {
+            InternalVoipLoggingFunction([[NSString alloc] initWithUTF8String:string.c_str()]);
+        }
+    });
 }
 
 + (void)applyServerConfig:(NSString *)string {
     if (string.length != 0) {
-        tgvoip::ServerConfig::GetSharedInstance()->Update(std::string(string.UTF8String));
+        TgVoip::setGlobalServerConfig(std::string(string.UTF8String));
     }
 }
 
 + (int32_t)maxLayer {
-    return tgvoip::VoIPController::GetConnectionMaxLayer();
+    return 92;
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving derivedState:(NSData * _Nonnull)derivedState {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -229,37 +215,94 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
-        _dataSavingMode = callControllerDataSavingForType(dataSaving);
         _networkType = networkType;
         
-        _controller = new tgvoip::VoIPController();
-        _controller->implData = (void *)((intptr_t)_contextId);
         std::vector<uint8_t> derivedStateValue;
         derivedStateValue.resize(derivedState.length);
         [derivedState getBytes:derivedStateValue.data() length:derivedState.length];
-        _controller->SetPersistentState(derivedStateValue);
         
+        std::unique_ptr<TgVoipProxy> proxyValue = nullptr;
         if (proxy != nil) {
-            _controller->SetProxy(tgvoip::PROXY_SOCKS5, proxy.host.UTF8String, (uint16_t)proxy.port, proxy.username.UTF8String ?: "", proxy.password.UTF8String ?: "");
+            TgVoipProxy proxyObject = {
+                .host = proxy.host.UTF8String,
+                .port = (uint16_t)proxy.port,
+                .login = proxy.username.UTF8String ?: "",
+                .password = proxy.password.UTF8String ?: ""
+            };
+            proxyValue = std::make_unique<TgVoipProxy>(proxyObject);
         }
         
-        auto callbacks = tgvoip::VoIPController::Callbacks();
-        callbacks.connectionStateChanged = &controllerStateCallback;
-        callbacks.groupCallKeyReceived = NULL;
-        callbacks.groupCallKeySent = NULL;
-        callbacks.signalBarCountChanged = &signalBarsCallback;
-        callbacks.upgradeToGroupCallRequested = NULL;
-        _controller->SetCallbacks(callbacks);
+        TgVoipCrypto crypto;
+        crypto.sha1 = &TGCallSha1;
+        crypto.sha256 = &TGCallSha256;
+        crypto.rand_bytes = &TGCallRandomBytes;
+        crypto.aes_ige_encrypt = &TGCallAesIgeEncrypt;
+        crypto.aes_ige_decrypt = &TGCallAesIgeDecrypt;
+        crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;
         
-        tgvoip::VoIPController::crypto.sha1 = &TGCallSha1;
-        tgvoip::VoIPController::crypto.sha256 = &TGCallSha256;
-        tgvoip::VoIPController::crypto.rand_bytes = &TGCallRandomBytes;
-        tgvoip::VoIPController::crypto.aes_ige_encrypt = &TGCallAesIgeEncrypt;
-        tgvoip::VoIPController::crypto.aes_ige_decrypt = &TGCallAesIgeDecrypt;
-        tgvoip::VoIPController::crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;
+        std::vector<TgVoipEndpoint> endpoints;
+        NSArray<OngoingCallConnectionDescription *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
+        for (OngoingCallConnectionDescription *connection in connections) {
+            unsigned char peerTag[16];
+            [connection.peerTag getBytes:peerTag length:16];
+            
+            TgVoipEndpoint endpoint;
+            endpoint.endpointId = connection.connectionId;
+            endpoint.host = std::string(connection.ip.UTF8String);
+            endpoint.port = (uint16_t)connection.port;
+            endpoint.type = TgVoipEndpointType::UdpRelay;
+            memcpy(endpoint.peerTag, peerTag, 16);
+            endpoints.push_back(endpoint);
+        }
+        
+        TgVoipConfig config = {
+            .initializationTimeout = _callConnectTimeout,
+            .receiveTimeout = _callPacketTimeout,
+            .dataSaving = callControllerDataSavingForType(dataSaving),
+            .enableP2P = allowP2P,
+            .enableAEC = false,
+            .enableNS = true,
+            .enableAGC = true,
+            .enableCallUpgrade = false,
+            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .maxApiLayer = [OngoingCallThreadLocalContext maxLayer]
+        };
+        
+        std::vector<uint8_t> encryptionKeyValue;
+        encryptionKeyValue.resize(key.length);
+        memcpy(encryptionKeyValue.data(), key.bytes, key.length);
+        
+        TgVoipEncryptionKey encryptionKey = {
+            .value = encryptionKeyValue,
+            .isOutgoing = isOutgoing,
+        };
+        
+        _tgVoip = TgVoip::makeInstance(
+            crypto,
+            config,
+            { derivedStateValue },
+            endpoints,
+            proxyValue,
+            callControllerNetworkTypeForType(networkType),
+            encryptionKey
+        );
         
         _state = OngoingCallStateInitializing;
         _signalBars = -1;
+        
+        __weak OngoingCallThreadLocalContext *weakSelf = self;
+        _tgVoip->setStateUpdated([weakSelf](TgVoipState state) {
+            __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
+            if (strongSelf) {
+                [strongSelf controllerStateChanged:state];
+            }
+        });
+        _tgVoip->setSignalBarsUpdated([weakSelf](int signalBars) {
+            __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
+            if (strongSelf) {
+                [strongSelf signalBarsChanged:signalBars];
+            }
+        });
     }
     return self;
 }
@@ -267,79 +310,30 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
 - (void)dealloc {
     assert([_queue isCurrent]);
     removeContext(_contextId);
-    if (_controller != NULL) {
+    if (_tgVoip != NULL) {
         [self stop:nil];
     }
 }
 
-- (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath {
-    std::vector<tgvoip::Endpoint> endpoints;
-    NSArray<OngoingCallConnectionDescription *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
-    for (OngoingCallConnectionDescription *connection in connections) {
-        struct in_addr addrIpV4;
-        if (!inet_aton(connection.ip.UTF8String, &addrIpV4)) {
-            NSLog(@"CallSession: invalid ipv4 address");
-        }
-        
-        struct in6_addr addrIpV6;
-        if (!inet_pton(AF_INET6, connection.ipv6.UTF8String, &addrIpV6)) {
-            NSLog(@"CallSession: invalid ipv6 address");
-        }
-        
-        tgvoip::IPv4Address address(std::string(connection.ip.UTF8String));
-        tgvoip::IPv6Address addressv6(std::string(connection.ipv6.UTF8String));
-        unsigned char peerTag[16];
-        [connection.peerTag getBytes:peerTag length:16];
-        endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::Type::UDP_RELAY, peerTag));
-    }
-    
-    tgvoip::VoIPController::Config config(_callConnectTimeout, _callPacketTimeout, _dataSavingMode, false, true, true);
-    config.logFilePath = logPath.length > 0 ? std::string(logPath.UTF8String) : "";
-    config.statsDumpFilePath = "";
-    
-    if (_controller != nil) {
-        _controller->SetConfig(config);
-        
-        _controller->SetNetworkType(callControllerNetworkTypeForType(_networkType));
-        _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
-        _controller->SetRemoteEndpoints(endpoints, allowP2P, maxLayer);
-        _controller->Start();
-        
-        _controller->Connect();
-    }
-}
-
 - (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    if (_controller != nil) {
-        _controller->Stop();
+    if (_tgVoip) {
+        TgVoipFinalState finalState = _tgVoip->stop();
         
-        auto debugString = _controller->GetDebugLog();
-        NSString *debugLog = [NSString stringWithUTF8String:debugString.c_str()];
+        NSString *debugLog = [NSString stringWithUTF8String:finalState.debugLog.c_str()];
+        _lastDerivedState = [[NSData alloc] initWithBytes:finalState.persistentState.value.data() length:finalState.persistentState.value.size()];
         
-        tgvoip::VoIPController::TrafficStats stats;
-        _controller->GetStats(&stats);
-        std::vector<uint8_t> derivedStateValue = _controller->GetPersistentState();
-        _lastDerivedState = [[NSData alloc] initWithBytes:derivedStateValue.data() length:derivedStateValue.size()];
-        delete _controller;
-        _controller = NULL;
+        delete _tgVoip;
+        _tgVoip = NULL;
         
         if (completion) {
-            completion(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
+            completion(debugLog, finalState.trafficStats.bytesSentWifi, finalState.trafficStats.bytesReceivedWifi, finalState.trafficStats.bytesSentMobile, finalState.trafficStats.bytesReceivedMobile);
         }
-    }
-}
-    
-- (bool)needRate {
-    if (_controller != nil) {
-        return _controller->NeedRate();
-    } else {
-        return false;
     }
 }
 
 - (NSString *)debugInfo {
-    if (_controller != nil) {
-        auto rawDebugString = _controller->GetDebugString();
+    if (_tgVoip != nil) {
+        auto rawDebugString = _tgVoip->getDebugInfo();
         return [NSString stringWithUTF8String:rawDebugString.c_str()];
     } else {
         return nil;
@@ -347,17 +341,17 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
 }
 
 - (NSString *)version {
-    if (_controller != nil) {
-        return [NSString stringWithUTF8String:_controller->GetVersion()];
+    if (_tgVoip != nil) {
+        return [NSString stringWithUTF8String:_tgVoip->getVersion().c_str()];
     } else {
         return nil;
     }
 }
 
 - (NSData * _Nonnull)getDerivedState {
-    if (_controller != nil) {
-        std::vector<uint8_t> derivedStateValue = _controller->GetPersistentState();
-        return [[NSData alloc] initWithBytes:derivedStateValue.data() length:derivedStateValue.size()];
+    if (_tgVoip) {
+        auto persistentState = _tgVoip->getPersistentState();
+        return [[NSData alloc] initWithBytes:persistentState.value.data() length:persistentState.value.size()];
     } else if (_lastDerivedState != nil) {
         return _lastDerivedState;
     } else {
@@ -365,13 +359,13 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     }
 }
 
-- (void)controllerStateChanged:(int)state {
+- (void)controllerStateChanged:(TgVoipState)state {
     OngoingCallState callState = OngoingCallStateInitializing;
     switch (state) {
-        case tgvoip::STATE_ESTABLISHED:
+        case TgVoipState::Estabilished:
             callState = OngoingCallStateConnected;
             break;
-        case tgvoip::STATE_FAILED:
+        case TgVoipState::Failed:
             callState = OngoingCallStateFailed;
             break;
         default:
@@ -398,16 +392,16 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
 }
 
 - (void)setIsMuted:(bool)isMuted {
-    if (_controller != nil) {
-        _controller->SetMicMute(isMuted);
+    if (_tgVoip) {
+        _tgVoip->setMuteMicrophone(isMuted);
     }
 }
 
 - (void)setNetworkType:(OngoingCallNetworkType)networkType {
     if (_networkType != networkType) {
         _networkType = networkType;
-        if (_controller != nil) {
-            _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
+        if (_tgVoip) {
+            _tgVoip->setNetworkType(callControllerNetworkTypeForType(networkType));
         }
     }
 }

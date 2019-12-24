@@ -167,9 +167,16 @@ public final class PresentationCallImpl: PresentationCall {
     public let isOutgoing: Bool
     public let peer: Peer?
     
+    private let serializedData: String?
+    private let dataSaving: VoiceCallDataSaving
+    private let derivedState: VoipDerivedState
+    private let proxyServer: ProxyServerSettings?
+    private let currentNetworkType: NetworkType
+    private let updatedNetworkType: Signal<NetworkType, NoError>
+    
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
-    private var ongoingContext: OngoingCallContext
+    private var ongoingContext: OngoingCallContext?
     private var ongoingContextStateDisposable: Disposable?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
@@ -197,6 +204,8 @@ public final class PresentationCallImpl: PresentationCall {
     public var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
         return self.audioOutputStatePromise.get()
     }
+    
+    private let debugInfoValue = Promise<(String, String)>(("", ""))
     
     private let canBeRemovedPromise = Promise<Bool>(false)
     private var didSetCanBeRemoved = false
@@ -233,7 +242,12 @@ public final class PresentationCallImpl: PresentationCall {
         self.isOutgoing = isOutgoing
         self.peer = peer
         
-        self.ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType, serializedData: serializedData, dataSaving: dataSaving, derivedState: derivedState)
+        self.serializedData = serializedData
+        self.dataSaving = dataSaving
+        self.derivedState = derivedState
+        self.proxyServer = proxyServer
+        self.currentNetworkType = currentNetworkType
+        self.updatedNetworkType = updatedNetworkType
         
         var didReceiveAudioOutputs = false
         
@@ -248,28 +262,6 @@ public final class PresentationCallImpl: PresentationCall {
         |> deliverOnMainQueue).start(next: { [weak self] sessionState in
             if let strongSelf = self {
                 strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
-            }
-        })
-        
-        self.ongoingContextStateDisposable = (self.ongoingContext.state
-        |> deliverOnMainQueue).start(next: { [weak self] contextState in
-            if let strongSelf = self {
-                if let sessionState = strongSelf.sessionState {
-                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: contextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
-                } else {
-                    strongSelf.callContextState = contextState
-                }
-            }
-        })
-        
-        self.receptionDisposable = (self.ongoingContext.reception
-        |> deliverOnMainQueue).start(next: { [weak self] reception in
-            if let strongSelf = self {
-                if let sessionState = strongSelf.sessionState {
-                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: reception, audioSessionControl: strongSelf.audioSessionControl)
-                } else {
-                    strongSelf.reception = reception
-                }
             }
         })
         
@@ -476,7 +468,34 @@ public final class PresentationCallImpl: PresentationCall {
                 self.audioSessionShouldBeActive.set(true)
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
-                    self.ongoingContext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    self.ongoingContext = ongoingContext
+                    
+                    self.debugInfoValue.set(ongoingContext.debugInfo())
+                    
+                    self.ongoingContextStateDisposable = (ongoingContext.state
+                    |> deliverOnMainQueue).start(next: { [weak self] contextState in
+                        if let strongSelf = self {
+                            if let sessionState = strongSelf.sessionState {
+                                strongSelf.updateSessionState(sessionState: sessionState, callContextState: contextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
+                            } else {
+                                strongSelf.callContextState = contextState
+                            }
+                        }
+                    })
+                    
+                    self.receptionDisposable = (ongoingContext.reception
+                    |> deliverOnMainQueue).start(next: { [weak self] reception in
+                        if let strongSelf = self {
+                            if let sessionState = strongSelf.sessionState {
+                                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: reception, audioSessionControl: strongSelf.audioSessionControl)
+                            } else {
+                                strongSelf.reception = reception
+                            }
+                        }
+                    })
+                    
                     if sessionState.isOutgoing {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }
@@ -485,13 +504,13 @@ public final class PresentationCallImpl: PresentationCall {
                 self.audioSessionShouldBeActive.set(true)
                 if wasActive {
                     let debugLogValue = Promise<String?>()
-                    self.ongoingContext.stop(callId: id, sendDebugLogs: options.contains(.sendDebugLogs), debugLogValue: debugLogValue)
+                    self.ongoingContext?.stop(callId: id, sendDebugLogs: options.contains(.sendDebugLogs), debugLogValue: debugLogValue)
                 }
             default:
                 self.audioSessionShouldBeActive.set(false)
                 if wasActive {
                     let debugLogValue = Promise<String?>()
-                    self.ongoingContext.stop(debugLogValue: debugLogValue)
+                    self.ongoingContext?.stop(debugLogValue: debugLogValue)
                 }
         }
         if case .terminated = sessionState.state, !wasTerminated {
@@ -521,12 +540,6 @@ public final class PresentationCallImpl: PresentationCall {
         if let presentationState = presentationState {
             self.statePromise.set(presentationState)
             self.updateTone(presentationState, previous: previous)
-        }
-        
-        if !self.shouldPresentCallRating {
-            self.ongoingContext.needsRating { needsRating in
-                self.shouldPresentCallRating = needsRating
-            }
         }
     }
     
@@ -606,7 +619,7 @@ public final class PresentationCallImpl: PresentationCall {
     public func hangUp() -> Signal<Bool, NoError> {
         let debugLogValue = Promise<String?>()
         self.callSessionManager.drop(internalId: self.internalId, reason: .hangUp, debugLog: debugLogValue.get())
-        self.ongoingContext.stop(debugLogValue: debugLogValue)
+        self.ongoingContext?.stop(debugLogValue: debugLogValue)
         
         return self.hungUpPromise.get()
     }
@@ -614,7 +627,7 @@ public final class PresentationCallImpl: PresentationCall {
     public func rejectBusy() {
         self.callSessionManager.drop(internalId: self.internalId, reason: .busy, debugLog: .single(nil))
         let debugLog = Promise<String?>()
-        self.ongoingContext.stop(debugLogValue: debugLog)
+        self.ongoingContext?.stop(debugLogValue: debugLog)
     }
     
     public func toggleIsMuted() {
@@ -624,7 +637,7 @@ public final class PresentationCallImpl: PresentationCall {
     public func setIsMuted(_ value: Bool) {
         self.isMutedValue = value
         self.isMutedPromise.set(self.isMutedValue)
-        self.ongoingContext.setIsMuted(self.isMutedValue)
+        self.ongoingContext?.setIsMuted(self.isMutedValue)
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -645,6 +658,6 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func debugInfo() -> Signal<(String, String), NoError> {
-        return self.ongoingContext.debugInfo()
+        return self.debugInfoValue.get()
     }
 }

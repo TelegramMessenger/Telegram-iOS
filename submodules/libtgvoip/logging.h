@@ -33,7 +33,7 @@ void tgvoip_log_file_write_header(FILE* file);
 
 #elif defined(__APPLE__) && TARGET_OS_IPHONE && defined(TGVOIP_HAVE_TGLOG)
 
-#include "os/darwin/TGLogWrapper.h"
+void __tgvoip_call_tglog(const char *format, ...);
 
 #define LOGV(msg, ...) {__tgvoip_call_tglog("V/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('V', msg, ##__VA_ARGS__);}
 #define LOGD(msg, ...) {__tgvoip_call_tglog("D/tgvoip: " msg, ##__VA_ARGS__); tgvoip_log_file_printf('D', msg, ##__VA_ARGS__);}

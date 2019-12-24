@@ -30,9 +30,9 @@ static_library(
             "webrtc_dsp/**/*.h",
         ]),
     ]),
-    exported_headers = glob([
+    exported_headers = [
         "OngoingCallThreadLocalContext.h"
-    ], exclude = ["libtgvoip.h"]),
+    ],
     platform_compiler_flags = [
         ('arm.*', [
             '-DTGVOIP_USE_CUSTOM_CRYPTO',
