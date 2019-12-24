@@ -4675,6 +4675,7 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
 "Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
 "Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
+"Appearance.ThemePreview.Chat.3.TextWithLink" = "Is that everything? It seemed like he said [quite a bit more] than that. 😯";
 
 "Appearance.ThemePreview.Chat.4.Text" = "For relaxing times, make it Suntory time. 😎";
 "Appearance.ThemePreview.Chat.5.Text" = "He wants you to turn, look in camera. O.K.?";
@@ -5226,3 +5227,6 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.WebSessions" = "Active Websites";
 
 "Appearance.ShareThemeColor" = "Share";
+
+"Theme.ThemeChanged" = "Color Theme Changed";
+"Theme.ThemeChangedText" = "You can change it back in\n[Settings > Appearance]().";

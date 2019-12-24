@@ -17,7 +17,7 @@ private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xe
 enum ThemeAccentColorControllerMode {
     case colors(themeReference: PresentationThemeReference, create: Bool)
     case background(themeReference: PresentationThemeReference)
-    case edit(theme: PresentationTheme, wallpaper: TelegramWallpaper?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme) -> Void)
+    case edit(theme: PresentationTheme, wallpaper: TelegramWallpaper?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme, TelegramThemeSettings?) -> Void)
     
     var themeReference: PresentationThemeReference? {
         switch self {
@@ -181,13 +181,25 @@ final class ThemeAccentColorController: ViewController {
                     let _ = (prepare
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         let updatedTheme: PresentationTheme
+                        
+                        var settings: TelegramThemeSettings?
+                        
                         if let themeReference = themeReference {
                             updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor, backgroundColors: state.backgroundColors, bubbleColors: state.messagesColors, wallpaper: state.initialWallpaper ?? coloredWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                            
+                            if case let .builtin(theme) = themeReference {
+                                var messageColors: (Int32, Int32)?
+                                if let colors = state.messagesColors {
+                                    messageColors = (Int32(bitPattern: colors.0.rgb), Int32(bitPattern: colors.1?.rgb ?? colors.0.rgb))
+                                }
+                                
+                                settings = TelegramThemeSettings(baseTheme: theme.baseTheme, accentColor: Int32(bitPattern: state.accentColor.rgb), messageColors: messageColors, wallpaper: coloredWallpaper)
+                            }
                         } else {
                             updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor, backgroundColors: state.backgroundColors, bubbleColors: state.messagesColors, wallpaper: state.initialWallpaper ?? coloredWallpaper)
                         }
-                        
-                        completion(updatedTheme)
+                                                
+                        completion(updatedTheme, settings)
                     })
                 } else {
                     let _ = (prepare

@@ -21,11 +21,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let animatedStickerNode: AnimatedStickerNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
-    private let buttonTextNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
+    private let undoButtonTextNode: ImmediateTextNode
+    private let undoButtonNode: HighlightTrackingButtonNode
     private let panelNode: ASDisplayNode
     private let panelWrapperNode: ASDisplayNode
-    private let action: (Bool) -> Void
+    private let action: (UndoOverlayAction) -> Bool
     private let dismiss: () -> Void
     
     private let effectView: UIView
@@ -38,7 +39,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (Bool) -> Void, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
         self.elevatedLayout = elevatedLayout
         
         self.action = action
@@ -54,6 +55,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
+        
+        self.buttonNode = HighlightTrackingButtonNode()
         
         var displayUndo = true
         var undoText = presentationData.strings.Undo_Undo
@@ -129,12 +132,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
+                
+                undoTextColor = UIColor(rgb: 0xff7b74)
             
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                self.textNode.attributedText = attributedText
                 displayUndo = true
                 undoText = cancel
-                undoTextColor = UIColor(rgb: 0xff7b74)
                 self.originalRemainingSeconds = 3
             case let .emoji(path, text):
                 self.iconNode = nil
@@ -167,11 +175,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
-        self.buttonTextNode = ImmediateTextNode()
-        self.buttonTextNode.displaysAsynchronously = false
-        self.buttonTextNode.attributedText = NSAttributedString(string: undoText, font: Font.regular(17.0), textColor: undoTextColor)
+        self.undoButtonTextNode = ImmediateTextNode()
+        self.undoButtonTextNode.displaysAsynchronously = false
+        self.undoButtonTextNode.attributedText = NSAttributedString(string: undoText, font: Font.regular(17.0), textColor: undoTextColor)
         
-        self.buttonNode = HighlightTrackingButtonNode()
+        self.undoButtonNode = HighlightTrackingButtonNode()
         
         self.panelNode = ASDisplayNode()
         if presentationData.theme.overallDarkAppearance {
@@ -201,25 +209,27 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
+        self.panelWrapperNode.addSubnode(self.buttonNode)
         if displayUndo {
-            self.panelWrapperNode.addSubnode(self.buttonTextNode)
-            self.panelWrapperNode.addSubnode(self.buttonNode)
+            self.panelWrapperNode.addSubnode(self.undoButtonTextNode)
+            self.panelWrapperNode.addSubnode(self.undoButtonNode)
         }
         self.addSubnode(self.panelNode)
         self.addSubnode(self.panelWrapperNode)
         
-        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+        self.undoButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.buttonTextNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.buttonTextNode.alpha = 0.4
+                    strongSelf.undoButtonTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.undoButtonTextNode.alpha = 0.4
                 } else {
-                    strongSelf.buttonTextNode.alpha = 1.0
-                    strongSelf.buttonTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.undoButtonTextNode.alpha = 1.0
+                    strongSelf.undoButtonTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.undoButtonNode.addTarget(self, action: #selector(self.undoButtonPressed), forControlEvents: .touchUpInside)
     }
     
     override func didLoad() {
@@ -230,7 +240,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func buttonPressed() {
-        self.action(false)
+        if self.action(.info) {
+            self.dismiss()
+        }
+    }
+    
+    @objc private func undoButtonPressed() {
+        self.action(.undo)
         self.dismiss()
     }
     
@@ -239,7 +255,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.remainingSeconds -= 1
         }
         if self.remainingSeconds == 0 {
-            self.action(true)
+            self.action(.commit)
             self.dismiss()
         } else {
             if !self.timerTextNode.bounds.size.width.isZero, let snapshot = self.timerTextNode.view.snapshotContentTree() {
@@ -286,9 +302,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         let margin: CGFloat = 16.0
         
-        let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
+        let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let buttonMinX: CGFloat
-        if self.buttonNode.supernode != nil {
+        if self.undoButtonNode.supernode != nil {
             buttonMinX = layout.size.width - layout.safeInsets.left - rightInset - buttonTextSize.width - margin * 2.0
         } else {
             buttonMinX = layout.size.width - layout.safeInsets.left - rightInset
@@ -316,8 +332,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
         
         let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
-        transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
-        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
+        transition.updateFrame(node: self.undoButtonTextNode, frame: buttonTextFrame)
+        
+        let undoButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
+        self.undoButtonNode.frame = undoButtonFrame
+        
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: undoButtonFrame.minX - layout.safeInsets.left, height: contentHeight))
         
         var textContentHeight = textSize.height
         var textOffset: CGFloat = 0.0

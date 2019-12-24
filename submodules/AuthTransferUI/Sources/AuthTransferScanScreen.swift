@@ -133,8 +133,11 @@ public final class AuthTransferScanScreen: ViewController {
         if let navigationController = navigationController as? NavigationController {
             let activeSessionsContext = self.activeSessionsContext
             self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: "Loggin Successful", text: "Telegram for macOS", cancel: "Terminate"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
-                if !value, let session = session {
+                if value == .undo, let session = session {
                     let _ = activeSessionsContext.remove(hash: session.hash).start()
+                    return true
+                } else {
+                    return false
                 }
             }), in: .window(.root))
             

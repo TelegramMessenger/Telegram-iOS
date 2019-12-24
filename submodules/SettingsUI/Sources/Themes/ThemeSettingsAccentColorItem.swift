@@ -14,17 +14,21 @@ import PresentationDataUtils
 
 private enum ThemeSettingsColorEntryId: Hashable {
     case color(Int)
+    case theme(Int64)
     case picker
 }
 
 private enum ThemeSettingsColorEntry: Comparable, Identifiable {
     case color(Int, PresentationThemeReference, PresentationThemeAccentColor?, Bool)
+    case theme(Int, PresentationThemeReference, PresentationThemeReference, Bool)
     case picker
     
     var stableId: ThemeSettingsColorEntryId {
         switch self {
             case let .color(index, _, _, _):
                 return .color(index)
+            case let .theme(_, _, theme, _):
+                return .theme(theme.index)
             case .picker:
                 return .picker
         }
@@ -34,6 +38,12 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
         switch lhs {
             case let .color(lhsIndex, lhsThemeReference, lhsAccentColor, lhsSelected):
                 if case let .color(rhsIndex, rhsThemeReference, rhsAccentColor, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsThemeReference.index == rhsThemeReference.index, lhsAccentColor == rhsAccentColor, lhsSelected == rhsSelected {
+                    return true
+                } else {
+                    return false
+                }
+            case let .theme(lhsIndex, lhsBaseThemeReference, lhsTheme, lhsSelected):
+                if case let .theme(rhsIndex, rhsBaseThemeReference, rhsTheme, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsBaseThemeReference.index == rhsBaseThemeReference.index, lhsTheme == rhsTheme, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
@@ -51,9 +61,11 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
         switch lhs {
             case .picker:
                 return true
-            case let .color(lhsIndex, _, _, _):
+            case let .color(lhsIndex, _, _, _), let .theme(lhsIndex, _, _, _):
                 switch rhs {
                     case let .color(rhsIndex, _, _, _):
+                        return lhsIndex < rhsIndex
+                    case let .theme(rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
                     case .picker:
                         return false
@@ -61,26 +73,97 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
         }
     }
     
-    func item(action: @escaping (PresentationThemeAccentColor?, Bool) -> Void, contextAction: ((PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
+    func item(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
         switch self {
             case let .color(_, themeReference, accentColor, selected):
-                return ThemeSettingsAccentColorIconItem(themeReference: themeReference, accentColor: accentColor, selected: selected, action: action, contextAction: contextAction)
+                return ThemeSettingsAccentColorIconItem(themeReference: themeReference, color: accentColor.flatMap { .accentColor($0) }, selected: selected, action: action, contextAction: contextAction)
+            case let .theme(_, baseThemeReference, theme, selected):
+                return ThemeSettingsAccentColorIconItem(themeReference: baseThemeReference, color: .theme(theme), selected: selected, action: action, contextAction: contextAction)
             case .picker:
                 return ThemeSettingsAccentColorPickerItem(action: openColorPicker)
         }
     }
 }
 
+enum ThemeSettingsColorOption: Equatable {
+    case accentColor(PresentationThemeAccentColor)
+    case theme(PresentationThemeReference)
+    
+    var accentColor: UIColor? {
+        switch self {
+            case let .accentColor(color):
+                return color.color
+            case let .theme(reference):
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings {
+                    return UIColor(rgb: UInt32(bitPattern: settings.accentColor))
+                } else {
+                    return nil
+                }
+        }
+    }
+    
+    var baseColor: UIColor? {
+        switch self {
+            case let .accentColor(color):
+                return color.baseColor.color
+            case .theme:
+                return nil
+        }
+    }
+    
+    var plainBubbleColors: (UIColor, UIColor)? {
+        switch self {
+            case let .accentColor(color):
+                return color.plainBubbleColors
+            case let .theme(reference):
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
+                    return (UIColor(rgb: UInt32(bitPattern: messageColors.top)), UIColor(rgb: UInt32(bitPattern: messageColors.bottom)))
+                } else {
+                    return nil
+                }
+        }
+    }
+    
+    var customBubbleColors: (UIColor, UIColor?)? {
+        switch self {
+            case let .accentColor(color):
+                return color.customBubbleColors
+            case let .theme(reference):
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
+                    let topColor = UIColor(rgb: UInt32(bitPattern: messageColors.top))
+                    let bottomColor = UIColor(rgb: UInt32(bitPattern: messageColors.bottom))
+                    if topColor.rgb != bottomColor.rgb {
+                        return (topColor, bottomColor)
+                    } else {
+                        return (topColor, nil)
+                    }
+                } else {
+                    return nil
+                }
+        }
+    }
+    
+    var index: Int64 {
+        switch self {
+            case let .accentColor(color):
+                return Int64(color.index)
+            case let .theme(reference):
+                return reference.index
+                
+        }
+    }
+}
+
 private class ThemeSettingsAccentColorIconItem: ListViewItem {
     let themeReference: PresentationThemeReference
-    let accentColor: PresentationThemeAccentColor?
+    let color: ThemeSettingsColorOption?
     let selected: Bool
-    let action: (PresentationThemeAccentColor?, Bool) -> Void
-    let contextAction: ((PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?
+    let action: (ThemeSettingsColorOption?, Bool) -> Void
+    let contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(themeReference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?, selected: Bool, action: @escaping (PresentationThemeAccentColor?, Bool) -> Void, contextAction: ((PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(themeReference: PresentationThemeReference, color: ThemeSettingsColorOption?, selected: Bool, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.themeReference = themeReference
-        self.accentColor = accentColor
+        self.color = color
         self.selected = selected
         self.action = action
         self.contextAction = contextAction
@@ -128,7 +211,7 @@ private class ThemeSettingsAccentColorIconItem: ListViewItem {
     
     public var selectable = true
     public func selected(listView: ListView) {
-        self.action(self.accentColor, self.selected)
+        self.action(self.color, self.selected)
     }
 }
 
@@ -224,7 +307,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                 gesture.cancel()
                 return
             }
-            item.contextAction?(item.accentColor, strongSelf.containerNode, gesture)
+            item.contextAction?(item.color, strongSelf.containerNode, gesture)
         }
     }
     
@@ -258,7 +341,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
             var updatedAccentColor = false
             var updatedSelected = false
             
-            if currentItem == nil || currentItem?.accentColor != item.accentColor {
+            if currentItem == nil || currentItem?.color != item.color {
                 updatedAccentColor = true
             }
             if currentItem?.selected != item.selected {
@@ -271,8 +354,8 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                     strongSelf.item = item
                     
                     if updatedAccentColor {
-                        var fillColor = item.accentColor?.color
-                        var strokeColor = item.accentColor?.baseColor.color
+                        var fillColor = item.color?.accentColor
+                        var strokeColor = item.color?.baseColor
                         if strokeColor == .clear {
                             strokeColor = fillColor
                         }
@@ -288,12 +371,12 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                         var topColor: UIColor?
                         var bottomColor: UIColor?
                         
-                        if let colors = item.accentColor?.plainBubbleColors {
+                        if let colors = item.color?.plainBubbleColors {
                             topColor = colors.0
                             bottomColor = colors.1
                         } else if case .builtin(.dayClassic) = item.themeReference {
-                            if let accentColor = item.accentColor {
-                                let hsb = accentColor.color.hsb
+                            if let accentColor = item.color?.accentColor {
+                                let hsb = accentColor.hsb
                                 let bubbleColor = UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0)
                                 topColor = bubbleColor
                                 bottomColor = bubbleColor
@@ -490,15 +573,18 @@ enum ThemeSettingsAccentColor {
     case color(PresentationThemeBaseColor)
     case preset(PresentationThemeAccentColor)
     case custom(PresentationThemeAccentColor)
+    case theme(PresentationThemeReference)
     
-    var index: Int32? {
+    var index: Int64? {
         switch self {
             case .default:
                 return nil
             case let .color(color):
-                return 10 + color.rawValue
+                return Int64(10 + color.rawValue)
             case let .preset(color), let .custom(color):
-                return color.index
+                return Int64(color.index)
+            case let .theme(theme):
+                return theme.index
         }
     }
 }
@@ -509,13 +595,13 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let themeReference: PresentationThemeReference
     let colors: [ThemeSettingsAccentColor]
-    let currentColor: PresentationThemeAccentColor?
-    let updated: (PresentationThemeAccentColor?) -> Void
-    let contextAction: ((PresentationThemeReference, PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?
+    let currentColor: ThemeSettingsColorOption?
+    let updated: (ThemeSettingsColorOption?) -> Void
+    let contextAction: ((PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?
     let openColorPicker: (Bool) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: PresentationThemeAccentColor?, updated: @escaping (PresentationThemeAccentColor?) -> Void, contextAction: ((PresentationThemeReference, PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: ThemeSettingsColorOption?, updated: @escaping (ThemeSettingsColorOption?) -> Void, contextAction: ((PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.themeReference = themeReference
         self.colors = colors
@@ -568,7 +654,7 @@ private struct ThemeSettingsAccentColorItemNodeTransition {
     let crossfade: Bool
 }
 
-private func preparedTransition(action: @escaping (PresentationThemeAccentColor?, Bool) -> Void, contextAction: ((PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], crossfade: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
+private func preparedTransition(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], crossfade: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -578,11 +664,11 @@ private func preparedTransition(action: @escaping (PresentationThemeAccentColor?
     return ThemeSettingsAccentColorItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade)
 }
 
-private func ensureColorVisible(listNode: ListView, accentColor: PresentationThemeAccentColor?, animated: Bool) -> Bool {
+private func ensureColorVisible(listNode: ListView, accentColor: ThemeSettingsColorOption?, animated: Bool) -> Bool {
     var resultNode: ThemeSettingsAccentColorIconItemNode?
     listNode.forEachItemNode { node in
         if resultNode == nil, let node = node as? ThemeSettingsAccentColorIconItemNode {
-            if node.item?.accentColor?.index == accentColor?.index {
+            if node.item?.color?.index == accentColor?.index {
                 resultNode = node
             }
         }
@@ -768,33 +854,61 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 let selected = item.currentColor == nil
                                 entries.append(.color(index, item.themeReference, nil, selected))
                             case let .color(color):
-                                let selected = item.currentColor?.baseColor == color
-                                let accentColor: PresentationThemeAccentColor
+                                var selected = false
+                                if let currentColor = item.currentColor, case let .accentColor(accentColor) = currentColor {
+                                    selected = accentColor.baseColor == color
+                                }
+                                let accentColor: ThemeSettingsColorOption
                                 if let currentColor = item.currentColor, selected {
                                     accentColor = currentColor
                                 } else {
-                                    accentColor = PresentationThemeAccentColor(index: 10 + color.rawValue, baseColor: color)
+                                    accentColor = .accentColor(PresentationThemeAccentColor(index: 10 + color.rawValue, baseColor: color))
                                 }
-                                entries.append(.color(index, item.themeReference, accentColor, selected))
+                                switch accentColor {
+                                    case let .accentColor(color):
+                                        entries.append(.color(index, item.themeReference, color, selected))
+                                    case let .theme(theme):
+                                        entries.append(.theme(index, item.themeReference, theme, selected))
+                                }
                             case let .preset(color), let .custom(color):
-                                let selected = item.currentColor == color
+                                var selected = false
+                                if let currentColor = item.currentColor {
+                                    selected = currentColor.index == Int64(color.index)
+                                }
                                 entries.append(.color(index, item.themeReference, color, selected))
+                            case let .theme(theme):
+                                var selected = false
+                                if let currentColor = item.currentColor {
+                                    selected = currentColor.index == theme.index
+                                }
+                                entries.append(.theme(index, item.themeReference, theme, selected))
                         }
                         
                         index += 1
                     }
                     
-                    let action: (PresentationThemeAccentColor?, Bool) -> Void = { [weak self] color, selected in
+                    let action: (ThemeSettingsColorOption?, Bool) -> Void = { [weak self] color, selected in
                         if let strongSelf = self, let item = strongSelf.item {
                             if selected {
-                                item.openColorPicker(color?.baseColor != .custom)
+                                var create = true
+                                if let color = color {
+                                    switch color {
+                                        case let .accentColor(color):
+                                            create = color.baseColor != .custom
+                                        case let .theme(theme):
+                                            if case let .cloud(theme) = theme {
+                                                create = !theme.theme.isCreator
+                                            }
+                                    }
+                                }
+                                item.openColorPicker(create)
                             } else {
                                 item.updated(color)
                             }
                             ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }
                     }
-                    let contextAction: ((PresentationThemeAccentColor?, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, node, gesture in
+                    let contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, node, gesture in
                         if let strongSelf = self, let item = strongSelf.item {
                             item.contextAction?(item.themeReference, color, node, gesture)
                         }

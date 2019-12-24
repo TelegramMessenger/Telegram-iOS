@@ -547,7 +547,7 @@ public func solidColorImage(_ color: UIColor) -> Signal<(TransformImageArguments
     })
 }
 
-public func gradientImage(_ colors: [UIColor], rotation: Int32 = 0) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func gradientImage(_ colors: [UIColor], rotation: Int32? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     guard !colors.isEmpty else {
         return .complete()
     }
@@ -572,9 +572,11 @@ public func gradientImage(_ colors: [UIColor], rotation: Int32 = 0) -> Signal<(T
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
-            c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
-            c.rotate(by: CGFloat(rotation) * CGFloat.pi / 180.0)
-            c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
+            if let rotation = rotation {
+                c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
+                c.rotate(by: CGFloat(rotation) * CGFloat.pi / 180.0)
+                c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
+            }
             
             c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
         }

@@ -200,8 +200,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.blurredNode.image = image
                 strongSelf.blurredNode.blurView.blurRadius = 45.0
-                strongSelf.ready.set(.single(true))
             }
+            self?.ready.set(.single(true))
         }
         
         self.colorDisposable = (self.wallpaperPromise.get()

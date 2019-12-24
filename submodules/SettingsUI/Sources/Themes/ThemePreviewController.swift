@@ -15,6 +15,7 @@ import WallpaperResources
 import OverlayStatusController
 import AppBundle
 import PresentationDataUtils
+import UndoUI
 
 public enum ThemePreviewSource {
     case settings(PresentationThemeReference, TelegramWallpaper?)
@@ -279,7 +280,7 @@ public final class ThemePreviewController: ViewController {
                         |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
                             let similarTheme = themes.first(where: { $0.isCreator && $0.title == info.title })
                             if let similarTheme = similarTheme {
-                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData, settings: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
@@ -298,7 +299,7 @@ public final class ThemePreviewController: ViewController {
                                 }
                                 
                             } else {
-                                return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData, settings: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
@@ -322,31 +323,52 @@ public final class ThemePreviewController: ViewController {
                     return .single(theme)
             }
         }
-        |> mapToSignal { updatedTheme -> Signal<Void, NoError> in
+        |> mapToSignal { updatedTheme -> Signal<(PresentationThemeReference, Bool)?, NoError> in
             if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
             let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-            return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
-                var updated: PresentationThemeSettings
-                if autoNightModeTriggered {
-                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                    automaticThemeSwitchSetting.theme = updatedTheme
-                    updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
-                } else {
-                    updated = current.withUpdatedTheme(updatedTheme)
-                }
-                
-                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                themeSpecificChatWallpapers[updatedTheme.index] = nil
-                return updated.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
-            })
+            var switchingFromDefaultTheme = false
+            
+            return context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference, Bool)? in
+                var previousDefaultTheme: (PresentationThemeReference, Bool)?
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                    let currentSettings: PresentationThemeSettings
+                    if let entry = entry as? PresentationThemeSettings {
+                        currentSettings = entry
+                    } else {
+                        currentSettings = PresentationThemeSettings.defaultSettings
+                    }
+                    
+                    var updatedSettings: PresentationThemeSettings
+                    if autoNightModeTriggered {
+                        if case .builtin = currentSettings.automaticThemeSwitchSetting.theme {
+                            previousDefaultTheme = (currentSettings.automaticThemeSwitchSetting.theme, true)
+                        }
+                        
+                        var automaticThemeSwitchSetting = currentSettings.automaticThemeSwitchSetting
+                        automaticThemeSwitchSetting.theme = updatedTheme
+                        updatedSettings = currentSettings.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                    } else {
+                        if case .builtin = currentSettings.theme {
+                            previousDefaultTheme = (currentSettings.theme, false)
+                        }
+                         
+                        updatedSettings = currentSettings.withUpdatedTheme(updatedTheme)
+                    }
+                    
+                    var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
+                    themeSpecificChatWallpapers[updatedTheme.index] = nil
+                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
+                })
+                return previousDefaultTheme
+            }
         }
         
         var cancelImpl: (() -> Void)?
         let progress = Signal<Never, NoError> { [weak self] subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             self?.present(controller, in: .window(.root))
@@ -369,9 +391,34 @@ public final class ThemePreviewController: ViewController {
                 progressDisposable.dispose()
             }
         }
-        |> deliverOnMainQueue).start(completed: {[weak self] in
+        |> deliverOnMainQueue).start(next: { [weak self] previousDefaultTheme in
             if let strongSelf = self {
                 Queue.mainQueue().after(0.3) {
+                    let navigationController = strongSelf.navigationController as? NavigationController
+                    if let (previousDefaultTheme, autoNightMode) = previousDefaultTheme {
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                            if value == .undo {
+                                let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
+                                    var updated: PresentationThemeSettings
+                                    if autoNightMode {
+                                        var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                        automaticThemeSwitchSetting.theme = previousDefaultTheme
+                                        updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                                    } else {
+                                        updated = current.withUpdatedTheme(previousDefaultTheme)
+                                    }
+                                    return updated
+                                }).start()
+                                return true
+                            } else if value == .info {
+                                let controller = themeSettingsController(context: context)
+                                controller.navigationPresentation = .modal
+                                navigationController?.pushViewController(controller, animated: true)
+                                return true
+                            }
+                            return false
+                        }), in: .window(.root))
+                    }
                     strongSelf.dismiss()
                 }
             }

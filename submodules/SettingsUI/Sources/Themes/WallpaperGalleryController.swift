@@ -24,8 +24,8 @@ public enum WallpaperListType {
 
 public enum WallpaperListSource {
     case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
-    case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?, UIColor?, Int32?, Message?)
-    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, Int32?, Message?)
+    case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?, UIColor?, UIColor?, Int32?, Int32?, Message?)
+    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, UIColor?, Int32?, Int32?, Message?)
     case asset(PHAsset)
     case contextResult(ChatContextResult)
     case customColor(Int32?)
@@ -97,27 +97,31 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
     }
 }
 
-private func updatedFileWallpaper(wallpaper: TelegramWallpaper, color: UIColor?, intensity: Int32?) -> TelegramWallpaper {
+private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
     if case let .file(file) = wallpaper {
-        return updatedFileWallpaper(id: file.id, accessHash: file.accessHash, slug: file.slug, file: file.file, color: color, intensity: intensity)
+        return updatedFileWallpaper(id: file.id, accessHash: file.accessHash, slug: file.slug, file: file.file, firstColor: firstColor, secondColor: secondColor, intensity: intensity, rotation: rotation)
     } else {
         return wallpaper
     }
 }
 
-private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, color: UIColor?, intensity: Int32?) -> TelegramWallpaper {
+private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
     let isPattern = file.mimeType == "image/png"
-    var colorValue: Int32?
+    var firstColorValue: Int32?
+    var secondColorValue: Int32?
     var intensityValue: Int32?
-    if let color = color {
-        colorValue = Int32(bitPattern: color.rgb)
+    if let firstColor = firstColor {
+        firstColorValue = Int32(bitPattern: firstColor.rgb)
         intensityValue = intensity
     } else if isPattern {
-        colorValue = 0xd6e2ee
+        firstColorValue = 0xd6e2ee
         intensityValue = 50
     }
+    if let secondColor = secondColor {
+        secondColorValue = Int32(bitPattern: secondColor.rgb)
+    }
     
-    return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, color: colorValue, intensity: intensityValue))
+    return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(color: firstColorValue, bottomColor: secondColorValue, intensity: intensityValue, rotation: rotation))
 }
 
 public class WallpaperGalleryController: ViewController {
@@ -183,15 +187,15 @@ public class WallpaperGalleryController: ViewController {
                 if case let .wallpapers(wallpaperOptions) = type, let options = wallpaperOptions {
                     self.initialOptions = options
                 }
-            case let .slug(slug, file, options, color, intensity, message):
+            case let .slug(slug, file, options, firstColor, secondColor, intensity, rotation, message):
                 if let file = file {
-                    let wallpaper = updatedFileWallpaper(slug: slug, file: file, color: color, intensity: intensity)
+                    let wallpaper = updatedFileWallpaper(slug: slug, file: file, firstColor: firstColor, secondColor: secondColor, intensity: intensity, rotation: rotation)
                     entries = [.wallpaper(wallpaper, message)]
                     centralEntryIndex = 0
                     self.initialOptions = options
                 }
-            case let .wallpaper(wallpaper, options, color, intensity, message):
-                let wallpaper = updatedFileWallpaper(wallpaper: wallpaper, color: color, intensity: intensity)
+            case let .wallpaper(wallpaper, options, firstColor, secondColor, intensity, rotation, message):
+                let wallpaper = updatedFileWallpaper(wallpaper: wallpaper, firstColor: firstColor, secondColor: secondColor, intensity: intensity, rotation: rotation)
                 entries = [.wallpaper(wallpaper, message)]
                 centralEntryIndex = 0
                 self.initialOptions = options
@@ -776,10 +780,17 @@ public class WallpaperGalleryController: ViewController {
             case let .file(_, _, _, _, isPattern, _, slug, _, settings):
                 if isPattern {
                     if let color = settings.color {
-                        options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                        if let bottomColor = settings.bottomColor {
+                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)-\(UIColor(rgb: UInt32(bitPattern: bottomColor)).hexString)")
+                        } else {
+                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                        }
                     }
                     if let intensity = settings.intensity {
                         options.append("intensity=\(intensity)")
+                    }
+                    if let rotation = settings.rotation {
+                        options.append("rotation=\(rotation)")
                     }
                 }
                 
