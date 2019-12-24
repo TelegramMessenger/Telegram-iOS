@@ -310,20 +310,30 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     } else if type == "telegram_theme" {
                         var file: TelegramMediaFile?
+                        var settings: TelegramThemeSettings?
                         var isSupported = false
-                        if let contentFiles = webpage.files {
-                            if let filteredFile = contentFiles.filter({ $0.mimeType == themeMimeType }).first {
-                                isSupported = true
-                                file = filteredFile
-                            } else {
-                                file = contentFiles.first
+                        
+                        for attribute in webpage.attributes {
+                            if case let .theme(attribute) = attribute {
+                                if let attributeSettings = attribute.settings {
+                                    settings = attributeSettings
+                                    isSupported = true
+                                } else if let filteredFile = attribute.files.filter({ $0.mimeType == themeMimeType }).first {
+                                    file = filteredFile
+                                    isSupported = true
+                                }
                             }
-                        } else if let contentFile = webpage.file {
+                        }
+                        
+                        if !isSupported, let contentFile = webpage.file {
                             isSupported = true
                             file = contentFile
                         }
                         if let file = file {
                             let media = WallpaperPreviewMedia(content: .file(file, nil, nil, nil, true, isSupported))
+                            mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                        } else if let settings = settings {
+                            let media = WallpaperPreviewMedia(content: .themeSettings(settings))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         }
                     }

@@ -150,7 +150,7 @@ final class ThemeAccentColorController: ViewController {
                     }
                 }
                 
-                let prepare: Signal<Void, NoError>
+                let prepare: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
                     let resource = file.file.resource
                     let representation = CachedPatternWallpaperRepresentation(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: state.patternIntensity, rotation: state.rotation)
@@ -167,7 +167,8 @@ final class ThemeAccentColorController: ViewController {
                         prepare = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
                         |> filter({ $0.complete })
                         |> take(1)
-                        |> mapToSignal { _ -> Signal<Void, NoError> in
+                        |> castError(CreateThemeError.self)
+                        |> mapToSignal { _ -> Signal<CreateThemeResult, CreateThemeError> in
                             return .complete()
                         })
                     } else {
@@ -201,67 +202,116 @@ final class ThemeAccentColorController: ViewController {
                                                 
                         completion(updatedTheme, settings)
                     })
-                } else {
-                    let _ = (prepare
-                    |> then(updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                        let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                        var currentTheme = current.theme
-                        if autoNightModeTriggered {
-                            currentTheme = current.automaticThemeSwitchSetting.theme
-                        }
-                        
-                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                        var themeSpecificAccentColors = current.themeSpecificAccentColors
-                        var themeSpecificCustomColors = current.themeSpecificCustomColors
-                        var customColors = themeSpecificCustomColors[currentTheme.index]?.colors ?? []
-                        
-                        var bubbleColors: (Int32, Int32?)?
-                        if let messagesColors = state.messagesColors {
-                            if let secondColor = messagesColors.1 {
-                                bubbleColors = (Int32(bitPattern: messagesColors.0.rgb), Int32(bitPattern: secondColor.rgb))
-                            } else {
-                                bubbleColors = (Int32(bitPattern: messagesColors.0.rgb), nil)
-                            }
-                        }
-                        
-                        let index: Int32
-                        var exists: Bool
-                        if let initialIndex = initialAccentColor?.index, initialIndex != -1 {
-                            index = initialIndex
-                            exists = true
+                } else if case let .colors(theme, create) = strongSelf.mode {
+                    var baseTheme: TelegramBaseTheme
+                    var telegramTheme: TelegramTheme?
+                    if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+                        telegramTheme = theme.theme
+                        baseTheme = settings.baseTheme
+                    } else {
+                        baseTheme = .classic
+                    }
+                    
+                    let accentColor =  Int32(bitPattern: state.accentColor.rgb)
+                    var bubbleColors: (Int32, Int32)?
+                    if let messagesColors = state.messagesColors {
+                        if let secondColor = messagesColors.1 {
+                            bubbleColors = (Int32(bitPattern: messagesColors.0.rgb), Int32(bitPattern: secondColor.rgb))
                         } else {
-                            index = Int32(bitPattern: arc4random())
-                            exists = false
+                            bubbleColors = (Int32(bitPattern: messagesColors.0.rgb), Int32(bitPattern: messagesColors.0.rgb))
                         }
-                        
-                        let color = PresentationThemeAccentColor(index: index, baseColor: .custom, accentColor: Int32(bitPattern: state.accentColor.rgb), bubbleColors: bubbleColors)
-                        themeSpecificAccentColors[currentTheme.index] = color
-                        
-                        if exists {
-                            if let index = customColors.firstIndex(where: { $0.index == index }) {
-                                customColors[index] = color
-                            } else {
-                                customColors.append(color)
+                    }
+                    
+                    var wallpaper: TelegramWallpaper? = nil // themeSpecificChatWallpapers[currentTheme.index]
+                    if let coloredWallpaper = coloredWallpaper {
+                        wallpaper = coloredWallpaper
+                    }
+                    
+                    let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: accentColor, messageColors: bubbleColors, wallpaper: wallpaper)
+                    
+                    let save: Signal<Void, NoError>
+                    
+                    if !create, let theme = telegramTheme {
+                        let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: settings))
+                        |> deliverOnMainQueue).start(next: { next in
+                            if case let .result(resultTheme) = next {
+                                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
+                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+//                                    if let resource = resultTheme.file?.resource, let data = themeData {
+//                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+//                                    }
+                                    
+                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
+                                    
+                                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                    themeSpecificChatWallpapers[themeReference.index] = nil
+                                    
+                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                }) |> deliverOnMainQueue).start(completed: {
+                                    if let strongSelf = self {
+                                        strongSelf.completion?()
+                                        strongSelf.dismiss()
+                                    }
+                                })
                             }
-                        } else {
-                            customColors.append(color)
-                        }
-                        
-                        var wallpaper = themeSpecificChatWallpapers[currentTheme.index]
-                        if let coloredWallpaper = coloredWallpaper {
-                            wallpaper = coloredWallpaper
-                        }
-                        
-                        themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: color)] = wallpaper
-                        themeSpecificCustomColors[currentTheme.index] = PresentationThemeCustomColors(colors: customColors)
-                        
-                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificCustomColors: themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                    })) |> deliverOnMainQueue).start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.completion?()
-                            strongSelf.dismiss()
-                        }
-                    })
+                        }, error: { error in
+                        })
+                    } else {
+                        let title = generateThemeName(accentColor: state.accentColor)
+                        let _ = (prepare |> then(createTheme(account: context.account, title: title, resource: nil, thumbnailData: nil, settings: settings))
+                        |> deliverOnMainQueue).start(next: { next in
+                            if case let .result(resultTheme) = next {
+                                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
+                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                                //                                    if let resource = resultTheme.file?.resource, let data = themeData {
+                                //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                //                                    }
+                                
+                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
+                                    
+                                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                    themeSpecificChatWallpapers[themeReference.index] = nil
+                                    
+                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                }) |> deliverOnMainQueue).start(completed: {
+                                    if let strongSelf = self {
+                                        strongSelf.completion?()
+                                        strongSelf.dismiss()
+                                    }
+                                })
+                            }
+                        }, error: { error in
+                        })
+                    }
+                    
+//                    let _ = (prepare
+//                    |> then(updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+//                        let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+//                        var currentTheme = current.theme
+//                        if autoNightModeTriggered {
+//                            currentTheme = current.automaticThemeSwitchSetting.theme
+//                        }
+//
+//
+//
+//                        if create {
+//
+//                        } else {
+//
+//                        }
+//
+//                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+//
+//
+//                        themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: nil)] = wallpaper
+//
+//                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+//                    })) |> deliverOnMainQueue).start(completed: { [weak self] in
+//                        if let strongSelf = self {
+//                            strongSelf.completion?()
+//                            strongSelf.dismiss()
+//                        }
+//                    })
                 }
             }
         })
@@ -326,69 +376,116 @@ final class ThemeAccentColorController: ViewController {
             }
             
             if let themeReference = strongSelf.mode.themeReference {
-                let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
-                if case .colors(_, true) = strongSelf.mode {
-                } else if themeSpecificAccentColor?.baseColor == .custom {
-                    strongSelf.initialAccentColor = themeSpecificAccentColor
-                }
-                accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
                 var wallpaper: TelegramWallpaper
-                if let accentColor = themeSpecificAccentColor, let customWallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] {
-                    wallpaper = customWallpaper
-                } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
-                    wallpaper = customWallpaper
-                } else {
-                    let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil) ?? defaultPresentationTheme
-                    if case let .builtin(themeName) = themeReference {
-                        if case .dayClassic = themeName, settings.themeSpecificAccentColors[themeReference.index] != nil {
-                            ignoreDefaultWallpaper = true
-                        } else if case .nightAccent = themeName {
-                            ignoreDefaultWallpaper = true
+                
+                if case .colors(_, true) = strongSelf.mode {
+                    let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
+                    accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
+                   
+                    if let accentColor = themeSpecificAccentColor, let customWallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] {
+                        wallpaper = customWallpaper
+                    } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
+                        wallpaper = customWallpaper
+                    } else {
+                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil) ?? defaultPresentationTheme
+                        if case let .builtin(themeName) = themeReference {
+                            if case .dayClassic = themeName, settings.themeSpecificAccentColors[themeReference.index] != nil {
+                                ignoreDefaultWallpaper = true
+                            } else if case .nightAccent = themeName {
+                                ignoreDefaultWallpaper = true
+                            }
+                        }
+                        
+                        wallpaper = theme.chat.defaultWallpaper
+                    }
+                    
+                    if case let .builtin(settings) = wallpaper {
+                        var defaultPatternWallpaper: TelegramWallpaper?
+                        
+                        for wallpaper in wallpapers {
+                            //JqSUrO0-mFIBAAAAWwTvLzoWGQI, 25
+                            if case let .file(file) = wallpaper, file.slug == "-Xc-np9y2VMCAAAARKr0yNNPYW0" {
+                                defaultPatternWallpaper = wallpaper
+                                break
+                            }
+                        }
+                        
+                        if let defaultPatternWallpaper = defaultPatternWallpaper {
+                            wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 40, rotation: nil))
                         }
                     }
                     
-                    wallpaper = theme.chat.defaultWallpaper
-                }
-                
-                if case let .builtin(settings) = wallpaper {
-                    var defaultPatternWallpaper: TelegramWallpaper?
+                    if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
+                        initialWallpaper = wallpaper
+                    }
                     
-                    for wallpaper in wallpapers {
-                        //JqSUrO0-mFIBAAAAWwTvLzoWGQI, 25
-                        if case let .file(file) = wallpaper, file.slug == "-Xc-np9y2VMCAAAARKr0yNNPYW0" {
-                            defaultPatternWallpaper = wallpaper
-                            break
+                    if let initialBackgroundColor = strongSelf.initialBackgroundColor {
+                        backgroundColors = (initialBackgroundColor, nil)
+                    } else if !ignoreDefaultWallpaper {
+                        extractWallpaperParameters(wallpaper)
+                    } else {
+                        backgroundColors = nil
+                    }
+                    
+                    if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
+                        if let bottomColor = bubbleColors.1 {
+                            messageColors = (bubbleColors.0, bottomColor)
+                        } else {
+                            messageColors = (bubbleColors.0, nil)
+                        }
+                    } else {
+                        if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
+                            messageColors = (UIColor(rgb: 0xe1ffc7), nil)
+                        } else {
+                            messageColors = nil
                         }
                     }
-                    
-                    if let defaultPatternWallpaper = defaultPatternWallpaper {
-                        wallpaper = defaultPatternWallpaper.withUpdatedSettings(WallpaperSettings(blur: settings.blur, motion: settings.motion, color: 0xd6e2ee, bottomColor: nil, intensity: 40, rotation: nil))
-                    }
-                }
-                
-                if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
-                    initialWallpaper = wallpaper
-                }
-                
-                if let initialBackgroundColor = strongSelf.initialBackgroundColor {
-                    backgroundColors = (initialBackgroundColor, nil)
-                } else if !ignoreDefaultWallpaper {
-                    extractWallpaperParameters(wallpaper)
                 } else {
-                    backgroundColors = nil
-                }
-                
-                if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
-                    if let bottomColor = bubbleColors.1 {
-                        messageColors = (bubbleColors.0, bottomColor)
+                    let presentationTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
+                    if case let .cloud(theme) = themeReference, let themeSettings = theme.theme.settings {
+                        accentColor = UIColor(rgb: UInt32(bitPattern: themeSettings.accentColor))
+                        
+                        if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
+                            wallpaper = customWallpaper
+                        } else {
+                            wallpaper = presentationTheme.chat.defaultWallpaper
+                        }
+                        extractWallpaperParameters(wallpaper)
+                        if !wallpaper.isColorOrGradient {
+                            initialWallpaper = wallpaper
+                        }
+                        
+                        if let colors = themeSettings.messageColors {
+                            let topMessageColor = UIColor(rgb: UInt32(bitPattern: colors.top))
+                            let bottomMessageColor = UIColor(rgb: UInt32(bitPattern: colors.bottom))
+                            if topMessageColor.rgb == bottomMessageColor.rgb {
+                                messageColors = (topMessageColor, nil)
+                            } else {
+                                messageColors = (topMessageColor, bottomMessageColor)
+                            }
+                        } else {
+                           messageColors = nil
+                        }
                     } else {
-                        messageColors = (bubbleColors.0, nil)
-                    }
-                } else {
-                    if let themeReference = strongSelf.mode.themeReference, themeReference == .builtin(.dayClassic), settings.themeSpecificAccentColors[themeReference.index] == nil {
-                        messageColors = (UIColor(rgb: 0xe1ffc7), nil)
-                    } else {
-                        messageColors = nil
+                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
+                        
+                        accentColor = theme.rootController.navigationBar.accentTextColor
+                        
+                        let wallpaper = theme.chat.defaultWallpaper
+                        extractWallpaperParameters(wallpaper)
+                        
+                        if !wallpaper.isColorOrGradient {
+                            initialWallpaper = wallpaper
+                        }
+                        
+                        let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
+                        let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill
+                        
+                        if topMessageColor.rgb == bottomMessageColor.rgb {
+                            messageColors = (topMessageColor, nil)
+                        } else {
+                            messageColors = (topMessageColor, bottomMessageColor)
+                        }
                     }
                 }
             } else if case let .edit(theme, wallpaper, _, _, _) = strongSelf.mode {

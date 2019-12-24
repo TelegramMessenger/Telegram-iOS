@@ -306,7 +306,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-350980120] = { return Api.WebPage.parse_webPageEmpty($0) }
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
     dict[-2054908813] = { return Api.WebPage.parse_webPageNotModified($0) }
-    dict[-94051982] = { return Api.WebPage.parse_webPage($0) }
+    dict[-392411726] = { return Api.WebPage.parse_webPage($0) }
     dict[1036876423] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageText($0) }
     dict[-190472735] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaGeo($0) }
     dict[1262639204] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageGame($0) }
@@ -600,6 +600,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1118798639] = { return Api.InputThemeSettings.parse_inputThemeSettings($0) }
     dict[1251549527] = { return Api.InputStickeredMedia.parse_inputStickeredMediaPhoto($0) }
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
+    dict[1421174295] = { return Api.WebPageAttribute.parse_webPageAttributeTheme($0) }
     dict[82699215] = { return Api.messages.FeaturedStickers.parse_featuredStickersNotModified($0) }
     dict[-123893531] = { return Api.messages.FeaturedStickers.parse_featuredStickers($0) }
     dict[1375940666] = { return Api.auth.LoginTokenInfo.parse_loginTokenInfo($0) }
@@ -1257,6 +1258,8 @@ public struct Api {
             case let _1 as Api.InputThemeSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputStickeredMedia:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.WebPageAttribute:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FeaturedStickers:
                 _1.serialize(buffer, boxed)

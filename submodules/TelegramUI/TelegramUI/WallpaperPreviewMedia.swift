@@ -8,6 +8,7 @@ enum WallpaperPreviewMediaContent: Equatable {
     case file(TelegramMediaFile, UIColor?, UIColor?, Int32?, Bool, Bool)
     case color(UIColor)
     case gradient(UIColor, UIColor, Int32?)
+    case themeSettings(TelegramThemeSettings)
 }
 
 final class WallpaperPreviewMedia: Media {

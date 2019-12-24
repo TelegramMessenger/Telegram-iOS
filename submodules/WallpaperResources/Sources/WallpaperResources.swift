@@ -863,84 +863,98 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     c.restoreGState()
 }
 
-public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let isSupportedTheme = fileReference.media.mimeType == "application/x-tgtheme-ios"
-    let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
-    let data = maybeFetched
-    |> take(1)
-    |> mapToSignal { maybeData -> Signal<(Data?, Data?), NoError> in
-        if maybeData.complete && isSupportedTheme {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            return .single((loadedData, nil))
-        } else {
-            let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
-            
-            let previewRepresentation = fileReference.media.previewRepresentations.first
-            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-            if let previewRepresentation = previewRepresentation {
-                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
-            } else {
-                fetchedThumbnail = .complete()
-            }
-            
-            let thumbnailData: Signal<Data?, NoError>
-            if let previewRepresentation = previewRepresentation {
-                thumbnailData = Signal<Data?, NoError> { subscriber in
-                    let fetchedDisposable = fetchedThumbnail.start()
-                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(previewRepresentation.resource).start(next: { next in
-                        let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
-                        if let data = data, data.count > 0 {
-                            subscriber.putNext(data)
-                        } else {
-                            subscriber.putNext(decodedThumbnailData)
-                        }
-                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+public enum ThemeImageSource {
+    case file(FileMediaReference)
+    case settings(TelegramThemeSettings)
+}
+
+public func themeImage(account: Account, accountManager: AccountManager, source: ThemeImageSource, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let theme: Signal<(PresentationTheme?, Data?), NoError>
+    
+    switch source {
+        case let .file(fileReference):
+            let isSupportedTheme = fileReference.media.mimeType == "application/x-tgtheme-ios"
+            let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+            theme = maybeFetched
+            |> take(1)
+            |> mapToSignal { maybeData -> Signal<(PresentationTheme?, Data?), NoError> in
+                if maybeData.complete && isSupportedTheme {
+                    let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                    return .single((loadedData.flatMap { makePresentationTheme(data: $0) }, nil))
+                } else {
+                    let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
                     
-                    return ActionDisposable {
-                        fetchedDisposable.dispose()
-                        thumbnailDisposable.dispose()
+                    let previewRepresentation = fileReference.media.previewRepresentations.first
+                    let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
+                    if let previewRepresentation = previewRepresentation {
+                        fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
+                    } else {
+                        fetchedThumbnail = .complete()
                     }
-                }
-            } else {
-                thumbnailData = .single(decodedThumbnailData)
-            }
-            
-            let reference = fileReference.resourceReference(fileReference.media.resource)
-            let fullSizeData: Signal<Data?, NoError>
-            if isSupportedTheme {
-                fullSizeData = Signal { subscriber in
-                    let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
-                    let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
-                        |> map { data -> Data? in
-                            return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
-                        }).start(next: { next in
-                            if let data = next {
-                                accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                    
+                    let thumbnailData: Signal<Data?, NoError>
+                    if let previewRepresentation = previewRepresentation {
+                        thumbnailData = Signal<Data?, NoError> { subscriber in
+                            let fetchedDisposable = fetchedThumbnail.start()
+                            let thumbnailDisposable = account.postbox.mediaBox.resourceData(previewRepresentation.resource).start(next: { next in
+                                let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                                if let data = data, data.count > 0 {
+                                    subscriber.putNext(data)
+                                } else {
+                                    subscriber.putNext(decodedThumbnailData)
+                                }
+                            }, error: subscriber.putError, completed: subscriber.putCompletion)
+                            
+                            return ActionDisposable {
+                                fetchedDisposable.dispose()
+                                thumbnailDisposable.dispose()
                             }
-                            subscriber.putNext(next)
-                        }, error: { error in
-                            subscriber.putError(error)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
-                    return ActionDisposable {
-                        fetch.dispose()
-                        disposable.dispose()
+                        }
+                    } else {
+                        thumbnailData = .single(decodedThumbnailData)
+                    }
+                    
+                    let reference = fileReference.resourceReference(fileReference.media.resource)
+                    let fullSizeData: Signal<Data?, NoError>
+                    if isSupportedTheme {
+                        fullSizeData = Signal { subscriber in
+                            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                            let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                                |> map { data -> Data? in
+                                    return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
+                                }).start(next: { next in
+                                    if let data = next {
+                                        accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                                    }
+                                    subscriber.putNext(next)
+                                }, error: { error in
+                                    subscriber.putError(error)
+                                }, completed: {
+                                    subscriber.putCompletion()
+                                })
+                            return ActionDisposable {
+                                fetch.dispose()
+                                disposable.dispose()
+                            }
+                        }
+                    } else {
+                         fullSizeData = .single(nil)
+                    }
+                    
+                    return thumbnailData |> mapToSignal { thumbnailData in
+                        return fullSizeData |> map { fullSizeData in
+                            return (fullSizeData.flatMap { makePresentationTheme(data: $0) }, thumbnailData)
+                        }
                     }
                 }
-            } else {
-                 fullSizeData = .single(nil)
             }
-            
-            return thumbnailData |> mapToSignal { thumbnailData in
-                return fullSizeData |> map { fullSizeData in
-                    return (fullSizeData, thumbnailData)
-                }
-            }
-        }
+        case let .settings(settings):
+            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(rgb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(rgb: UInt32(bitPattern: $0.top)), UIColor(rgb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
     }
-    |> mapToSignal { (fullSizeData, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
-        if let fullSizeData = fullSizeData, let theme = makePresentationTheme(data: fullSizeData) {
+    
+    let data = theme
+    |> mapToSignal { (theme, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
+        if let theme = theme {
             if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
                 return cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
@@ -1071,6 +1085,16 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         case .dayClassic:
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
+                if let wallpaper = wallpaper, case let .file(file) = wallpaper {
+                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) } ?? UIColor(rgb: 0xd6e2ee)
+                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                } else {
+                    if let bubbleColors = bubbleColors {
+                        topBackgroundColor = UIColor(rgb: 0xd6e2ee)
+                    } else {
+                        topBackgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                    }
+                }
                 if let bubbleColors = bubbleColors {
                     topBackgroundColor = UIColor(rgb: 0xd6e2ee)
                     outgoingColor = bubbleColors

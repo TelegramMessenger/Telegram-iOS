@@ -36,12 +36,33 @@ private class PickerAnnotationContainerView: UIView {
 
 private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
     var customHitTest: ((CGPoint) -> Bool)?
+    private var allowSelectionChanges = true
     
     @objc override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let customHitTest = self.customHitTest, customHitTest(gestureRecognizer.location(in: self)) {
             return false
         }
-        return true
+        return self.allowSelectionChanges
+    }
+    
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let pointInside = super.point(inside: point, with: event)
+        if !pointInside {
+            return pointInside
+        }
+        
+        for annotation in self.annotations(in: self.visibleMapRect) where annotation is LocationPinAnnotation {
+            guard let view = self.view(for: annotation as! MKAnnotation) else {
+                continue
+            }
+            if view.frame.insetBy(dx: -16.0, dy: -16.0).contains(point) {
+                self.allowSelectionChanges = true
+                return true
+            }
+        }
+        self.allowSelectionChanges = false
+        
+        return pointInside
     }
 }
 

@@ -73,7 +73,7 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
         }
     }
     
-    func item(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
+    func item(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void) -> ListViewItem {
         switch self {
             case let .color(_, themeReference, accentColor, selected):
                 return ThemeSettingsAccentColorIconItem(themeReference: themeReference, color: accentColor.flatMap { .accentColor($0) }, selected: selected, action: action, contextAction: contextAction)
@@ -107,7 +107,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.baseColor.color
             case .theme:
-                return nil
+                return .clear
         }
     }
     
@@ -159,9 +159,9 @@ private class ThemeSettingsAccentColorIconItem: ListViewItem {
     let color: ThemeSettingsColorOption?
     let selected: Bool
     let action: (ThemeSettingsColorOption?, Bool) -> Void
-    let contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?
+    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(themeReference: PresentationThemeReference, color: ThemeSettingsColorOption?, selected: Bool, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(themeReference: PresentationThemeReference, color: ThemeSettingsColorOption?, selected: Bool, action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.themeReference = themeReference
         self.color = color
         self.selected = selected
@@ -307,7 +307,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                 gesture.cancel()
                 return
             }
-            item.contextAction?(item.color, strongSelf.containerNode, gesture)
+            item.contextAction?(item.color, item.selected, strongSelf.containerNode, gesture)
         }
     }
     
@@ -384,6 +384,16 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                                 fillColor = UIColor(rgb: 0x007ee5)
                                 strokeColor = fillColor
                                 topColor = UIColor(rgb: 0xe1ffc7)
+                                bottomColor = topColor
+                            }
+                        } else if case .builtin(.nightAccent) = item.themeReference {
+                            if let accentColor = item.color?.accentColor {
+                                bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                                topColor = bottomColor!.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
+                            } else {
+                                fillColor = UIColor(rgb: 0x2ea6ff)
+                                strokeColor = fillColor
+                                topColor = UIColor(rgb: 0x466f95)
                                 bottomColor = topColor
                             }
                         }
@@ -593,16 +603,18 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
+    let generalThemeReference: PresentationThemeReference
     let themeReference: PresentationThemeReference
     let colors: [ThemeSettingsAccentColor]
     let currentColor: ThemeSettingsColorOption?
     let updated: (ThemeSettingsColorOption?) -> Void
-    let contextAction: ((PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?
+    let contextAction: ((Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?
     let openColorPicker: (Bool) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: ThemeSettingsColorOption?, updated: @escaping (ThemeSettingsColorOption?) -> Void, contextAction: ((PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, generalThemeReference: PresentationThemeReference, themeReference: PresentationThemeReference, colors: [ThemeSettingsAccentColor], currentColor: ThemeSettingsColorOption?, updated: @escaping (ThemeSettingsColorOption?) -> Void, contextAction: ((Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
+        self.generalThemeReference = generalThemeReference
         self.themeReference = themeReference
         self.colors = colors
         self.currentColor = currentColor
@@ -654,7 +666,7 @@ private struct ThemeSettingsAccentColorItemNodeTransition {
     let crossfade: Bool
 }
 
-private func preparedTransition(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], crossfade: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
+private func preparedTransition(action: @escaping (ThemeSettingsColorOption?, Bool) -> Void, contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)?, openColorPicker: @escaping (Bool) -> Void, from fromEntries: [ThemeSettingsColorEntry], to toEntries: [ThemeSettingsColorEntry], crossfade: Bool) -> ThemeSettingsAccentColorItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -852,7 +864,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         switch color {
                             case .default:
                                 let selected = item.currentColor == nil
-                                entries.append(.color(index, item.themeReference, nil, selected))
+                                entries.append(.color(index, item.generalThemeReference, nil, selected))
                             case let .color(color):
                                 var selected = false
                                 if let currentColor = item.currentColor, case let .accentColor(accentColor) = currentColor {
@@ -866,9 +878,9 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 switch accentColor {
                                     case let .accentColor(color):
-                                        entries.append(.color(index, item.themeReference, color, selected))
+                                        entries.append(.color(index, item.generalThemeReference, color, selected))
                                     case let .theme(theme):
-                                        entries.append(.theme(index, item.themeReference, theme, selected))
+                                        entries.append(.theme(index, item.generalThemeReference, theme, selected))
                                 }
                             case let .preset(color), let .custom(color):
                                 var selected = false
@@ -881,7 +893,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 if let currentColor = item.currentColor {
                                     selected = currentColor.index == theme.index
                                 }
-                                entries.append(.theme(index, item.themeReference, theme, selected))
+                                entries.append(.theme(index, item.generalThemeReference, theme, selected))
                         }
                         
                         index += 1
@@ -908,9 +920,9 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }
                     }
-                    let contextAction: ((ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, node, gesture in
+                    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, selected, node, gesture in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.contextAction?(item.themeReference, color, node, gesture)
+                            item.contextAction?(selected, item.themeReference, color, node, gesture)
                         }
                     }
                     let openColorPicker: (Bool) -> Void = { [weak self] create in
@@ -920,7 +932,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let previousEntries = strongSelf.entries ?? []
-                    let crossfade = previousEntries.count != entries.count || (currentItem != nil && currentItem?.themeReference.index != item.themeReference.index)
+                    let crossfade = previousEntries.count != entries.count || (currentItem != nil && (currentItem?.generalThemeReference.index != item.generalThemeReference.index))
                     let transition = preparedTransition(action: action, contextAction: contextAction, openColorPicker: openColorPicker, from: previousEntries, to: entries, crossfade: crossfade)
                     strongSelf.enqueueTransition(transition)
                     

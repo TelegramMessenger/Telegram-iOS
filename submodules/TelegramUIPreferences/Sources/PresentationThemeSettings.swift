@@ -456,6 +456,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         } else {
             self.bubbleColors = nil
         }
+        self.wallpaper = decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -476,6 +477,11 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "bt")
             encoder.encodeNil(forKey: "bb")
+        }
+        if let wallpaper = self.wallpaper {
+            encoder.encodeObject(wallpaper, forKey: "w")
+        } else {
+            encoder.encodeNil(forKey: "w")
         }
     }
     
@@ -509,6 +515,10 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
        } else {
             return nil
        }
+    }
+    
+    public func withUpdatedWallpaper(_ wallpaper: TelegramWallpaper?) -> PresentationThemeAccentColor {
+        return PresentationThemeAccentColor(index: self.index, baseColor: self.baseColor, accentColor: self.accentColor, bubbleColors: self.bubbleColors, wallpaper: wallpaper)
     }
 }
 

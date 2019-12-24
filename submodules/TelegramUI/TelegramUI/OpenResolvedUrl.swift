@@ -281,12 +281,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .theme(slug):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let signal = getTheme(account: context.account, slug: slug)
-            |> mapToSignal { themeInfo -> Signal<(Data, TelegramTheme), GetThemeError> in
-                return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
+            |> mapToSignal { themeInfo -> Signal<(Data?, TelegramThemeSettings?, TelegramTheme), GetThemeError> in
+                return Signal<(Data?, TelegramThemeSettings?, TelegramTheme), GetThemeError> { subscriber in
                     let disposables = DisposableSet()
-                    let resource = themeInfo.file?.resource
-                    
-                    if let resource = resource {
+                    if let settings = themeInfo.settings {
+                        subscriber.putNext((nil, settings, themeInfo))
+                        subscriber.putCompletion()
+                    } else if let resource = themeInfo.file?.resource {
                         disposables.add(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: resource)).start())
                         
                         let maybeFetched = context.sharedContext.accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
@@ -309,7 +310,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                    
                         disposables.add(maybeFetched.start(next: { data in
                             if let data = data {
-                                subscriber.putNext((data, themeInfo))
+                                subscriber.putNext((data, nil, themeInfo))
                                 subscriber.putCompletion()
                             }
                         }))
@@ -348,9 +349,16 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             }
             |> deliverOnMainQueue).start(next: { dataAndTheme in
-                if let theme = makePresentationTheme(data: dataAndTheme.0) {
-                    let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
-                    navigationController?.pushViewController(previewController)
+                if let data = dataAndTheme.0 {
+                    if let theme = makePresentationTheme(data: data) {
+                        let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
+                        navigationController?.pushViewController(previewController)
+                    }
+                } else if let settings = dataAndTheme.1 {
+                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(rgb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(rgb: UInt32(bitPattern: $0.top)), UIColor(rgb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper) {
+                        let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
+                        navigationController?.pushViewController(previewController)
+                    }
                 }
             }, error: { error in
                 let errorText: String
@@ -367,6 +375,52 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
                 navigationController?.pushViewController(c)
+            }
+        case let .settings(section):
+            dismissInput()
+            switch section {
+                case .theme:
+                    if let navigationController = navigationController {
+                        let controller = themeSettingsController(context: context)
+                        controller.navigationPresentation = .modal
+                        
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is ThemeSettingsController) }
+                        controllers.append(controller)
+                        
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                case .devices:
+                    if let navigationController = navigationController {
+                        let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
+                            let activeSessionsContext = ActiveSessionsContext(account: context.account)
+                            let webSessionsContext = WebSessionsContext(account: context.account)
+                            let otherSessionCount = activeSessionsContext.state
+                            |> map { state -> Int in
+                                return state.sessions.filter({ !$0.isCurrent }).count
+                            }
+                            |> distinctUntilChanged
+                            
+                            return otherSessionCount
+                            |> map { value in
+                                return (activeSessionsContext, value, webSessionsContext)
+                            }
+                        }
+                        
+                        let _ = (activeSessions
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { activeSessionsContext, count, webSessionsContext in
+                            let controller = recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false)
+                            controller.navigationPresentation = .modal
+                            
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is RecentSessionsController) }
+                            controllers.append(controller)
+                            
+                            navigationController.setViewControllers(controllers, animated: true)
+                        })
+                    }
+                    break
             }
     }
 }

@@ -15,6 +15,7 @@ import PresentationDataUtils
 import AccountContext
 import SearchBarNode
 import SearchUI
+import WallpaperResources
 
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool

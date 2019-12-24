@@ -129,7 +129,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
             outgoingSecondaryTextColor = UIColor(rgb: 0xffffff, alpha: 0.5)
             outgoingLinkTextColor = UIColor(rgb: 0xffffff)
             outgoingScamColor = UIColor(rgb: 0xffffff)
-            outgoingCheckColor = UIColor(rgb: 0xffffff, alpha: 0.5)
+            outgoingCheckColor = UIColor(rgb: 0xffffff)
         }
     }
     
@@ -392,7 +392,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
         freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2a2a2a), stroke: UIColor(rgb: 0x1f1f1f)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2a2a2a), stroke: UIColor(rgb: 0x1f1f1f))),
         infoPrimaryTextColor: UIColor(rgb: 0xffffff),
         infoLinkTextColor: UIColor(rgb: 0xffffff),
-        outgoingCheckColor: UIColor(rgb: 0xffffff, alpha: 0.5),
+        outgoingCheckColor: UIColor(rgb: 0xffffff),
         mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
         mediaDateAndStatusTextColor: UIColor(rgb: 0xffffff),
         shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),

@@ -5925,13 +5925,13 @@ public extension Api {
                     })
                 }
             
-                public static func createTheme(flags: Int32, slug: String, title: String, document: Api.InputDocument, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
+                public static func createTheme(flags: Int32, slug: String, title: String, document: Api.InputDocument?, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1683113716)
+                    buffer.appendInt32(-2077048289)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
-                    document.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
                     return (FunctionDescription(name: "account.createTheme", parameters: [("flags", flags), ("slug", slug), ("title", title), ("document", document), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
                         let reader = BufferReader(buffer)

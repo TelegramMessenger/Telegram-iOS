@@ -200,7 +200,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
     }
     
     let continueHandling: () -> Void = {
-        let handleRevolvedUrl: (ResolvedUrl) -> Void = { resolved in
+        let handleResolvedUrl: (ResolvedUrl) -> Void = { resolved in
             if case let .externalUrl(value) = resolved {
                 context.sharedContext.applicationBindings.openUrl(value)
             } else {
@@ -243,416 +243,435 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         
         let handleInternalUrl: (String) -> Void = { url in
             let _ = (context.sharedContext.resolveUrl(account: context.account, url: url)
-            |> deliverOnMainQueue).start(next: handleRevolvedUrl)
+            |> deliverOnMainQueue).start(next: handleResolvedUrl)
         }
         
-        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme), let query = parsedUrl.query {
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
             var convertedUrl: String?
-            if parsedUrl.host == "localpeer" {
-                 if let components = URLComponents(string: "/?" + query) {
-                    var peerId: PeerId?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "id", let intValue = Int64(value) {
-                                    peerId = PeerId(intValue)
-                                }
-                            }
-                        }
-                    }
-                    if let peerId = peerId, let navigationController = navigationController {
-                        context.sharedContext.applicationBindings.dismissNativeController()
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                    }
-                }
-            } else if parsedUrl.host == "join" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var invite: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "invite" {
-                                    invite = value
-                                }
-                            }
-                        }
-                    }
-                    if let invite = invite {
-                        convertedUrl = "https://t.me/joinchat/\(invite)"
-                    }
-                }
-            } else if parsedUrl.host == "addstickers" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var set: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "set" {
-                                    set = value
-                                }
-                            }
-                        }
-                    }
-                    if let set = set {
-                        convertedUrl = "https://t.me/addstickers/\(set)"
-                    }
-                }
-            } else if parsedUrl.host == "setlanguage" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var lang: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "lang" {
-                                    lang = value
-                                }
-                            }
-                        }
-                    }
-                    if let lang = lang {
-                        convertedUrl = "https://t.me/setlanguage/\(lang)"
-                    }
-                }
-            } else if parsedUrl.host == "msg" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var sharePhoneNumber: String?
-                    var shareText: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "to" {
-                                    sharePhoneNumber = value
-                                } else if queryItem.name == "text" {
-                                    shareText = value
-                                }
-                            }
-                        }
-                    }
-                    if sharePhoneNumber != nil || shareText != nil {
-                        handleRevolvedUrl(.share(url: nil, text: shareText, to: sharePhoneNumber))
-                        return
-                    }
-                }
-            } else if parsedUrl.host == "msg_url" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var shareUrl: String?
-                    var shareText: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "url" {
-                                    shareUrl = value
-                                } else if queryItem.name == "text" {
-                                    shareText = value
-                                }
-                            }
-                        }
-                    }
-                    if let shareUrl = shareUrl {
-                        var resultUrl = "https://t.me/share/url?url=\(urlEncodedStringFromString(shareUrl))"
-                        if let shareText = shareText {
-                            resultUrl += "&text=\(urlEncodedStringFromString(shareText))"
-                        }
-                        convertedUrl = resultUrl
-                    }
-                }
-            } else if parsedUrl.host == "socks" || parsedUrl.host == "proxy" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var server: String?
-                    var port: String?
-                    var user: String?
-                    var pass: String?
-                    var secret: String?
-                    var secretHost: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "server" || queryItem.name == "proxy" {
-                                    server = value
-                                } else if queryItem.name == "port" {
-                                    port = value
-                                } else if queryItem.name == "user" {
-                                    user = value
-                                } else if queryItem.name == "pass" {
-                                    pass = value
-                                } else if queryItem.name == "secret" {
-                                    secret = value
-                                } else if queryItem.name == "host" {
-                                    secretHost = value
-                                }
-                            }
-                        }
-                    }
-                    
-                    if let server = server, !server.isEmpty, let port = port, let _ = Int32(port) {
-                        var result = "https://t.me/proxy?proxy=\(server)&port=\(port)"
-                        if let user = user {
-                            result += "&user=\((user as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                            if let pass = pass {
-                                result += "&pass=\((pass as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                            }
-                        }
-                        if let secret = secret {
-                            result += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                        }
-                        if let secretHost = secretHost?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) {
-                            result += "&host=\(secretHost)"
-                        }
-                        convertedUrl = result
-                    }
-                }
-            } else if parsedUrl.host == "passport" || parsedUrl.host == "resolve" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var domain: String?
-                    var botId: Int32?
-                    var scope: String?
-                    var publicKey: String?
-                    var callbackUrl: String?
-                    var opaquePayload = Data()
-                    var opaqueNonce = Data()
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "domain" {
-                                    domain = value
-                                } else if queryItem.name == "bot_id" {
-                                    botId = Int32(value)
-                                } else if queryItem.name == "scope" {
-                                    scope = value
-                                } else if queryItem.name == "public_key" {
-                                    publicKey = value
-                                } else if queryItem.name == "callback_url" {
-                                    callbackUrl = value
-                                } else if queryItem.name == "payload" {
-                                    if let data = value.data(using: .utf8) {
-                                        opaquePayload = data
-                                    }
-                                } else if queryItem.name == "nonce" {
-                                    if let data = value.data(using: .utf8) {
-                                        opaqueNonce = data
+            if let query = parsedUrl.query {
+                if parsedUrl.host == "localpeer" {
+                     if let components = URLComponents(string: "/?" + query) {
+                        var peerId: PeerId?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "id", let intValue = Int64(value) {
+                                        peerId = PeerId(intValue)
                                     }
                                 }
                             }
                         }
+                        if let peerId = peerId, let navigationController = navigationController {
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                        }
                     }
-                    
-                    let valid: Bool
-                    if parsedUrl.host == "resolve" {
-                        if domain == "telegrampassport" {
-                            valid = true
+                } else if parsedUrl.host == "join" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var invite: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "invite" {
+                                        invite = value
+                                    }
+                                }
+                            }
+                        }
+                        if let invite = invite {
+                            convertedUrl = "https://t.me/joinchat/\(invite)"
+                        }
+                    }
+                } else if parsedUrl.host == "addstickers" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var set: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "set" {
+                                        set = value
+                                    }
+                                }
+                            }
+                        }
+                        if let set = set {
+                            convertedUrl = "https://t.me/addstickers/\(set)"
+                        }
+                    }
+                } else if parsedUrl.host == "setlanguage" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var lang: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "lang" {
+                                        lang = value
+                                    }
+                                }
+                            }
+                        }
+                        if let lang = lang {
+                            convertedUrl = "https://t.me/setlanguage/\(lang)"
+                        }
+                    }
+                } else if parsedUrl.host == "msg" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var sharePhoneNumber: String?
+                        var shareText: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "to" {
+                                        sharePhoneNumber = value
+                                    } else if queryItem.name == "text" {
+                                        shareText = value
+                                    }
+                                }
+                            }
+                        }
+                        if sharePhoneNumber != nil || shareText != nil {
+                            handleResolvedUrl(.share(url: nil, text: shareText, to: sharePhoneNumber))
+                            return
+                        }
+                    }
+                } else if parsedUrl.host == "msg_url" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var shareUrl: String?
+                        var shareText: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "url" {
+                                        shareUrl = value
+                                    } else if queryItem.name == "text" {
+                                        shareText = value
+                                    }
+                                }
+                            }
+                        }
+                        if let shareUrl = shareUrl {
+                            var resultUrl = "https://t.me/share/url?url=\(urlEncodedStringFromString(shareUrl))"
+                            if let shareText = shareText {
+                                resultUrl += "&text=\(urlEncodedStringFromString(shareText))"
+                            }
+                            convertedUrl = resultUrl
+                        }
+                    }
+                } else if parsedUrl.host == "socks" || parsedUrl.host == "proxy" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var server: String?
+                        var port: String?
+                        var user: String?
+                        var pass: String?
+                        var secret: String?
+                        var secretHost: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "server" || queryItem.name == "proxy" {
+                                        server = value
+                                    } else if queryItem.name == "port" {
+                                        port = value
+                                    } else if queryItem.name == "user" {
+                                        user = value
+                                    } else if queryItem.name == "pass" {
+                                        pass = value
+                                    } else if queryItem.name == "secret" {
+                                        secret = value
+                                    } else if queryItem.name == "host" {
+                                        secretHost = value
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if let server = server, !server.isEmpty, let port = port, let _ = Int32(port) {
+                            var result = "https://t.me/proxy?proxy=\(server)&port=\(port)"
+                            if let user = user {
+                                result += "&user=\((user as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                                if let pass = pass {
+                                    result += "&pass=\((pass as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                                }
+                            }
+                            if let secret = secret {
+                                result += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                            }
+                            if let secretHost = secretHost?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) {
+                                result += "&host=\(secretHost)"
+                            }
+                            convertedUrl = result
+                        }
+                    }
+                } else if parsedUrl.host == "passport" || parsedUrl.host == "resolve" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var domain: String?
+                        var botId: Int32?
+                        var scope: String?
+                        var publicKey: String?
+                        var callbackUrl: String?
+                        var opaquePayload = Data()
+                        var opaqueNonce = Data()
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "domain" {
+                                        domain = value
+                                    } else if queryItem.name == "bot_id" {
+                                        botId = Int32(value)
+                                    } else if queryItem.name == "scope" {
+                                        scope = value
+                                    } else if queryItem.name == "public_key" {
+                                        publicKey = value
+                                    } else if queryItem.name == "callback_url" {
+                                        callbackUrl = value
+                                    } else if queryItem.name == "payload" {
+                                        if let data = value.data(using: .utf8) {
+                                            opaquePayload = data
+                                        }
+                                    } else if queryItem.name == "nonce" {
+                                        if let data = value.data(using: .utf8) {
+                                            opaqueNonce = data
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        let valid: Bool
+                        if parsedUrl.host == "resolve" {
+                            if domain == "telegrampassport" {
+                                valid = true
+                            } else {
+                                valid = false
+                            }
                         } else {
-                            valid = false
+                            valid = true
                         }
-                    } else {
-                        valid = true
-                    }
-                    
-                    if valid {
-                        if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
-                            if scope.hasPrefix("{") && scope.hasSuffix("}") {
-                                opaquePayload = Data()
-                                if opaqueNonce.isEmpty {
+                        
+                        if valid {
+                            if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                                if scope.hasPrefix("{") && scope.hasSuffix("}") {
+                                    opaquePayload = Data()
+                                    if opaqueNonce.isEmpty {
+                                        return
+                                    }
+                                } else if opaquePayload.isEmpty {
                                     return
                                 }
-                            } else if opaquePayload.isEmpty {
-                                return
-                            }
-                            if case .chat = urlContext {
-                                return
-                            }
-                            let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
-                            
-                            if let navigationController = navigationController {
-                                context.sharedContext.applicationBindings.dismissNativeController()
+                                if case .chat = urlContext {
+                                    return
+                                }
+                                let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                                 
-                                navigationController.view.window?.endEditing(true)
-                                context.sharedContext.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false, completion: {})
+                                if let navigationController = navigationController {
+                                    context.sharedContext.applicationBindings.dismissNativeController()
+                                    
+                                    navigationController.view.window?.endEditing(true)
+                                    context.sharedContext.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false, completion: {})
+                                }
                             }
+                            return
                         }
-                        return
                     }
-                }
-            } else if parsedUrl.host == "user" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var id: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "id" {
-                                    id = value
+                } else if parsedUrl.host == "user" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var id: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "id" {
+                                        id = value
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
-                        let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                            return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
-                        }
-                        |> deliverOnMainQueue).start(next: { peer in
-                            if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
-                                navigationController?.pushViewController(controller)
+                        
+                        if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
+                            let _ = (context.account.postbox.transaction { transaction -> Peer? in
+                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
                             }
-                        })
-                        return
-                    }
-                }
-            } else if parsedUrl.host == "login" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var code: String?
-                    var isToken: Bool = false
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "code" {
-                                    code = value
+                            |> deliverOnMainQueue).start(next: { peer in
+                                if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
+                                    navigationController?.pushViewController(controller)
                                 }
-                            }
-                            if queryItem.name == "token" {
-                                isToken = true
-                            }
+                            })
+                            return
                         }
                     }
-                    if isToken {
-                        context.sharedContext.presentGlobalController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.AuthSessions_AddDevice_UrlLoginHint, actions: [
-                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                            }),
-                        ], parseMarkdown: true), nil)
-                        return
-                    }
-                    if let code = code {
-                        convertedUrl = "https://t.me/login/\(code)"
-                    }
-                }
-            } else if parsedUrl.host == "confirmphone" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var phone: String?
-                    var hash: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "phone" {
-                                    phone = value
-                                } else if queryItem.name == "hash" {
-                                    hash = value
+                } else if parsedUrl.host == "login" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var code: String?
+                        var isToken: Bool = false
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "code" {
+                                        code = value
+                                    }
+                                }
+                                if queryItem.name == "token" {
+                                    isToken = true
                                 }
                             }
                         }
+                        if isToken {
+                            context.sharedContext.presentGlobalController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.AuthSessions_AddDevice_UrlLoginHint, actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                }),
+                            ], parseMarkdown: true), nil)
+                            return
+                        }
+                        if let code = code {
+                            convertedUrl = "https://t.me/login/\(code)"
+                        }
                     }
-                    if let phone = phone, let hash = hash {
-                        convertedUrl = "https://t.me/confirmphone?phone=\(phone)&hash=\(hash)"
-                    }
-                }
-            } else if parsedUrl.host == "bg" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var parameter: String?
-                    var query: [String] = []
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "slug" {
-                                    parameter = value
-                                } else if queryItem.name == "color" {
-                                    parameter = value
-                                } else if queryItem.name == "gradient" {
-                                    parameter = value
-                                } else if queryItem.name == "mode" {
-                                    query.append("mode=\(value)")
-                                } else if queryItem.name == "bg_color" {
-                                    query.append("bg_color=\(value)")
-                                } else if queryItem.name == "intensity" {
-                                    query.append("intensity=\(value)")
-                                } else if queryItem.name == "rotation" {
-                                    query.append("rotation=\(value)")
+                } else if parsedUrl.host == "confirmphone" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var phone: String?
+                        var hash: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "phone" {
+                                        phone = value
+                                    } else if queryItem.name == "hash" {
+                                        hash = value
+                                    }
                                 }
                             }
                         }
+                        if let phone = phone, let hash = hash {
+                            convertedUrl = "https://t.me/confirmphone?phone=\(phone)&hash=\(hash)"
+                        }
                     }
-                    var queryString = ""
-                    if !query.isEmpty {
-                        queryString = "?\(query.joined(separator: "&"))"
-                    }
-                    if let parameter = parameter {
-                        convertedUrl = "https://t.me/bg/\(parameter)\(queryString)"
-                    }
-                }
-            } else if parsedUrl.host == "addtheme" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var parameter: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "slug" {
-                                    parameter = value
+                } else if parsedUrl.host == "bg" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var parameter: String?
+                        var query: [String] = []
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        parameter = value
+                                    } else if queryItem.name == "color" {
+                                        parameter = value
+                                    } else if queryItem.name == "gradient" {
+                                        parameter = value
+                                    } else if queryItem.name == "mode" {
+                                        query.append("mode=\(value)")
+                                    } else if queryItem.name == "bg_color" {
+                                        query.append("bg_color=\(value)")
+                                    } else if queryItem.name == "intensity" {
+                                        query.append("intensity=\(value)")
+                                    } else if queryItem.name == "rotation" {
+                                        query.append("rotation=\(value)")
+                                    }
                                 }
                             }
                         }
+                        var queryString = ""
+                        if !query.isEmpty {
+                            queryString = "?\(query.joined(separator: "&"))"
+                        }
+                        if let parameter = parameter {
+                            convertedUrl = "https://t.me/bg/\(parameter)\(queryString)"
+                        }
                     }
-                    if let parameter = parameter {
-                        convertedUrl = "https://t.me/addtheme/\(parameter)"
-                    }
-                }
-            }
-            
-            if parsedUrl.host == "resolve" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var domain: String?
-                    var start: String?
-                    var startGroup: String?
-                    var game: String?
-                    var post: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "domain" {
-                                    domain = value
-                                } else if queryItem.name == "start" {
-                                    start = value
-                                } else if queryItem.name == "startgroup" {
-                                    startGroup = value
-                                } else if queryItem.name == "game" {
-                                    game = value
-                                } else if queryItem.name == "post" {
-                                    post = value
+                } else if parsedUrl.host == "addtheme" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var parameter: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        parameter = value
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    if let domain = domain {
-                        var result = "https://t.me/\(domain)"
-                        if let post = post, let postValue = Int(post) {
-                            result += "/\(postValue)"
+                        if let parameter = parameter {
+                            convertedUrl = "https://t.me/addtheme/\(parameter)"
                         }
-                        if let start = start {
-                            result += "?start=\(start)"
-                        } else if let startGroup = startGroup {
-                            result += "?startgroup=\(startGroup)"
-                        } else if let game = game {
-                            result += "?game=\(game)"
-                        }
-                        convertedUrl = result
                     }
                 }
-            } else if parsedUrl.host == "hostOverride" {
-                if let components = URLComponents(string: "/?" + query) {
-                    var host: String?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "host" {
-                                    host = value
+                
+                if parsedUrl.host == "resolve" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var domain: String?
+                        var start: String?
+                        var startGroup: String?
+                        var game: String?
+                        var post: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "domain" {
+                                        domain = value
+                                    } else if queryItem.name == "start" {
+                                        start = value
+                                    } else if queryItem.name == "startgroup" {
+                                        startGroup = value
+                                    } else if queryItem.name == "game" {
+                                        game = value
+                                    } else if queryItem.name == "post" {
+                                        post = value
+                                    }
                                 }
                             }
                         }
+                        
+                        if let domain = domain {
+                            var result = "https://t.me/\(domain)"
+                            if let post = post, let postValue = Int(post) {
+                                result += "/\(postValue)"
+                            }
+                            if let start = start {
+                                result += "?start=\(start)"
+                            } else if let startGroup = startGroup {
+                                result += "?startgroup=\(startGroup)"
+                            } else if let game = game {
+                                result += "?game=\(game)"
+                            }
+                            convertedUrl = result
+                        }
                     }
-                    if let host = host {
-                        let _ = updateNetworkSettingsInteractively(postbox: context.account.postbox, network: context.account.network, { settings in
-                            var settings = settings
-                            settings.backupHostOverride = host
-                            return settings
-                        }).start()
-                        return
+                } else if parsedUrl.host == "hostOverride" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var host: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "host" {
+                                        host = value
+                                    }
+                                }
+                            }
+                        }
+                        if let host = host {
+                            let _ = updateNetworkSettingsInteractively(postbox: context.account.postbox, network: context.account.network, { settings in
+                                var settings = settings
+                                settings.backupHostOverride = host
+                                return settings
+                            }).start()
+                            return
+                        }
+                    }
+                }
+            } else {
+                if parsedUrl.host == "settings" {
+                    if let path = parsedUrl.pathComponents.last {
+                        var section: ResolvedUrlSettingsSection?
+                        switch path {
+                            case "theme":
+                                section = .theme
+                            case "devices":
+                                section = .devices
+                            default:
+                                break
+                        }
+                        if let section = section {
+                            handleResolvedUrl(.settings(section))
+                        }
                     }
                 }
             }

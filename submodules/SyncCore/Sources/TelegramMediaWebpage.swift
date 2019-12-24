@@ -1,5 +1,74 @@
 import Postbox
 
+private enum TelegramMediaWebpageAttributeTypes: Int32 {
+    case unsupported
+    case theme
+}
+
+public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
+    case unsupported
+    case theme(TelegraMediaWebpageThemeAttribute)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+            case TelegramMediaWebpageAttributeTypes.theme.rawValue:
+                self = .theme(decoder.decodeObjectForKey("a", decoder: { TelegraMediaWebpageThemeAttribute(decoder: $0) }) as! TelegraMediaWebpageThemeAttribute)
+            default:
+                self = .unsupported
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case .unsupported:
+                encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.unsupported.rawValue, forKey: "r")
+            case let .theme(attribute):
+                encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.theme.rawValue, forKey: "r")
+                encoder.encodeObject(attribute, forKey: "a")
+        }
+    }
+}
+
+public final class TelegraMediaWebpageThemeAttribute: PostboxCoding, Equatable {
+    public static func == (lhs: TelegraMediaWebpageThemeAttribute, rhs: TelegraMediaWebpageThemeAttribute) -> Bool {
+        if lhs.settings != rhs.settings {
+            return false
+        }
+        if lhs.files.count != rhs.files.count {
+            return false
+        } else {
+            for i in 0 ..< lhs.files.count {
+                if !lhs.files[i].isEqual(to: rhs.files[i]) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    public let files: [TelegramMediaFile]
+    public let settings: TelegramThemeSettings?
+    
+    public init(files: [TelegramMediaFile], settings: TelegramThemeSettings?) {
+        self.files = files
+        self.settings = settings
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.files = decoder.decodeObjectArrayForKey("files")
+        self.settings = decoder.decodeObjectForKey("settings", decoder: { TelegramThemeSettings(decoder: $0) }) as? TelegramThemeSettings
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObjectArray(self.files, forKey: "files")
+        if let settings = self.settings {
+            encoder.encodeObject(settings, forKey: "settings")
+        } else {
+            encoder.encodeNil(forKey: "settings")
+        }
+    }
+}
+
 public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let url: String
     public let displayUrl: String
@@ -16,10 +85,10 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     
     public let image: TelegramMediaImage?
     public let file: TelegramMediaFile?
-    public let files: [TelegramMediaFile]?
+    public let attributes: [TelegramMediaWebpageAttribute]
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, files: [TelegramMediaFile]?, instantPage: InstantPage?) {
+    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, attributes: [TelegramMediaWebpageAttribute], instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
         self.hash = hash
@@ -34,7 +103,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.author = author
         self.image = image
         self.file = file
-        self.files = files
+        self.attributes = attributes
         self.instantPage = instantPage
     }
     
@@ -72,7 +141,14 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
             self.file = nil
         }
         
-        self.files = decoder.decodeOptionalObjectArrayWithDecoderForKey("fis")
+        var effectiveAttributes: [TelegramMediaWebpageAttribute] = []
+        if let attributes = decoder.decodeObjectArrayWithDecoderForKey("attr") as [TelegramMediaWebpageAttribute]? {
+            effectiveAttributes.append(contentsOf: attributes)
+        }
+        if let legacyFiles = decoder.decodeOptionalObjectArrayWithDecoderForKey("fis") as [TelegramMediaFile]? {
+            effectiveAttributes.append(.theme(TelegraMediaWebpageThemeAttribute(files: legacyFiles, settings: nil)))
+        }
+        self.attributes = effectiveAttributes
         
         if let instantPage = decoder.decodeObjectForKey("ip", decoder: { InstantPage(decoder: $0) }) as? InstantPage {
             self.instantPage = instantPage
@@ -142,11 +218,9 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "fi")
         }
-        if let files = self.files {
-            encoder.encodeObjectArray(files, forKey: "fis")
-        } else {
-            encoder.encodeNil(forKey: "fis")
-        }
+        
+        encoder.encodeObjectArray(self.attributes, forKey: "attr")
+        
         if let instantPage = self.instantPage {
             encoder.encodeObject(instantPage, forKey: "ip")
         } else {
@@ -187,18 +261,14 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
         return false
     }
     
-    if let lhsFiles = lhs.files, let rhsFiles = rhs.files {
-        if lhsFiles.count != rhsFiles.count {
-            return false
-        } else {
-            for i in 0 ..< lhsFiles.count {
-                if !lhsFiles[i].isEqual(to: rhsFiles[i]) {
-                    return false
-                }
+    if lhs.attributes.count != rhs.attributes.count {
+        return false
+    } else {
+        for i in 0 ..< lhs.attributes.count {
+            if lhs.attributes[i] != rhs.attributes[i] {
+                return false
             }
         }
-    } else if (lhs.files == nil) != (rhs.files == nil) {
-        return false
     }
     
     if lhs.instantPage != rhs.instantPage {

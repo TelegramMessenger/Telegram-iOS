@@ -48,7 +48,13 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
                 return nil
             }
         case let .cloud(info):
-            if let file = info.theme.file, let path = mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data, themeReference: themeReference, resolvedWallpaper: info.resolvedWallpaper) {
+            if let settings = info.theme.settings {
+                if let loadedTheme =  makePresentationTheme(mediaBox: mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: accentColor ?? UIColor(rgb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: bubbleColors ?? settings.messageColors.flatMap { (UIColor(rgb: UInt32(bitPattern: $0.top)), UIColor(rgb: UInt32(bitPattern: $0.bottom))) }, wallpaper:  wallpaper ?? settings.wallpaper, serviceBackgroundColor: serviceBackgroundColor, preview: preview) {
+                    theme = loadedTheme
+                } else {
+                    return nil
+                }
+            } else if let file = info.theme.file, let path = mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data, themeReference: themeReference, resolvedWallpaper: info.resolvedWallpaper) {
                 theme = customizePresentationTheme(loadedTheme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: bubbleColors, wallpaper: wallpaper)
             } else {
                 return nil

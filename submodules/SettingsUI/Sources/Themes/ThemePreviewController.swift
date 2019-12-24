@@ -21,6 +21,7 @@ public enum ThemePreviewSource {
     case settings(PresentationThemeReference, TelegramWallpaper?)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
+    case themeSettings(String, TelegramThemeSettings)
     case media(AnyMediaReference)
 }
 
@@ -63,55 +64,61 @@ public final class ThemePreviewController: ViewController {
         
         var hasInstallsCount = false
         let themeName: String
-        if case let .theme(theme) = source {
-            themeName = theme.title
-            self.theme.set(.single(theme)
-            |> then(
-                getTheme(account: context.account, slug: theme.slug)
+        switch source {
+            case let .theme(theme):
+                themeName = theme.title
+                self.theme.set(.single(theme)
+                |> then(
+                    getTheme(account: context.account, slug: theme.slug)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                        return .single(nil)
+                    }
+                    |> filter { $0 != nil }
+                ))
+                hasInstallsCount = true
+            case let .slug(slug, _), let .themeSettings(slug, _):
+                self.theme.set(getTheme(account: context.account, slug: slug)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
                     return .single(nil)
-                }
-                |> filter { $0 != nil }
-            ))
-            hasInstallsCount = true
-        } else if case let .slug(slug, _) = source {
-            self.theme.set(getTheme(account: context.account, slug: slug)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
-                return .single(nil)
-            })
-            themeName = previewTheme.name.string
-            
-            self.presentationTheme.set(.single(self.previewTheme)
-            |> then(
-                self.theme.get()
-                |> mapToSignal { theme in
-                    if let file = theme?.file {
-                        return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
-                        |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
-                            guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
-                                return .complete()
+                })
+                themeName = previewTheme.name.string
+                
+                self.presentationTheme.set(.single(self.previewTheme)
+                |> then(
+                    self.theme.get()
+                    |> mapToSignal { theme in
+                        if let file = theme?.file {
+                            return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
+                                |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
+                                    guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
+                                        return .complete()
+                                    }
+                                    return .single(presentationTheme)
                             }
-                            return .single(presentationTheme)
+                        } else {
+                            return .complete()
                         }
-                    } else {
-                        return .complete()
                     }
+                ))
+                hasInstallsCount = true
+            case let .settings(themeReference, _):
+                if case let .cloud(theme) = themeReference {
+                    self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                        return .single(nil)
+                    })
+                    themeName = theme.theme.title
+                    hasInstallsCount = true
+                } else {
+                    self.theme.set(.single(nil))
+                    themeName = previewTheme.name.string
                 }
-            ))
-            hasInstallsCount = true
-        } else if case let .settings(themeReference, _) = source, case let .cloud(theme) = themeReference {
-            self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
-                return .single(nil)
-            })
-            themeName = previewTheme.name.string
-            hasInstallsCount = true
-        } else {
-            self.theme.set(.single(nil))
-            themeName = previewTheme.name.string
+            default:
+                self.theme.set(.single(nil))
+                themeName = previewTheme.name.string
         }
         
         var isPreview = false
@@ -219,7 +226,7 @@ public final class ThemePreviewController: ViewController {
         switch self.source {
             case let .settings(reference, _):
                 theme = .single(reference)
-            case .theme, .slug:
+            case .theme, .slug, .themeSettings:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
                 |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
                     if let theme = theme {
@@ -440,7 +447,7 @@ public final class ThemePreviewController: ViewController {
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")
                 preferredAction = .default
-            case let .slug(slug, _):
+            case let .slug(slug, _), let .themeSettings(slug, _):
                 subject = .url("https://t.me/addtheme/\(slug)")
                 preferredAction = .default
             case let .media(media):

@@ -812,6 +812,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .wallet:
                         break
+                    case .settings:
+                        break
                 }
             }
         }))

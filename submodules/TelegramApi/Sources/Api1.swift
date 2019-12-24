@@ -9227,7 +9227,7 @@ public extension Api {
         case webPageEmpty(id: Int64)
         case webPagePending(id: Int64, date: Int32)
         case webPageNotModified
-        case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, documents: [Api.Document]?, cachedPage: Api.Page?)
+        case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?, attributes: [Api.WebPageAttribute]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -9250,9 +9250,9 @@ public extension Api {
                     }
                     
                     break
-                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let documents, let cachedPage):
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
                     if boxed {
-                        buffer.appendInt32(-94051982)
+                        buffer.appendInt32(-392411726)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -9271,12 +9271,12 @@ public extension Api {
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(author!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 9) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 11) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents!.count))
-                    for item in documents! {
+                    if Int(flags) & Int(1 << 10) != 0 {cachedPage!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 12) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes!.count))
+                    for item in attributes! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 10) != 0 {cachedPage!.serialize(buffer, true)}
                     break
     }
     }
@@ -9289,8 +9289,8 @@ public extension Api {
                 return ("webPagePending", [("id", id), ("date", date)])
                 case .webPageNotModified:
                 return ("webPageNotModified", [])
-                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let documents, let cachedPage):
-                return ("webPage", [("flags", flags), ("id", id), ("url", url), ("displayUrl", displayUrl), ("hash", hash), ("type", type), ("siteName", siteName), ("title", title), ("description", description), ("photo", photo), ("embedUrl", embedUrl), ("embedType", embedType), ("embedWidth", embedWidth), ("embedHeight", embedHeight), ("duration", duration), ("author", author), ("document", document), ("documents", documents), ("cachedPage", cachedPage)])
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
+                return ("webPage", [("flags", flags), ("id", id), ("url", url), ("displayUrl", displayUrl), ("hash", hash), ("type", type), ("siteName", siteName), ("title", title), ("description", description), ("photo", photo), ("embedUrl", embedUrl), ("embedType", embedType), ("embedWidth", embedWidth), ("embedHeight", embedHeight), ("duration", duration), ("author", author), ("document", document), ("cachedPage", cachedPage), ("attributes", attributes)])
     }
     }
     
@@ -9361,13 +9361,13 @@ public extension Api {
             if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
                 _17 = Api.parse(reader, signature: signature) as? Api.Document
             } }
-            var _18: [Api.Document]?
-            if Int(_1!) & Int(1 << 11) != 0 {if let _ = reader.readInt32() {
-                _18 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            } }
-            var _19: Api.Page?
+            var _18: Api.Page?
             if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
-                _19 = Api.parse(reader, signature: signature) as? Api.Page
+                _18 = Api.parse(reader, signature: signature) as? Api.Page
+            } }
+            var _19: [Api.WebPageAttribute]?
+            if Int(_1!) & Int(1 << 12) != 0 {if let _ = reader.readInt32() {
+                _19 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WebPageAttribute.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -9386,10 +9386,10 @@ public extension Api {
             let _c15 = (Int(_1!) & Int(1 << 7) == 0) || _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 8) == 0) || _16 != nil
             let _c17 = (Int(_1!) & Int(1 << 9) == 0) || _17 != nil
-            let _c18 = (Int(_1!) & Int(1 << 11) == 0) || _18 != nil
-            let _c19 = (Int(_1!) & Int(1 << 10) == 0) || _19 != nil
+            let _c18 = (Int(_1!) & Int(1 << 10) == 0) || _18 != nil
+            let _c19 = (Int(_1!) & Int(1 << 12) == 0) || _19 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 {
-                return Api.WebPage.webPage(flags: _1!, id: _2!, url: _3!, displayUrl: _4!, hash: _5!, type: _6, siteName: _7, title: _8, description: _9, photo: _10, embedUrl: _11, embedType: _12, embedWidth: _13, embedHeight: _14, duration: _15, author: _16, document: _17, documents: _18, cachedPage: _19)
+                return Api.WebPage.webPage(flags: _1!, id: _2!, url: _3!, displayUrl: _4!, hash: _5!, type: _6, siteName: _7, title: _8, description: _9, photo: _10, embedUrl: _11, embedType: _12, embedWidth: _13, embedHeight: _14, duration: _15, author: _16, document: _17, cachedPage: _18, attributes: _19)
             }
             else {
                 return nil
@@ -17144,6 +17144,56 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputStickeredMedia.inputStickeredMediaDocument(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum WebPageAttribute: TypeConstructorDescription {
+        case webPageAttributeTheme(flags: Int32, documents: [Api.Document]?, settings: Api.ThemeSettings?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webPageAttributeTheme(let flags, let documents, let settings):
+                    if boxed {
+                        buffer.appendInt32(1421174295)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documents!.count))
+                    for item in documents! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 1) != 0 {settings!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webPageAttributeTheme(let flags, let documents, let settings):
+                return ("webPageAttributeTheme", [("flags", flags), ("documents", documents), ("settings", settings)])
+    }
+    }
+    
+        public static func parse_webPageAttributeTheme(_ reader: BufferReader) -> WebPageAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.Document]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            } }
+            var _3: Api.ThemeSettings?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ThemeSettings
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WebPageAttribute.webPageAttributeTheme(flags: _1!, documents: _2, settings: _3)
             }
             else {
                 return nil

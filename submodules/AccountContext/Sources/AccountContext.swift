@@ -153,6 +153,11 @@ public enum WallpaperUrlParameter {
     case gradient(UIColor, UIColor, Int32?)
 }
 
+public enum ResolvedUrlSettingsSection {
+    case theme
+    case devices
+}
+
 public enum ResolvedUrl {
     case externalUrl(String)
     case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
@@ -171,6 +176,7 @@ public enum ResolvedUrl {
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
     case wallet(address: String, amount: Int64?, comment: String?)
+    case settings(ResolvedUrlSettingsSection)
 }
 
 public enum NavigateToChatKeepStack {

@@ -150,6 +150,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SendScheduledMessageImmediatelyAction.self, f: { SendScheduledMessageImmediatelyAction(decoder: $0) })
     declareEncodable(WalletCollection.self, f: { WalletCollection(decoder: $0) })
     declareEncodable(EmbeddedMediaStickersMessageAttribute.self, f: { EmbeddedMediaStickersMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramMediaWebpageAttribute.self, f: { TelegramMediaWebpageAttribute(decoder: $0) })
     
     return
 }()

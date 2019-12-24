@@ -516,14 +516,14 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         
         let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
-        let effectiveColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
-        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+        let currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
         
         let currentWallpaper: TelegramWallpaper
         if let themeSpecificWallpaper = themeSpecificWallpaper {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors) ?? defaultPresentationTheme
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors, wallpaper: currentColors?.wallpaper) ?? defaultPresentationTheme
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
@@ -537,12 +537,13 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                     |> distinctUntilChanged
                     |> map { autoNightModeTriggered in
                         var effectiveTheme: PresentationThemeReference
-                        var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
+                        var effectiveChatWallpaper = currentWallpaper
+                        var effectiveColors = currentColors
                         
                         var switchedToNightModeWallpaper = false
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
-                            let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                            effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
                             let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
                             
                             if let themeSpecificWallpaper = themeSpecificWallpaper {
@@ -554,8 +555,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                             effectiveTheme = themeSettings.theme
                         }
                         
-                        let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
-                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors, wallpaper: effectiveColors?.wallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
                         if autoNightModeTriggered && !switchedToNightModeWallpaper {
                             switch effectiveChatWallpaper {

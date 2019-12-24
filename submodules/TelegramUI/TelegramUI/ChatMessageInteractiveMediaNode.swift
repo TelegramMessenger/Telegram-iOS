@@ -322,6 +322,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else {
                             unboundSize = CGSize(width: 54.0, height: 54.0)
                         }
+                    case .themeSettings:
+                        unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
                     case .color, .gradient:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
                 }
@@ -439,13 +441,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     } else {
                         emptyColor = message.effectivelyIncoming(context.account.peerId) ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor
                     }
-                    if let wallpaper = media as? WallpaperPreviewMedia, case let .file(_, patternColor, patternBottomColor, rotation, _, _) = wallpaper.content {
-                        var colors: [UIColor] = []
-                        colors.append(patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5))
-                        if let patternBottomColor = patternBottomColor {
-                            colors.append(patternBottomColor)
+                    if let wallpaper = media as? WallpaperPreviewMedia {
+                        if case let .file(_, patternColor, patternBottomColor, rotation, _, _) = wallpaper.content {
+                            var colors: [UIColor] = []
+                            colors.append(patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                            if let patternBottomColor = patternBottomColor {
+                                colors.append(patternBottomColor)
+                            }
+                            patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation)
                         }
-                        patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation)
                     }
                     
                     if mediaUpdated || isSendingUpdated || automaticPlaybackUpdated {
@@ -580,7 +584,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 switch wallpaper.content {
                                     case let .file(file, _, _, _, isTheme, _):
                                         if isTheme {
-                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file))
+                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)))
                                         } else {
                                             let representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
                                             if file.mimeType == "image/png" {
@@ -589,6 +593,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }
                                         }
+                                    case let .themeSettings(settings):
+                                        return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
                                     case let .color(color):
                                         return solidColorImage(color)
                                     case let .gradient(topColor, bottomColor, rotation):
@@ -604,6 +610,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }, cancel: {
                                     messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                                 })
+                            } else if case .themeSettings = wallpaper.content {
                             } else {
                                 boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
                             }
@@ -645,7 +652,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
                                     }
-                                case .color, .gradient:
+                                case .themeSettings, .color, .gradient:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
                         }
