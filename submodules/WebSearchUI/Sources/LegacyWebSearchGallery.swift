@@ -427,6 +427,8 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
             }
         }
         
-        enqueueMediaMessages(signals)
+        if !signals.isEmpty {
+            enqueueMediaMessages(signals)
+        }
     }
 }
