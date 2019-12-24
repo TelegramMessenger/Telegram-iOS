@@ -4677,6 +4677,7 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
 "Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
 "Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
+"Appearance.ThemePreview.Chat.3.TextWithLink" = "Is that everything? It seemed like he said [quite a bit more] than that. 😯";
 
 "Appearance.ThemePreview.Chat.4.Text" = "For relaxing times, make it Suntory time. 😎";
 "Appearance.ThemePreview.Chat.5.Text" = "He wants you to turn, look in camera. O.K.?";
@@ -5159,6 +5160,8 @@ Any member of this group will be able to see messages in the channel.";
 "AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
 "AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
 "AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
+"AuthSessions.AddedDeviceTitle" = "Loggin Successful";
+"AuthSessions.AddedDeviceTerminate" = "Terminate";
 
 "Map.SendThisPlace" = "Send This Place";
 "Map.SetThisPlace" = "Set This Place";
@@ -5228,3 +5231,11 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.WebSessions" = "Active Websites";
 
 "Appearance.ShareThemeColor" = "Share";
+
+"Theme.ThemeChanged" = "Color Theme Changed";
+"Theme.ThemeChangedText" = "You can change it back in\n[Settings > Appearance]().";
+
+"StickerPackActionInfo.AddedTitle" = "Stickers Added";
+"StickerPackActionInfo.AddedText" = "%@ has been added to your stickers.";
+"StickerPackActionInfo.RemovedTitle" = "Stickers Removed";
+"StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";

@@ -148,9 +148,9 @@ public struct ChatAvailableMessageActions {
 }
 
 public enum WallpaperUrlParameter {
-    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
+    case slug(String, WallpaperPresentationOptions, UIColor?, UIColor?, Int32?, Int32?)
     case color(UIColor)
-    case gradient(UIColor, UIColor)
+    case gradient(UIColor, UIColor, Int32?)
 }
 
 public enum ResolvedUrl {
