@@ -228,6 +228,7 @@ final class ThemeAccentColorController: ViewController {
                     }
                     
                     let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: accentColor, messageColors: bubbleColors, wallpaper: wallpaper)
+                    let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
                     
                     let save: Signal<Void, NoError>
                     
@@ -246,7 +247,10 @@ final class ThemeAccentColorController: ViewController {
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
-                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
+                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
+                                    
+                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 }) |> deliverOnMainQueue).start(completed: {
                                     if let strongSelf = self {
                                         strongSelf.completion?()
@@ -272,7 +276,10 @@ final class ThemeAccentColorController: ViewController {
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
-                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
+                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
+                                    
+                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 }) |> deliverOnMainQueue).start(completed: {
                                     if let strongSelf = self {
                                         strongSelf.completion?()
@@ -283,35 +290,6 @@ final class ThemeAccentColorController: ViewController {
                         }, error: { error in
                         })
                     }
-                    
-//                    let _ = (prepare
-//                    |> then(updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-//                        let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-//                        var currentTheme = current.theme
-//                        if autoNightModeTriggered {
-//                            currentTheme = current.automaticThemeSwitchSetting.theme
-//                        }
-//
-//
-//
-//                        if create {
-//
-//                        } else {
-//
-//                        }
-//
-//                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-//
-//
-//                        themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: nil)] = wallpaper
-//
-//                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-//                    })) |> deliverOnMainQueue).start(completed: { [weak self] in
-//                        if let strongSelf = self {
-//                            strongSelf.completion?()
-//                            strongSelf.dismiss()
-//                        }
-//                    })
                 }
             }
         })

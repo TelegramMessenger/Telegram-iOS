@@ -221,7 +221,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     )
 }
 
-public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme {
+public func makeDefaultDarkPresentationTheme(customIndex: Int64? = nil, preview: Bool) -> PresentationTheme {
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: UIColor(rgb: 0x1c1c1d),
         separatorColor: UIColor(rgb: 0x3d3d40),
@@ -532,7 +532,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
 
     return PresentationTheme(
         name: .builtin(.night),
-        index: PresentationThemeReference.builtin(.night).index,
+        index: customIndex ?? PresentationThemeReference.builtin(.night).index,
         referenceTheme: .night,
         overallDarkAppearance: true,
         intro: intro,

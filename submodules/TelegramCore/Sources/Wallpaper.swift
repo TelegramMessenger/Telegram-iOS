@@ -25,6 +25,9 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if wallpaperSettings.motion {
         flags |= (1 << 2)
     }
+    if let _ = wallpaperSettings.intensity {
+        flags |= (1 << 3)
+    }
     if let _ = wallpaperSettings.bottomColor {
         flags |= (1 << 4)
     }
