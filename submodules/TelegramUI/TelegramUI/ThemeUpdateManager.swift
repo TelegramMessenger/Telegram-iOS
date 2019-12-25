@@ -84,7 +84,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                         guard let file = theme.file else {
                             return .complete()
                         }
-                        return telegramThemeData(account: account, accountManager: accountManager, resource: file.resource)
+                        return telegramThemeData(account: account, accountManager: accountManager, reference: .standalone(resource: file.resource))
                         |> mapToSignal { data -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                             guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
                                 return .complete()

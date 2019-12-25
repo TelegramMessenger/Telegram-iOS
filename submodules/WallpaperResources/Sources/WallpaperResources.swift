@@ -699,8 +699,8 @@ public func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryM
     }
 }
 
-public func telegramThemeData(account: Account, accountManager: AccountManager, resource: MediaResource, synchronousLoad: Bool = false) -> Signal<Data?, NoError> {
-    let maybeFetched = accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+public func telegramThemeData(account: Account, accountManager: AccountManager, reference: MediaResourceReference, synchronousLoad: Bool = false) -> Signal<Data?, NoError> {
+    let maybeFetched = accountManager.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
     return maybeFetched
     |> take(1)
     |> mapToSignal { maybeData in
@@ -708,15 +708,15 @@ public func telegramThemeData(account: Account, accountManager: AccountManager, 
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             return .single(loadedData)
         } else {
-            let data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+            let data = account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
             return Signal { subscriber in
-                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: resource)).start()
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
                 let disposable = (data
                 |> map { data -> Data? in
                     return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
                 }).start(next: { next in
                     if let data = next {
-                        accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                        accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
                     }
                     subscriber.putNext(next)
                 }, error: { error in
@@ -1153,13 +1153,14 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         colorsSignal = .single(((topBackgroundColor, bottomBackgroundColor), (incomingColor, incomingColor), outgoingColor, nil, rotation))
     } else {
         var resource: MediaResource?
+        var reference: MediaResourceReference?
         if case let .local(theme) = theme {
-            resource = theme.resource
-        } else if case let .cloud(theme) = theme {
-            resource = theme.theme.file?.resource
+            reference = .standalone(resource: theme.resource)
+        } else if case let .cloud(theme) = theme, let resource = theme.theme.file?.resource {
+            reference = .theme(theme: .slug(theme.theme.slug), resource: resource)
         }
-        if let resource = resource {
-            colorsSignal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
+        if let reference = reference {
+            colorsSignal = telegramThemeData(account: account, accountManager: accountManager, reference: reference, synchronousLoad: false)
             |> mapToSignal { data -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
                 if let data = data, let theme = makePresentationTheme(data: data) {
                     var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> = .complete()

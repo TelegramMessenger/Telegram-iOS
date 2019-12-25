@@ -13,7 +13,7 @@ let telegramThemeFormat = "ios"
 let telegramThemeFileExtension = "tgios-theme"
 #endif
 
-public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
+public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
@@ -31,18 +31,20 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
             }
         }
         |> mapToSignal { items, hash -> Signal<[TelegramTheme], NoError> in
-            let _ = accountManager.transaction { transaction in
-                transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
-                    var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
-                    for theme in items {
-                        if theme.id == updated.currentTheme?.id {
-                            updated = ThemeSettings(currentTheme: theme)
-                            break
+            if let accountManager = accountManager {
+                let _ = accountManager.transaction { transaction in
+                    transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                        var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                        for theme in items {
+                            if theme.id == updated.currentTheme?.id {
+                                updated = ThemeSettings(currentTheme: theme)
+                                break
+                            }
                         }
-                    }
-                    return updated
-                })
-            }.start()
+                        return updated
+                    })
+                }.start()
+            }
             
             return postbox.transaction { transaction -> [TelegramTheme] in
                 var entries: [OrderedItemListEntry] = []

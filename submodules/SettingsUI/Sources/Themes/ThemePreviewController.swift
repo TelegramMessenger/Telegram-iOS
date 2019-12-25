@@ -90,7 +90,7 @@ public final class ThemePreviewController: ViewController {
                     self.theme.get()
                     |> mapToSignal { theme in
                         if let file = theme?.file {
-                            return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
+                            return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, reference: .standalone(resource: file.resource))
                                 |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
                                     guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
                                         return .complete()
