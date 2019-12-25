@@ -28,9 +28,6 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if let _ = wallpaperSettings.bottomColor {
         flags |= (1 << 4)
     }
-    if let _ = wallpaperSettings.rotation {
-        flags |= (1 << 4)
-    }
     return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color, secondBackgroundColor: wallpaperSettings.bottomColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation)
 }
 
