@@ -1339,10 +1339,9 @@ extension PresentationThemeChatInputPanel: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        let panelBackgroundColor = try decodeColor(values, .panelBg)
-        let panelBackgroundColorNoWallpaper = try decodeColor(values, .panelBgNoWallpaper)
-        self.init(panelBackgroundColor: panelBackgroundColor,
-                  panelBackgroundColorNoWallpaper: panelBackgroundColorNoWallpaper ?? panelBackgroundColor,
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
+        self.init(panelBackgroundColor: try decodeColor(values, .panelBg),
+                  panelBackgroundColorNoWallpaper: try decodeColor(values, .panelBg, decoder: decoder, fallbackKey: codingPath + ".panelBgNoWallpaper"),
                   panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelControlAccentColor: try decodeColor(values, .panelControlAccent),
                   panelControlColor: try decodeColor(values, .panelControl),
