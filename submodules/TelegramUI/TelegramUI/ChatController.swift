@@ -182,6 +182,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let controllerNavigationDisposable = MetaDisposable()
     private let sentMessageEventsDisposable = MetaDisposable()
     private let failedMessageEventsDisposable = MetaDisposable()
+    private weak var currentFailedMessagesAlertController: ViewController?
     private let messageActionCallbackDisposable = MetaDisposable()
     private let messageActionUrlAuthDisposable = MetaDisposable()
     private let editMessageDisposable = MetaDisposable()
@@ -4296,7 +4297,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
                 self.failedMessageEventsDisposable.set((self.context.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
-                    if let strongSelf = self {
+                    if let strongSelf = self, strongSelf.currentFailedMessagesAlertController == nil {
                         let text: String
                         let moreInfo: Bool
                         switch reason {
@@ -4324,7 +4325,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]
                         }
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions), in: .window(.root))
+                        let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions)
+                        strongSelf.currentFailedMessagesAlertController = controller
+                        strongSelf.present(controller, in: .window(.root))
                     }
                 }))
         }
