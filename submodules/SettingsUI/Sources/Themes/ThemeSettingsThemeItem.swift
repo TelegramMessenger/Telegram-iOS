@@ -273,7 +273,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    if case let .cloud(theme) = item.themeReference, theme.theme.file == nil {
+                    if case let .cloud(theme) = item.themeReference, theme.theme.file == nil && theme.theme.settings == nil {
                         if updatedTheme {
                             strongSelf.imageNode.setSignal(createThemeImage(theme: item.theme))
                         }
@@ -305,7 +305,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     func prepareCrossfadeTransition() {
-        self.snapshotView?.removeFromSuperview()
+        guard self.snapshotView == nil else {
+            return
+        }
         
         if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
@@ -314,8 +316,13 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     func animateCrossfadeTransition() {
+        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
+            return
+        }
+        
         self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.snapshotView?.removeFromSuperview()
+            self?.snapshotView = nil
         })
     }
     
@@ -345,6 +352,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let themes: [PresentationThemeReference]
+    let allThemes: [PresentationThemeReference]
     let displayUnsupported: Bool
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
@@ -353,11 +361,12 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], allThemes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
+        self.allThemes = allThemes
         self.displayUnsupported = displayUnsupported
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
@@ -594,14 +603,26 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + 2.0)
                     strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     
+                    var themes: [Int64: PresentationThemeReference] = [:]
+                    for theme in item.allThemes {
+                        themes[theme.index] = theme
+                    }
+                    
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-                    for theme in item.themes {
+                    for var theme in item.themes.prefix(1) {
                         if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
                             continue
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
-                        let accentColor = item.themeSpecificAccentColors[theme.index]
+                        var accentColor = item.themeSpecificAccentColors[theme.index]
+                        if let customThemeIndex = accentColor?.themeIndex {
+                            if let customTheme = themes[customThemeIndex] {
+                                theme = customTheme
+                            }
+                            accentColor = nil
+                        }
+                        
                         let wallpaper = accentColor?.wallpaper
                         entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1
@@ -633,7 +654,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func prepareCrossfadeTransition() {
-        self.snapshotView?.removeFromSuperview()
+        guard self.snapshotView == nil else {
+            return
+        }
         
         if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
@@ -648,8 +671,13 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func animateCrossfadeTransition() {
+        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
+            return
+        }
+        
         self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.snapshotView?.removeFromSuperview()
+            self?.snapshotView = nil
         })
         
         self.listNode.forEachVisibleItemNode { node in

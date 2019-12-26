@@ -441,7 +441,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     )
 }
 
-public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> PresentationTheme {
+public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
     let accentColor = defaultDarkTintedAccentColor
     
     let secondaryBadgeTextColor: UIColor
@@ -787,8 +787,8 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
     )
 
     return PresentationTheme(
-        name: .builtin(.nightAccent),
-        index: PresentationThemeReference.builtin(.nightAccent).index,
+        name: extendingThemeReference?.name ?? .builtin(.nightAccent),
+        index: extendingThemeReference?.index ?? PresentationThemeReference.builtin(.nightAccent).index,
         referenceTheme: .nightAccent,
         overallDarkAppearance: true,
         intro: intro,

@@ -143,7 +143,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             selectedFileId = file.id
         }
         
-        for wallpaper in wallpapers {
+        for wallpaper in self.wallpapers {
             let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
             node.cornerRadius = 5.0
@@ -251,7 +251,16 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
         
         if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
-            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
+            
+            var origin = CGPoint()
+            if frame.minX < bounds.minX {
+                origin.x = max(0.0, frame.minX)
+            } else if frame.maxX > bounds.maxX {
+                origin.x = min(self.scrollNode.view.contentSize.width - bounds.width, frame.maxX - bounds.width)
+            }
+            
+            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: origin, size: self.scrollNode.frame.size))
         }
     }
     

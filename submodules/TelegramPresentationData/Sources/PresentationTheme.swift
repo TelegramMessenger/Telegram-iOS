@@ -1105,6 +1105,28 @@ public enum PresentationThemeName: Equatable {
     }
 }
 
+public extension PresentationThemeReference {
+    public var name: PresentationThemeName {
+        switch self {
+            case let .builtin(theme):
+                switch theme {
+                    case .day:
+                        return .builtin(.day)
+                    case .dayClassic:
+                        return .builtin(.dayClassic)
+                    case .night:
+                        return .builtin(.night)
+                    case .nightAccent:
+                        return .builtin(.nightAccent)
+                }
+            case let .cloud(info):
+                return .custom(info.theme.title)
+            default:
+                return .custom("")
+        }
+    }
+}
+
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let index: Int64

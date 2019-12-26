@@ -282,6 +282,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
             previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
         case let .edit(info):
+            settingsPromise.set(.single(info.theme.settings))
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
                     previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
@@ -295,7 +296,6 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 } else {
                     previewThemePromise.set(.single(theme.withUpdated(name: nil, defaultWallpaper: info.resolvedWallpaper)))
                 }
-                settingsPromise.set(.single(info.theme.settings))
             } else {
                 previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
                 
@@ -320,7 +320,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
         let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
         |> take(1)).start(next: { theme, previousSettings in
             var controllerDismissImpl: (() -> Void)?
-            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
+            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, generalThemeReference: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
                 updateState { current in
                     var state = current
                     previewThemePromise.set(.single(updatedTheme))
@@ -515,7 +515,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             themeSpecificChatWallpapers[themeReference.index] = nil
                                             
-                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         }) |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
                                                 saveThemeTemplateFile(state.title, themeResource, {
@@ -549,7 +549,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[themeReference.index] = nil
                                         
-                                        return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificCustomColors: current.themeSpecificCustomColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {
                                             saveThemeTemplateFile(state.title, themeResource, {
