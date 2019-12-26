@@ -147,8 +147,8 @@ public final class CachedPatternWallpaperMaskRepresentation: CachedMediaResource
 public final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     
-    public let color: Int32
-    public let bottomColor: Int32?
+    public let color: UInt32
+    public let bottomColor: UInt32?
     public let intensity: Int32
     public let rotation: Int32?
     
@@ -165,7 +165,7 @@ public final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepr
         return id
     }
     
-    public init(color: Int32, bottomColor: Int32?, intensity: Int32, rotation: Int32?) {
+    public init(color: UInt32, bottomColor: UInt32?, intensity: Int32, rotation: Int32?) {
         self.color = color
         self.bottomColor = bottomColor
         self.intensity = intensity

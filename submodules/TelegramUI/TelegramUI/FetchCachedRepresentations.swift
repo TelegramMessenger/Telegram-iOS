@@ -454,9 +454,9 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                 
                 var colors: [UIColor] = []
                 if let bottomColor = representation.bottomColor {
-                    colors.append(UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                    colors.append(UIColor(rgb: bottomColor))
                 }
-                colors.append(UIColor(rgb: UInt32(bitPattern: representation.color)))
+                colors.append(UIColor(rgb: representation.color))
                 
                 let intensity = CGFloat(representation.intensity) / 100.0
                 

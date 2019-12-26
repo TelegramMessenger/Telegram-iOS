@@ -759,10 +759,10 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
             }
         case let .color(color):
-            c.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+            c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
         case let .gradient(topColor, bottomColor, _):
-            let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))].map { $0.cgColor } as CFArray
+            let gradientColors = [UIColor(rgb: topColor), UIColor(rgb: bottomColor)].map { $0.cgColor } as CFArray
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
@@ -1091,8 +1091,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
                 if let wallpaper = wallpaper, case let .file(file) = wallpaper {
-                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) } ?? UIColor(rgb: 0xd6e2ee)
-                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
+                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
                 } else {
                     if let bubbleColors = bubbleColors {
                         topBackgroundColor = UIColor(rgb: 0xd6e2ee)
@@ -1139,15 +1139,15 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         if let wallpaper = wallpaper {
             switch wallpaper {
                 case let .color(color):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    topBackgroundColor = UIColor(rgb: color)
                 case let .gradient(topColor, bottomColor, settings):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
-                    bottomBackgroundColor = UIColor(rgb: UInt32(bitPattern: bottomColor))
+                    topBackgroundColor = UIColor(rgb: topColor)
+                    bottomBackgroundColor = UIColor(rgb: bottomColor)
                     rotation = settings.rotation
                 case let .file(file):
                     if let color = file.settings.color {
-                        topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                        topBackgroundColor = UIColor(rgb: color)
+                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
                     }
                     rotation = file.settings.rotation
                 default:
@@ -1199,16 +1199,16 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     case .builtin:
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                     case let .color(color):
-                        backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
+                        backgroundColor = (UIColor(rgb: color), nil)
                     case let .gradient(topColor, bottomColor, settings):
-                        backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                        backgroundColor = (UIColor(rgb: topColor), UIColor(rgb: bottomColor))
                         rotation = settings.rotation
                     case .image:
                         backgroundColor = (.black, nil)
                     case let .file(file):
                         rotation = file.settings.rotation
                         if file.isPattern, let color = file.settings.color {
-                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) })
+                            backgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
                         } else {
                             backgroundColor = (theme.chatList.backgroundColor, nil)
                         }

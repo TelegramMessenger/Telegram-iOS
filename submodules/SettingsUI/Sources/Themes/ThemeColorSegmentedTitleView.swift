@@ -21,6 +21,10 @@ final class ThemeColorSegmentedTitleView: UIView {
         }
     }
     
+    func setIndex(_ index: Int, animated: Bool) {
+        self.segmentedControlNode.setSelectedIndex(index, animated: animated)
+    }
+    
     var sectionUpdated: ((ThemeColorSection) -> Void)?
     var shouldUpdateSection: ((ThemeColorSection, @escaping (Bool) -> Void) -> Void)?
     

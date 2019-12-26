@@ -300,7 +300,7 @@ final class ThemeGridController: ViewController {
                     var options: [String] = []
                     if isPattern {
                         if let color = settings.color {
-                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                            options.append("bg_color=\(UIColor(rgb: color).hexString)")
                         }
                         if let intensity = settings.intensity {
                             options.append("intensity=\(intensity)")
@@ -313,7 +313,7 @@ final class ThemeGridController: ViewController {
                     }
                     item = slug + optionsString
                 case let .color(color):
-                    item = "\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"
+                    item = "\(UIColor(rgb: color).hexString)"
                 default:
                     break
             }

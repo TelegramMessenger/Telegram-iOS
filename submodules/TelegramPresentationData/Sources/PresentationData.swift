@@ -395,9 +395,9 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
         case .builtin:
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
-            return serviceColor(with: UIColor(rgb: UInt32(bitPattern: color)))
+            return serviceColor(with: UIColor(argb: color))
         case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
             return serviceColor(with: mixedColor)
         case .image:
             if let image = wallpaper.1 {
@@ -408,9 +408,9 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
         case let .file(file):
             if file.isPattern {
                 if let color = file.settings.color {
-                    var mixedColor = UIColor(rgb: UInt32(bitPattern: color))
+                    var mixedColor = UIColor(argb: color)
                     if let bottomColor = file.settings.bottomColor {
-                        mixedColor = mixedColor.mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
                     }
                     return serviceColor(with: mixedColor)
                 } else {
@@ -450,9 +450,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
         case .builtin:
             return .single(UIColor(rgb: 0x748391, alpha: 0.45))
         case let .color(color):
-            return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
+            return .single(serviceColor(with: UIColor(argb: color)))
         case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
             return .single(serviceColor(with: mixedColor))
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
@@ -477,9 +477,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
         case let .file(file):
             if file.isPattern {
                 if let color = file.settings.color {
-                    var mixedColor = UIColor(rgb: UInt32(bitPattern: color))
+                    var mixedColor = UIColor(argb: color)
                     if let bottomColor = file.settings.bottomColor {
-                        mixedColor = mixedColor.mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+                        mixedColor = mixedColor.mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
                     }
                     return .single(serviceColor(with: mixedColor))
                 } else {

@@ -149,11 +149,12 @@ final class ThemeAccentColorController: ViewController {
             if let strongSelf = self {
                 let context = strongSelf.context
                 let initialAccentColor = strongSelf.initialAccentColor
+                let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                 
                 var coloredWallpaper: TelegramWallpaper?
                 if let backgroundColors = state.backgroundColors {
-                    let color = Int32(bitPattern: backgroundColors.0.argb)
-                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }
+                    let color = backgroundColors.0.argb
+                    let bottomColor = backgroundColors.1.flatMap { $0.argb }
                     
                     if let patternWallpaper = state.patternWallpaper {
                         coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
@@ -167,7 +168,7 @@ final class ThemeAccentColorController: ViewController {
                 let prepare: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: Int32(bitPattern: backgroundColors.0.argb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }, intensity: state.patternIntensity, rotation: state.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(color: backgroundColors.0.argb, bottomColor: backgroundColors.1.flatMap { $0.argb }, intensity: state.patternIntensity, rotation: state.rotation)
                     
                     var data: Data?
                     if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -248,7 +249,44 @@ final class ThemeAccentColorController: ViewController {
                     
                     let save: Signal<Void, NoError>
                     
-                    if !create, let theme = telegramTheme {
+                    if create {
+                        let title = generateThemeName(accentColor: state.accentColor)
+                        let _ = (prepare |> then(createTheme(account: context.account, title: title, resource: nil, thumbnailData: nil, settings: settings))
+                        |> deliverOnMainQueue).start(next: { next in
+                            if case let .result(resultTheme) = next {
+                                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
+                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                                    //                                    if let resource = resultTheme.file?.resource, let data = themeData {
+                                    //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                    //                                    }
+                                    
+                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
+                                    
+                                    var updatedTheme = current.theme
+                                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                    if autoNightModeTriggered {
+                                        updatedAutomaticThemeSwitchSetting.theme = themeReference
+                                    } else {
+                                        updatedTheme = themeReference
+                                    }
+                                    
+                                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                    themeSpecificChatWallpapers[themeReference.index] = nil
+                                    
+                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
+                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
+                                    
+                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                }) |> deliverOnMainQueue).start(completed: {
+                                    if let strongSelf = self {
+                                        strongSelf.completion?()
+                                        strongSelf.dismiss()
+                                    }
+                                })
+                            }
+                        }, error: { error in
+                        })
+                    } else if let theme = telegramTheme {
                         let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: settings))
                         |> deliverOnMainQueue).start(next: { next in
                             if case let .result(resultTheme) = next {
@@ -260,13 +298,21 @@ final class ThemeAccentColorController: ViewController {
                                     
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
                                     
+                                    var updatedTheme = current.theme
+                                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                    if autoNightModeTriggered {
+                                        updatedAutomaticThemeSwitchSetting.theme = themeReference
+                                    } else {
+                                        updatedTheme = themeReference
+                                    }
+                                    
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
                                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
-                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 }) |> deliverOnMainQueue).start(completed: {
                                     if let strongSelf = self {
                                         strongSelf.completion?()
@@ -274,37 +320,10 @@ final class ThemeAccentColorController: ViewController {
                                     }
                                 })
                             }
-                        }, error: { error in
+                        }, error: { _ in
                         })
                     } else {
-                        let title = generateThemeName(accentColor: state.accentColor)
-                        let _ = (prepare |> then(createTheme(account: context.account, title: title, resource: nil, thumbnailData: nil, settings: settings))
-                        |> deliverOnMainQueue).start(next: { next in
-                            if case let .result(resultTheme) = next {
-                                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
-                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                                //                                    if let resource = resultTheme.file?.resource, let data = themeData {
-                                //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                                //                                    }
-                                
-                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
-                                    
-                                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                    themeSpecificChatWallpapers[themeReference.index] = nil
-                                    
-                                    var themeSpecificAccentColors = current.themeSpecificAccentColors
-                                    themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
-                                    
-                                    return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                }) |> deliverOnMainQueue).start(completed: {
-                                    if let strongSelf = self {
-                                        strongSelf.completion?()
-                                        strongSelf.dismiss()
-                                    }
-                                })
-                            }
-                        }, error: { error in
-                        })
+                       
                     }
                 } else if case .background = strongSelf.mode {
                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
@@ -331,6 +350,11 @@ final class ThemeAccentColorController: ViewController {
             if let strongSelf = self {
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: theme, presentationStrings: strongSelf.presentationData.strings))
                 strongSelf.segmentedTitleView.theme = theme
+            }
+        }
+        self.controllerNode.requestSectionUpdate = { [weak self] section in
+            if let strongSelf = self {
+                strongSelf.segmentedTitleView.setIndex(section.rawValue, animated: true)
             }
         }
         
@@ -367,9 +391,9 @@ final class ThemeAccentColorController: ViewController {
                         if let intensity = file.settings.intensity {
                             patternIntensity = intensity
                         }
-                        patternColor = UIColor(rgb: UInt32(bitPattern: color))
+                        patternColor = UIColor(rgb: color)
                         if let bottomColorValue = file.settings.bottomColor {
-                            bottomColor = UIColor(rgb: UInt32(bitPattern: bottomColorValue))
+                            bottomColor = UIColor(rgb: bottomColorValue)
                         }
                     }
                     patternWallpaper = wallpaper
@@ -377,9 +401,9 @@ final class ThemeAccentColorController: ViewController {
                     motion = file.settings.motion
                     rotation = file.settings.rotation ?? 0
                 } else if case let .color(color) = wallpaper {
-                    backgroundColors = (UIColor(rgb: UInt32(bitPattern: color)), nil)
+                    backgroundColors = (UIColor(rgb: color), nil)
                 } else if case let .gradient(topColor, bottomColor, settings) = wallpaper {
-                    backgroundColors = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                    backgroundColors = (UIColor(rgb: topColor), UIColor(rgb: bottomColor))
                     motion = settings.motion
                     rotation = settings.rotation ?? 0
                 } else {

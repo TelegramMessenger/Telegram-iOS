@@ -28,7 +28,7 @@ public enum WallpaperListSource {
     case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, UIColor?, Int32?, Int32?, Message?)
     case asset(PHAsset)
     case contextResult(ChatContextResult)
-    case customColor(Int32?)
+    case customColor(UInt32?)
 }
 
 private func areMessagesEqual(_ lhsMessage: Message?, _ rhsMessage: Message?) -> Bool {
@@ -107,18 +107,18 @@ private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UICo
 
 private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
     let isPattern = file.mimeType == "image/png"
-    var firstColorValue: Int32?
-    var secondColorValue: Int32?
+    var firstColorValue: UInt32?
+    var secondColorValue: UInt32?
     var intensityValue: Int32?
     if let firstColor = firstColor {
-        firstColorValue = Int32(bitPattern: firstColor.argb)
+        firstColorValue = firstColor.argb
         intensityValue = intensity
     } else if isPattern {
         firstColorValue = 0xd6e2ee
         intensityValue = 50
     }
     if let secondColor = secondColor {
-        secondColorValue = Int32(bitPattern: secondColor.argb)
+        secondColorValue = secondColor.argb
     }
     
     return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(color: firstColorValue, bottomColor: secondColorValue, intensity: intensityValue, rotation: rotation))
@@ -206,7 +206,7 @@ public class WallpaperGalleryController: ViewController {
                 entries = [.contextResult(result)]
                 centralEntryIndex = 0
             case let .customColor(color):
-                let initialColor = color ?? 0x000000
+                let initialColor: UInt32 = color ?? 0x000000
                 entries = [.wallpaper(.color(initialColor), nil)]
                 centralEntryIndex = 0
         }
@@ -554,7 +554,7 @@ public class WallpaperGalleryController: ViewController {
             case let .wallpaper(wallpaper, _):
                 switch wallpaper {
                     case .color:
-                        currentEntry = .wallpaper(.color(Int32(color.argb)), nil)
+                        currentEntry = .wallpaper(.color(color.argb), nil)
                     default:
                         break
                 }
@@ -570,7 +570,7 @@ public class WallpaperGalleryController: ViewController {
     private func updateEntries(pattern: TelegramWallpaper?, intensity: Int32? = nil, preview: Bool = false) {
         var updatedEntries: [WallpaperGalleryEntry] = []
         for entry in self.entries {
-            var entryColor: Int32?
+            var entryColor: UInt32?
             if case let .wallpaper(wallpaper, _) = entry {
                 if case let .color(color) = wallpaper {
                     entryColor = color
@@ -781,9 +781,9 @@ public class WallpaperGalleryController: ViewController {
                 if isPattern {
                     if let color = settings.color {
                         if let bottomColor = settings.bottomColor {
-                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)-\(UIColor(rgb: UInt32(bitPattern: bottomColor)).hexString)")
+                            options.append("bg_color=\(UIColor(rgb: color).hexString)-\(UIColor(rgb: bottomColor).hexString)")
                         } else {
-                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                            options.append("bg_color=\(UIColor(rgb: color).hexString)")
                         }
                     }
                     if let intensity = settings.intensity {
@@ -801,9 +801,9 @@ public class WallpaperGalleryController: ViewController {
                 
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
             case let .color(color):
-                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"))
+                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: color).hexString)"))
             case let .gradient(topColor, bottomColor, _):
-                controller = ShareController(context: context, subject:. url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: topColor)).hexString)-\(UIColor(rgb: UInt32(bitPattern: bottomColor)).hexString)"))
+                controller = ShareController(context: context, subject:. url("https://t.me/bg/\(UIColor(rgb: topColor).hexString)-\(UIColor(rgb: bottomColor).hexString)"))
             default:
                 break
         }

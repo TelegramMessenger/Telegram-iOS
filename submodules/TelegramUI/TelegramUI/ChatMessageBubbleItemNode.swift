@@ -337,6 +337,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
                     switch tapAction {
                         case .none:
+                            if let _ = strongSelf.item?.controllerInteraction.tapMessage {
+                                return .waitForSingleTap
+                            }
                             break
                         case .ignore:
                             return .fail

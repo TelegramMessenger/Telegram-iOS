@@ -226,7 +226,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            signal = solidColorImage(UIColor(rgb: UInt32(bitPattern: color)))
+                            signal = solidColorImage(UIColor(rgb: color))
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -236,7 +236,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .gradient(topColor, bottomColor, settings):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
-                            signal = gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))], rotation: settings.rotation)
+                            signal = gradientImage([UIColor(rgb: topColor), UIColor(rgb: bottomColor)], rotation: settings.rotation)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
@@ -263,11 +263,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     if let intensity = file.settings.intensity {
                                         patternIntensity = CGFloat(intensity) / 100.0
                                     }
-                                    patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                                    patternColor = UIColor(rgb: color, alpha: patternIntensity)
                                     patternColors.append(patternColor)
                                     
                                     if let bottomColor = file.settings.bottomColor {
-                                        patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                                        patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
                                     }
                                 }
        

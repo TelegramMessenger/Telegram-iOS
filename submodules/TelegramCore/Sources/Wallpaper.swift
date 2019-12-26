@@ -9,7 +9,7 @@ extension WallpaperSettings {
     init(apiWallpaperSettings: Api.WallPaperSettings) {
         switch apiWallpaperSettings {
             case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, intensity, rotation):
-                self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, color: backgroundColor, bottomColor: secondBackgroundColor, intensity: intensity, rotation: rotation)
+                self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, color: backgroundColor.flatMap { UInt32(bitPattern: $0) }, bottomColor: secondBackgroundColor.flatMap { UInt32(bitPattern: $0) }, intensity: intensity, rotation: rotation)
         }
     }
 }
@@ -31,7 +31,7 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if let _ = wallpaperSettings.bottomColor {
         flags |= (1 << 4)
     }
-    return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color, secondBackgroundColor: wallpaperSettings.bottomColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation)
+    return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color.flatMap { Int32(bitPattern: $0) }, secondBackgroundColor: wallpaperSettings.bottomColor.flatMap { Int32(bitPattern: $0) }, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation)
 }
 
 extension TelegramWallpaper {
@@ -53,9 +53,9 @@ extension TelegramWallpaper {
             case let .wallPaperNoFile(flags, settings):
                 if let settings = settings, case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, intensity, rotation) = settings {
                     if let color = backgroundColor, let bottomColor = secondBackgroundColor {
-                        self = .gradient(color, bottomColor, WallpaperSettings(rotation: rotation))
+                        self = .gradient(UInt32(bitPattern: color), UInt32(bitPattern: bottomColor), WallpaperSettings(rotation: rotation))
                     } else if let color = backgroundColor {
-                        self = .color(color)
+                        self = .color(UInt32(bitPattern: color))
                     } else {
                         self = .color(0xffffff)
                     }

@@ -39,12 +39,12 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                 }
             case let .color(color):
                 backgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                    context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).withAlphaComponent(1.0).cgColor)
+                    context.setFillColor(UIColor(argb: color).withAlphaComponent(1.0).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
             case let .gradient(topColor, bottomColor, settings):
                 backgroundImage = generateImage(CGSize(width: 640.0, height: 1280.0), rotatedContext: { size, context in
-                    let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)).cgColor, UIColor(rgb: UInt32(bitPattern: bottomColor)).cgColor] as CFArray
+                    let gradientColors = [UIColor(argb: topColor).cgColor, UIColor(argb: bottomColor).cgColor] as CFArray
                        
                     var locations: [CGFloat] = [0.0, 1.0]
                     let colorSpace = CGColorSpaceCreateDeviceRGB()

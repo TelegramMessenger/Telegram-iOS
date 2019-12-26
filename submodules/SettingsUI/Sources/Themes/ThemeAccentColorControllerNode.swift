@@ -199,9 +199,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private var patternArgumentsPromise = Promise<TransformImageArguments>()
     private var patternArgumentsDisposable: Disposable?
     
-    private var tapGestureRecognizer: UITapGestureRecognizer?
-    
     var themeUpdated: ((PresentationTheme) -> Void)?
+    var requestSectionUpdate: ((ThemeColorSection) -> Void)?
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -423,8 +422,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             if let backgroundColors = backgroundColors {
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper {
-                    let color = Int32(bitPattern: backgroundColors.0.argb)
-                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }
+                    let color = backgroundColors.0.argb
+                    let bottomColor = backgroundColors.1.flatMap { $0.argb }
                     wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
                     
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
@@ -436,10 +435,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     
                     wallpaperSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                 } else if let bottomColor = backgroundColors.1 {
-                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.argb), Int32(bitPattern: bottomColor.argb), WallpaperSettings(rotation: state.rotation))
+                    wallpaper = .gradient(backgroundColors.0.argb, bottomColor.argb, WallpaperSettings(rotation: state.rotation))
                     wallpaperSignal = gradientImage([backgroundColors.0, bottomColor], rotation: state.rotation)
                 } else {
-                    wallpaper = .color(Int32(bitPattern: backgroundColors.0.argb))
+                    wallpaper = .color(backgroundColors.0.argb)
                 }
             } else if let themeReference = mode.themeReference, case let .builtin(theme) = themeReference, state.initialWallpaper == nil {
                 var suggestedWallpaper: TelegramWallpaper
@@ -447,12 +446,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .dayClassic:
                         let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                        suggestedWallpaper = .gradient(Int32(bitPattern: topColor.argb), Int32(bitPattern: bottomColor.argb), WallpaperSettings())
+                        suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
                         wallpaperSignal = gradientImage([topColor, bottomColor], rotation: state.rotation)
                         backgroundColors = (topColor, bottomColor)
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                        suggestedWallpaper = .color(Int32(bitPattern: color.argb))
+                        suggestedWallpaper = .color(color.argb)
                         backgroundColors = (color, nil)
                     default:
                         suggestedWallpaper = .builtin(WallpaperSettings())
@@ -510,8 +509,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.serviceBackgroundColorPromise.set(.single(serviceBackgroundColor))
             
             if case let .color(value) = wallpaper {
-                strongSelf.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
-                strongSelf.immediateBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+                strongSelf.backgroundColor = UIColor(rgb: value)
+                strongSelf.immediateBackgroundNode.backgroundColor = UIColor(rgb: value)
                 strongSelf.immediateBackgroundNode.image = nil
                 strongSelf.signalBackgroundNode.isHidden = true
                 strongSelf.signalBackgroundNode.contentAnimations = []
@@ -588,10 +587,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.pageControlNode.setPage(0.0)
         self.colorPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.patternPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true
-        
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.chatTapped(_:)))
-//        self.scrollNode.view.addGestureRecognizer(tapGestureRecognizer)
-        self.tapGestureRecognizer = tapGestureRecognizer
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -857,11 +852,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let item = self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: self.theme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: { [weak self] message in
                 if message.flags.contains(.Incoming) {
                     self?.updateSection(.accent)
+                    self?.requestSectionUpdate?(.accent)
                 } else {
                     self?.updateSection(.messages)
+                    self?.requestSectionUpdate?(.messages)
                 }
             }, clickThroughMessage: { [weak self] in
                 self?.updateSection(.background)
+                self?.requestSectionUpdate?(.background)
             })
             return item
         }
@@ -1038,19 +1036,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             self.setMotionEnabled(self.state.motion, animated: false)
         }
     }
-    
-    @objc private func chatTapped(_ gestureRecognizer: UITapGestureRecognizer) {
-//        self.updateState({ current in
-//            var updated = current
-//            if updated.displayPatternPanel {
-//                updated.displayPatternPanel = false
-//            } else {
-//                updated.colorPanelCollapsed = !updated.colorPanelCollapsed
-//            }
-//            return updated
-//        }, animated: true)
-    }
-    
+        
     @objc private func toggleMotion() {
         self.updateState({ current in
             var updated = current

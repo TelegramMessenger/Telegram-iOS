@@ -3,12 +3,12 @@ import Postbox
 public struct WallpaperSettings: PostboxCoding, Equatable {
     public let blur: Bool
     public let motion: Bool
-    public let color: Int32?
-    public let bottomColor: Int32?
+    public let color: UInt32?
+    public let bottomColor: UInt32?
     public let intensity: Int32?
     public let rotation: Int32?
     
-    public init(blur: Bool = false, motion: Bool = false, color: Int32? = nil, bottomColor: Int32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
+    public init(blur: Bool = false, motion: Bool = false, color: UInt32? = nil, bottomColor: UInt32? = nil, intensity: Int32? = nil, rotation: Int32? = nil) {
         self.blur = blur
         self.motion = motion
         self.color = color
@@ -20,8 +20,8 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.blur = decoder.decodeInt32ForKey("b", orElse: 0) != 0
         self.motion = decoder.decodeInt32ForKey("m", orElse: 0) != 0
-        self.color = decoder.decodeOptionalInt32ForKey("c")
-        self.bottomColor = decoder.decodeOptionalInt32ForKey("bc")
+        self.color = decoder.decodeOptionalInt32ForKey("c").flatMap { UInt32(bitPattern: $0) }
+        self.bottomColor = decoder.decodeOptionalInt32ForKey("bc").flatMap { UInt32(bitPattern: $0) }
         self.intensity = decoder.decodeOptionalInt32ForKey("i")
         self.rotation = decoder.decodeOptionalInt32ForKey("r")
     }
@@ -30,12 +30,12 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         encoder.encodeInt32(self.blur ? 1 : 0, forKey: "b")
         encoder.encodeInt32(self.motion ? 1 : 0, forKey: "m")
         if let color = self.color {
-            encoder.encodeInt32(color, forKey: "c")
+            encoder.encodeInt32(Int32(bitPattern: color), forKey: "c")
         } else {
             encoder.encodeNil(forKey: "c")
         }
         if let bottomColor = self.bottomColor {
-            encoder.encodeInt32(bottomColor, forKey: "bc")
+            encoder.encodeInt32(Int32(bitPattern: bottomColor), forKey: "bc")
         } else {
             encoder.encodeNil(forKey: "bc")
         }
@@ -76,8 +76,8 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     case builtin(WallpaperSettings)
-    case color(Int32)
-    case gradient(Int32, Int32, WallpaperSettings)
+    case color(UInt32)
+    case gradient(UInt32, UInt32, WallpaperSettings)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(id: Int64, accessHash: Int64, isCreator: Bool, isDefault: Bool, isPattern: Bool, isDark: Bool, slug: String, file: TelegramMediaFile, settings: WallpaperSettings)
     
@@ -87,7 +87,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
                 self = .builtin(settings)
             case 1:
-                self = .color(decoder.decodeInt32ForKey("c", orElse: 0))
+                self = .color(UInt32(bitPattern: decoder.decodeInt32ForKey("c", orElse: 0)))
             case 2:
                 let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
                 self = .image(decoder.decodeObjectArrayWithDecoderForKey("i"), settings)
@@ -100,7 +100,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 }
             case 4:
                  let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-                self = .gradient(decoder.decodeInt32ForKey("c1", orElse: 0), decoder.decodeInt32ForKey("c2", orElse: 0), settings)
+                self = .gradient(UInt32(bitPattern: decoder.decodeInt32ForKey("c1", orElse: 0)), UInt32(bitPattern: decoder.decodeInt32ForKey("c2", orElse: 0)), settings)
             default:
                 assertionFailure()
                 self = .color(0xffffff)
@@ -123,11 +123,11 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 encoder.encodeObject(settings, forKey: "settings")
             case let .color(color):
                 encoder.encodeInt32(1, forKey: "v")
-                encoder.encodeInt32(color, forKey: "c")
+                encoder.encodeInt32(Int32(bitPattern: color), forKey: "c")
             case let .gradient(topColor, bottomColor, settings):
                 encoder.encodeInt32(4, forKey: "v")
-                encoder.encodeInt32(topColor, forKey: "c1")
-                encoder.encodeInt32(bottomColor, forKey: "c2")
+                encoder.encodeInt32(Int32(bitPattern: topColor), forKey: "c1")
+                encoder.encodeInt32(Int32(bitPattern: bottomColor), forKey: "c2")
                 encoder.encodeObject(settings, forKey: "settings")
             case let .image(representations, settings):
                 encoder.encodeInt32(2, forKey: "v")

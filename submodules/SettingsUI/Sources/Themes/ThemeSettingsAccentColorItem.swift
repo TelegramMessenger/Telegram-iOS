@@ -900,7 +900,6 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 entries.append(.theme(index, item.generalThemeReference, theme, selected))
                         }
-                        
                         index += 1
                     }
                     
@@ -935,7 +934,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             item.openColorPicker(true)
                         }
                     }
-                    
+                                        
                     let previousEntries = strongSelf.entries ?? []
                     let updatePosition = currentItem != nil && (previousEntries.count != entries.count || (currentItem?.generalThemeReference.index != item.generalThemeReference.index))
                     let transition = preparedTransition(action: action, contextAction: contextAction, openColorPicker: openColorPicker, from: previousEntries, to: entries, updatePosition: updatePosition)

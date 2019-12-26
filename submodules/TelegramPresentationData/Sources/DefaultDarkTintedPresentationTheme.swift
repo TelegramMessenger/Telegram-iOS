@@ -47,7 +47,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     if bubbleColors == nil, editing {
         if let accentColor = accentColor {
             let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-            suggestedWallpaper = .color(Int32(bitPattern: color.rgb))
+            suggestedWallpaper = .color(color.argb)
         }
         
         let accentColor = accentColor ?? defaultDarkTintedAccentColor
@@ -224,9 +224,9 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         defaultWallpaper = forcedWallpaper
     } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
+            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+            defaultWallpaper = .color(backgroundColors.0.argb)
         }
     } else if let forcedWallpaper = suggestedWallpaper {
         defaultWallpaper = forcedWallpaper
@@ -728,7 +728,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     )
 
     let chat = PresentationThemeChat(
-        defaultWallpaper: .color(Int32(bitPattern: accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).rgb)),
+        defaultWallpaper: .color(accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).argb),
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,

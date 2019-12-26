@@ -150,7 +150,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: 100)
+                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100)
                 updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             
