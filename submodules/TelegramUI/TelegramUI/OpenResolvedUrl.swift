@@ -264,9 +264,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
-                    signal = .single(.color(Int32(color.rgb)))
+                    signal = .single(.color(Int32(color.argb)))
                 case let .gradient(topColor, bottomColor, rotation):
-                    signal = .single(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings()))
+                    signal = .single(.gradient(Int32(topColor.argb), Int32(bottomColor.argb), WallpaperSettings()))
             }
             
             let _ = (signal

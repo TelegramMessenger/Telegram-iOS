@@ -111,14 +111,14 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
     var secondColorValue: Int32?
     var intensityValue: Int32?
     if let firstColor = firstColor {
-        firstColorValue = Int32(bitPattern: firstColor.rgb)
+        firstColorValue = Int32(bitPattern: firstColor.argb)
         intensityValue = intensity
     } else if isPattern {
         firstColorValue = 0xd6e2ee
         intensityValue = 50
     }
     if let secondColor = secondColor {
-        secondColorValue = Int32(bitPattern: secondColor.rgb)
+        secondColorValue = Int32(bitPattern: secondColor.argb)
     }
     
     return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(color: firstColorValue, bottomColor: secondColorValue, intensity: intensityValue, rotation: rotation))
@@ -554,7 +554,7 @@ public class WallpaperGalleryController: ViewController {
             case let .wallpaper(wallpaper, _):
                 switch wallpaper {
                     case .color:
-                        currentEntry = .wallpaper(.color(Int32(color.rgb)), nil)
+                        currentEntry = .wallpaper(.color(Int32(color.argb)), nil)
                     default:
                         break
                 }

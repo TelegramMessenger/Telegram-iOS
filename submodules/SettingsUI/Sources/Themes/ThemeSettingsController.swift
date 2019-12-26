@@ -539,6 +539,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
+    let removedThemeIndexesPromise = Promise<Set<Int64>>(Set())
+    let removedThemeIndexes = Atomic<Set<Int64>>(value: Set())
+    
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         selectThemeImpl?(theme)
     }, selectFontSize: { fontSize in
@@ -700,7 +703,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
+                            let _ = (cloudThemes.get()
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { themes in
                                 if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
@@ -716,8 +719,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                         }
                                         selectThemeImpl?(newTheme)
                                     }
-                                    
                                 }
+                                
+                                removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                    var updated = value
+                                    updated.insert(theme.theme.id)
+                                    return updated
+                                })))
                                 
                                 let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
                             })
@@ -896,7 +904,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             var items: [ActionSheetItem] = []
                             items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
+                                let _ = (cloudThemes.get()
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { themes in
                                     if isCurrent, let settings = cloudTheme.theme.settings {
@@ -919,6 +927,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                         }
                                     }
                                     
+                                    removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                        var updated = value
+                                        updated.insert(cloudTheme.theme.id)
+                                        return updated
+                                    })))
+                                    
                                     let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: cloudTheme.theme).start()
                                 })
                             }))
@@ -940,8 +954,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let previousThemeReference = Atomic<PresentationThemeReference?>(value: nil)
     let previousAccentColor = Atomic<PresentationThemeAccentColor?>(value: nil)
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get())
+        |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = presentationData.fontSize
@@ -969,7 +983,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
         
-        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }.filter { !removedThemeIndexes.contains($0.index) }
         
         var availableThemes = defaultThemes
         if defaultThemes.first(where: { $0.index == themeReference.index }) == nil && cloudThemes.first(where: { $0.index == themeReference.index }) == nil {

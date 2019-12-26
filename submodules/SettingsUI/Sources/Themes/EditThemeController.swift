@@ -290,7 +290,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         if let wallpaper = wallpaper {
                             return theme.withUpdated(name: nil, defaultWallpaper: wallpaper.wallpaper)
                         } else {
-                            return theme.withUpdated(name: nil, defaultWallpaper: .color(Int32(bitPattern: theme.chatList.backgroundColor.rgb)))
+                            return theme.withUpdated(name: nil, defaultWallpaper: .color(Int32(bitPattern: theme.chatList.backgroundColor.argb)))
                         }
                     }))
                 } else {

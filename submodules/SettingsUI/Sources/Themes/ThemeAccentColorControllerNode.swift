@@ -423,8 +423,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             if let backgroundColors = backgroundColors {
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper {
-                    let color = Int32(bitPattern: backgroundColors.0.rgb)
-                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }
+                    let color = Int32(bitPattern: backgroundColors.0.argb)
+                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }
                     wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
                     
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
@@ -436,10 +436,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     
                     wallpaperSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                 } else if let bottomColor = backgroundColors.1 {
-                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(rotation: state.rotation))
+                    wallpaper = .gradient(Int32(bitPattern: backgroundColors.0.argb), Int32(bitPattern: bottomColor.argb), WallpaperSettings(rotation: state.rotation))
                     wallpaperSignal = gradientImage([backgroundColors.0, bottomColor], rotation: state.rotation)
                 } else {
-                    wallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+                    wallpaper = .color(Int32(bitPattern: backgroundColors.0.argb))
                 }
             } else if let themeReference = mode.themeReference, case let .builtin(theme) = themeReference, state.initialWallpaper == nil {
                 var suggestedWallpaper: TelegramWallpaper
@@ -447,12 +447,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     case .dayClassic:
                         let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                        suggestedWallpaper = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
+                        suggestedWallpaper = .gradient(Int32(bitPattern: topColor.argb), Int32(bitPattern: bottomColor.argb), WallpaperSettings())
                         wallpaperSignal = gradientImage([topColor, bottomColor], rotation: state.rotation)
                         backgroundColors = (topColor, bottomColor)
                     case .nightAccent:
                         let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                        suggestedWallpaper = .color(Int32(bitPattern: color.rgb))
+                        suggestedWallpaper = .color(Int32(bitPattern: color.argb))
                         backgroundColors = (color, nil)
                     default:
                         suggestedWallpaper = .builtin(WallpaperSettings())

@@ -152,8 +152,8 @@ final class ThemeAccentColorController: ViewController {
                 
                 var coloredWallpaper: TelegramWallpaper?
                 if let backgroundColors = state.backgroundColors {
-                    let color = Int32(bitPattern: backgroundColors.0.rgb)
-                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }
+                    let color = Int32(bitPattern: backgroundColors.0.argb)
+                    let bottomColor = backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }
                     
                     if let patternWallpaper = state.patternWallpaper {
                         coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(motion: state.motion, color: color, bottomColor: bottomColor, intensity: state.patternIntensity, rotation: state.rotation))
@@ -167,7 +167,7 @@ final class ThemeAccentColorController: ViewController {
                 let prepare: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
                     let resource = file.file.resource
-                    let representation = CachedPatternWallpaperRepresentation(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: state.patternIntensity, rotation: state.rotation)
+                    let representation = CachedPatternWallpaperRepresentation(color: Int32(bitPattern: backgroundColors.0.argb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.argb) }, intensity: state.patternIntensity, rotation: state.rotation)
                     
                     var data: Data?
                     if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -218,7 +218,7 @@ final class ThemeAccentColorController: ViewController {
                         if hasSettings, let baseTheme = baseTheme {
                             var messageColors: (Int32, Int32)?
                             if let colors = state.messagesColors {
-                                messageColors = (Int32(bitPattern: colors.0.rgb), Int32(bitPattern: colors.1?.rgb ?? colors.0.rgb))
+                                messageColors = (Int32(bitPattern: colors.0.argb), Int32(bitPattern: colors.1?.argb ?? colors.0.argb))
                             }
                             
                             settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: coloredWallpaper)
@@ -473,7 +473,7 @@ final class ThemeAccentColorController: ViewController {
                         if let colors = themeSettings.messageColors {
                             let topMessageColor = UIColor(argb: UInt32(bitPattern: colors.top))
                             let bottomMessageColor = UIColor(argb: UInt32(bitPattern: colors.bottom))
-                            if topMessageColor.rgb == bottomMessageColor.rgb {
+                            if topMessageColor.argb == bottomMessageColor.argb {
                                 messageColors = (topMessageColor, nil)
                             } else {
                                 messageColors = (topMessageColor, bottomMessageColor)
@@ -545,7 +545,7 @@ final class ThemeAccentColorController: ViewController {
                         let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
                         let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill
                         
-                        if topMessageColor.rgb == bottomMessageColor.rgb {
+                        if topMessageColor.argb == bottomMessageColor.argb {
                             messageColors = (topMessageColor, nil)
                         } else {
                             messageColors = (topMessageColor, bottomMessageColor)
@@ -565,7 +565,7 @@ final class ThemeAccentColorController: ViewController {
                 let topMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.fill
                 let bottomMessageColor = theme.chat.message.outgoing.bubble.withWallpaper.gradientFill
                 
-                if topMessageColor.rgb == bottomMessageColor.rgb {
+                if topMessageColor.argb == bottomMessageColor.argb {
                     messageColors = (topMessageColor, nil)
                 } else {
                     messageColors = (topMessageColor, bottomMessageColor)

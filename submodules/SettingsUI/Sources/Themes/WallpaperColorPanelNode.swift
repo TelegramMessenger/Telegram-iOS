@@ -574,7 +574,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
         
-        if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb || self.state.preview != previousPreview {
+        if self.state.firstColor?.argb != previousFirstColor?.argb || self.state.secondColor?.argb != previousSecondColor?.argb || self.state.preview != previousPreview {
             self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, !self.state.preview)
         }
     }
