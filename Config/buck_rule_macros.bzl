@@ -22,6 +22,7 @@ def apple_lib(
         exported_deps = [],
         additional_linker_flags = None,
         exported_preprocessor_flags = [],
+        exported_linker_flags = [],
         frameworks = [],
         weak_frameworks = [],
         swift_version = None,
@@ -115,7 +116,7 @@ def apple_lib(
         else:
             linker_flags = []
 
-        resolved_exported_linker_flags = linker_flags + additional_linker_flags
+        resolved_exported_linker_flags = exported_linker_flags + linker_flags + additional_linker_flags
 
         if native.read_config("custom", "mode") == "project":
             resolved_frameworks = resolved_frameworks + ["$SDKROOT/System/Library/Frameworks/%s.framework" % x for x in weak_frameworks]
@@ -155,6 +156,7 @@ def static_library(
         deps = [],
         additional_linker_flags = None,
         exported_preprocessor_flags = [],
+        exported_linker_flags = [],
         frameworks = [],
         weak_frameworks = [],
         info_plist = None,
@@ -180,6 +182,7 @@ def static_library(
         deps = deps,
         additional_linker_flags = additional_linker_flags,
         exported_preprocessor_flags = exported_preprocessor_flags,
+        exported_linker_flags = exported_linker_flags,
         frameworks = frameworks,
         weak_frameworks = weak_frameworks,
         warning_as_error = warning_as_error,
