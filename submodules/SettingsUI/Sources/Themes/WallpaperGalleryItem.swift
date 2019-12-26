@@ -244,7 +244,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
                         case let .file(file):
-                            let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
+                            let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
                             contentSize = dimensions.cgSize
                             displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
                             
