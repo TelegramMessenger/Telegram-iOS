@@ -220,6 +220,16 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
     }
+    
+    public var generalThemeReference: PresentationThemeReference {
+        let generalThemeReference: PresentationThemeReference
+        if case let .cloud(theme) = self, let settings = theme.theme.settings {
+            generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+        } else {
+            generalThemeReference = self
+        }
+        return generalThemeReference
+    }
 }
 
 public func coloredThemeIndex(reference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?) -> Int64 {

@@ -305,7 +305,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     func prepareCrossfadeTransition() {
-        self.snapshotView?.removeFromSuperview()
+        guard self.snapshotView == nil else {
+            return
+        }
         
         if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
@@ -314,8 +316,13 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     func animateCrossfadeTransition() {
+        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
+            return
+        }
+        
         self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.snapshotView?.removeFromSuperview()
+            self?.snapshotView = nil
         })
     }
     
@@ -603,7 +610,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-                    for var theme in item.themes {
+                    for var theme in item.themes.prefix(1) {
                         if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
                             continue
                         }
@@ -647,7 +654,9 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func prepareCrossfadeTransition() {
-        self.snapshotView?.removeFromSuperview()
+        guard self.snapshotView == nil else {
+            return
+        }
         
         if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
@@ -662,8 +671,13 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func animateCrossfadeTransition() {
+        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
+            return
+        }
+        
         self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.snapshotView?.removeFromSuperview()
+            self?.snapshotView = nil
         })
         
         self.listNode.forEachVisibleItemNode { node in

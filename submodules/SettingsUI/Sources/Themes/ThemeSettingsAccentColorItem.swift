@@ -143,6 +143,15 @@ enum ThemeSettingsColorOption: Equatable {
         }
     }
     
+    var wallpaper: TelegramWallpaper? {
+        switch self {
+            case let .accentColor(color):
+                return color.wallpaper
+            case .theme:
+                return nil
+        }
+    }
+    
     var index: Int64 {
         switch self {
             case let .accentColor(color):
@@ -918,7 +927,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, selected, node, gesture in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.contextAction?(selected, item.themeReference, color, node, gesture)
+                            item.contextAction?(selected, item.generalThemeReference, color, node, gesture)
                         }
                     }
                     let openColorPicker: (Bool) -> Void = { [weak self] create in

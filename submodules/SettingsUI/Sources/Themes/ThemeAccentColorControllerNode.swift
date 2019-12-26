@@ -258,7 +258,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: self.theme, strings: self.presentationData.strings)
         
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
-        if case .edit(_, _, _, true, _) = self.mode {
+        if case .edit(_, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
         } else {
             doneButtonType = .set
@@ -469,7 +469,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
                     updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
-                } else if case let .edit(theme, _, _, _, _) = mode {
+                } else if case let .edit(theme, _, _, _, _, _) = mode {
                     updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors)
                 } else {
                     updatedTheme = theme
@@ -700,7 +700,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 doneButtonType = .apply
                 cancelButtonType = .discard
             } else {
-                if case .edit(_, _, _, true, _) = self.mode {
+                if case .edit(_, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
                 } else {
                     doneButtonType = .set
