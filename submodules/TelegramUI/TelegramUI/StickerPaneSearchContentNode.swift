@@ -35,13 +35,13 @@ private enum StickerSearchEntryId: Equatable, Hashable {
 
 private enum StickerSearchEntry: Identifiable, Comparable {
     case sticker(index: Int, code: String?, stickerItem: FoundStickerItem, theme: PresentationTheme)
-    case global(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool)
+    case global(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, topSeparator: Bool)
     
     var stableId: StickerSearchEntryId {
         switch self {
         case let .sticker(_, code, stickerItem, _):
             return .sticker(code, stickerItem.file.fileId.id)
-        case let .global(_, info, _, _):
+        case let .global(_, info, _, _, _):
             return .global(info.id)
         }
     }
@@ -66,8 +66,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             } else {
                 return false
             }
-        case let .global(index, info, topItems, installed):
-            if case .global(index, info, topItems, installed) = rhs {
+        case let .global(index, info, topItems, installed, topSeparator):
+            if case .global(index, info, topItems, installed, topSeparator) = rhs {
                 return true
             } else {
                 return false
@@ -84,11 +84,11 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             default:
                 return true
             }
-        case let .global(lhsIndex, _, _, _):
+        case let .global(lhsIndex, _, _, _, _):
             switch rhs {
             case .sticker:
                 return false
-            case let .global(rhsIndex, _, _, _):
+            case let .global(rhsIndex, _, _, _, _):
                 return lhsIndex < rhsIndex
             }
         }
@@ -100,8 +100,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
-        case let .global(_, info, topItems, installed):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, installed: installed, unread: false, open: {
+        case let .global(_, info, topItems, installed, topSeparator):
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info)
@@ -322,17 +322,57 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             let local = searchStickerSets(postbox: context.account.postbox, query: text)
             let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
             |> delay(0.2, queue: Queue.mainQueue())
-            let packs = local
+            let rawPacks = local
             |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
                 var localResult = result
                 if let currentRemote = self.currentRemotePacks.with ({ $0 }) {
                     localResult = localResult.merge(with: currentRemote)
                 }
                 return .single((localResult, false, nil))
-                |> then(remote |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
-                    return (result.merge(with: remote), true, remote)
-                })
+                |> then(
+                    remote
+                    |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                        return (result.merge(with: remote), true, remote)
+                    }
+                )
             }
+            
+            let installedPackIds = context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])])
+            |> map { view -> Set<ItemCollectionId> in
+                var installedPacks = Set<ItemCollectionId>()
+                if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
+                    if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
+                        for entry in packsEntries {
+                            installedPacks.insert(entry.id)
+                        }
+                    }
+                }
+                return installedPacks
+            }
+            |> distinctUntilChanged
+            let packs = combineLatest(rawPacks, installedPackIds)
+            |> map { packs, installedPackIds -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                var (localPacks, completed, remotePacks) = packs
+                
+                for i in 0 ..< localPacks.infos.count {
+                    let installed = installedPackIds.contains(localPacks.infos[i].0)
+                    if installed != localPacks.infos[i].3 {
+                        localPacks.infos[i].3 = installed
+                    }
+                }
+                
+                if remotePacks != nil {
+                    for i in 0 ..< remotePacks!.infos.count {
+                        let installed = installedPackIds.contains(remotePacks!.infos[i].0)
+                        if installed != remotePacks!.infos[i].3 {
+                            remotePacks!.infos[i].3 = installed
+                        }
+                    }
+                }
+                
+                return (localPacks, completed, remotePacks)
+            }
+            
             signal = combineLatest(stickers, packs)
             |> map { stickers, packs -> ([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
                 return (stickers, packs.0, packs.1, packs.2)
@@ -374,6 +414,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                             existingStickerIds.insert(id)
                         }
                     }
+                    var isFirstGlobal = true
                     for (collectionId, info, _, installed) in packs.infos {
                         if let info = info as? StickerPackCollectionInfo {
                             var topItems: [StickerPackItem] = []
@@ -384,7 +425,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                                     }
                                 }
                             }
-                            entries.append(.global(index: index, info: info, topItems: topItems, installed: installed))
+                            entries.append(.global(index: index, info: info, topItems: topItems, installed: installed, topSeparator: !isFirstGlobal))
+                            isFirstGlobal = false
                             index += 1
                         }
                     }

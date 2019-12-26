@@ -12,6 +12,7 @@ import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
 import PresentationDataUtils
+import UndoUI
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
@@ -33,8 +34,9 @@ final class TrendingPaneEntry: Identifiable, Comparable {
     let topItems: [StickerPackItem]
     let installed: Bool
     let unread: Bool
+    let topSeparator: Bool
     
-    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool) {
+    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
         self.index = index
         self.info = info
         self.theme = theme
@@ -42,6 +44,7 @@ final class TrendingPaneEntry: Identifiable, Comparable {
         self.topItems = topItems
         self.installed = installed
         self.unread = unread
+        self.topSeparator = topSeparator
     }
     
     var stableId: ItemCollectionId {
@@ -70,6 +73,9 @@ final class TrendingPaneEntry: Identifiable, Comparable {
         if lhs.unread != rhs.unread {
             return false
         }
+        if lhs.topSeparator != rhs.topSeparator {
+            return false
+        }
         return true
     }
     
@@ -79,7 +85,7 @@ final class TrendingPaneEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: grid, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info)
@@ -100,8 +106,8 @@ private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntr
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: true), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: true)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: false), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: false)) }
     
     return TrendingPaneTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
@@ -111,7 +117,7 @@ func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], installedPa
     var index = 0
     for item in trendingEntries {
         if !installedPacks.contains(item.info.id) {
-            result.append(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
+            result.append(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: index != 0))
             index += 1
         }
     }
@@ -167,26 +173,52 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
+                let account = strongSelf.context.account
                 let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<Void, NoError> in
+                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
-                        case let .result(info, items, installed):
-                            if installed {
+                    case let .result(info, items, installed):
+                        if installed {
+                            return .complete()
+                        } else {
+                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                            |> filter { $0 }
+                            |> ignoreValues
+                            |> then(
+                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                                |> ignoreValues
+                            )
+                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                                 return .complete()
-                            } else {
-                                return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
                             }
-                        case .fetching:
-                            break
-                        case .none:
-                            break
+                            |> then(.single((info, items)))
+                        }
+                    case .fetching:
+                        break
+                    case .none:
+                        break
                     }
                     return .complete()
-                } |> deliverOnMainQueue).start(completed: {
-                    if let strongSelf = self {
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                }
+                |> deliverOnMainQueue).start(next: { info, items in
+                    guard let strongSelf = self else {
+                        return
                     }
+                    
+                    var animateInAsReplacement = false
+                    if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        return true
+                    }))
                 })
             }
         }, openPack: { [weak self] info in

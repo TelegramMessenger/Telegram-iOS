@@ -652,7 +652,12 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 
-                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                switch selectedType {
+                case .publicChannel:
+                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                case .privateChannel:
+                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
+                }
                 
                 switch selectedType {
                     case .publicChannel:
