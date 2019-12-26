@@ -13,6 +13,7 @@ static_library(
         "-DSVGKitLogWarn(...)=1",
         "-DSVGKitLogError(...)=1",
         "-DSVGKitLogInfo(...)=1",
+        "-I$SDKROOT/usr/include/libxml2",
     ],
     headers = glob([
         "Sources/**/*.h",
@@ -20,10 +21,7 @@ static_library(
     exported_headers = glob([
         "Sources/*.h",
     ]),
-    exported_preprocessor_flags = [
-        "-I${SDKROOT}/usr/include/libxml2",
-    ],
-    frameworks = [
-        "$SDKROOT/System/Library/Frameworks/libxml2.tbd",
+    exported_linker_flags = [
+        "-lxml2",
     ],
 )

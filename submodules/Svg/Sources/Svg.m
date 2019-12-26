@@ -9,7 +9,7 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
     
     SVGKImage *image = [[SVGKImage alloc] initWithData:data];
     if (image == nil) {
-        return;
+        return nil;
     }
     
     double deltaTime = -1.0f * [startTime timeIntervalSinceNow];

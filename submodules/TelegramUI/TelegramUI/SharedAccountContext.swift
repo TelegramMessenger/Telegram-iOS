@@ -1080,7 +1080,48 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PeerSelectionControllerImpl(params)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil) -> ListViewItem {
+        let controllerInteraction: ChatControllerInteraction
+        if tapMessage != nil || clickThroughMessage != nil {
+            controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
+                return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, tapMessage: { message in
+                tapMessage?(message)
+                }, clickThroughMessage: {
+                    clickThroughMessage?()
+                }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+               }, presentController: { _, _ in }, navigationController: {
+                   return nil
+               }, chatControllerNode: {
+                   return nil
+               }, reactionContainerNode: {
+                   return nil
+               }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+               }, canSetupReply: { _ in
+                   return false
+               }, navigateToFirstDateMessage: { _ in
+               }, requestRedeliveryOfFailedMessages: { _ in
+               }, addContact: { _ in
+               }, rateCall: { _, _ in
+               }, requestSelectMessagePollOption: { _, _ in
+               }, openAppStorePage: {
+               }, displayMessageTooltip: { _, _, _, _ in
+               }, seekToTimecode: { _, _, _ in
+               }, scheduleCurrentMessage: {
+               }, sendScheduledMessagesNow: { _ in
+               }, editScheduledMessagesTime: { _ in
+               }, performTextSelectionAction: { _, _, _ in
+               }, updateMessageReaction: { _, _ in
+               }, openMessageReactions: { _ in
+               }, displaySwipeToReplyHint: {
+               }, dismissReplyMarkupMessage: { _ in
+               }, requestMessageUpdate: { _ in
+               }, cancelInteractiveKeyboardGestures: {
+               }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+                  pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
+        } else {
+            controllerInteraction = defaultChatControllerInteraction
+        }
+        
         return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: .peer(message.id.peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: defaultChatControllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true, additionalContent: nil)
     }
     
