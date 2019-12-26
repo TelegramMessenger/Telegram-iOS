@@ -21,7 +21,7 @@ static_library(
     exported_headers = glob([
         "Sources/*.h",
     ]),
-    frameworks = [
-        "$SDKROOT/System/Library/Frameworks/libxml2.tbd",
+    exported_linker_flags = [
+        "-lxml2",
     ],
 )
