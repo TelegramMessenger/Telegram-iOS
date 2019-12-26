@@ -13,6 +13,7 @@ import LocalMediaResources
 import TelegramPresentationData
 import TelegramUIPreferences
 import AppBundle
+import Svg
 
 public func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
@@ -193,11 +194,15 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
             var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
-                    let options = NSMutableDictionary()
-                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
-                    if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
-                        imageOrientation = imageOrientationFromSource(imageSource)
-                        fullSizeImage = image
+                    if fullSizeData.count > 5, let string = String(data: fullSizeData.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
+                        fullSizeImage = drawSvgImage(fullSizeData, fittedRect.size)?.cgImage
+                    } else {
+                        let options = NSMutableDictionary()
+                        options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                        if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                            imageOrientation = imageOrientationFromSource(imageSource)
+                            fullSizeImage = image
+                        }
                     }
                 } else {
                     let imageSource = CGImageSourceCreateIncremental(nil)
