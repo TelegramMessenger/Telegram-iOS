@@ -631,7 +631,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             gesture?.cancel()
         }, navigateToMessage: { [weak self] fromId, id in
             self?.navigateToMessage(from: fromId, to: .id(id))
-        }, clickThroughMessage: { [weak self] in
+        }, tapMessage: nil, clickThroughMessage: { [weak self] in
             self?.chatDisplayNode.dismissInput()
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {

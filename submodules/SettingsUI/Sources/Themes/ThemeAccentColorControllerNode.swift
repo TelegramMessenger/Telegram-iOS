@@ -589,8 +589,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.colorPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.patternPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.chatTapped))
-        self.scrollNode.view.addGestureRecognizer(tapGestureRecognizer)
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.chatTapped(_:)))
+//        self.scrollNode.view.addGestureRecognizer(tapGestureRecognizer)
         self.tapGestureRecognizer = tapGestureRecognizer
     }
     
@@ -852,8 +852,18 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let message8 = Message(stableId: 8, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 8), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66007, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
         sampleMessages.append(message8)
         
+        
         items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: self.theme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil)
+            let item = self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: self.theme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: { [weak self] message in
+                if message.flags.contains(.Incoming) {
+                    self?.updateSection(.accent)
+                } else {
+                    self?.updateSection(.messages)
+                }
+            }, clickThroughMessage: { [weak self] in
+                self?.updateSection(.background)
+            })
+            return item
         }
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
@@ -868,7 +878,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     itemNode.contentSize = layout.contentSize
                     itemNode.insets = layout.insets
                     itemNode.frame = nodeFrame
-                    itemNode.isUserInteractionEnabled = false
                     
                     apply(ListViewItemApply(isOnScreen: true))
                 })
@@ -882,7 +891,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
                 itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
                 self.messagesContainerNode.addSubnode(itemNode!)
             }
@@ -1031,16 +1039,16 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
-    @objc private func chatTapped() {
-        self.updateState({ current in
-            var updated = current
-            if updated.displayPatternPanel {
-                updated.displayPatternPanel = false
-            } else {
-                updated.colorPanelCollapsed = !updated.colorPanelCollapsed
-            }
-            return updated
-        }, animated: true)
+    @objc private func chatTapped(_ gestureRecognizer: UITapGestureRecognizer) {
+//        self.updateState({ current in
+//            var updated = current
+//            if updated.displayPatternPanel {
+//                updated.displayPatternPanel = false
+//            } else {
+//                updated.colorPanelCollapsed = !updated.colorPanelCollapsed
+//            }
+//            return updated
+//        }, animated: true)
     }
     
     @objc private func toggleMotion() {
@@ -1052,6 +1060,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     }
     
     @objc private func togglePattern() {
+        self.view.endEditing(true)
+        
         let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
         let backgroundColors = self.currentBackgroundColors
         

@@ -66,7 +66,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessageContextMenu: { _, _, _, _, _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in
-        }, clickThroughMessage: {
+        }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in

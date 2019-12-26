@@ -49,7 +49,7 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
             }
         case let .cloud(info):
             if let settings = info.theme.settings {
-                if let loadedTheme = makePresentationTheme(mediaBox: mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), extendingThemeReference: themeReference, accentColor: accentColor ?? UIColor(rgb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: bubbleColors ?? settings.messageColors.flatMap { (UIColor(rgb: UInt32(bitPattern: $0.top)), UIColor(rgb: UInt32(bitPattern: $0.bottom))) }, wallpaper:  wallpaper ?? settings.wallpaper, serviceBackgroundColor: serviceBackgroundColor, preview: preview) {
+                if let loadedTheme = makePresentationTheme(mediaBox: mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), extendingThemeReference: themeReference, accentColor: accentColor ?? UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: bubbleColors ?? settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper:  wallpaper ?? settings.wallpaper, serviceBackgroundColor: serviceBackgroundColor, preview: preview) {
                     theme = loadedTheme
                 } else {
                     return nil

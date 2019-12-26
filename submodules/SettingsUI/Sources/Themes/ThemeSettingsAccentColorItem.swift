@@ -95,7 +95,7 @@ enum ThemeSettingsColorOption: Equatable {
                 return color.color
             case let .theme(reference):
                 if case let .cloud(theme) = reference, let settings = theme.theme.settings {
-                    return UIColor(rgb: UInt32(bitPattern: settings.accentColor))
+                    return UIColor(argb: UInt32(bitPattern: settings.accentColor))
                 } else {
                     return nil
                 }
@@ -117,7 +117,7 @@ enum ThemeSettingsColorOption: Equatable {
                 return color.plainBubbleColors
             case let .theme(reference):
                 if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    return (UIColor(rgb: UInt32(bitPattern: messageColors.top)), UIColor(rgb: UInt32(bitPattern: messageColors.bottom)))
+                    return (UIColor(argb: UInt32(bitPattern: messageColors.top)), UIColor(argb: UInt32(bitPattern: messageColors.bottom)))
                 } else {
                     return nil
                 }
@@ -130,9 +130,9 @@ enum ThemeSettingsColorOption: Equatable {
                 return color.customBubbleColors
             case let .theme(reference):
                 if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    let topColor = UIColor(rgb: UInt32(bitPattern: messageColors.top))
-                    let bottomColor = UIColor(rgb: UInt32(bitPattern: messageColors.bottom))
-                    if topColor.rgb != bottomColor.rgb {
+                    let topColor = UIColor(argb: UInt32(bitPattern: messageColors.top))
+                    let bottomColor = UIColor(argb: UInt32(bitPattern: messageColors.bottom))
+                    if topColor.argb != bottomColor.argb {
                         return (topColor, bottomColor)
                     } else {
                         return (topColor, nil)

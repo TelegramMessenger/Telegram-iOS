@@ -116,10 +116,12 @@ public enum ThemeUpdatedResult {
 }
 
 private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal<ThemeUpdatedResult, GetThemeError> {
-    guard let file = theme.file, let fileId = file.id?.id else {
+    
+    let id = theme.settings != nil ? 0 : theme.file?.id?.id
+    guard let documentId = id else {
         return .fail(.generic)
     }
-    return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
+    return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: documentId))
     |> mapError { _ -> GetThemeError in return .generic }
     |> map { theme -> ThemeUpdatedResult in
         if let theme = TelegramTheme(apiTheme: theme) {
@@ -547,6 +549,9 @@ private func areThemesEqual(_ lhs: TelegramTheme, _ rhs: TelegramTheme) -> Bool 
         return false
     }
     if lhs.file?.id != rhs.file?.id {
+        return false
+    }
+    if lhs.settings != rhs.settings {
         return false
     }
     return true
