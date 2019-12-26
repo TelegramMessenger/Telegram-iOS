@@ -798,7 +798,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 var index = 0
                 for item in trendingPacks {
                     if !installedPacks.contains(item.info.id) {
-                        gridEntries.append(.trending(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread)))
+                        gridEntries.append(.trending(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
                         index += 1
                     }
                 }
@@ -1159,14 +1159,14 @@ final class ChatMediaInputNode: ChatInputNode {
         
         if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
-            let previousTrendingPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
+            //let previousTrendingPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
             let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
-            let updatedTrendingPanelIsActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
+            //let updatedTrendingPanelIsActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
             
-            if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
                 transition = .immediate
-            }
+            }*/
             
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: transition, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
@@ -1187,7 +1187,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 case .trending:
                     self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
             }
-            if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
                 self.controllerInteraction.updateInputMode { current in
                     switch current {
                     case let .media(mode, _):
@@ -1200,7 +1200,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         return current
                     }
                 }
-            }
+            }*/
         } else {
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)

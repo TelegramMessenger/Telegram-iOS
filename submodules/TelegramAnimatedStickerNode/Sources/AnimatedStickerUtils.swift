@@ -183,7 +183,7 @@ private let threadPool: ThreadPool = {
 }()
 
 @available(iOS 9.0, *)
-public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<Data, NoError> {
+public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         let cancelled = Atomic<Bool>(value: false)
         
@@ -212,19 +212,36 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                     
                     var currentFrame: Int32 = 0
                     
-                    let writeBuffer = WriteBuffer()
+                    //let writeBuffer = WriteBuffer()
+                    let tempFile = TempBox.shared.tempFile(fileName: "result.asticker")
+                    guard let file = ManagedFile(queue: nil, path: tempFile.path, mode: .readwrite) else {
+                        return
+                    }
+                    
+                    func writeData(_ data: UnsafeRawPointer, length: Int) {
+                        file.write(data, count: length)
+                    }
+                    
+                    func commitData() {
+                    }
+                    
+                    func completeWithCurrentResult() {
+                        subscriber.putNext(.tempFile(tempFile))
+                        subscriber.putCompletion()
+                    }
+                    
                     var numberOfFramesCommitted = 0
                     
                     var fps: Int32 = player.frameRate
                     var frameCount: Int32 = player.frameCount
-                    writeBuffer.write(&fps, length: 4)
-                    writeBuffer.write(&frameCount, length: 4)
+                    writeData(&fps, length: 4)
+                    writeData(&frameCount, length: 4)
                     var widthValue: Int32 = Int32(size.width)
                     var heightValue: Int32 = Int32(size.height)
                     var bytesPerRowValue: Int32 = Int32(bytesPerRow)
-                    writeBuffer.write(&widthValue, length: 4)
-                    writeBuffer.write(&heightValue, length: 4)
-                    writeBuffer.write(&bytesPerRowValue, length: 4)
+                    writeData(&widthValue, length: 4)
+                    writeData(&heightValue, length: 4)
+                    writeData(&bytesPerRowValue, length: 4)
                     
                     let frameLength = bytesPerRow * Int(size.height)
                     assert(frameLength % 16 == 0)
@@ -293,8 +310,8 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
                             let length = compression_encode_buffer(bytes, compressedFrameDataLength, previousYuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
                             var frameLengthValue: Int32 = Int32(length)
-                            writeBuffer.write(&frameLengthValue, length: 4)
-                            writeBuffer.write(bytes, length: length)
+                            writeData(&frameLengthValue, length: 4)
+                            writeData(bytes, length: length)
                         }
                         
                         let tmp = previousYuvaFrameData
@@ -310,20 +327,14 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         if numberOfFramesCommitted >= 5 {
                             numberOfFramesCommitted = 0
                             
-                            subscriber.putNext(writeBuffer.makeData())
-                            writeBuffer.reset()
-                            
-                            /*#if DEBUG
-                            usleep(500000)
-                            #endif*/
+                            commitData()
                         }
                         
                     }
                     
-                    if writeBuffer.length != 0 {
-                        subscriber.putNext(writeBuffer.makeData())
-                    }
+                    commitData()
                     
+                    completeWithCurrentResult()
                     subscriber.putCompletion()
                     /*print("animation render time \(CACurrentMediaTime() - startTime)")
                     print("of which drawing time \(drawingTime)")

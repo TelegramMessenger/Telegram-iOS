@@ -5238,4 +5238,5 @@ Any member of this group will be able to see messages in the channel.";
 "StickerPackActionInfo.AddedTitle" = "Stickers Added";
 "StickerPackActionInfo.AddedText" = "%@ has been added to your stickers.";
 "StickerPackActionInfo.RemovedTitle" = "Stickers Removed";
+"StickerPackActionInfo.ArchivedTitle" = "Stickers Archived";
 "StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";

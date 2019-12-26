@@ -39,6 +39,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let info: StickerPackCollectionInfo
     let topItems: [StickerPackItem]
     let grid: Bool
+    let topSeparator: Bool
     let installed: Bool
     let unread: Bool
     let open: () -> Void
@@ -47,16 +48,17 @@ final class StickerPaneSearchGlobalItem: GridItem {
     
     let section: GridSection? = StickerPaneSearchGlobalSection()
     var fillsRowWithHeight: CGFloat? {
-        return self.grid ? nil : 128.0
+        return self.grid ? nil : (128.0 + (self.topSeparator ? 12.0 : 0.0))
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.info = info
         self.topItems = topItems
         self.grid = grid
+        self.topSeparator = topSeparator
         self.installed = installed
         self.unread = unread
         self.open = open
@@ -91,6 +93,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let installBackgroundNode: ASImageNode
     private let installButtonNode: HighlightTrackingButtonNode
     private var itemNodes: [TrendingTopItemNode]
+    private let topSeparatorNode: ASDisplayNode
     
     private var item: StickerPaneSearchGlobalItem?
     private var appliedItem: StickerPaneSearchGlobalItem?
@@ -134,6 +137,9 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         self.installButtonNode = HighlightTrackingButtonNode()
         
+        self.topSeparatorNode = ASDisplayNode()
+        self.topSeparatorNode.isLayerBacked = true
+        
         self.itemNodes = []
         
         super.init()
@@ -144,6 +150,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.addSubnode(self.installBackgroundNode)
         self.addSubnode(self.installTextNode)
         self.addSubnode(self.installButtonNode)
+        self.addSubnode(self.topSeparatorNode)
         
         self.installButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -193,6 +200,15 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         let params = ListViewItemLayoutParams(width: self.bounds.size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: self.bounds.height)
         
+        var topOffset: CGFloat = 12.0
+        if item.topSeparator {
+            topOffset += 12.0
+        }
+        
+        self.topSeparatorNode.isHidden = !item.topSeparator
+        self.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: CGSize(width: params.width - 16.0 * 2.0, height: UIScreenPixel))
+        self.topSeparatorNode.backgroundColor = item.theme.chat.inputMediaPanel.stickersSectionTextColor.withAlphaComponent(0.3)
+        
         let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
@@ -208,7 +224,6 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         
         let leftInset: CGFloat = 14.0
         let rightInset: CGFloat = 16.0
-        let topOffset: CGFloat = 12.0
         
         let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Stickers_Install, font: buttonFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
