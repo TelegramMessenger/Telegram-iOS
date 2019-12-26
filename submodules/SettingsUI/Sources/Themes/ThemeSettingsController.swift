@@ -1244,11 +1244,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 return themeReference
             }
             |> deliverOnMainQueue).start(next: { themeReference in
-                let defaultThemeReference: PresentationThemeReference?
-                if case .builtin = themeReference {
-                    defaultThemeReference = themeReference
-                }
-                
                 let controller = ThemeAccentColorController(context: context, mode: .edit(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, generalThemeReference: themeReference.generalThemeReference, defaultThemeReference: themeReference, create: true, completion: { result, settings in
                     let controller = editThemeController(context: context, mode: .create(result, settings), navigateToChat: { peerId in
                         if let navigationController = getNavigationControllerImpl?() {

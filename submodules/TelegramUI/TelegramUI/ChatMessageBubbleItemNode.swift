@@ -2302,6 +2302,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
                     switch tapAction {
                         case .none, .ignore:
+                            if let item = self.item, let tapMessage = self.item?.controllerInteraction.tapMessage {
+                                foundTapAction = true
+                                tapMessage(item.message)
+                            }
                             break
                         case let .url(url, concealed):
                             foundTapAction = true
