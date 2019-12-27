@@ -8,23 +8,10 @@ static_library(
         "Sources/**/*.c",
         "Sources/**/*.cpp",
     ]),
-    compiler_flags = [
-        "-DSVGKitLogVerbose(...)=1",
-        "-DSVGKitLogWarn(...)=1",
-        "-DSVGKitLogError(...)=1",
-        "-DSVGKitLogInfo(...)=1",
-        "-I$SDKROOT/usr/include/libxml2",
-    ],
     headers = glob([
         "Sources/**/*.h",
     ]),
-    exported_headers = glob([
-        "Sources/*.h",
-    ]),
-    exported_linker_flags = [
-        "-lxml2",
-    ],
-    deps = [
-        "//submodules/GZip:GZip",
+    exported_headers = [
+        "Sources/Svg.h",
     ],
 )
