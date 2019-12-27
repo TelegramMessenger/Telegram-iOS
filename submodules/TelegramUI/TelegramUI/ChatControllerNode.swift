@@ -227,7 +227,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
-        if self.chatPresentationInterfaceState.chatWallpaper == self.chatPresentationInterfaceState.theme.chat.defaultWallpaper, case .color = self.chatPresentationInterfaceState.chatWallpaper {
+        if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
             self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
             self.usePlainInputSeparator = true
         } else {
@@ -1454,7 +1454,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.navigateButtons.updateTheme(theme: chatPresentationInterfaceState.theme)
             
             if themeUpdated {
-                if self.chatPresentationInterfaceState.chatWallpaper == self.chatPresentationInterfaceState.theme.chat.defaultWallpaper, case .color = self.chatPresentationInterfaceState.chatWallpaper {
+                if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
                     self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
                     self.usePlainInputSeparator = true
                 } else {
