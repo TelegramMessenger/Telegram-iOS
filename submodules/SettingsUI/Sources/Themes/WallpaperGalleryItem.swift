@@ -337,7 +337,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             } else {
                                 subtitleSignal = .single(nil)
                             }
-                            actionSignal = .single(defaultAction)
+                            if file.id == 0 {
+                                actionSignal = .single(nil)
+                            } else {
+                                actionSignal = .single(defaultAction)
+                            }
                         case let .image(representations, _):
                             if let largestSize = largestImageRepresentation(representations) {
                                 contentSize = largestSize.dimensions.cgSize

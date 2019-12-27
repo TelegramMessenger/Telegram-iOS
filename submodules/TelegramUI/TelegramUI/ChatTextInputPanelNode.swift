@@ -726,7 +726,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight
                 
                 let backgroundColor: UIColor
-                if interfaceState.theme.chat.defaultWallpaper == interfaceState.chatWallpaper, case .color = interfaceState.chatWallpaper {
+                if case let .color(color) = interfaceState.chatWallpaper, UIColor(rgb: color).isEqual(interfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
                     backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper
                 } else {
                     backgroundColor = interfaceState.theme.chat.inputPanel.panelBackgroundColor

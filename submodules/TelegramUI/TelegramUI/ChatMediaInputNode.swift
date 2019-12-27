@@ -460,7 +460,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
         
-        if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+        if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
             self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
         } else {
             self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
@@ -923,7 +923,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self.theme = theme
             self.strings = strings
             
-            if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+            if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
                 self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
             } else {
                 self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
