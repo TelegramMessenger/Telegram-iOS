@@ -128,7 +128,6 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     }
     
     func updateWallpapers() {
-        return
         guard let subnodes = self.scrollNode.subnodes else {
             return
         }
