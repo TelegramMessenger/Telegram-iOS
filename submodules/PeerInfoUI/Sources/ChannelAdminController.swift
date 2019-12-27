@@ -1121,22 +1121,31 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 dismissImpl?()
                             }))
                         } else if updateFlags != defaultFlags || updateRank != nil {
+                            enum WrappedUpdateChannelAdminRightsError {
+                                case direct(UpdateChannelAdminRightsError)
+                                case conversionTooManyChannels
+                                case conversionFailed
+                            }
+                            
                             let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                             |> map(Optional.init)
-                            |> `catch` { error -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                            |> `catch` { error -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                 switch error {
                                 case .tooManyChannels:
-                                    return .fail(.addMemberError(.tooMuchJoined))
+                                    return .fail(.conversionTooManyChannels)
                                 default:
-                                    return .fail(.generic)
+                                    return .fail(.conversionFailed)
                                 }
                             }
-                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                 guard let upgradedPeerId = upgradedPeerId else {
-                                    return .fail(.generic)
+                                    return .fail(.conversionFailed)
                                 }
                                 return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank)
-                                |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                                |> mapError { error -> WrappedUpdateChannelAdminRightsError in
+                                    return .direct(error)
+                                }
+                                |> mapToSignal { _ -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                     return .complete()
                                 }
                                 |> then(.single(upgradedPeerId))
@@ -1157,15 +1166,19 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     return current.withUpdatedUpdating(false)
                                 }
                                 
-                                if case let .addMemberError(error) = error {
-                                    var text = presentationData.strings.Login_UnknownError
-                                    if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                    } else if case .tooMuchJoined = error {
-                                        pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
-                                        return
+                                switch error {
+                                case let .direct(error):
+                                    if case let .addMemberError(error) = error {
+                                        var text = presentationData.strings.Login_UnknownError
+                                        if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        } else if case .tooMuchJoined = error {
+                                            text = presentationData.strings.Invite_ChannelsTooMuch
+                                        }
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                case .conversionFailed, .conversionTooManyChannels:
+                                    pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
                                 }
                                 
                                 dismissImpl?()
