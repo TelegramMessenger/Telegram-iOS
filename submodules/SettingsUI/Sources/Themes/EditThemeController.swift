@@ -14,6 +14,7 @@ import PresentationDataUtils
 import LegacyMediaPickerUI
 import WallpaperResources
 import AccountContext
+import MediaResources
 
 private final class EditThemeControllerArguments {
     let context: AccountContext
@@ -503,11 +504,40 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         resolvedWallpaper = nil
                     }
                     
+                    
+                    let prepare: Signal<CreateThemeResult, CreateThemeError>
+                    if let resolvedWallpaper = resolvedWallpaper, case let .file(file) = resolvedWallpaper, resolvedWallpaper.isPattern {
+                        let resource = file.file.resource
+                        let representation = CachedPatternWallpaperRepresentation(color: file.settings.color ?? 0xd6e2ee, bottomColor: file.settings.bottomColor, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
+                        
+                        var data: Data?
+                        if let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            data = maybeData
+                        } else if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            data = maybeData
+                        }
+                        
+                        if let data = data {
+                            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                            prepare = (context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                            |> filter({ $0.complete })
+                            |> take(1)
+                            |> castError(CreateThemeError.self)
+                            |> mapToSignal { _ -> Signal<CreateThemeResult, CreateThemeError> in
+                                return .complete()
+                            })
+                        } else {
+                            prepare = .complete()
+                        }
+                    } else {
+                        prepare = .complete()
+                    }
+                    
                     switch mode {
                         case .create:
                             if let themeResource = themeResource {
-                                let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData, settings: settings)
-                                |> deliverOnMainQueue).start(next: { next in
+                                let _ = (prepare |> then(createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData, settings: settings)
+                                |> deliverOnMainQueue)).start(next: { next in
                                     if case let .result(resultTheme) = next {
                                         let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                         let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
@@ -540,8 +570,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 })
                             }
                         case let .edit(info):
-                            let _ = (updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource, settings: settings)
-                            |> deliverOnMainQueue).start(next: { next in
+                            let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource, settings: settings)
+                            |> deliverOnMainQueue)).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in

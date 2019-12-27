@@ -26,7 +26,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let wallpaper: TelegramWallpaper?
     
     var stableId: Int64 {
-        return self.themeReference.index
+        return self.themeReference.generalThemeReference.index
     }
     
     static func ==(lhs: ThemeSettingsThemeEntry, rhs: ThemeSettingsThemeEntry) -> Bool {
