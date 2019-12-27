@@ -7,6 +7,7 @@ import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import StickerPackPreviewUI
 
 final class StickerPaneSearchGlobalSection: GridSection {
     let height: CGFloat = 0.0
@@ -41,6 +42,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let grid: Bool
     let topSeparator: Bool
     let installed: Bool
+    let installing: Bool
     let unread: Bool
     let open: () -> Void
     let install: () -> Void
@@ -51,7 +53,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         return self.grid ? nil : (128.0 + (self.topSeparator ? 12.0 : 0.0))
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -60,6 +62,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.grid = grid
         self.topSeparator = topSeparator
         self.installed = installed
+        self.installing = installing
         self.unread = unread
         self.open = open
         self.install = install
@@ -98,12 +101,21 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private var item: StickerPaneSearchGlobalItem?
     private var appliedItem: StickerPaneSearchGlobalItem?
     private let preloadDisposable = MetaDisposable()
+    private let preloadedStickerPackThumbnailDisposable = MetaDisposable()
+    
+    private var preloadedThumbnail = false
     
     override var isVisibleInGrid: Bool {
         didSet {
             if oldValue != self.isVisibleInGrid {
                 for node in self.itemNodes {
                     node.visibility = self.isVisibleInGrid
+                }
+                
+                if let item = self.item, self.isVisibleInGrid, !self.preloadedThumbnail {
+                    self.preloadedThumbnail = true
+                    
+                    self.preloadedStickerPackThumbnailDisposable.set(preloadedStickerPackThumbnail(account: item.account, info: item.info, items: item.topItems).start())
                 }
             }
         }
@@ -173,6 +185,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     
     deinit {
         self.preloadDisposable.dispose()
+        self.preloadedStickerPackThumbnailDisposable.dispose()
     }
     
     override func didLoad() {
