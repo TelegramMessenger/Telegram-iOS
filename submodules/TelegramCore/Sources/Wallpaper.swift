@@ -31,7 +31,7 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if let _ = wallpaperSettings.bottomColor {
         flags |= (1 << 4)
     }
-    return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color.flatMap { Int32(bitPattern: $0) }, secondBackgroundColor: wallpaperSettings.bottomColor.flatMap { Int32(bitPattern: $0) }, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation)
+    return .wallPaperSettings(flags: flags, backgroundColor: wallpaperSettings.color.flatMap { Int32(bitPattern: $0) }, secondBackgroundColor: wallpaperSettings.bottomColor.flatMap { Int32(bitPattern: $0) }, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0)
 }
 
 extension TelegramWallpaper {

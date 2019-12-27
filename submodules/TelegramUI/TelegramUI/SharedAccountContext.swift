@@ -878,7 +878,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeTempAccountContext(account: Account) -> AccountContext {
-        return AccountContextImpl(sharedContext: self, account: account, tonContext: nil, limitsConfiguration: .defaultValue, contentSettings: .default)
+        return AccountContextImpl(sharedContext: self, account: account, tonContext: nil, limitsConfiguration: .defaultValue, contentSettings: .default, temp: true)
     }
     
     public func openChatMessage(_ params: OpenChatMessageParams) -> Bool {

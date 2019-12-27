@@ -52,13 +52,13 @@ final class ThemeAccentColorController: ViewController {
     private var controllerNode: ThemeAccentColorControllerNode {
         return self.displayNode as! ThemeAccentColorControllerNode
     }
-
-    private let segmentedTitleView: ThemeColorSegmentedTitleView
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self._ready
     }
+
+    private let segmentedTitleView: ThemeColorSegmentedTitleView
     
     var completion: (() -> Void)?
     
@@ -239,7 +239,7 @@ final class ThemeAccentColorController: ViewController {
                         baseTheme = .classic
                     }
                     
-                    var wallpaper: TelegramWallpaper? = nil // themeSpecificChatWallpapers[currentTheme.index]
+                    var wallpaper: TelegramWallpaper? = nil //themeSpecificChatWallpapers[theme.index]
                     if let coloredWallpaper = coloredWallpaper {
                         wallpaper = coloredWallpaper
                     }
@@ -322,8 +322,6 @@ final class ThemeAccentColorController: ViewController {
                             }
                         }, error: { _ in
                         })
-                    } else {
-                       
                     }
                 } else if case .background = strongSelf.mode {
                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
@@ -345,7 +343,7 @@ final class ThemeAccentColorController: ViewController {
                     })
                 }
             }
-        })
+        }, ready: self._ready)
         self.controllerNode.themeUpdated = { [weak self] theme in
             if let strongSelf = self {
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: theme, presentationStrings: strongSelf.presentationData.strings))
@@ -410,7 +408,7 @@ final class ThemeAccentColorController: ViewController {
                     backgroundColors = nil
                 }
             }
-        
+            
             if let themeReference = strongSelf.mode.themeReference {
                 var wallpaper: TelegramWallpaper
         
@@ -605,7 +603,6 @@ final class ThemeAccentColorController: ViewController {
             strongSelf.controllerNode.updateState({ _ in
                 return initialState
             }, animated: false)
-            strongSelf._ready.set(.single(true))
         })
         self.displayNodeDidLoad()
     }

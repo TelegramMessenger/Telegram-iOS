@@ -173,12 +173,11 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
     return .single(theme)
     |> map { theme -> (TransformImageArguments) -> DrawingContext? in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: false)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             let drawingRect = arguments.drawingRect
             
             context.withContext { c in
-                c.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
-                c.fill(drawingRect)
+                c.clear(CGRect(origin: CGPoint(), size: drawingRect.size))
                 
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
                 c.scaleBy(x: 1.0, y: -1.0)
@@ -200,7 +199,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
     private let titleNode: TextNode
-    private var snapshotView: UIView?
+    var snapshotView: UIView?
     
     var item: ThemeSettingsThemeIconItem?
 
@@ -675,15 +674,29 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             return
         }
         
-        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
-            self?.snapshotView?.removeFromSuperview()
-            self?.snapshotView = nil
-        })
+        var views: [UIView] = []
+        if let snapshotView = self.snapshotView {
+            views.append(snapshotView)
+            self.snapshotView = nil
+        }
         
         self.listNode.forEachVisibleItemNode { node in
             if let node = node as? ThemeSettingsThemeItemIconNode {
-                node.animateCrossfadeTransition()
+                if let snapshotView = node.snapshotView {
+                    views.append(snapshotView)
+                    node.snapshotView = nil
+                }
             }
         }
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            for view in views {
+                view.alpha = 0.0
+            }
+        }, completion: { _ in
+            for view in views {
+                view.removeFromSuperview()
+            }
+        })
     }
 }

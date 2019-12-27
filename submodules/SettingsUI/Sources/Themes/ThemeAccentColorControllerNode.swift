@@ -158,6 +158,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let mode: ThemeAccentColorControllerMode
     private var presentationData: PresentationData
     
+    private let ready: Promise<Bool>
+    
     private let queue = Queue()
     
     private var state: ThemeColorState
@@ -215,13 +217,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
         self.context = context
         self.mode = mode
         self.state = ThemeColorState()
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme
         self.wallpaper = self.presentationData.chatWallpaper
+        
+        self.ready = ready
         
         let calendar = Calendar(identifier: .gregorian)
         var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: Date())
@@ -299,9 +303,28 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.backgroundWrapperNode.addSubnode(self.immediateBackgroundNode)
         self.backgroundWrapperNode.addSubnode(self.signalBackgroundNode)
         
+        self.signalBackgroundNode.imageUpdated = { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.ready.set(.single(true))
+                strongSelf.signalBackgroundNode.contentAnimations = []
+            }
+        }
+        
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
-                
+               
+        self.colorPanelNode.colorAdded = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
+            }
+        }
+        
+        self.colorPanelNode.colorRemoved = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.signalBackgroundNode.contentAnimations = [.subsequentUpdates]
+            }
+        }
+        
         self.colorPanelNode.colorsChanged = { [weak self] firstColor, secondColor, ended in
             if let strongSelf = self, let section = strongSelf.state.section {
                 strongSelf.updateState({ current in
@@ -516,12 +539,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 strongSelf.signalBackgroundNode.contentAnimations = []
                 strongSelf.signalBackgroundNode.reset()
                 strongSelf.patternWallpaper = nil
+                strongSelf.ready.set(.single(true) )
             } else if let wallpaperImage = wallpaperImage {
                 strongSelf.immediateBackgroundNode.image = wallpaperImage
                 strongSelf.signalBackgroundNode.isHidden = true
                 strongSelf.signalBackgroundNode.contentAnimations = []
                 strongSelf.signalBackgroundNode.reset()
                 strongSelf.patternWallpaper = nil
+                strongSelf.ready.set(.single(true) )
             } else if let wallpaperSignal = wallpaperSignal {
                 strongSelf.signalBackgroundNode.contentMode = .scaleToFill
                 strongSelf.signalBackgroundNode.isHidden = false
@@ -670,7 +695,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
 
             self.colorPanelNode.updateState({ _ in
-                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation ?? 0, preview: false)
+                return WallpaperColorPanelNodeState(selection: colorPanelCollapsed ? .none : .first, firstColor: firstColor, defaultColor: defaultColor, secondColor: secondColor, secondColorAvailable: self.state.section != .accent, rotateAvailable: self.state.section == .background, rotation: self.state.rotation ?? 0, preview: false, simpleGradientGeneration: self.state.section == .messages)
             }, animated: animated)
             
             needsLayout = true

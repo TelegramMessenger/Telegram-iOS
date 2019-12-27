@@ -13,7 +13,7 @@ import ContextUI
 import PresentationDataUtils
 
 private enum ThemeSettingsColorEntryId: Hashable {
-    case color(Int)
+    case color(Int64)
     case theme(Int64)
     case picker
 }
@@ -25,8 +25,8 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
     
     var stableId: ThemeSettingsColorEntryId {
         switch self {
-            case let .color(index, _, _, _):
-                return .color(index)
+            case let .color(index, themeReference, accentColor, _):
+                return .color(themeReference.index &+ Int64(accentColor?.index ?? 0))
             case let .theme(_, _, theme, _):
                 return .theme(theme.index)
             case .picker:
@@ -770,7 +770,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized || transition.updatePosition {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
-                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-56.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
+                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }
         }
@@ -786,6 +786,11 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
             var themeUpdated = false
             if currentItem?.theme !== item.theme {
                 themeUpdated = true
+            }
+            
+            var colorUpdated: Bool
+            if currentItem?.currentColor != item.currentColor {
+                colorUpdated = true
             }
             
             let contentSize: CGSize
