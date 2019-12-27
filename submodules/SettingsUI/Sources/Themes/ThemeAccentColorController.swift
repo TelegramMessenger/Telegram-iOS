@@ -376,8 +376,6 @@ final class ThemeAccentColorController: ViewController {
             var defaultMessagesColor: UIColor?
             var rotation: Int32 = 0
             
-            var ignoreDefaultWallpaper = false
-            
             func extractWallpaperParameters(_ wallpaper: TelegramWallpaper?) {
                 guard let wallpaper = wallpaper else {
                     return
@@ -439,29 +437,20 @@ final class ThemeAccentColorController: ViewController {
                     } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                         wallpaper = customWallpaper
                     } else {
-                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil, wallpaper: themeSpecificAccentColor?.wallpaper) ?? defaultPresentationTheme
-                        if case let .builtin(themeName) = themeReference {
-                            if case .dayClassic = themeName, settings.themeSpecificAccentColors[coloredThemeIndex(reference: themeReference, accentColor: themeSpecificAccentColor)] != nil {
-                                ignoreDefaultWallpaper = true
-                            } else if case .nightAccent = themeName {
-                                ignoreDefaultWallpaper = true
-                            }
-                        }
+                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper) ?? defaultPresentationTheme
                         wallpaper = theme.chat.defaultWallpaper
                     }
                     
                     extractBuiltinWallpaper(wallpaper)
                     
-                    if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
+                    if !wallpaper.isColorOrGradient {
                         initialWallpaper = wallpaper
                     }
                     
                     if let initialBackgroundColor = strongSelf.initialBackgroundColor {
                         backgroundColors = (initialBackgroundColor, nil)
-                    } else if !ignoreDefaultWallpaper {
-                        extractWallpaperParameters(wallpaper)
                     } else {
-                        backgroundColors = nil
+                        extractWallpaperParameters(wallpaper)
                     }
                     
                     if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {
@@ -513,28 +502,19 @@ final class ThemeAccentColorController: ViewController {
                              wallpaper = customWallpaper
                          } else {
                              let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: nil, wallpaper: themeSpecificAccentColor?.wallpaper) ?? defaultPresentationTheme
-                             if case let .builtin(themeName) = themeReference {
-                                 if case .dayClassic = themeName, settings.themeSpecificAccentColors[coloredThemeIndex(reference: themeReference, accentColor: themeSpecificAccentColor)] != nil {
-                                     ignoreDefaultWallpaper = true
-                                 } else if case .nightAccent = themeName {
-                                     ignoreDefaultWallpaper = true
-                                 }
-                             }
                              wallpaper = theme.chat.defaultWallpaper
                          }
                          
                          extractBuiltinWallpaper(wallpaper)
                          
-                         if !wallpaper.isColorOrGradient && !ignoreDefaultWallpaper {
+                         if !wallpaper.isColorOrGradient {
                              initialWallpaper = wallpaper
                          }
                          
                          if let initialBackgroundColor = strongSelf.initialBackgroundColor {
                              backgroundColors = (initialBackgroundColor, nil)
-                         } else if !ignoreDefaultWallpaper {
-                             extractWallpaperParameters(wallpaper)
                          } else {
-                             backgroundColors = nil
+                             extractWallpaperParameters(wallpaper)
                          }
                          
                          if let bubbleColors = settings.themeSpecificAccentColors[themeReference.index]?.customBubbleColors {

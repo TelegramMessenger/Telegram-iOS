@@ -1155,6 +1155,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
     } else {
         var resource: MediaResource?
         var reference: MediaResourceReference?
+        var defaultWallpaper: TelegramWallpaper?
         if case let .local(theme) = theme {
             reference = .standalone(resource: theme.resource)
         } else if case let .cloud(theme) = theme, let resource = theme.theme.file?.resource {
@@ -1188,7 +1189,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             if let theme = theme {
                 var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> = .complete()
                 var rotation: Int32?
-                let backgroundColor: (UIColor, UIColor?)
+                var backgroundColor: (UIColor, UIColor?)
                 let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
                 let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
                 switch theme.chat.defaultWallpaper {
@@ -1203,7 +1204,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         backgroundColor = (.black, nil)
                     case let .file(file):
                         rotation = file.settings.rotation
-                        if theme.chat.defaultWallpaper.isPattern, let color = file.settings.color {
+                        if let color = file.settings.color {
                             backgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
                         } else {
                             backgroundColor = (theme.chatList.backgroundColor, nil)
@@ -1211,6 +1212,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         wallpaperSignal = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                         |> mapToSignal { wallpaper in
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
+                                var effectiveBackgroundColor = backgroundColor
+                                if let color = file.settings.color {
+                                    effectiveBackgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
+                                }
+                                
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                                 return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
@@ -1225,7 +1231,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                         if let color = file.settings.color, let intensity = file.settings.intensity {
                                             return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                             |> mapToSignal { _ in
-                                                return .complete()
+                                                return .single((effectiveBackgroundColor, incomingColor, outgoingColor, nil, rotation))
                                             }
                                         } else {
                                             return .complete()

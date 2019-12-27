@@ -1261,24 +1261,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 return themeReference
             }
             |> deliverOnMainQueue).start(next: { themeReference in
-                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, generalThemeReference: themeReference.generalThemeReference, defaultThemeReference: themeReference, create: true, completion: { result, settings in
-                    let controller = editThemeController(context: context, mode: .create(result, settings), navigateToChat: { peerId in
-                        if let navigationController = getNavigationControllerImpl?() {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                        }
-                    })
-                    updateControllersImpl?({ controllers in
-                        var controllers = controllers
-                        controllers = controllers.filter { controller in
-                            if controller is ThemeAccentColorController {
-                                return false
-                            }
-                            return true
-                        }
-                        controllers.append(controller)
-                        return controllers
-                    })
-                }))
+                let controller = editThemeController(context: context, mode: .create(nil, nil), navigateToChat: { peerId in
+                    if let navigationController = getNavigationControllerImpl?() {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                    }
+                })
                 pushControllerImpl?(controller)
             })
         }))

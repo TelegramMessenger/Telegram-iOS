@@ -314,13 +314,18 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     var dismissInputImpl: (() -> Void)?
     var errorImpl: ((EditThemeEntryTag) -> Void)?
     
+    var generalThemeReference: PresentationThemeReference?
+    if case let .edit(cloudTheme) = mode {
+        generalThemeReference = PresentationThemeReference.cloud(cloudTheme).generalThemeReference
+    }
+    
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in
         updateState(f)
     }, openColors: {
         let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
         |> take(1)).start(next: { theme, previousSettings in
             var controllerDismissImpl: (() -> Void)?
-            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, generalThemeReference: nil, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
+            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, generalThemeReference: generalThemeReference, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
                 updateState { current in
                     var state = current
                     previewThemePromise.set(.single(updatedTheme))

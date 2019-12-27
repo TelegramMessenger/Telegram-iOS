@@ -609,12 +609,12 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-                    for var theme in item.themes {
+                    for var theme in item.themes.prefix(1) {
                         if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
                             continue
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
-                        var accentColor = item.themeSpecificAccentColors[theme.index]
+                        var accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
                         if let customThemeIndex = accentColor?.themeIndex {
                             if let customTheme = themes[customThemeIndex] {
                                 theme = customTheme
