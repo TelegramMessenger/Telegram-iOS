@@ -555,6 +555,10 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                             effectiveTheme = themeSettings.theme
                         }
                         
+                        if let colors = effectiveColors, colors.baseColor == .theme {
+                            effectiveColors = nil
+                        }
+                        
                         let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors, wallpaper: effectiveColors?.wallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
                         if autoNightModeTriggered && !switchedToNightModeWallpaper {

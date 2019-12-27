@@ -1163,7 +1163,15 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         }
         
         let themeSignal: Signal<PresentationTheme?, NoError>
-        if let reference = reference {
+        if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+            themeSignal = Signal { subscriber in
+                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+                subscriber.putNext(theme)
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            }
+        } else if let reference = reference {
             themeSignal = telegramThemeData(account: account, accountManager: accountManager, reference: reference, synchronousLoad: false)
             |> map { data -> PresentationTheme? in
                 if let data = data, let theme = makePresentationTheme(data: data) {
@@ -1171,14 +1179,6 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 } else {
                     return nil
                 }
-            }
-        } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
-            themeSignal = Signal { subscriber in
-                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
-                subscriber.putNext(theme)
-                subscriber.putCompletion()
-                
-                return EmptyDisposable
             }
         } else {
             themeSignal = .never()
