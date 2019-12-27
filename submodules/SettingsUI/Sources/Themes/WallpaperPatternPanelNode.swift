@@ -220,7 +220,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity ?? 40)
+            self.sliderView?.value = CGFloat(intensity ?? 50)
             
             self.scrollNode.view.contentOffset = CGPoint()
             

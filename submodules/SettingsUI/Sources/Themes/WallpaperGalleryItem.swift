@@ -35,22 +35,24 @@ class WallpaperGalleryItem: GalleryItem {
     let context: AccountContext
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
+    let source: WallpaperListSource
     
-    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
+    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
         self.context = context
         self.entry = entry
         self.arguments = arguments
+        self.source = source
     }
     
     func node() -> GalleryItemNode {
         let node = WallpaperGalleryItemNode(context: self.context)
-        node.setEntry(self.entry, arguments: self.arguments)
+        node.setEntry(self.entry, arguments: self.arguments, source: self.source)
         return node
     }
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? WallpaperGalleryItemNode {
-            node.setEntry(self.entry, arguments: self.arguments)
+            node.setEntry(self.entry, arguments: self.arguments, source: self.source)
         }
     }
     
@@ -71,7 +73,10 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let context: AccountContext
+    private let presentationData: PresentationData
+    
     var entry: WallpaperGalleryEntry?
+    var source: WallpaperListSource?
     private var colorPreview: Bool = false
     private var contentSize: CGSize?
     private var arguments = WallpaperGalleryItemArguments()
@@ -85,6 +90,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var blurButtonNode: WallpaperOptionButtonNode
     private var motionButtonNode: WallpaperOptionButtonNode
     private var patternButtonNode: WallpaperOptionButtonNode
+    
+    private let messagesContainerNode: ASDisplayNode
+    private var messageNodes: [ListViewItemNode]?
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -102,6 +110,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     init(context: AccountContext) {
         self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
@@ -113,12 +122,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.blurredNode = BlurredImageNode()
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
+        self.messagesContainerNode = ASDisplayNode()
+        self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        
+        self.blurButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
         self.blurButtonNode.setEnabled(false)
-        self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion, value: .check(false))
+        self.motionButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Motion, value: .check(false))
         self.motionButtonNode.setEnabled(false)
-        self.patternButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
+        self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         self.patternButtonNode.setEnabled(false)
         
         super.init()
@@ -135,6 +146,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.addSubnode(self.wrapperNode)
         self.addSubnode(self.statusNode)
+        self.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.blurButtonNode)
         self.addSubnode(self.motionButtonNode)
@@ -171,9 +183,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.action?()
     }
     
-    func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
+    func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
         let previousArguments = self.arguments
         self.arguments = arguments
+        self.source = source
         
         if self.arguments.colorPreview != previousArguments.colorPreview {
             if self.arguments.colorPreview {
@@ -511,6 +524,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             if let layout = self.validLayout {
                 self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: .immediate)
+                self.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .immediate)
             }
         }
     }
@@ -524,12 +538,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         if let layout = self.validLayout {
             self.updateWrapperLayout(layout: layout, offset: offset, transition: .immediate)
             self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: .immediate)
+            self.updateMessagesLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition:.immediate)
         }
     }
     
     func updateDismissTransition(_ value: CGFloat) {
         if let layout = self.validLayout {
             self.updateButtonsLayout(layout: layout, offset: CGPoint(x: 0.0, y: value), transition: .immediate)
+            self.updateMessagesLayout(layout: layout, offset: CGPoint(x: 0.0, y: value), transition: .immediate)
         }
     }
     
@@ -764,6 +780,104 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         transition.updateAlpha(node: self.motionButtonNode, alpha: motionAlpha * alpha)
     }
     
+    private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        var bottomInset: CGFloat = 115.0
+        if self.patternButtonNode.isSelected {
+            bottomInset = 350.0
+        }
+        
+        var items: [ListViewItem] = []
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
+        let otherPeerId = self.context.account.peerId
+        var peers = SimpleDictionary<PeerId, Peer>()
+        let messages = SimpleDictionary<MessageId, Message>()
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        
+        var topMessageText = ""
+        var bottomMessageText = ""
+        var currentWallpaper: TelegramWallpaper = self.presentationData.chatWallpaper
+        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry {
+            currentWallpaper = wallpaper
+        }
+        
+        if let source = self.source {
+            switch source {
+                case .wallpaper, .slug:
+                    topMessageText = presentationData.strings.WallpaperPreview_PreviewTopText
+                    bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomText
+                case let .list(_, _, type):
+                    switch type {
+                        case .wallpapers:
+                            topMessageText = presentationData.strings.WallpaperPreview_SwipeTopText
+                            bottomMessageText = presentationData.strings.WallpaperPreview_SwipeBottomText
+                        case .colors:
+                            topMessageText = presentationData.strings.WallpaperPreview_SwipeColorsTopText
+                            bottomMessageText = presentationData.strings.WallpaperPreview_SwipeColorsBottomText
+                }
+                case .asset, .contextResult:
+                    topMessageText = presentationData.strings.WallpaperPreview_CropTopText
+                    bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
+                case .customColor:
+                    topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
+                    bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
+            }
+        }
+        
+        let theme = self.presentationData.theme.withUpdated(preview: true)
+                   
+        let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+        
+        let message2 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+        
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
+        if let messageNodes = self.messageNodes {
+//            for i in 0 ..< items.count {
+//                let itemNode = messageNodes[i]
+//                items[i].updateNode(async: { $0() }, node: {
+//                    return itemNode
+//                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+//                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+//
+//                    itemNode.contentSize = layout.contentSize
+//                    itemNode.insets = layout.insets
+//                    itemNode.frame = nodeFrame
+//                    itemNode.isUserInteractionEnabled = false
+//
+//                    apply(ListViewItemApply(isOnScreen: true))
+//                })
+//            }
+        } else {
+            var messageNodes: [ListViewItemNode] = []
+            for i in 0 ..< items.count {
+                var itemNode: ListViewItemNode?
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    itemNode = node
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+                itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
+                messageNodes.append(itemNode!)
+                self.messagesContainerNode.addSubnode(itemNode!)
+            }
+            self.messageNodes = messageNodes
+        }
+        
+        let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
+        
+        if let messageNodes = self.messageNodes {
+            var bottomOffset: CGFloat = 9.0 + bottomInset
+            for itemNode in messageNodes {
+                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: offset.x, y: bottomOffset - offset.y), size: itemNode.frame.size))
+                bottomOffset += itemNode.frame.height
+                itemNode.updateFrame(itemNode.frame, within: layout.size)
+                transition.updateAlpha(node: itemNode, alpha: alpha)
+            }
+        }
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
@@ -774,6 +888,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.wrapperNode.bounds = CGRect(origin: CGPoint(), size: layout.size)
         self.updateWrapperLayout(layout: layout, offset: offset, transition: transition)
+        self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if self.cropNode.supernode == nil {
             self.imageNode.frame = self.wrapperNode.bounds
@@ -798,6 +913,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height + additionalYOffset - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
         
         self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
+        self.updateMessagesLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
         
         self.validLayout = layout
     }
