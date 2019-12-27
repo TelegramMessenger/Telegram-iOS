@@ -514,7 +514,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             controller?.dismissAnimated()
         }
         let removeAction: (RemoveStickerPackOption) -> Void = { action in
-            let _ = (removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: .archive)
+            let _ = (removeStickerPackInteractively(postbox: context.account.postbox, id: archivedItem.info.id, option: action)
             |> deliverOnMainQueue).start(next: { indexAndItems in
                 guard let (positionInList, items) = indexAndItems else {
                     return
@@ -530,7 +530,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                     }
                 }
                 
-                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_ArchivedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).0, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: action == .archive ? presentationData.strings.StickerPackActionInfo_ArchivedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).0, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
                     if case .undo = action {
                         let _ = addStickerPackInteractively(postbox: context.account.postbox, info: archivedItem.info, items: items, positionInList: positionInList).start()
                     }

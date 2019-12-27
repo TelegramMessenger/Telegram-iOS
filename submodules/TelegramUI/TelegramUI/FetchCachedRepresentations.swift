@@ -21,6 +21,7 @@ import ImageBlur
 import TelegramAnimatedStickerNode
 import WallpaperResources
 import Svg
+import GZip
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -409,9 +410,13 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
 
 private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+        if var data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             let path = NSTemporaryDirectory() + "\(arc4random64())"
             let url = URL(fileURLWithPath: path)
+            
+            if let unzippedData = TGGUnzipData(data, 2 * 1024 * 1024) {
+                data = unzippedData
+            }
             
             if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
                 let size = representation.size ?? CGSize(width: 1440.0, height: 2960.0)

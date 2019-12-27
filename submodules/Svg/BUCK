@@ -24,4 +24,7 @@ static_library(
     exported_linker_flags = [
         "-lxml2",
     ],
+    deps = [
+        "//submodules/GZip:GZip",
+    ],
 )
