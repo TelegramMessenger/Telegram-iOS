@@ -868,7 +868,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
         if let messageNodes = self.messageNodes {
-            var bottomOffset: CGFloat = 9.0 + bottomInset
+            var bottomOffset: CGFloat = 9.0 + bottomInset + layout.intrinsicInsets.bottom
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: offset.x, y: bottomOffset - offset.y), size: itemNode.frame.size))
                 bottomOffset += itemNode.frame.height
