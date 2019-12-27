@@ -18,9 +18,9 @@ extension TelegramThemeSettings {
     convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, messageColors: (top: UIColor, bottom: UIColor?)?, wallpaper: TelegramWallpaper?) {
         var messageColorsValues: (UInt32, UInt32)?
         if let colors = messageColors {
-            messageColorsValues = (UInt32(bitPattern: colors.0.argb), UInt32(bitPattern: colors.1?.argb ?? colors.0.argb))
+            messageColorsValues = (colors.0.argb, colors.1?.argb ?? colors.0.argb)
         }
-        self.init(baseTheme: baseTheme, accentColor: UInt32(bitPattern: accentColor.argb), messageColors: messageColorsValues, wallpaper: wallpaper)
+        self.init(baseTheme: baseTheme, accentColor: accentColor.argb, messageColors: messageColorsValues, wallpaper: wallpaper)
     }
 }
 
@@ -469,7 +469,7 @@ final class ThemeAccentColorController: ViewController {
                 } else {
                     let presentationTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
                     if case let .cloud(theme) = themeReference, let themeSettings = theme.theme.settings {
-                        accentColor = UIColor(argb: UInt32(bitPattern: themeSettings.accentColor))
+                        accentColor = UIColor(argb: themeSettings.accentColor)
                         
                         if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                             wallpaper = customWallpaper
@@ -482,8 +482,8 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         if let colors = themeSettings.messageColors {
-                            let topMessageColor = UIColor(argb: UInt32(bitPattern: colors.top))
-                            let bottomMessageColor = UIColor(argb: UInt32(bitPattern: colors.bottom))
+                            let topMessageColor = UIColor(argb: colors.top)
+                            let bottomMessageColor = UIColor(argb: colors.bottom)
                             if topMessageColor.argb == bottomMessageColor.argb {
                                 messageColors = (topMessageColor, nil)
                             } else {
