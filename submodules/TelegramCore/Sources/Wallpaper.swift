@@ -47,7 +47,7 @@ extension TelegramWallpaper {
                     }
                     self = .file(id: id, accessHash: accessHash, isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, isPattern: (flags & 1 << 3) != 0, isDark: (flags & 1 << 4) != 0, slug: slug, file: file, settings: wallpaperSettings)
                 } else {
-                    assertionFailure()
+                    //assertionFailure()
                     self = .color(0xffffff)
                 }
             case let .wallPaperNoFile(flags, settings):

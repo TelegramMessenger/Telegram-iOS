@@ -98,7 +98,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
-                            case "USER_PRIVACY_RESTRICTED":
+                            case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
                                 return .fail(.restricted)
                             case "USER_BOT":
                                 return .fail(.bot(memberId))
@@ -194,7 +194,7 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
                 switch error.errorDescription {
                    case "CHANNELS_TOO_MUCH":
                         return .tooMuchJoined
-                    case "USER_PRIVACY_RESTRICTED":
+                    case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
                         return .restricted
                     case "USERS_TOO_MUCH":
                         return .limitExceeded

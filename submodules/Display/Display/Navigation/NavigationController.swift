@@ -194,6 +194,8 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     var keyboardViewManager: KeyboardViewManager?
     
+    var updateSupportedOrientations: (() -> Void)?
+    
     public func updateMasterDetailsBlackout(_ blackout: MasterDetailLayoutBlackout?, transition: ContainedViewLayoutTransition) {
         self.masterDetailsBlackout = blackout
         if isViewLoaded {
@@ -928,6 +930,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         if notifyGlobalOverlayControllersUpdated {
             self.globalOverlayControllersUpdated?()
         }
+        
+        self.updateSupportedOrientations?()
     }
     
     private func controllerRemoved(_ controller: ViewController) {
