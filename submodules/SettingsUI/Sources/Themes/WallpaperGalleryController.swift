@@ -106,7 +106,7 @@ private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UICo
 }
 
 private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
-    let isPattern = file.mimeType == "image/png"
+    let isPattern = ["image/png", "image/svg+xml"].contains(file.mimeType) 
     var firstColorValue: UInt32?
     var secondColorValue: UInt32?
     var intensityValue: Int32?
@@ -429,7 +429,7 @@ public class WallpaperGalleryController: ViewController {
                                             }
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
-                                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                                        if wallpaper.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                                             let representation = CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation)
                                             
                                             var data: Data?
@@ -577,7 +577,7 @@ public class WallpaperGalleryController: ViewController {
             if let entryColor = entryColor {
                 if let pattern = pattern, case let .file(file) = pattern {
                     let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: entryColor, intensity: intensity)
-                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
+                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
                     updatedEntries.append(.wallpaper(newWallpaper, nil))
                 } else {
                     let newWallpaper = TelegramWallpaper.color(entryColor)

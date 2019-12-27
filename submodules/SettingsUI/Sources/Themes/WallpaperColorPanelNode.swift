@@ -772,8 +772,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                 
                 let secondColor: UIColor
                 if updated.simpleGradientGeneration {
-                    var colorHsb = color.hsb
-                        
+                    var colorHsb = color.hsb 
                     if color.hsb.2 > 0.5 {
                         secondColor = UIColor(hue: colorHsb.0, saturation: colorHsb.1, brightness: max(0.28, color.hsb.2 - 0.3), alpha: 1.0)
                     } else {

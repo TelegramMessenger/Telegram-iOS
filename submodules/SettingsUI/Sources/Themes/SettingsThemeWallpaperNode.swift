@@ -126,7 +126,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     }
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-                    if file.isPattern {
+                    if wallpaper.isPattern {
                         self.backgroundNode.isHidden = false
                         
                         var patternColors: [UIColor] = []

@@ -406,7 +406,7 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
                 return UIColor(rgb: 0x000000, alpha: 0.3)
             }
         case let .file(file):
-            if file.isPattern {
+            if wallpaper.0.isPattern {
                 if let color = file.settings.color {
                     var mixedColor = UIColor(argb: color)
                     if let bottomColor = file.settings.bottomColor {
@@ -475,7 +475,7 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                 return .single(UIColor(rgb: 0x000000, alpha: 0.3))
             }
         case let .file(file):
-            if file.isPattern {
+            if wallpaper.isPattern {
                 if let color = file.settings.color {
                     var mixedColor = UIColor(argb: color)
                     if let bottomColor = file.settings.bottomColor {
@@ -562,7 +562,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                                 case .builtin, .color, .gradient:
                                     effectiveChatWallpaper = themeValue.chat.defaultWallpaper
                                 case let .file(file):
-                                    if file.isPattern {
+                                    if effectiveChatWallpaper.isPattern {
                                         effectiveChatWallpaper = themeValue.chat.defaultWallpaper
                                     }
                                 default:

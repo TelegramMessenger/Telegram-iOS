@@ -267,7 +267,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             }
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: reference(for: file.file.resource, media: file.file, message: message)))
                             
-                            if file.isPattern {
+                            if wallpaper.isPattern {
                                 var patternColors: [UIColor] = []
                                 var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                                 var patternIntensity: CGFloat = 0.5
@@ -751,7 +751,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .gradient:
                             motionAlpha = 1.0
                         case let .file(file):
-                            if file.isPattern {
+                            if wallpaper.isPattern {
                                 motionAlpha = 1.0
                                 if self.arguments.isColorsList {
                                     patternAlpha = 1.0

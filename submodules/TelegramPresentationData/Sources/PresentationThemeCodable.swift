@@ -138,7 +138,7 @@ extension TelegramWallpaper: Codable {
             case let .file(file):
                 var components: [String] = []
                 components.append(file.slug)
-                if file.isPattern {
+                if self.isPattern {
                     if let color = file.settings.color {
                         components.append(String(format: "%06x", color))
                     }

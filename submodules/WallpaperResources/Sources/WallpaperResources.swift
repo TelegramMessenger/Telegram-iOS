@@ -194,15 +194,11 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
             var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
-                    if fullSizeData.count > 5, let string = String(data: fullSizeData.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                        fullSizeImage = drawSvgImage(fullSizeData, fittedRect.size)?.cgImage
-                    } else {
-                        let options = NSMutableDictionary()
-                        options[kCGImageSourceShouldCache as NSString] = false as NSNumber
-                        if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
-                            imageOrientation = imageOrientationFromSource(imageSource)
-                            fullSizeImage = image
-                        }
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
+                        fullSizeImage = image
                     }
                 } else {
                     let imageSource = CGImageSourceCreateIncremental(nil)
@@ -974,7 +970,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                             accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                             let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                             
-                            if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                            if wallpaper.wallpaper.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                                 return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
                                     if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
@@ -1207,7 +1203,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                         backgroundColor = (.black, nil)
                     case let .file(file):
                         rotation = file.settings.rotation
-                        if file.isPattern, let color = file.settings.color {
+                        if theme.chat.defaultWallpaper.isPattern, let color = file.settings.color {
                             backgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
                         } else {
                             backgroundColor = (theme.chatList.backgroundColor, nil)
@@ -1225,7 +1221,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                                     let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                                     
-                                    if file.isPattern {
+                                    if wallpaper.wallpaper.isPattern {
                                         if let color = file.settings.color, let intensity = file.settings.intensity {
                                             return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                             |> mapToSignal { _ in

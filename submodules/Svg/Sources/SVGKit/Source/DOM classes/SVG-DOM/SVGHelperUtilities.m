@@ -580,7 +580,7 @@
 
 +(CGColorRef) parseFillForElement:(SVGElement *)svgElement fromFill:(NSString *)actualFill andOpacity:(NSString *)actualFillOpacity
 {
-    return [self parsePaintColorForElement:svgElement paintColor:actualFill paintOpacity:actualFillOpacity defaultColor:@"black"];
+    return [self parsePaintColorForElement:svgElement paintColor:actualFill paintOpacity:actualFillOpacity defaultColor:@"white"];
 }
 
 +(CGColorRef) parseStrokeForElement:(SVGElement *)svgElement
@@ -592,7 +592,7 @@
 
 +(CGColorRef) parseStrokeForElement:(SVGElement *)svgElement fromStroke:(NSString *)actualStroke andOpacity:(NSString *)actualStrokeOpacity
 {
-    return [self parsePaintColorForElement:svgElement paintColor:actualStroke paintOpacity:actualStrokeOpacity defaultColor:@"none"];
+    return [self parsePaintColorForElement:svgElement paintColor:actualStroke paintOpacity:actualStrokeOpacity defaultColor:@"white"];
 }
 
 /**
@@ -648,6 +648,15 @@
         } else {
             return NULL;
         }
+    }
+    
+    UIColor *color = [UIColor colorWithCGColor:colorRef];
+    if ([color isEqual:[UIColor colorWithRed:0 green:0 blue:0 alpha:1.0]]) {
+        return [UIColor whiteColor].CGColor;
+    } else if ([color isEqual:[UIColor colorWithRed:1 green:1 blue:1 alpha:1.0]]) {
+        return [UIColor blackColor].CGColor;
+    } else {
+        return colorRef;
     }
     
     return colorRef;

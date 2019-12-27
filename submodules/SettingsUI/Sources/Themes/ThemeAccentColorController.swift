@@ -382,7 +382,7 @@ final class ThemeAccentColorController: ViewController {
                 guard let wallpaper = wallpaper else {
                     return
                 }
-                if case let .file(file) = wallpaper, file.isPattern {
+                if case let .file(file) = wallpaper, wallpaper.isPattern {
                     var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.4)
                     var bottomColor: UIColor?
                     if let color = file.settings.color {

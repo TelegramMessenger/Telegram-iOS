@@ -211,7 +211,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             case .image, .builtin:
                 return true
             case let .file(file):
-                return !file.isPattern
+                return !self.wallpaper.isPattern
             default:
                 return false
         }
@@ -505,7 +505,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let patternArguments = PatternWallpaperArguments(colors: calcPatternColors(for: state), rotation: wallpaper.settings?.rotation ?? 0, preview: state.preview)
             
             var wallpaperApply: (() -> Void)?
-            if let strongSelf = self, case let .file(file) = wallpaper, file.isPattern, let (layout, _, _) = strongSelf.validLayout {
+            if let strongSelf = self, wallpaper.isPattern, let (layout, _, _) = strongSelf.validLayout {
                 let makeImageLayout = strongSelf.signalBackgroundNode.asyncLayout()
                 wallpaperApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: wallpaper.dimensions ?? layout.size, boundingSize: layout.size, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))
             }

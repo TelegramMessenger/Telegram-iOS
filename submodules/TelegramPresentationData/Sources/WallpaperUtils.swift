@@ -9,7 +9,7 @@ public extension TelegramWallpaper {
         case .image:
             return false
         case let .file(file):
-            if file.isPattern, file.settings.color == 0xffffff {
+            if self.isPattern, file.settings.color == 0xffffff {
                 return true
             } else {
                 return false
@@ -33,7 +33,7 @@ public extension TelegramWallpaper {
     var isPattern: Bool {
         switch self {
         case let .file(file):
-            return file.isPattern
+            return file.isPattern || file.file.mimeType == "image/svg+xml"
         default:
             return false
         }
