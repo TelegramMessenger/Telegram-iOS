@@ -7,6 +7,12 @@ public enum TelegramBaseTheme: Int32 {
     case tinted
 }
 
+public extension UInt32 {
+    init(bitPattern: UInt32) {
+        self = bitPattern
+    }
+}
+
 public final class TelegramThemeSettings: PostboxCoding, Equatable {
     public static func == (lhs: TelegramThemeSettings, rhs: TelegramThemeSettings) -> Bool {
         if lhs.baseTheme != rhs.baseTheme {

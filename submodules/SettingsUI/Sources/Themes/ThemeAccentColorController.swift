@@ -16,11 +16,11 @@ private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xe
 
 extension TelegramThemeSettings {
     convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, messageColors: (top: UIColor, bottom: UIColor?)?, wallpaper: TelegramWallpaper?) {
-        var messageColorsValues: (Int32, Int32)?
+        var messageColorsValues: (UInt32, UInt32)?
         if let colors = messageColors {
-            messageColorsValues = (Int32(bitPattern: colors.0.argb), Int32(bitPattern: colors.1?.argb ?? colors.0.argb))
+            messageColorsValues = (UInt32(bitPattern: colors.0.argb), UInt32(bitPattern: colors.1?.argb ?? colors.0.argb))
         }
-        self.init(baseTheme: baseTheme, accentColor: Int32(bitPattern: accentColor.argb), messageColors: messageColorsValues, wallpaper: wallpaper)
+        self.init(baseTheme: baseTheme, accentColor: UInt32(bitPattern: accentColor.argb), messageColors: messageColorsValues, wallpaper: wallpaper)
     }
 }
 
