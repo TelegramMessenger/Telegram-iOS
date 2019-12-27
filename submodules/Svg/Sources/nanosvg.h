@@ -1037,8 +1037,8 @@ static void nsvg__addPath(NSVGparser* p, char closed)
 	if (p->npts < 4)
 		return;
 
-	if (closed)
-		nsvg__lineTo(p, p->pts[0], p->pts[1]);
+	/*if (closed)
+		nsvg__lineTo(p, p->pts[0], p->pts[1]);*/
 
 	path = (NSVGpath*)malloc(sizeof(NSVGpath));
 	if (path == NULL) goto error;
@@ -2683,30 +2683,37 @@ static void nsvg__startElement(void* ud, const char* el, const char** attr)
 		if (p->pathFlag)	// Do not allow nested paths.
 			return;
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parsePath(p, attr);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "rect") == 0) {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parseRect(p, attr);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "circle") == 0) {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parseCircle(p, attr);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "ellipse") == 0) {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parseEllipse(p, attr);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "line") == 0)  {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parseLine(p, attr);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "polyline") == 0)  {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parsePoly(p, attr, 0);
 		nsvg__popAttr(p);
 	} else if (strcmp(el, "polygon") == 0)  {
 		nsvg__pushAttr(p);
+        nsvg__parseAttribs(p, attr);
 		nsvg__parsePoly(p, attr, 1);
 		nsvg__popAttr(p);
 	} else  if (strcmp(el, "linearGradient") == 0) {
