@@ -33,7 +33,7 @@ public extension TelegramWallpaper {
     var isPattern: Bool {
         switch self {
         case let .file(file):
-            return file.isPattern || file.file.mimeType == "image/svg+xml"
+            return file.isPattern || file.file.mimeType == "application/x-tgwallpattern"
         default:
             return false
         }
