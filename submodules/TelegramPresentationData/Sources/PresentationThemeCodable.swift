@@ -41,7 +41,7 @@ extension TelegramWallpaper: Codable {
                 default:
                     let optionKeys = ["motion", "blur"]
                     
-                    if value.count == 6, let color = UIColor(hexString: value) {
+                    if [6, 8].contains(value.count), let color = UIColor(hexString: value) {
                         self = .color(color.argb)
                     } else {
                         let components = value.components(separatedBy: " ")
@@ -80,7 +80,7 @@ extension TelegramWallpaper: Codable {
                                     if optionKeys.contains(component) {
                                         continue
                                     }
-                                    if component.count == 6, let value = UIColor(hexString: component) {
+                                    if [6, 8].contains(component.count), let value = UIColor(hexString: component) {
                                         if color == nil {
                                             color = value.argb
                                         } else if bottomColor == nil {

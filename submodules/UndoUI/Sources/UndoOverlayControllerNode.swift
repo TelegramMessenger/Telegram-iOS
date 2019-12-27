@@ -153,7 +153,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 displayUndo = true
                 undoText = cancel
-                self.originalRemainingSeconds = 3
+                self.originalRemainingSeconds = 5
             case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil

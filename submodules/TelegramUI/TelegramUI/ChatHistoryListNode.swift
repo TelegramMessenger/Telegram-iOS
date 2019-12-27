@@ -1766,7 +1766,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.selectionScrollDisplayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
             self?.selectionScrollActivationTimer = nil
             if let strongSelf = self, let delta = strongSelf.selectionScrollDelta {
-                let distance: CGFloat = 10.0 * min(1.0, 0.15 + abs(delta * delta))
+                let distance: CGFloat = 15.0 * min(1.0, 0.15 + abs(delta * delta))
                 let direction: ListViewScrollDirection = delta > 0.0 ? .up : .down
                 strongSelf.scrollWithDirection(direction, distance: distance)
                 
