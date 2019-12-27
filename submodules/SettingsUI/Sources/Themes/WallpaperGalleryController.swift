@@ -106,7 +106,7 @@ private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UICo
 }
 
 private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
-    var isPattern = ["image/png", "image/svg+xml"].contains(file.mimeType)
+    var isPattern = ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType)
     if let fileName = file.fileName, fileName.hasSuffix(".svgbg") {
         isPattern = true
     }
