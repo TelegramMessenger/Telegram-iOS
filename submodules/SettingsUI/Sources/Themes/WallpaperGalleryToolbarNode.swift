@@ -30,8 +30,10 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         }
     }
     
-    private let cancelButton = HighlightableButtonNode()
-    private let doneButton = HighlightableButtonNode()
+    private let cancelButton = HighlightTrackingButtonNode()
+    private let cancelHighlightBackgroundNode = ASDisplayNode()
+    private let doneButton = HighlightTrackingButtonNode()
+    private let doneHighlightBackgroundNode = ASDisplayNode()
     private let separatorNode = ASDisplayNode()
     private let topSeparatorNode = ASDisplayNode()
     
@@ -46,7 +48,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         
         super.init()
         
+        self.addSubnode(self.cancelHighlightBackgroundNode)
         self.addSubnode(self.cancelButton)
+        self.addSubnode(self.doneHighlightBackgroundNode)
         self.addSubnode(self.doneButton)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.topSeparatorNode)
@@ -56,11 +60,11 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.cancelButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.cancelButton.backgroundColor = strongSelf.theme.list.itemHighlightedBackgroundColor
+                    strongSelf.cancelHighlightBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.cancelHighlightBackgroundNode.alpha = 1.0
                 } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.cancelButton.backgroundColor = .clear
-                    })
+                    strongSelf.cancelHighlightBackgroundNode.alpha = 0.0
+                    strongSelf.cancelHighlightBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 }
             }
         }
@@ -68,11 +72,11 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.doneButton.backgroundColor = strongSelf.theme.list.itemHighlightedBackgroundColor
+                    strongSelf.doneHighlightBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.doneHighlightBackgroundNode.alpha = 1.0
                 } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.doneButton.backgroundColor = .clear
-                    })
+                    strongSelf.doneHighlightBackgroundNode.alpha = 0.0
+                    strongSelf.doneHighlightBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 }
             }
         }
@@ -91,6 +95,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.backgroundColor = theme.rootController.tabBar.backgroundColor
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
+        self.cancelHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
+        self.doneHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
         
         let cancelTitle: String
         switch self.cancelButtonType {
@@ -114,7 +120,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.cancelButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
+        self.cancelHighlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
         self.doneButton.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
+        self.doneHighlightBackgroundNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
         self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height + layout.intrinsicInsets.bottom))
         self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: UIScreenPixel))
     }

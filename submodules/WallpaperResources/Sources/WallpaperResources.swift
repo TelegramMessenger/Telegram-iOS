@@ -527,7 +527,7 @@ public func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool
         } else {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))
         }
-        let alpha = (prominent ? 0.5 : 0.4) * intensity
+        let alpha = (prominent ? 0.6 : 0.55) * intensity
         return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }
     return .black

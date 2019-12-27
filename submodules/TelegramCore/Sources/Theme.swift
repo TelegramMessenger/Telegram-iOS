@@ -48,11 +48,11 @@ extension TelegramThemeSettings {
     convenience init?(apiThemeSettings: Api.ThemeSettings) {
         switch apiThemeSettings {
             case let .themeSettings(flags, baseTheme, accentColor, messageTopColor, messageBottomColor, wallpaper):
-                var messageColors: (Int32, Int32)?
+                var messageColors: (UInt32, UInt32)?
                 if let messageTopColor = messageTopColor, let messageBottomColor = messageBottomColor {
-                    messageColors = (messageTopColor, messageBottomColor)
+                    messageColors = (UInt32(bitPattern: messageTopColor), UInt32(bitPattern: messageBottomColor))
                 }
-                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme) ?? .classic, accentColor: accentColor, messageColors: messageColors, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
+                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme) ?? .classic, accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
             default:
                 return nil
         }
@@ -72,6 +72,15 @@ extension TelegramThemeSettings {
             flags |= 1 << 1
         }
         
-        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: self.accentColor, messageTopColor: self.messageColors?.0, messageBottomColor: self.messageColors?.1, wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
+        var messageTopColor: Int32?
+        var messageBottomColor: Int32?
+        if let color = self.messageColors?.0 {
+            messageTopColor = Int32(bitPattern: color)
+        }
+        if let color = self.messageColors?.1 {
+            messageBottomColor = Int32(bitPattern: color)
+        }
+        
+        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: Int32(bitPattern: self.accentColor), messageTopColor: messageTopColor, messageBottomColor: messageBottomColor, wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
     }
 }

@@ -41,6 +41,8 @@ public final class ThemePreviewController: ViewController {
         return self._ready
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -399,11 +401,11 @@ public final class ThemePreviewController: ViewController {
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] previousDefaultTheme in
-            if let strongSelf = self {
+            if let strongSelf = self, let layout = strongSelf.validLayout, layout.size.width >= 375.0  {
                 Queue.mainQueue().after(0.3) {
                     let navigationController = strongSelf.navigationController as? NavigationController
                     if let (previousDefaultTheme, autoNightMode) = previousDefaultTheme {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: true, animateInAsReplacement: false, action: { value in
                             if value == .undo {
                                 let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
                                     var updated: PresentationThemeSettings
@@ -434,6 +436,8 @@ public final class ThemePreviewController: ViewController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.validLayout = layout
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }

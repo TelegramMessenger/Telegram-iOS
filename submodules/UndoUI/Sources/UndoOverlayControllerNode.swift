@@ -535,7 +535,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.checkTimer()
     }
     
+    var dismissed = false
     func animateOut(completion: @escaping () -> Void) {
+        guard !self.dismissed else {
+            return
+        }
+        self.dismissed = true
         self.panelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { _ in })
         self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false) { _ in
             completion()
