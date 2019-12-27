@@ -950,7 +950,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                 }
             }
         case let .settings(settings):
-            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
+            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
     }
     
     let data = theme
@@ -1165,7 +1165,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         let themeSignal: Signal<PresentationTheme?, NoError>
         if case let .cloud(theme) = theme, let settings = theme.theme.settings {
             themeSignal = Signal { subscriber in
-                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
                 subscriber.putNext(theme)
                 subscriber.putCompletion()
                 

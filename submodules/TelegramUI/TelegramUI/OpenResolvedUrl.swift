@@ -355,7 +355,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController?.pushViewController(previewController)
                     }
                 } else if let settings = dataAndTheme.1 {
-                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper) {
+                    if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper) {
                         let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.2))
                         navigationController?.pushViewController(previewController)
                     }
