@@ -41,7 +41,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 
                 let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                 let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                suggestedWallpaper = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
                 suggestedWallpaper = .builtin(WallpaperSettings())
@@ -201,9 +201,9 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         defaultWallpaper = forcedWallpaper
     } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
+            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+            defaultWallpaper = .color(backgroundColors.0.argb)
         }
     } else if let forcedWallpaper = suggestedWallpaper {
         defaultWallpaper = forcedWallpaper

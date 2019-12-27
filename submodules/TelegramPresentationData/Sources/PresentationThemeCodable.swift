@@ -42,7 +42,7 @@ extension TelegramWallpaper: Codable {
                     let optionKeys = ["motion", "blur"]
                     
                     if value.count == 6, let color = UIColor(hexString: value) {
-                        self = .color(Int32(bitPattern: color.rgb))
+                        self = .color(color.argb)
                     } else {
                         let components = value.components(separatedBy: " ")
                         var blur = false
@@ -63,11 +63,11 @@ extension TelegramWallpaper: Codable {
                                 }
                             }
                             
-                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
+                            self = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
-                            var color: Int32?
-                            var bottomColor: Int32?
+                            var color: UInt32?
+                            var bottomColor: UInt32?
                             var intensity: Int32?
                             var rotation: Int32?
 
@@ -82,9 +82,9 @@ extension TelegramWallpaper: Codable {
                                     }
                                     if component.count == 6, let value = UIColor(hexString: component) {
                                         if color == nil {
-                                            color = Int32(bitPattern: value.rgb)
+                                            color = value.argb
                                         } else if bottomColor == nil {
-                                            bottomColor = Int32(bitPattern: value.rgb)
+                                            bottomColor = value.argb
                                         }
                                     } else if component.count <= 3, let value = Int32(component) {
                                         if intensity == nil {
@@ -138,7 +138,7 @@ extension TelegramWallpaper: Codable {
             case let .file(file):
                 var components: [String] = []
                 components.append(file.slug)
-                if file.isPattern {
+                if self.isPattern {
                     if let color = file.settings.color {
                         components.append(String(format: "%06x", color))
                     }

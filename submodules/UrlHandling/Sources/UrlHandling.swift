@@ -174,9 +174,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents[0] == "bg" {
                     let component = pathComponents[1]
                     let parameter: WallpaperUrlParameter
-                    if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
+                    if [6, 8].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
-                    } else if component.count == 13, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                    } else if [13, 15, 17].contains(component.count), component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
                         var rotation: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
@@ -214,9 +214,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             }
                                         }
                                     } else if queryItem.name == "bg_color" {
-                                        if value.count == 6, value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
+                                        if [6, 8].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: value) {
                                             topColor = color
-                                        } else if value.count == 13, value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
+                                        } else if [13, 15, 17].contains(value.count), value.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF-").inverted) == nil {
                                             let components = value.components(separatedBy: "-")
                                             if components.count == 2, let topColorValue = UIColor(hexString: components[0]), let bottomColorValue = UIColor(hexString: components[1]) {
                                                 topColor = topColorValue

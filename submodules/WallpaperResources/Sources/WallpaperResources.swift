@@ -194,15 +194,11 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
             var imageOrientation: UIImage.Orientation = .up
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
-                    if fullSizeData.count > 5, let string = String(data: fullSizeData.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
-                        fullSizeImage = drawSvgImage(fullSizeData, fittedRect.size)?.cgImage
-                    } else {
-                        let options = NSMutableDictionary()
-                        options[kCGImageSourceShouldCache as NSString] = false as NSNumber
-                        if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
-                            imageOrientation = imageOrientationFromSource(imageSource)
-                            fullSizeImage = image
-                        }
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
+                        fullSizeImage = image
                     }
                 } else {
                     let imageSource = CGImageSourceCreateIncremental(nil)
@@ -759,10 +755,10 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
             }
         case let .color(color):
-            c.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+            c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
         case let .gradient(topColor, bottomColor, _):
-            let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))].map { $0.cgColor } as CFArray
+            let gradientColors = [UIColor(rgb: topColor), UIColor(rgb: bottomColor)].map { $0.cgColor } as CFArray
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
@@ -974,7 +970,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                             accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                             let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                             
-                            if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                            if wallpaper.wallpaper.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                                 return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
                                     if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
@@ -1091,8 +1087,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
                 if let wallpaper = wallpaper, case let .file(file) = wallpaper {
-                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) } ?? UIColor(rgb: 0xd6e2ee)
-                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
+                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
                 } else {
                     if let bubbleColors = bubbleColors {
                         topBackgroundColor = UIColor(rgb: 0xd6e2ee)
@@ -1139,15 +1135,15 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         if let wallpaper = wallpaper {
             switch wallpaper {
                 case let .color(color):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    topBackgroundColor = UIColor(rgb: color)
                 case let .gradient(topColor, bottomColor, settings):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
-                    bottomBackgroundColor = UIColor(rgb: UInt32(bitPattern: bottomColor))
+                    topBackgroundColor = UIColor(rgb: topColor)
+                    bottomBackgroundColor = UIColor(rgb: bottomColor)
                     rotation = settings.rotation
                 case let .file(file):
                     if let color = file.settings.color {
-                        topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                        topBackgroundColor = UIColor(rgb: color)
+                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
                     }
                     rotation = file.settings.rotation
                 default:
@@ -1199,16 +1195,16 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                     case .builtin:
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                     case let .color(color):
-                        backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
+                        backgroundColor = (UIColor(rgb: color), nil)
                     case let .gradient(topColor, bottomColor, settings):
-                        backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                        backgroundColor = (UIColor(rgb: topColor), UIColor(rgb: bottomColor))
                         rotation = settings.rotation
                     case .image:
                         backgroundColor = (.black, nil)
                     case let .file(file):
                         rotation = file.settings.rotation
-                        if file.isPattern, let color = file.settings.color {
-                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) })
+                        if theme.chat.defaultWallpaper.isPattern, let color = file.settings.color {
+                            backgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
                         } else {
                             backgroundColor = (theme.chatList.backgroundColor, nil)
                         }
@@ -1225,7 +1221,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                     accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                                     let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                                     
-                                    if file.isPattern {
+                                    if wallpaper.wallpaper.isPattern {
                                         if let color = file.settings.color, let intensity = file.settings.intensity {
                                             return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                             |> mapToSignal { _ in

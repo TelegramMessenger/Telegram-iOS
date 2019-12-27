@@ -149,7 +149,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
         
         if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
-            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: value)
         }
         
         self.pageControlNode.isUserInteractionEnabled = false
@@ -235,7 +235,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                 let fileReference = FileMediaReference.standalone(media: file.file)
-                if file.isPattern {
+                if wallpaper.isPattern {
                     signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
                 } else if strongSelf.instantChatBackgroundNode.image == nil {
                     signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
@@ -277,9 +277,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     if let intensity = file.settings.intensity {
                         patternIntensity = CGFloat(intensity) / 100.0
                     }
-                    var patternColors = [UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)]
+                    var patternColors = [UIColor(rgb: color, alpha: patternIntensity)]
                     if let bottomColor = file.settings.bottomColor {
-                        patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                        patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
                     }
                     patternArguments = PatternWallpaperArguments(colors: patternColors, rotation: file.settings.rotation)
                 }
@@ -315,7 +315,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
         if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
-            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: value)
         }
         
         self.toolbarNode.updateThemeAndStrings(theme: self.previewTheme, strings: self.presentationData.strings)

@@ -84,7 +84,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.disposable = ((telegramWallpapers(postbox: context.account.postbox, network: context.account.network)
         |> map { wallpapers in
             return wallpapers.filter { wallpaper in
-                if case let .file(file) = wallpaper, file.isPattern, file.file.mimeType != "image/webp" {
+                if case let .file(file) = wallpaper, wallpaper.isPattern, file.file.mimeType != "image/webp" {
                     return true
                 } else {
                     return false
@@ -128,6 +128,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     }
     
     func updateWallpapers() {
+        return
         guard let subnodes = self.scrollNode.subnodes else {
             return
         }
@@ -150,8 +151,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: 100)
-                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
+                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100)
+                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             
             var selected = false
@@ -220,7 +221,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity ?? 40)
+            self.sliderView?.value = CGFloat(intensity ?? 50)
             
             self.scrollNode.view.contentOffset = CGPoint()
             

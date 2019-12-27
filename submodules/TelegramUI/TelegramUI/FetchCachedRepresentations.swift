@@ -20,6 +20,7 @@ import LocationResources
 import ImageBlur
 import TelegramAnimatedStickerNode
 import WallpaperResources
+import Svg
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -409,11 +410,30 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
 private func fetchCachedPatternWallpaperMaskRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = UIImage(data: data) {
-                let path = NSTemporaryDirectory() + "\(arc4random64())"
-                let url = URL(fileURLWithPath: path)
+            let path = NSTemporaryDirectory() + "\(arc4random64())"
+            let url = URL(fileURLWithPath: path)
+            
+            if data.count > 5, let string = String(data: data.subdata(in: 0 ..< 5), encoding: .utf8), string == "<?xml" {
+                let size = representation.size ?? CGSize(width: 1440.0, height: 2960.0)
                 
-                let size = representation.size != nil ? image.size.aspectFitted(representation.size!) : CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                if let image = drawSvgImage(data, size) {
+                    if let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                        CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
+                        
+                        let colorQuality: Float = 0.87
+                        
+                        let options = NSMutableDictionary()
+                        options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                        
+                        CGImageDestinationAddImage(alphaDestination, image.cgImage!, options as CFDictionary)
+                        if CGImageDestinationFinalize(alphaDestination) {
+                            subscriber.putNext(.temporaryPath(path))
+                            subscriber.putCompletion()
+                        }
+                    }
+                }
+            } else if let image = UIImage(data: data) {
+                let size = representation.size.flatMap { image.size.aspectFitted($0) } ?? CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                 
                 let alphaImage = generateImage(size, contextGenerator: { size, context in
                     context.setFillColor(UIColor.black.cgColor)
@@ -454,9 +474,9 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                 
                 var colors: [UIColor] = []
                 if let bottomColor = representation.bottomColor {
-                    colors.append(UIColor(rgb: UInt32(bitPattern: bottomColor)))
+                    colors.append(UIColor(rgb: bottomColor))
                 }
-                colors.append(UIColor(rgb: UInt32(bitPattern: representation.color)))
+                colors.append(UIColor(rgb: representation.color))
                 
                 let intensity = CGFloat(representation.intensity) / 100.0
                 

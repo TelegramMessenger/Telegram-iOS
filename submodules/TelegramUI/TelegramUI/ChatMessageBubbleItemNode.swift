@@ -337,6 +337,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
                     switch tapAction {
                         case .none:
+                            if let _ = strongSelf.item?.controllerInteraction.tapMessage {
+                                return .waitForSingleTap
+                            }
                             break
                         case .ignore:
                             return .fail
@@ -2268,7 +2271,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             }
                         }
                     }
-                } else if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                } else if let replyInfoNode = self.replyInfoNode, self.item?.controllerInteraction.tapMessage == nil, replyInfoNode.frame.contains(location) {
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
@@ -2302,7 +2305,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
                     switch tapAction {
                         case .none, .ignore:
-                            if let item = self.item, let tapMessage = self.item?.controllerInteraction.tapMessage {
+                            if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
                                 foundTapAction = true
                                 tapMessage(item.message)
                             }

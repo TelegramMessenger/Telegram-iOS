@@ -74,10 +74,10 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
             case .builtin:
                 return 0
             case let .color(color):
-                return (Int64(1) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+                return (Int64(1) << 32) | Int64(bitPattern: UInt64(color))
             case let .gradient(topColor, bottomColor, _):
-                var hash: UInt32 = UInt32(bitPattern: topColor)
-                hash = hash &* 31 &+ UInt32(bitPattern: bottomColor)
+                var hash: UInt32 = topColor
+                hash = hash &* 31 &+ bottomColor
                 return (Int64(2) << 32) | Int64(hash)
             case let .file(id, _, _, _, _, _, _, _, settings):
                 var hash: Int = id.hashValue
@@ -383,7 +383,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (file.isPattern && file.settings.color == nil) {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.color == nil) {
                     continue
                 }
                 let selected = presentationData.chatWallpaper.isBasicallyEqual(to: wallpaper)

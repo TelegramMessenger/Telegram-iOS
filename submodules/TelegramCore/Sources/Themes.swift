@@ -116,7 +116,6 @@ public enum ThemeUpdatedResult {
 }
 
 private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal<ThemeUpdatedResult, GetThemeError> {
-    
     let id = theme.settings != nil ? 0 : theme.file?.id?.id
     guard let documentId = id else {
         return .fail(.generic)

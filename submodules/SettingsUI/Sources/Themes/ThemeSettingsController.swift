@@ -323,10 +323,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                         colorItems.append(.default)
                         defaultColor = nil
                         
-                        let patternWallpaper: (String, Int32, Int32?, Int32?, Int32?) -> TelegramWallpaper = { slug, topColor, bottomColor, intensity, rotation in
-                           return TelegramWallpaper.file(id: 0, accessHash: 0, isCreator: false, isDefault: true, isPattern: true, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(color: topColor, bottomColor: bottomColor, intensity: intensity ?? 50, rotation: rotation))
-                        }
-                        
                         for preset in dayClassicColorPresets {
                             colorItems.append(.preset(preset))
                         }
@@ -539,6 +535,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
+    let removedThemeIndexesPromise = Promise<Set<Int64>>(Set())
+    let removedThemeIndexes = Atomic<Set<Int64>>(value: Set())
+    
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         selectThemeImpl?(theme)
     }, selectFontSize: { fontSize in
@@ -700,12 +699,22 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
+                            let _ = (cloudThemes.get()
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { themes in
+                                removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                    var updated = value
+                                    updated.insert(theme.theme.id)
+                                    return updated
+                                })))
+                                
                                 if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
                                     if let settings = theme.theme.settings {
-                                        selectAccentColorImpl?(nil)
+                                        if settings.baseTheme == .night {
+                                            selectAccentColorImpl?(PresentationThemeAccentColor(baseColor: .blue))
+                                        } else {
+                                            selectAccentColorImpl?(nil)
+                                        }
                                     } else {
                                         let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
                                         let newTheme: PresentationThemeReference
@@ -716,7 +725,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                         }
                                         selectThemeImpl?(newTheme)
                                     }
-                                    
                                 }
                                 
                                 let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
@@ -896,9 +904,15 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             var items: [ActionSheetItem] = []
                             items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
+                                let _ = (cloudThemes.get()
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { themes in
+                                    removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                         var updated = value
+                                         updated.insert(cloudTheme.theme.id)
+                                         return updated
+                                     })))
+                                    
                                     if isCurrent, let settings = cloudTheme.theme.settings {
                                         let colorThemes = themes.filter { theme in
                                             if let settings = theme.settings {
@@ -914,7 +928,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                             if let previousThemeIndex = previousThemeIndex {
                                                 selectThemeImpl?(.cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil)))
                                             } else {
-                                                selectAccentColorImpl?(nil)
+                                                if settings.baseTheme == .night {
+                                                    selectAccentColorImpl?(PresentationThemeAccentColor(baseColor: .blue))
+                                                } else {
+                                                    selectAccentColorImpl?(nil)
+                                                }
                                             }
                                         }
                                     }
@@ -940,8 +958,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let previousThemeReference = Atomic<PresentationThemeReference?>(value: nil)
     let previousAccentColor = Atomic<PresentationThemeAccentColor?>(value: nil)
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get())
+        |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = presentationData.fontSize
@@ -969,7 +987,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
         
-        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }.filter { !removedThemeIndexes.contains($0.index) }
         
         var availableThemes = defaultThemes
         if defaultThemes.first(where: { $0.index == themeReference.index }) == nil && cloudThemes.first(where: { $0.index == themeReference.index }) == nil {
@@ -1194,7 +1212,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                 
                 if autoNightModeTriggered {
-                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                     updatedAutomaticThemeSwitchSetting.theme = generalThemeReference
                 } else {
                     updatedTheme = generalThemeReference
