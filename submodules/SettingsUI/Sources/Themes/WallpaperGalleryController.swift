@@ -106,7 +106,10 @@ private func updatedFileWallpaper(wallpaper: TelegramWallpaper, firstColor: UICo
 }
 
 private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, slug: String, file: TelegramMediaFile, firstColor: UIColor?, secondColor: UIColor?, intensity: Int32?, rotation: Int32?) -> TelegramWallpaper {
-    let isPattern = ["image/png", "image/svg+xml"].contains(file.mimeType) 
+    var isPattern = ["image/png", "image/svg+xml"].contains(file.mimeType)
+    if let fileName = file.fileName, fileName.hasSuffix(".svgbg") {
+        isPattern = true
+    }
     var firstColorValue: UInt32?
     var secondColorValue: UInt32?
     var intensityValue: Int32?
@@ -340,8 +343,23 @@ public class WallpaperGalleryController: ViewController {
         self.overlayNode = overlayNode
         self.galleryNode.overlayNode = overlayNode
         self.galleryNode.addSubnode(overlayNode)
+        
+        var doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set
+        switch self.source {
+        case let .wallpaper(wallpaper):
+            switch wallpaper.0 {
+            case let .file(file):
+                if file.id == 0 {
+                    doneButtonType = .none
+                }
+            default:
+                break
+            }
+        default:
+            break
+        }
                 
-        let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: .set)
+        let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
         

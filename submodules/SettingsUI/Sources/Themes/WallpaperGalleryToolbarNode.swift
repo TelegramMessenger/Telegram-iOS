@@ -13,6 +13,7 @@ enum WallpaperGalleryToolbarDoneButtonType {
     case set
     case proceed
     case apply
+    case none
 }
 
 final class WallpaperGalleryToolbarNode: ASDisplayNode {
@@ -107,6 +108,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
                 doneTitle = strings.Theme_Colors_Proceed
             case .apply:
                 doneTitle = strings.WallpaperPreview_PatternPaternApply
+            case .none:
+                doneTitle = ""
+                self.doneButton.isUserInteractionEnabled = false
         }
         self.cancelButton.setTitle(cancelTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
         self.doneButton.setTitle(doneTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
