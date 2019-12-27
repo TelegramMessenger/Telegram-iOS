@@ -1,9 +1,8 @@
 #import "Svg.h"
 
-#import "SVGKit.h"
-#import "SVGKExporterUIImage.h"
-
 #import "nanosvg.h"
+
+#define UIColorRGBA(rgb,a) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:a])
  
 CGSize aspectFillSize(CGSize size, CGSize bounds) {
     CGFloat scale = MAX(bounds.width / MAX(1.0, size.width), bounds.height / MAX(1.0, size.height));
@@ -124,7 +123,14 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSetFillColorWithColor(context, backgroundColor.CGColor);
     CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
-    CGContextScaleCTM(context, size.width / image->width, size.height / image->height);
+    
+    CGSize svgSize = CGSizeMake(image->width, image->height);
+    CGSize drawingSize = aspectFillSize(svgSize, size);
+    
+    CGFloat scale = MAX(size.width / MAX(1.0, svgSize.width), size.height / MAX(1.0, svgSize.height));
+    
+    CGContextScaleCTM(context, scale, scale);
+    CGContextTranslateCTM(context, (size.width - drawingSize.width) / 2.0, (size.height - drawingSize.height) / 2.0);
     
     for (NSVGshape *shape = image->shapes; shape != NULL; shape = shape->next) {
         if (!(shape->flags & NSVG_FLAGS_VISIBLE)) {
@@ -132,28 +138,45 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
         }
         
         if (shape->fill.type != NSVG_PAINT_NONE) {
+            //CGContextSetFillColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetFillColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
 
+            bool isFirst = true;
+            bool hasStartPoint = false;
+            CGPoint startPoint;
             for (NSVGpath *path = shape->paths; path != NULL; path = path->next) {
-                CGContextBeginPath(context);
+                if (isFirst) {
+                    CGContextBeginPath(context);
+                    isFirst = false;
+                    hasStartPoint = true;
+                    startPoint.x = path->pts[0];
+                    startPoint.y = path->pts[1];
+                }
                 CGContextMoveToPoint(context, path->pts[0], path->pts[1]);
                 for (int i = 0; i < path->npts - 1; i += 3) {
                     float *p = &path->pts[i * 2];
                     CGContextAddCurveToPoint(context, p[2], p[3], p[4], p[5], p[6], p[7]);
                 }
                 
-                switch (shape->fillRule) {
-                    case NSVG_FILLRULE_EVENODD:
-                        CGContextEOFillPath(context);
-                        break;
-                    default:
-                        CGContextFillPath(context);
-                        break;
+                if (path->closed) {
+                    if (hasStartPoint) {
+                        hasStartPoint = false;
+                        CGContextAddLineToPoint(context, startPoint.x, startPoint.y);
+                    }
                 }
+            }
+            switch (shape->fillRule) {
+                case NSVG_FILLRULE_EVENODD:
+                    CGContextEOFillPath(context);
+                    break;
+                default:
+                    CGContextFillPath(context);
+                    break;
             }
         }
         
         if (shape->stroke.type != NSVG_PAINT_NONE) {
+            //CGContextSetStrokeColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetStrokeColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
             CGContextSetMiterLimit(context, shape->miterLimit);
             
@@ -205,43 +228,9 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
     UIGraphicsEndImageContext();
     
     deltaTime = -1.0f * [startTime timeIntervalSinceNow];
-    printf("drawingTime = %f\n", deltaTime);
+    printf("drawingTime %fx%f = %f\n", size.width, size.height, deltaTime);
     
     nsvgDelete(image);
-    
-    return resultImage;
-}
-
-UIImage * _Nullable drawSvgImage1(NSData * _Nonnull data, CGSize size) {
-    NSDate *startTime = [NSDate date];
-    
-    SVGKImage *image = [[SVGKImage alloc] initWithData:data];
-    image.size = aspectFillSize(image.size, size);
-    
-    if (image == nil) {
-        return nil;
-    }
-        
-    double deltaTime = -1.0f * [startTime timeIntervalSinceNow];
-    //printf("parseTime = %f\n", deltaTime);
-    
-    UIGraphicsBeginImageContextWithOptions(size, true, 1.0);
-    
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, [UIColor blackColor].CGColor);
-    CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
-    
-    CGContextTranslateCTM(context, (size.width - image.size.width) / 2.0f, (size.height - image.size.height) / 2.0f);
-    
-    startTime = [NSDate date];
-        
-    [image renderToContext:context antiAliased:true curveFlatnessFactor:1.0 interpolationQuality:kCGInterpolationDefault flipYaxis:false];
-    
-    deltaTime = -1.0f * [startTime timeIntervalSinceNow];
-    //printf("drawingTime = %f\n", deltaTime);
-    
-    UIImage *resultImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
     
     return resultImage;
 }
