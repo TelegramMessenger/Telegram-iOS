@@ -367,6 +367,12 @@ public final class ThemePreviewController: ViewController {
                         updatedSettings = currentSettings.withUpdatedTheme(updatedTheme)
                     }
                     
+                    var themeSpecificAccentColors = updatedSettings.themeSpecificAccentColors
+                    if case let .cloud(info) = updatedTheme, let settings = info.theme.settings {
+                        let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+                        themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
+                    }
+                    
                     var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
                     themeSpecificChatWallpapers[updatedTheme.index] = nil
                     return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)

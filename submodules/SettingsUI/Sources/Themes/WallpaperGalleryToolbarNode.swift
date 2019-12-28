@@ -47,6 +47,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
         
+        self.cancelHighlightBackgroundNode.alpha = 0.0
+        self.doneHighlightBackgroundNode.alpha = 0.0
+        
         super.init()
         
         self.addSubnode(self.cancelHighlightBackgroundNode)
