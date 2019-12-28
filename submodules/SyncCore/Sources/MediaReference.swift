@@ -175,6 +175,39 @@ public enum ThemeReference: PostboxCoding, Hashable, Equatable {
     }
 }
 
+public enum WallpaperReference: PostboxCoding, Hashable, Equatable {
+    case slug(String)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+            case 0:
+                self = .slug(decoder.decodeStringForKey("s", orElse: ""))
+            default:
+                self = .slug("")
+                assertionFailure()
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case let .slug(slug):
+                encoder.encodeInt32(0, forKey: "r")
+                encoder.encodeString(slug, forKey: "s")
+        }
+    }
+    
+    public static func ==(lhs: WallpaperReference, rhs: WallpaperReference) -> Bool {
+        switch lhs {
+            case let .slug(slug):
+                if case .slug(slug) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 public enum AnyMediaReference: Equatable {
     case standalone(media: Media)
     case message(message: MessageReference, media: Media)
@@ -461,7 +494,7 @@ public enum MediaResourceReference: Equatable {
     case standalone(resource: MediaResource)
     case avatar(peer: PeerReference, resource: MediaResource)
     case messageAuthorAvatar(message: MessageReference, resource: MediaResource)
-    case wallpaper(resource: MediaResource)
+    case wallpaper(wallpaper: WallpaperReference?, resource: MediaResource)
     case stickerPackThumbnail(stickerPack: StickerPackReference, resource: MediaResource)
     case theme(theme: ThemeReference, resource: MediaResource)
     
@@ -475,7 +508,7 @@ public enum MediaResourceReference: Equatable {
                 return resource
             case let .messageAuthorAvatar(_, resource):
                 return resource
-            case let .wallpaper(resource):
+            case let .wallpaper(_, resource):
                 return resource
             case let .stickerPackThumbnail(_, resource):
                 return resource
@@ -510,8 +543,8 @@ public enum MediaResourceReference: Equatable {
             } else {
                 return false
             }
-        case let .wallpaper(lhsResource):
-            if case let .wallpaper(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+        case let .wallpaper(lhsWallpaper, lhsResource):
+            if case let .wallpaper(rhsWallpaper, rhsResource) = rhs, lhsWallpaper == rhsWallpaper, lhsResource.isEqual(to: rhsResource) {
                 return true
             } else {
                 return false

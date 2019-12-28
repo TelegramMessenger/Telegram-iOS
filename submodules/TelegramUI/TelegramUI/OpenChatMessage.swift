@@ -569,7 +569,7 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
                             }
                         }
                     } else if let settings = settings {
-                        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false) {
+                        if let theme = makePresentationTheme(settings: settings, title: content.title) {
                             let controller = ThemePreviewController(context: context, previewTheme: theme, source: .themeSettings(slug, settings))
                             pushController(controller)
                         } else {

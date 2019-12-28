@@ -83,7 +83,7 @@ CGSize aspectFillSize(CGSize size, CGSize bounds) {
 
 @end
 
-UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
+UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor) {
     NSDate *startTime = [NSDate date];
     
     NSXMLParser *parser = [[NSXMLParser alloc] initWithData:data];
@@ -115,9 +115,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size) {
     printf("parseTime = %f\n", deltaTime);
     
     startTime = [NSDate date];
-    
-    UIColor *backgroundColor = [UIColor blackColor];
-    UIColor *foregroundColor = [UIColor whiteColor];
     
     UIGraphicsBeginImageContextWithOptions(size, true, 1.0);
     CGContextRef context = UIGraphicsGetCurrentContext();

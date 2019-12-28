@@ -629,6 +629,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-69724536] = { return Api.BaseTheme.parse_baseThemeDay($0) }
     dict[-1212997976] = { return Api.BaseTheme.parse_baseThemeNight($0) }
     dict[1834973166] = { return Api.BaseTheme.parse_baseThemeTinted($0) }
+    dict[1527845466] = { return Api.BaseTheme.parse_baseThemeArctic($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
     dict[-1777752804] = { return Api.MessagesFilter.parse_inputMessagesFilterPhotos($0) }

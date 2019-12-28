@@ -68,7 +68,7 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
     if let message = message {
         return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
     }
-    return .wallpaper(resource: resource)
+    return .wallpaper(wallpaper: nil, resource: resource)
 }
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
@@ -347,7 +347,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 contentSize = largestSize.dimensions.cgSize
                                 displaySize = largestSize.dimensions.cgSize.dividedByScreenScale().integralFloor
                                 
-                                let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
+                                let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                                 
                                 if let largestIndex = convertedRepresentations.firstIndex(where: { $0.representation == largestSize }) {

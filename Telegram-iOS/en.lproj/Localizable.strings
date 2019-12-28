@@ -5160,7 +5160,7 @@ Any member of this group will be able to see messages in the channel.";
 "AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
 "AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
 "AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
-"AuthSessions.AddedDeviceTitle" = "Loggin Successful";
+"AuthSessions.AddedDeviceTitle" = "Login Successful";
 "AuthSessions.AddedDeviceTerminate" = "Terminate";
 
 "Map.SendThisPlace" = "Send This Place";

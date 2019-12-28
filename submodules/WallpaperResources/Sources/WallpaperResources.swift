@@ -787,11 +787,17 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
         c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
     }
-    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
     
-    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    if case let .color(color) = theme.chat.defaultWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColorNoWallpaper.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+    } else {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+        
+        c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    }
     
     c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
     c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
@@ -950,18 +956,18 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
                 }
             }
         case let .settings(settings):
-            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
+            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
     }
     
     let data = theme
     |> mapToSignal { (theme, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
         if let theme = theme {
-            if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+            if case let .file(file) = theme.chat.defaultWallpaper {
                 return cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                         return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                             guard complete, let fullSizeData = fullSizeData else {
@@ -1165,7 +1171,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         let themeSignal: Signal<PresentationTheme?, NoError>
         if case let .cloud(theme) = theme, let settings = theme.theme.settings {
             themeSignal = Signal { subscriber in
-                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
                 subscriber.putNext(theme)
                 subscriber.putCompletion()
                 
@@ -1218,7 +1224,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                                 }
                                 
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                                 return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                 |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
                                     guard complete, let fullSizeData = fullSizeData else {

@@ -145,6 +145,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     var scrollingInitiated: (() -> Void)?
     
+    private let installDisposable = MetaDisposable()
+    
     init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.context = context
         self.controllerInteraction = controllerInteraction
@@ -163,6 +165,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     deinit {
         self.disposable?.dispose()
+        self.installDisposable.dispose()
     }
     
     func activate() {
@@ -174,7 +177,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 let account = strongSelf.context.account
-                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
@@ -200,7 +203,37 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                     return .complete()
                 }
-                |> deliverOnMainQueue).start(next: { info, items in
+                |> deliverOnMainQueue
+                
+                let context = strongSelf.context
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self?.controllerInteraction.presentController(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.12, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                installSignal = installSignal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = {
+                    self?.installDisposable.set(nil)
+                }
+                    
+                strongSelf.installDisposable.set(installSignal.start(next: { info, items in
                     guard let strongSelf = self else {
                         return
                     }
@@ -219,7 +252,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
-                })
+                }))
             }
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {

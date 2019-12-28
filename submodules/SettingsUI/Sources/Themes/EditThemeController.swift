@@ -201,7 +201,7 @@ private struct EditThemeControllerState: Equatable {
     var updating: Bool
 }
 
-private func editThemeControllerEntries(presentationData: PresentationData, state: EditThemeControllerState, previewTheme: PresentationTheme) -> [EditThemeControllerEntry] {
+private func editThemeControllerEntries(presentationData: PresentationData, state: EditThemeControllerState, previewTheme: PresentationTheme, hasSettings: Bool) -> [EditThemeControllerEntry] {
     var entries: [EditThemeControllerEntry] = []
     
     var isCreate = false
@@ -256,8 +256,10 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (previewIncomingReplyName, previewIncomingReplyText), text: previewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: previewOutgoingText)]))
     
     entries.append(.changeColors(presentationData.theme, presentationData.strings.EditTheme_ChangeColors))
-    entries.append(.uploadTheme(presentationData.theme, uploadText))
-    entries.append(.uploadInfo(presentationData.theme, uploadInfo))
+    if !hasSettings {
+        entries.append(.uploadTheme(presentationData.theme, uploadText))
+        entries.append(.uploadInfo(presentationData.theme, uploadInfo))
+    }
     
     return entries
 }
@@ -266,6 +268,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     let initialState: EditThemeControllerState
     let previewThemePromise = Promise<PresentationTheme>()
     let settingsPromise = Promise<TelegramThemeSettings?>(nil)
+    let hasSettings: Bool
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch mode {
         case let .create(existingTheme, settings):
@@ -275,14 +278,17 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 theme = existingTheme
                 wallpaper = theme.chat.defaultWallpaper
                 settingsPromise.set(.single(settings))
+                hasSettings = settings != nil
             } else {
                 theme = presentationData.theme
                 wallpaper = presentationData.chatWallpaper
                 settingsPromise.set(.single(nil))
+                hasSettings = false
             }
             initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
             previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
         case let .edit(info):
+            hasSettings = info.theme.settings != nil
             settingsPromise.set(.single(info.theme.settings))
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
@@ -353,7 +359,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         |> mapToSignal { wallpaper -> Signal<TelegramWallpaper?, NoError> in
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                                 return wallpaperDatas(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                 |> mapToSignal { _, fullSizeData, complete -> Signal<TelegramWallpaper?, NoError> in
                                     guard complete, let fullSizeData = fullSizeData else {
@@ -633,7 +639,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 }
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: editThemeControllerEntries(presentationData: presentationData, state: state, previewTheme: previewTheme), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: editThemeControllerEntries(presentationData: presentationData, state: state, previewTheme: previewTheme, hasSettings: hasSettings), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

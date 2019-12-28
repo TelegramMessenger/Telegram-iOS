@@ -67,6 +67,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var statusDisposable: Disposable?
     private var fetchDisposable = MetaDisposable()
     
+    private var dismissed = false
+    
     init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, ready: Promise<Bool>) {
         self.context = context
         self.previewTheme = previewTheme
@@ -122,11 +124,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         
-        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
-            self.remoteChatBackgroundNode.isHidden = false
+        if case let .file(file) = previewTheme.chat.defaultWallpaper {
             self.toolbarNode.setDoneEnabled(false)
-        } else {
-            self.remoteChatBackgroundNode.isHidden = true
         }
         
         self.maskNode = ASImageNode()
@@ -175,11 +174,12 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.toolbarNode.cancel = {
             dismiss()
         }
-        var dismissed = false
-        self.toolbarNode.done = {
-            if !dismissed {
-                dismissed = true
-                apply()
+        self.toolbarNode.done = { [weak self] in
+            if let strongSelf = self {
+                if !strongSelf.dismissed {
+                    strongSelf.dismissed = true
+                    apply()
+                }
             }
         }
         
@@ -229,9 +229,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
                 var convertedRepresentations: [ImageRepresentationWithReference] = []
                 for representation in file.file.previewRepresentations {
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: MediaResourceReference.media(media: .standalone(media: file.file), resource: representation.resource)))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(wallpaper: .slug(file.slug), resource: representation.resource)))
                 }
-                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 
                 let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                 let fileReference = FileMediaReference.standalone(media: file.file)
@@ -249,9 +249,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
-
-                strongSelf.fetchDisposable.set(freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file.file)).start())
                 
+                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.sharedContext.accountManager.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start())
+                                
                 let account = strongSelf.context.account
                 let statusSignal = strongSelf.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
                 |> take(1)
@@ -269,7 +269,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         strongSelf.toolbarNode.setDoneEnabled(true)
                     }
                 })
-                
                 
                 var patternArguments: PatternWallpaperArguments?
                 if let color = file.settings.color {
@@ -584,7 +583,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.pageControlBackgroundNode.isHidden = false
             self.separatorNode.isHidden = true
             
-            bottomInset = 66.0
+            bottomInset = 38.0
         }
         
         self.messagesContainerNode.frame = self.chatContainerNode.bounds
@@ -593,14 +592,14 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
         
-        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
+        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
         self.updateMessagesLayout(layout: layout, bottomInset: self.isPreview ? 0.0 : (toolbarHeight + bottomInset), transition: transition)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)
+        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 28.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))

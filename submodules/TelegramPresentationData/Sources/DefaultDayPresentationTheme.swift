@@ -8,7 +8,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -294,7 +294,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     )
     
     return PresentationTheme(
-        name: theme.name,
+        name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
