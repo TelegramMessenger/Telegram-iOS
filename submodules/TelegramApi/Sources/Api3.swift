@@ -5962,6 +5962,24 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getMultiWallPapers(wallpapers: [Api.InputWallPaper]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.WallPaper]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1705865692)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(wallpapers.count))
+                    for item in wallpapers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "account.getMultiWallPapers", parameters: [("wallpapers", wallpapers)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.WallPaper]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.WallPaper]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.WallPaper.self)
+                        }
+                        return result
+                    })
+                }
             }
             public struct wallet {
                 public static func sendLiteRequest(body: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.LiteResponse>) {

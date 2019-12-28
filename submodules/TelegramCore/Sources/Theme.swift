@@ -27,6 +27,8 @@ extension TelegramBaseTheme {
                 self = .night
             case .baseThemeTinted:
                 self = .tinted
+            case .baseThemeArctic:
+                self = .day
         }
     }
     

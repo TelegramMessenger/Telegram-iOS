@@ -352,7 +352,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                 }
                 var currentColor = color ?? defaultColor.flatMap { .accentColor($0) }
-                if let color = currentColor, case let .accentColor(accentColor) = color {
+                if let color = currentColor, case let .accentColor(accentColor) = color, accentColor.baseColor == .theme {
                     var themeExists = false
                     if let _ = themes.first(where: { $0.index == accentColor.themeIndex }) {
                         themeExists = true
@@ -862,7 +862,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if let accentColor = accentColor {
                 if case let .accentColor(color) = accentColor, color.baseColor != .custom {
                 } else if case let .theme(theme) = accentColor, case let .cloud(cloudTheme) = theme {
-                    if cloudTheme.theme.isCreator {
+                    if cloudTheme.theme.isCreator && cloudThemeExists {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_EditTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
                                 if let navigationController = getNavigationControllerImpl?() {

@@ -17784,6 +17784,7 @@ public extension Api {
         case baseThemeDay
         case baseThemeNight
         case baseThemeTinted
+        case baseThemeArctic
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17811,6 +17812,12 @@ public extension Api {
                     }
                     
                     break
+                case .baseThemeArctic:
+                    if boxed {
+                        buffer.appendInt32(1527845466)
+                    }
+                    
+                    break
     }
     }
     
@@ -17824,6 +17831,8 @@ public extension Api {
                 return ("baseThemeNight", [])
                 case .baseThemeTinted:
                 return ("baseThemeTinted", [])
+                case .baseThemeArctic:
+                return ("baseThemeArctic", [])
     }
     }
     
@@ -17838,6 +17847,9 @@ public extension Api {
         }
         public static func parse_baseThemeTinted(_ reader: BufferReader) -> BaseTheme? {
             return Api.BaseTheme.baseThemeTinted
+        }
+        public static func parse_baseThemeArctic(_ reader: BufferReader) -> BaseTheme? {
+            return Api.BaseTheme.baseThemeArctic
         }
     
     }
