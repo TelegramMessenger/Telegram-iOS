@@ -138,16 +138,16 @@ final class ThemeAccentColorController: ViewController {
         super.loadDisplayNode()
         
         let theme: PresentationTheme
-        let wallpaper: TelegramWallpaper
+        let initialWallpaper: TelegramWallpaper
         if case let .edit(editedTheme, walpaper, _, _, _, _) = self.mode {
             theme = editedTheme
-            wallpaper = walpaper ?? editedTheme.chat.defaultWallpaper
+            initialWallpaper = walpaper ?? editedTheme.chat.defaultWallpaper
         } else {
             theme = self.presentationData.theme
-            wallpaper = self.presentationData.chatWallpaper
+            initialWallpaper = self.presentationData.chatWallpaper
         }
         
-        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, theme: theme, wallpaper: wallpaper, dismiss: { [weak self] in
+        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, theme: theme, wallpaper: initialWallpaper, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -202,7 +202,7 @@ final class ThemeAccentColorController: ViewController {
                     prepareWallpaper = .complete()
                 }
                 
-                if case let .edit(theme, _, generalThemeReference, themeReference, _, completion) = strongSelf.mode {
+                if case let .edit(theme, initialWallpaper, generalThemeReference, themeReference, _, completion) = strongSelf.mode {
                     let _ = (prepareWallpaper
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         let updatedTheme: PresentationTheme
@@ -248,10 +248,7 @@ final class ThemeAccentColorController: ViewController {
                         baseTheme = .classic
                     }
                     
-                    var wallpaper: TelegramWallpaper? = nil //themeSpecificChatWallpapers[theme.index]
-                    if let coloredWallpaper = coloredWallpaper {
-                        wallpaper = coloredWallpaper
-                    }
+                    let wallpaper = state.initialWallpaper ?? coloredWallpaper
                     
                     let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: wallpaper)
                     let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
@@ -345,6 +342,9 @@ final class ThemeAccentColorController: ViewController {
                     
                     let progressDisposable = progress.start()
                     cancelImpl = {
+                        if let strongSelf = self {
+                            strongSelf.controllerNode.dismissed = false
+                        }
                         disposable.set(nil)
                     }
                     disposable.set((apply

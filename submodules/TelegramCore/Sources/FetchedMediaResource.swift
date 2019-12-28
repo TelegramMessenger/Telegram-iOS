@@ -140,6 +140,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case stickerPack(stickerPack: StickerPackReference)
     case savedGifs
     case peer(peer: PeerReference)
+    case wallpaper(wallpaper: WallpaperReference)
     case wallpapers
     case themes
 }
@@ -380,13 +381,24 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
-    func wallpapers(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
+    func wallpapers(postbox: Postbox, network: Network, background: Bool, wallpaper: WallpaperReference?) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
         return self.genericItem(key: .wallpapers, background: background, request: { next, error in
-            return (telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
-            |> last
-            |> mapError { _ -> RevalidateMediaReferenceError in
-                return .generic
-            }).start(next: { value in
+            let signal: Signal<[TelegramWallpaper]?, RevalidateMediaReferenceError>
+            if let wallpaper = wallpaper, case let .slug(slug) = wallpaper {
+                signal = getWallpaper(network: network, slug: slug)
+                |> mapError { _ -> RevalidateMediaReferenceError in
+                    return .generic
+                }
+                |> map { [$0] }
+            } else {
+                signal = telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
+                |> last
+                |> mapError { _ -> RevalidateMediaReferenceError in
+                    return .generic
+                }
+            }
+            return (signal
+            ).start(next: { value in
                 if let value = value {
                     next(value)
                 } else {
@@ -569,8 +581,8 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                 }
                 return .fail(.generic)
             }
-        case .wallpaper:
-            return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+        case let .wallpaper(wallpaper, _):
+            return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, wallpaper: wallpaper)
             |> mapToSignal { wallpapers -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for wallpaper in wallpapers {
                     switch wallpaper {

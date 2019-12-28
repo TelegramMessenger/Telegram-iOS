@@ -1203,25 +1203,17 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
                     let resource = file.file.resource
                     let representation = CachedPatternWallpaperRepresentation(color: file.settings.color ?? 0xd6e2ee, bottomColor: file.settings.bottomColor, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
-                    
-                    var data: Data?
-                    if let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                        data = maybeData
-                    } else if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                        data = maybeData
-                    }
-                    
-                    if let data = data {
-                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                        return (context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
-                        |> filter({ $0.complete })
-                        |> take(1)
-                        |> mapToSignal { _ -> Signal<TelegramWallpaper?, NoError> in
-                            return .single(wallpaper)
-                        })
-                    } else {
-                        return .single(nil)
-                    }
+                            
+                    let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
+
+                    let _ = (context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: true)
+                    |> filter({ $0.complete })).start(next: { data in
+                        if data.complete, let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: maybeData, synchronous: true)
+                        }
+                    })
+                    return .single(wallpaper)
+    
                 } else {
                     return .single(nil)
                 }
@@ -1263,12 +1255,20 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
                 
                 if case let .builtin(theme) = generalThemeReference {
-                    if let wallpaper = current.themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)], wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
-                        themeSpecificChatWallpapers[currentTheme.index] = nil
-                        if let accentColor = accentColor {
-                            themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)] = nil
+                    let index = coloredThemeIndex(reference: currentTheme, accentColor: accentColor)
+                    if let wallpaper = current.themeSpecificChatWallpapers[index] {
+                        if wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
+                            themeSpecificChatWallpapers[index] = presetWallpaper
                         }
+                    } else {
+                        themeSpecificChatWallpapers[index] = presetWallpaper
                     }
+//                    if let wallpaper = current.themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)], wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
+//                        themeSpecificChatWallpapers[currentTheme.index] = nil
+//                        if let accentColor = accentColor {
+//                            themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)] = nil
+//                        }
+//                    }
                 }
                 
                 return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)

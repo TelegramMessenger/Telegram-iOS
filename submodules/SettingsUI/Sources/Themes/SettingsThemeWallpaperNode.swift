@@ -113,7 +113,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
                     
-                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
+                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
                     self.imageNode.setSignal(wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
@@ -122,7 +122,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.isHidden = false
                     
                     let convertedRepresentations : [ImageRepresentationWithReference] = file.file.previewRepresentations.map {
-                        ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource))
+                        ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: .slug(file.slug), resource: $0.resource))
                     }
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>

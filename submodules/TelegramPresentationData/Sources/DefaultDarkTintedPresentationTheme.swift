@@ -7,7 +7,7 @@ import TelegramUIPreferences
 private let defaultDarkTintedAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkTintedPresentationTheme = makeDefaultDarkTintedPresentationTheme(preview: false)
 
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
     }
@@ -424,7 +424,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     )
     
     return PresentationTheme(
-        name: theme.name,
+        name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,

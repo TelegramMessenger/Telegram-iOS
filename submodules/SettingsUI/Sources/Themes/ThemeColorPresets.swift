@@ -8,13 +8,13 @@ private func patternWallpaper(slug: String, topColor: UInt32, bottomColor: UInt3
 }
 
 var dayClassicColorPresets: [PresentationThemeAccentColor] = [
-    PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xf55783, bubbleColors: (0xd6f5ff, 0xc9fdfe), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xfce3ec, bottomColor: 0xfec8ff, intensity: 50, rotation: 45)),
-    PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xff5fa9, bubbleColors: (0xfff4d7, nil), wallpaper: patternWallpaper(slug: "51nnTjx8mFIBAAAAaFGJsMIvWkk", topColor: 0xf6b594, bottomColor: 0xebf6cd, intensity: 46, rotation: 45)),
-    PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0x5a9e29, bubbleColors: (0xfff8df, 0xdcf8c6), wallpaper: patternWallpaper(slug: "R3j69wKskFIBAAAAoUdXWCKMzCM", topColor: 0xede6dd, bottomColor: 0xffd59e, intensity: 50, rotation: nil)),
-    PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0x7e5fe5, bubbleColors: (0xf5e2ff, nil), wallpaper: patternWallpaper(slug: "nQcFYJe1mFIBAAAAcI95wtIK0fk", topColor: 0xfcccf4, bottomColor: 0xae85f0, intensity: 54, rotation: nil)),
-    PresentationThemeAccentColor(index: 107, baseColor: .preset, accentColor: 0x2cb9ed, bubbleColors: (0xadf7b5, 0xfcff8b), wallpaper: patternWallpaper(slug: "nQcFYJe1mFIBAAAAcI95wtIK0fk", topColor: 0x1a2d1a, bottomColor: 0x5f6f54, intensity: 50, rotation: 225)),
-    PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0x199972, bubbleColors: (0xfffec7, nil), wallpaper: patternWallpaper(slug: "fqv01SQemVIBAAAApND8LDRUhRU", topColor: 0xc1e7cb, bottomColor: nil, intensity: 50, rotation: nil)),
-    PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x009eee, bubbleColors: (0x94fff9, 0xccffc7), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xffbca6, bottomColor: 0xff63bd, intensity: 57, rotation: 225))
+    PresentationThemeAccentColor(index: 106, baseColor: .preset, accentColor: 0xfff55783, bubbleColors: (0xffd6f5ff, 0xffc9fdfe), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xfffce3ec, bottomColor: 0xfffec8ff, intensity: 50, rotation: 45)),
+    PresentationThemeAccentColor(index: 102, baseColor: .preset, accentColor: 0xffff5fa9, bubbleColors: (0xfffff4d7, nil), wallpaper: patternWallpaper(slug: "51nnTjx8mFIBAAAAaFGJsMIvWkk", topColor: 0xfff6b594, bottomColor: 0xffebf6cd, intensity: 46, rotation: 45)),
+    PresentationThemeAccentColor(index: 104, baseColor: .preset, accentColor: 0xff5a9e29, bubbleColors: (0xfffff8df, 0xffdcf8c6), wallpaper: patternWallpaper(slug: "R3j69wKskFIBAAAAoUdXWCKMzCM", topColor: 0xffede6dd, bottomColor: 0xffffd59e, intensity: 50, rotation: nil)),
+    PresentationThemeAccentColor(index: 101, baseColor: .preset, accentColor: 0xff7e5fe5, bubbleColors: (0xfff5e2ff, nil), wallpaper: patternWallpaper(slug: "nQcFYJe1mFIBAAAAcI95wtIK0fk", topColor: 0xfffcccf4, bottomColor: 0xffae85f0, intensity: 54, rotation: nil)),
+    PresentationThemeAccentColor(index: 107, baseColor: .preset, accentColor: 0xff2cb9ed, bubbleColors: (0xffadf7b5, 0xfffcff8b), wallpaper: patternWallpaper(slug: "nQcFYJe1mFIBAAAAcI95wtIK0fk", topColor: 0xff1a2d1a, bottomColor: 0xff5f6f54, intensity: 50, rotation: 225)),
+    PresentationThemeAccentColor(index: 103, baseColor: .preset, accentColor: 0xff199972, bubbleColors: (0xfffffec7, nil), wallpaper: patternWallpaper(slug: "fqv01SQemVIBAAAApND8LDRUhRU", topColor: 0xffc1e7cb, bottomColor: nil, intensity: 50, rotation: nil)),
+    PresentationThemeAccentColor(index: 105, baseColor: .preset, accentColor: 0x0ff09eee, bubbleColors: (0xff94fff9, 0xffccffc7), wallpaper: patternWallpaper(slug: "p-pXcflrmFIBAAAAvXYQk-mCwZU", topColor: 0xffffbca6, bottomColor: 0xffff63bd, intensity: 57, rotation: 225))
 ]
 
 var dayColorPresets: [PresentationThemeAccentColor] = [
