@@ -833,6 +833,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             |> mapToSignal { theme, reference, wallpaper in
                 if case let .cloud(info) = reference {
                     return cloudThemes.get()
+                    |> take(1)
                     |> map { themes -> Bool in
                         if let _ = themes.first(where: { $0.id == info.theme.id }) {
                             return true
