@@ -956,7 +956,7 @@ public func themeImage(account: Account, accountManager: AccountManager, source:
     let data = theme
     |> mapToSignal { (theme, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
         if let theme = theme {
-            if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+            if case let .file(file) = theme.chat.defaultWallpaper {
                 return cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {

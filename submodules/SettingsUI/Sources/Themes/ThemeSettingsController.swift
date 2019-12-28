@@ -515,6 +515,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var selectAccentColorImpl: ((PresentationThemeAccentColor?) -> Void)?
+    var openAccentColorPickerImpl: ((PresentationThemeReference, Bool) -> Void)?
     var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
@@ -549,8 +550,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }, selectAccentColor: { accentColor in
         selectAccentColorImpl?(accentColor)
     }, openAccentColorPicker: { themeReference, create in
-        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: themeReference, create: create))
-        pushControllerImpl?(controller)
+        openAccentColorPickerImpl?(themeReference, create)
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, openTextSize: {
@@ -1157,6 +1157,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         } |> deliverOnMainQueue).start(next: { crossfadeAccentColors in
             presentCrossfadeControllerImpl?((cloudTheme == nil || cloudTheme?.settings != nil) && !crossfadeAccentColors)
         })
+    }
+    openAccentColorPickerImpl = { [weak controller] themeReference, create in
+        if let _ = controller?.navigationController?.viewControllers.first(where: { $0 is ThemeAccentColorController }) {
+            return
+        }
+        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: themeReference, create: create))
+        pushControllerImpl?(controller)
     }
     selectAccentColorImpl = { accentColor in
         var wallpaperSignal: Signal<TelegramWallpaper?, NoError> = .single(nil)
