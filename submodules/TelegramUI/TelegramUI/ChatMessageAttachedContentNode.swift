@@ -487,7 +487,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, wallpaper, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
-                    if case let .file(_, _, isTheme, _) = wallpaper.content, isTheme {
+                    if case let .file(_, _, _, _, isTheme, _) = wallpaper.content, isTheme {
                         skipStandardStatus = true
                     }
                 }
@@ -767,7 +767,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             var hasAnimation = true
                             var transition: ContainedViewLayoutTransition = .immediate
                             switch animation {
-                                case .None:
+                                case .None, .Crossfade:
                                     hasAnimation = false
                                 case let .System(duration):
                                     hasAnimation = true
@@ -960,13 +960,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return false
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let contentImageNode = self.contentImageNode, let image = self.media as? TelegramMediaImage, image.isEqual(to: media) {
-            return (contentImageNode, { [weak contentImageNode] in
+            return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else if let contentImageNode = self.contentImageNode, let file = self.media as? TelegramMediaFile, file.isEqual(to: media) {
-            return (contentImageNode, { [weak contentImageNode] in
+            return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
@@ -1051,7 +1051,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return self.contentImageNode?.playMediaWithSound()
     }
     
-    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+    func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionNode(value: value)
         }

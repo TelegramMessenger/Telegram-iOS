@@ -181,8 +181,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
-                interaction.identifier = "sendMessage_\(account.peerId.toInt64())_\(peer.id.toInt64())"
-                interaction.groupIdentifier = "sendMessage_\(subject.toString())_\(account.peerId.toInt64())"
+                interaction.groupIdentifier = "sendMessage_\(peer.id.toInt64())"
                 interaction.donate { error in
                     if let error = error {
                         print(error)
@@ -193,25 +192,14 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
     }
 }
 
-public func deleteSendMessageIntents(account: Account, peerId: PeerId) {
+public func deleteSendMessageIntents(peerId: PeerId) {
     if #available(iOS 10.0, *) {
-        INInteraction.delete(with: ["sendMessage_\(account.peerId.toInt64())_\(peerId.toInt64())"])
+        INInteraction.delete(with: "sendMessage_\(peerId.toInt64())")
     }
 }
 
-public func deleteAllSendMessageIntents(accountPeerId: PeerId? = nil, subject: SendMessageIntentSubject? = nil) {
+public func deleteAllSendMessageIntents() {
     if #available(iOS 10.0, *) {
-        if let peerId = accountPeerId {
-            if let subject = subject {
-                INInteraction.delete(with: "sendMessage_\(subject.toString())_\(peerId.toInt64())")
-            } else {
-                INInteraction.delete(with: "sendMessage_\(peerId.toInt64())")
-                for subject in SendMessageIntentSubject.allCases {
-                    INInteraction.delete(with: "sendMessage_\(subject.toString())_\(peerId.toInt64())")
-                }
-            }
-        } else {
-            INInteraction.deleteAll()
-        }
+        INInteraction.deleteAll()
     }
 }

@@ -94,7 +94,7 @@ private struct MessageReactionListEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, presentationData: PresentationData) -> ListViewItem {
-        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, account: context.account, peer: self.item.peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .none, label: .text(self.item.reaction, .custom(Font.regular(19.0))), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: {
+        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: self.item.peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .none, label: .text(self.item.reaction, .custom(Font.regular(19.0))), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: {
             
         }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, noInsets: true, tag: nil)
     }

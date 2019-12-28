@@ -26,6 +26,8 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
     
+    var item: ListViewItemHeader?
+    
     func updateInternalStickLocationDistanceFactor(_ factor: CGFloat, animated: Bool) {
         self.internalStickLocationDistanceFactor = factor
     }

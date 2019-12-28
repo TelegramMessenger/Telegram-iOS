@@ -17,6 +17,7 @@ static_library(
         "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

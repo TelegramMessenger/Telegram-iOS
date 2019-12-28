@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SyncCore
 
@@ -8,7 +9,7 @@ public extension TelegramWallpaper {
         case .image:
             return false
         case let .file(file):
-            if file.isPattern, file.settings.color == 0xffffff {
+            if self.isPattern, file.settings.color == 0xffffff {
                 return true
             } else {
                 return false
@@ -20,12 +21,38 @@ public extension TelegramWallpaper {
         }
     }
     
+    var isColorOrGradient: Bool {
+        switch self {
+        case .color, .gradient:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var isPattern: Bool {
+        switch self {
+        case let .file(file):
+            return file.isPattern || file.file.mimeType == "application/x-tgwallpattern"
+        default:
+            return false
+        }
+    }
+    
     var isBuiltin: Bool {
         switch self {
         case .builtin:
             return true
         default:
             return false
+        }
+    }
+    
+    var dimensions: CGSize? {
+        if case let .file(file) = self {
+            return file.file.dimensions?.cgSize
+        } else {
+            return nil
         }
     }
 }

@@ -634,7 +634,7 @@ public class ChatMessageItemView: ListViewItemNode {
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
     
-    var awaitingAppliedReaction: (String, () -> Void)?
+    var awaitingAppliedReaction: (String?, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -698,7 +698,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
@@ -763,7 +763,7 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil)
+                    item.controllerInteraction.openUrl(url, true, nil, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
@@ -814,7 +814,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+    func targetReactionNode(value: String) -> (ASDisplayNode, Int)? {
         return nil
     }
 }

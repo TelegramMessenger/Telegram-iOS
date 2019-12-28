@@ -31,7 +31,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     
     outer: for message in item.content {
         for attribute in message.attributes {
-            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios") != nil {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                 result.append((message, ChatMessageRestrictedBubbleContentNode.self))
                 break outer
             }
@@ -208,7 +208,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return false
             }
             if let singleUrl = accessibilityData.singleUrl {
-                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false)
+                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false, strongSelf.item?.content.firstMessage)
             }
             return false
         }
@@ -337,6 +337,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
                     switch tapAction {
                         case .none:
+                            if let _ = strongSelf.item?.controllerInteraction.tapMessage {
+                                return .waitForSingleTap
+                            }
                             break
                         case .ignore:
                             return .fail
@@ -522,8 +525,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 if let item = strongSelf.item, let reaction = reaction {
                     switch reaction {
                     case let .reaction(value, _, _):
-                        strongSelf.awaitingAppliedReaction = (value, {})
-                        item.controllerInteraction.updateMessageReaction(item.message.id, value)
+                        var resolvedValue: String?
+                        if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), reactionsAttribute.reactions.contains(where: { $0.value == value }) {
+                            resolvedValue = nil
+                        } else {
+                            resolvedValue = value
+                        }
+                        strongSelf.awaitingAppliedReaction = (resolvedValue, {})
+                        item.controllerInteraction.updateMessageReaction(item.message.id, resolvedValue)
                     case .reply:
                         strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
                         var bounds = strongSelf.bounds
@@ -1643,7 +1652,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         } else {
             backgroundType = .incoming(mergeType)
         }
-        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, transition: transition)
+        let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
+        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: transition)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
         
         strongSelf.backgroundType = backgroundType
@@ -1999,13 +2009,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             
             strongSelf.awaitingAppliedReaction = nil
-            var targetNode: ASImageNode?
+            var targetNode: ASDisplayNode?
             var hideTarget = false
-            for contentNode in strongSelf.contentNodes {
-                if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
-                    targetNode = reactionNode
-                    hideTarget = count == 1
-                    break
+            if let awaitingAppliedReaction = awaitingAppliedReaction {
+                for contentNode in strongSelf.contentNodes {
+                    if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
+                        targetNode = reactionNode
+                        hideTarget = count == 1
+                        break
+                    }
                 }
             }
             strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)
@@ -2259,7 +2271,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             }
                         }
                     }
-                } else if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                } else if let replyInfoNode = self.replyInfoNode, self.item?.controllerInteraction.tapMessage == nil, replyInfoNode.frame.contains(location) {
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
@@ -2293,10 +2305,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
                     switch tapAction {
                         case .none, .ignore:
+                            if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
+                                foundTapAction = true
+                                tapMessage(item.message)
+                            }
                             break
                         case let .url(url, concealed):
                             foundTapAction = true
-                            self.item?.controllerInteraction.openUrl(url, concealed, nil)
+                            self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
                             break loop
                         case let .peerMention(peerId, _):
                             foundTapAction = true
@@ -2499,12 +2515,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         return super.hitTest(point, with: event)
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         for contentNode in self.contentNodes {
             if let result = contentNode.transitionNode(messageId: id, media: media) {
                 if self.contentNodes.count == 1 && self.contentNodes.first is ChatMessageMediaBubbleContentNode && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
-                    return (result.0, { [weak self] in
-                        guard let strongSelf = self, let resultView = result.1().0 else {
+                    return (result.0, result.1, { [weak self] in
+                        guard let strongSelf = self, let resultView = result.2().0 else {
                             return (nil, nil)
                         }
                         if strongSelf.backgroundNode.supernode != nil, let backgroundView = strongSelf.backgroundNode.view.snapshotContentTree(unhide: true) {
@@ -2652,7 +2668,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 selectionNode.updateLayout(size: selectionFrame.size)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
-                let selectionNode = ChatMessageSelectionNode(theme: item.presentationData.theme.theme, toggle: { [weak self] value in
+                let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
                             case let .message(message, _, _, _):
@@ -2740,7 +2756,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if let backgroundType = self.backgroundType {
                 let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
-                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+                let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
+                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
             }
         }
     }
@@ -2861,7 +2878,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
     
-    override func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+    override func targetReactionNode(value: String) -> (ASDisplayNode, Int)? {
         for contentNode in self.contentNodes {
             if let (reactionNode, count) = contentNode.reactionTargetNode(value: value) {
                 return (reactionNode, count)

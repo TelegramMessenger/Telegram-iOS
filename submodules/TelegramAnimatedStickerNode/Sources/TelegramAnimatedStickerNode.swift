@@ -18,13 +18,13 @@ public final class AnimatedStickerResourceSource: AnimatedStickerNodeSource {
         self.fitzModifier = fitzModifier
     }
     
-    public func cachedDataPath(width: Int, height: Int) -> Signal<String, NoError> {
+    public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
         return chatMessageAnimationData(postbox: self.account.postbox, resource: self.resource, fitzModifier: self.fitzModifier, width: width, height: height, synchronousLoad: false)
         |> filter { data in
-            return data.complete
+            return data.size != 0
         }
-        |> map { data -> String in
-            return data.path
+        |> map { data -> (String, Bool) in
+            return (data.path, data.complete)
         }
     }
     

@@ -631,6 +631,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
+                            strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.frame = progressFrame
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
@@ -911,9 +912,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let iconNode = self.iconNode, let file = self.file, file.isEqual(to: media) {
-            return (iconNode, { [weak iconNode] in
+            return (iconNode, iconNode.bounds, { [weak iconNode] in
                 return (iconNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {
@@ -950,7 +951,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.playerUpdateTimer = nil
     }
     
-    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+    func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionNode(value: value)
         }

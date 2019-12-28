@@ -11,6 +11,47 @@ import DeviceAccess
 import AccountContext
 import LegacyUI
 
+public func defaultVideoPresetForContext(_ context: AccountContext) -> TGMediaVideoConversionPreset {
+    var networkType: NetworkType = .wifi
+    let _ = (context.account.networkType
+    |> take(1)).start(next: { value in
+        networkType = value
+    })
+    
+    let autodownloadSettings = context.sharedContext.currentAutodownloadSettings.with { $0 }
+    let presetSettings: AutodownloadPresetSettings
+    switch networkType {
+    case .wifi:
+        presetSettings = autodownloadSettings.highPreset
+    default:
+        presetSettings = autodownloadSettings.mediumPreset
+    }
+    
+    let effectiveValue: Int
+    if presetSettings.videoUploadMaxbitrate == 0 {
+        effectiveValue = 0
+    } else {
+        effectiveValue = Int(presetSettings.videoUploadMaxbitrate) * 5 / 100
+    }
+    
+    switch effectiveValue {
+    case 0:
+        return TGMediaVideoConversionPresetCompressedMedium
+    case 1:
+        return TGMediaVideoConversionPresetCompressedVeryLow
+    case 2:
+        return TGMediaVideoConversionPresetCompressedLow
+    case 3:
+        return TGMediaVideoConversionPresetCompressedMedium
+    case 4:
+        return TGMediaVideoConversionPresetCompressedHigh
+    case 5:
+        return TGMediaVideoConversionPresetCompressedVeryHigh
+    default:
+        return TGMediaVideoConversionPresetCompressedMedium
+    }
+}
+
 public struct LegacyAttachmentMenuMediaEditing: OptionSet {
     public var rawValue: Int32
     
@@ -22,6 +63,9 @@ public struct LegacyAttachmentMenuMediaEditing: OptionSet {
 }
 
 public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+    let defaultVideoPreset = defaultVideoPresetForContext(context)
+    UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
+    
     let actionSheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
     let fontSize = floor(actionSheetTheme.baseFontSize * 20.0 / 17.0)
     
@@ -195,6 +239,9 @@ public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuShee
 }
 
 public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, presentationData: PresentationData, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+    let defaultVideoPreset = defaultVideoPresetForContext(context)
+    UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
+    
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: initialLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     legacyController.controllerLoaded = { [weak legacyController] in

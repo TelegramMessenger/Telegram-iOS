@@ -847,6 +847,7 @@ public final class PresentationThemeChatInputPanelMediaRecordingControl {
 
 public final class PresentationThemeChatInputPanel {
     public let panelBackgroundColor: UIColor
+    public let panelBackgroundColorNoWallpaper: UIColor
     public let panelSeparatorColor: UIColor
     public let panelControlAccentColor: UIColor
     public let panelControlColor: UIColor
@@ -864,8 +865,9 @@ public final class PresentationThemeChatInputPanel {
     public let mediaRecordingDotColor: UIColor
     public let mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl
     
-    public init(panelBackgroundColor: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
+    public init(panelBackgroundColor: UIColor, panelBackgroundColorNoWallpaper: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
         self.panelBackgroundColor = panelBackgroundColor
+        self.panelBackgroundColorNoWallpaper = panelBackgroundColorNoWallpaper
         self.panelSeparatorColor = panelSeparatorColor
         self.panelControlAccentColor = panelControlAccentColor
         self.panelControlColor = panelControlColor
@@ -884,8 +886,8 @@ public final class PresentationThemeChatInputPanel {
         self.mediaRecordingControl = mediaRecordingControl
     }
     
-    public func withUpdated(panelBackgroundColor: UIColor? = nil, panelSeparatorColor: UIColor? = nil, panelControlAccentColor: UIColor? = nil, panelControlColor: UIColor? = nil, panelControlDisabledColor: UIColor? = nil, panelControlDestructiveColor: UIColor? = nil, inputBackgroundColor: UIColor? = nil, inputStrokeColor: UIColor? = nil, inputPlaceholderColor: UIColor? = nil, inputTextColor: UIColor? = nil, inputControlColor: UIColor? = nil, actionControlFillColor: UIColor? = nil, actionControlForegroundColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, mediaRecordingDotColor: UIColor? = nil, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl? = nil) -> PresentationThemeChatInputPanel {
-        return PresentationThemeChatInputPanel(panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelControlAccentColor: panelControlAccentColor ?? self.panelControlAccentColor, panelControlColor: panelControlColor ?? self.panelControlColor, panelControlDisabledColor: panelControlDisabledColor ?? self.panelControlDisabledColor, panelControlDestructiveColor: panelControlDestructiveColor ?? self.panelControlDestructiveColor, inputBackgroundColor: inputBackgroundColor ?? self.inputBackgroundColor, inputStrokeColor: inputStrokeColor ?? self.inputStrokeColor, inputPlaceholderColor: inputPlaceholderColor ?? self.inputPlaceholderColor, inputTextColor: inputTextColor ?? self.inputTextColor, inputControlColor: inputControlColor ?? self.inputControlColor, actionControlFillColor: actionControlFillColor ?? self.actionControlFillColor, actionControlForegroundColor: actionControlForegroundColor ?? self.actionControlForegroundColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, mediaRecordingDotColor: mediaRecordingDotColor ?? self.mediaRecordingDotColor, mediaRecordingControl: mediaRecordingControl ?? self.mediaRecordingControl)
+    public func withUpdated(panelBackgroundColor: UIColor? = nil, panelBackgroundColorNoWallpaper: UIColor? = nil, panelSeparatorColor: UIColor? = nil, panelControlAccentColor: UIColor? = nil, panelControlColor: UIColor? = nil, panelControlDisabledColor: UIColor? = nil, panelControlDestructiveColor: UIColor? = nil, inputBackgroundColor: UIColor? = nil, inputStrokeColor: UIColor? = nil, inputPlaceholderColor: UIColor? = nil, inputTextColor: UIColor? = nil, inputControlColor: UIColor? = nil, actionControlFillColor: UIColor? = nil, actionControlForegroundColor: UIColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, mediaRecordingDotColor: UIColor? = nil, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl? = nil) -> PresentationThemeChatInputPanel {
+        return PresentationThemeChatInputPanel(panelBackgroundColor: panelBackgroundColor ?? self.panelBackgroundColor, panelBackgroundColorNoWallpaper: panelBackgroundColorNoWallpaper ?? self.panelBackgroundColorNoWallpaper, panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelControlAccentColor: panelControlAccentColor ?? self.panelControlAccentColor, panelControlColor: panelControlColor ?? self.panelControlColor, panelControlDisabledColor: panelControlDisabledColor ?? self.panelControlDisabledColor, panelControlDestructiveColor: panelControlDestructiveColor ?? self.panelControlDestructiveColor, inputBackgroundColor: inputBackgroundColor ?? self.inputBackgroundColor, inputStrokeColor: inputStrokeColor ?? self.inputStrokeColor, inputPlaceholderColor: inputPlaceholderColor ?? self.inputPlaceholderColor, inputTextColor: inputTextColor ?? self.inputTextColor, inputControlColor: inputControlColor ?? self.inputControlColor, actionControlFillColor: actionControlFillColor ?? self.actionControlFillColor, actionControlForegroundColor: actionControlForegroundColor ?? self.actionControlForegroundColor, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, mediaRecordingDotColor: mediaRecordingDotColor ?? self.mediaRecordingDotColor, mediaRecordingControl: mediaRecordingControl ?? self.mediaRecordingControl)
     }
 }
 
@@ -1103,8 +1105,31 @@ public enum PresentationThemeName: Equatable {
     }
 }
 
+public extension PresentationThemeReference {
+    public var name: PresentationThemeName {
+        switch self {
+            case let .builtin(theme):
+                switch theme {
+                    case .day:
+                        return .builtin(.day)
+                    case .dayClassic:
+                        return .builtin(.dayClassic)
+                    case .night:
+                        return .builtin(.night)
+                    case .nightAccent:
+                        return .builtin(.nightAccent)
+                }
+            case let .cloud(info):
+                return .custom(info.theme.title)
+            default:
+                return .custom("")
+        }
+    }
+}
+
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
+    public let index: Int64
     public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
     public let intro: PresentationThemeIntro
@@ -1120,8 +1145,9 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
+        self.index = index
         self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
         self.intro = intro
@@ -1162,6 +1188,10 @@ public final class PresentationTheme: Equatable {
                     break
             }
         }
-        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+    }
+    
+    public func withUpdated(preview: Bool) -> PresentationTheme {
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, preview: preview)
     }
 }

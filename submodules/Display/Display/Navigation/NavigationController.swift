@@ -128,8 +128,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     private let mode: NavigationControllerMode
     private var theme: NavigationControllerTheme
     
-    public private(set) weak var overlayPresentingController: ViewController?
-    
     var inCallNavigate: (() -> Void)?
     private var inCallStatusBar: StatusBar?
     private var globalScrollToTopNode: ScrollToTopNode?
@@ -137,8 +135,11 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var rootModalFrame: NavigationModalFrame?
     private var modalContainers: [NavigationModalContainer] = []
     private var overlayContainers: [NavigationOverlayContainer] = []
+    
     private var globalOverlayContainers: [NavigationOverlayContainer] = []
     private var globalOverlayContainerParent: GlobalOverlayContainerParent?
+    public var globalOverlayControllersUpdated: (() -> Void)?
+    
     private var validLayout: ContainerViewLayout?
     private var validStatusBarStyle: NavigationStatusBarStyle?
     private var validStatusBarHidden: Bool = false
@@ -192,6 +193,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     var keyboardViewManager: KeyboardViewManager?
+    
+    var updateSupportedOrientations: (() -> Void)?
     
     public func updateMasterDetailsBlackout(_ blackout: MasterDetailLayoutBlackout?, transition: ContainedViewLayoutTransition) {
         self.masterDetailsBlackout = blackout
@@ -451,6 +454,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var topVisibleOverlayContainerWithStatusBar: NavigationOverlayContainer?
         
+        var notifyGlobalOverlayControllersUpdated = false
+        
+        var modalStyleOverlayTransitionFactor: CGFloat = 0.0
         var previousGlobalOverlayContainer: NavigationOverlayContainer?
         for i in (0 ..< self.globalOverlayContainers.count).reversed() {
             let overlayContainer = self.globalOverlayContainers[i]
@@ -465,6 +471,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: overlayLayout.size))
             overlayContainer.update(layout: overlayLayout, transition: containerTransition)
             
+            modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
+            
             if overlayContainer.supernode == nil && overlayContainer.isReady {
                 if let previousGlobalOverlayContainer = previousGlobalOverlayContainer {
                     self.globalOverlayContainerParent?.insertSubnode(overlayContainer, belowSubnode: previousGlobalOverlayContainer)
@@ -472,6 +480,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.globalOverlayContainerParent?.addSubnode(overlayContainer)
                 }
                 overlayContainer.transitionIn()
+                notifyGlobalOverlayControllersUpdated = true
             }
             
             if overlayContainer.supernode != nil {
@@ -506,6 +515,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
             overlayContainer.update(layout: layout, transition: containerTransition)
+            
+            modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
             if overlayContainer.supernode == nil && overlayContainer.isReady {
                 if let previousOverlayContainer = previousOverlayContainer {
@@ -743,12 +754,14 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        topModalDismissProgress = max(topModalDismissProgress, modalStyleOverlayTransitionFactor)
+        
         switch layout.metrics.widthClass {
         case .compact:
-            if visibleModalCount != 0 {
+            if visibleModalCount != 0 || !modalStyleOverlayTransitionFactor.isZero {
                 let effectiveRootModalDismissProgress: CGFloat
                 let visibleRootModalDismissProgress: CGFloat
-                let additionalModalFrameProgress: CGFloat
+                var additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
                     effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
@@ -758,9 +771,13 @@ open class NavigationController: UINavigationController, ContainableController, 
                     visibleRootModalDismissProgress = topModalDismissProgress
                     additionalModalFrameProgress = 1.0 - topModalDismissProgress
                 } else {
-                    effectiveRootModalDismissProgress = 0.0
+                    effectiveRootModalDismissProgress = 1.0 - modalStyleOverlayTransitionFactor
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
-                    additionalModalFrameProgress = 1.0
+                    if visibleModalCount == 0 {
+                        additionalModalFrameProgress = 0.0
+                    } else {
+                        additionalModalFrameProgress = 1.0
+                    }
                 }
                 
                 let rootModalFrame: NavigationModalFrame
@@ -816,7 +833,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if topModalIsFlat {
                         maxScale = 1.0
                         maxOffset = 0.0
-                    } else if visibleModalCount == 1 {
+                    } else if visibleModalCount <= 1 {
                         maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
                         maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
                     } else {
@@ -826,7 +843,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     
                     let scale = 1.0 * visibleRootModalDismissProgress + (1.0 - visibleRootModalDismissProgress) * maxScale
                     let offset = (1.0 - visibleRootModalDismissProgress) * maxOffset
-                    transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset))
+                    transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset), beginWithCurrentState: true)
                 }
             } else {
                 if let rootModalFrame = self.rootModalFrame {
@@ -909,6 +926,12 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         self.isUpdatingContainers = false
+        
+        if notifyGlobalOverlayControllersUpdated {
+            self.globalOverlayControllersUpdated?()
+        }
+        
+        self.updateSupportedOrientations?()
     }
     
     private func controllerRemoved(_ controller: ViewController) {
@@ -1120,6 +1143,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     if overlayContainer.controller === controller {
                         overlayContainer.removeFromSupernode()
                         strongSelf.globalOverlayContainers.remove(at: i)
+                        strongSelf.globalOverlayControllersUpdated?()
                         break
                     }
                 }
@@ -1135,6 +1159,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             strongSelf.updateContainersNonReentrant(transition: .immediate)
         }, statusBarUpdated: { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateContainersNonReentrant(transition: transition)
+        }, modalStyleOverlayTransitionFactorUpdated: { [weak self] transition in
             guard let strongSelf = self else {
                 return
             }
@@ -1273,6 +1302,26 @@ open class NavigationController: UINavigationController, ContainableController, 
             })
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
+    }
+    
+    public var overlayControllers: [ViewController] {
+        return self.overlayContainers.compactMap { container in
+            if container.isReady {
+                return container.controller
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public var globalOverlayControllers: [ViewController] {
+        return self.globalOverlayContainers.compactMap { container in
+            if container.isReady {
+                return container.controller
+            } else {
+                return nil
             }
         }
     }

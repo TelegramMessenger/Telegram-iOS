@@ -31,36 +31,22 @@ private func textInputBackgroundImage(fieldColor: UIColor, strokeColor: UIColor,
     }
 }
 
-private func generateSwatchImage(theme: PresentationTheme, color: UIColor) -> UIImage? {
+private func generateSwatchBorderImage(theme: PresentationTheme) -> UIImage? {
+    return nil
     return generateImage(CGSize(width: 21.0, height: 21.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let fillColor = color
-        var strokeColor: UIColor?
-        let inputBackgroundColor = theme.chat.inputPanel.inputBackgroundColor
-        if fillColor.distance(to: inputBackgroundColor) < 200 {
-            strokeColor = theme.chat.inputPanel.inputStrokeColor
-            if strokeColor!.distance(to: inputBackgroundColor) < 200 {
-                strokeColor = theme.chat.inputPanel.inputControlColor
-            }
-        }
-        
-        context.setFillColor(fillColor.cgColor)
         context.setLineWidth(1.0)
-        
-        context.fillEllipse(in: bounds)
-        if let strokeColor = strokeColor {
-            context.setStrokeColor(strokeColor.cgColor)
-            context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
-        }
+        context.setStrokeColor(theme.chat.inputPanel.inputControlColor.cgColor)
+        context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
     })
 }
 
 private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
     
-    private let swatchNode: ASImageNode
+    private let swatchNode: ASDisplayNode
+    private let borderNode: ASImageNode
     private let removeButton: HighlightableButtonNode
     private let textBackgroundNode: ASImageNode
     private let selectionNode: ASDisplayNode
@@ -123,9 +109,13 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.prefixNode = ASTextNode()
         self.prefixNode.attributedText = NSAttributedString(string: "#", font: Font.regular(17.0), textColor: self.theme.chat.inputPanel.inputTextColor)
         
-        self.swatchNode = ASImageNode()
-        self.swatchNode.displaysAsynchronously = false
-        self.swatchNode.displayWithoutProcessing = true
+        self.swatchNode = ASDisplayNode()
+        self.swatchNode.cornerRadius = 10.5
+        
+        self.borderNode = ASImageNode()
+        self.borderNode.displaysAsynchronously = false
+        self.borderNode.displayWithoutProcessing = true
+        self.borderNode.image = generateSwatchBorderImage(theme: theme)
         
         self.removeButton = HighlightableButtonNode()
         self.removeButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRemoveIcon"), color: theme.chat.inputPanel.inputControlColor), for: .normal)
@@ -137,6 +127,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.textFieldNode)
         self.addSubnode(self.prefixNode)
         self.addSubnode(self.swatchNode)
+        self.addSubnode(self.borderNode)
         self.addSubnode(self.removeButton)
         
         self.removeButton.addTarget(self, action: #selector(self.removePressed), forControlEvents: .touchUpInside)
@@ -172,6 +163,8 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.tintColor = self.theme.list.itemAccentColor
         
         self.selectionNode.backgroundColor = theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.2)
+        self.borderNode.image = generateSwatchBorderImage(theme: theme)
+        self.updateBorderVisibility()
     }
     
     func setColor(_ color: UIColor, isDefault: Bool = false, update: Bool = true, ended: Bool = true) {
@@ -186,7 +179,20 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         if update {
             self.colorChanged?(color, ended)
         }
-        self.swatchNode.image = generateSwatchImage(theme: self.theme, color: color)
+        self.swatchNode.backgroundColor = color
+        self.updateBorderVisibility()
+    }
+    
+    private func updateBorderVisibility() {
+        guard let color = self.swatchNode.backgroundColor else {
+            return
+        }
+        let inputBackgroundColor = self.theme.chat.inputPanel.inputBackgroundColor
+        if color.distance(to: inputBackgroundColor) < 200 {
+            self.borderNode.alpha = 1.0
+        } else {
+            self.borderNode.alpha = 0.0
+        }
     }
     
     @objc private func removePressed() {
@@ -259,7 +265,11 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc func textFieldDidEndEditing(_ textField: UITextField) {
         if !self.skipEndEditing {
-            self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+            if let color = self.colorFromCurrentText() {
+                self.setColor(color)
+            } else {
+                self.setColor(self.previousColor ?? .black, isDefault: self.previousIsDefault ?? false)
+            }
         }
     }
     
@@ -280,7 +290,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private func updateSelectionLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.measureNode.attributedText = NSAttributedString(string: self.textFieldNode.textField.text ?? "", font: self.textFieldNode.textField.font)
         let size = self.measureNode.updateLayout(size)
-        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(45.0, size.width), height: 20.0))
+        transition.updateFrame(node: self.selectionNode, frame: CGRect(x: self.textFieldNode.frame.minX, y: 6.0, width: max(0.0, size.width), height: 20.0))
     }
     
     private func updateSelectionVisibility() {
@@ -290,7 +300,9 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     func updateLayout(size: CGSize, condensed: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, condensed)
         
-        transition.updateFrame(node: self.swatchNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 21.0, height: 21.0)))
+        let swatchFrame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 21.0, height: 21.0))
+        transition.updateFrame(node: self.swatchNode, frame: swatchFrame)
+        transition.updateFrame(node: self.borderNode, frame: swatchFrame)
         
         let textPadding: CGFloat = condensed ? 31.0 : 37.0
         
@@ -321,6 +333,10 @@ struct WallpaperColorPanelNodeState {
     var defaultColor: UIColor?
     var secondColor: UIColor?
     var secondColorAvailable: Bool
+    var rotateAvailable: Bool
+    var rotation: Int32
+    var preview: Bool
+    var simpleGradientGeneration: Bool
 }
 
 final class WallpaperColorPanelNode: ASDisplayNode {
@@ -333,6 +349,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private let bottomSeparatorNode: ASDisplayNode
     private let firstColorFieldNode: ColorInputFieldNode
     private let secondColorFieldNode: ColorInputFieldNode
+    private let rotateButton: HighlightableButtonNode
     private let swapButton: HighlightableButtonNode
     private let addButton: HighlightableButtonNode
     private let doneButton: HighlightableButtonNode
@@ -340,6 +357,10 @@ final class WallpaperColorPanelNode: ASDisplayNode {
 
     var colorsChanged: ((UIColor?, UIColor?, Bool) -> Void)?
     var colorSelected: (() -> Void)?
+    var rotate: (() -> Void)?
+    
+    var colorAdded: (() -> Void)?
+    var colorRemoved: (() -> Void)?
     
     private var validLayout: CGSize?
 
@@ -359,6 +380,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
         self.colorPickerNode = WallpaperColorPickerNode(strings: strings)
         
+        self.rotateButton = HighlightableButtonNode()
+        self.rotateButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         self.swapButton = HighlightableButtonNode()
         self.swapButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorSwapIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
         self.addButton = HighlightableButtonNode()
@@ -367,7 +390,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.firstColorFieldNode = ColorInputFieldNode(theme: theme)
         self.secondColorFieldNode = ColorInputFieldNode(theme: theme)
         
-        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false)
+        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, rotation: 0, preview: false, simpleGradientGeneration: false)
         
         super.init()
         
@@ -379,9 +402,11 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.addSubnode(self.doneButton)
         self.addSubnode(self.colorPickerNode)
         
+        self.addSubnode(self.rotateButton)
         self.addSubnode(self.swapButton)
         self.addSubnode(self.addButton)
         
+        self.rotateButton.addTarget(self, action: #selector(self.rotatePressed), forControlEvents: .touchUpInside)
         self.swapButton.addTarget(self, action: #selector(self.swapPressed), forControlEvents: .touchUpInside)
         self.addButton.addTarget(self, action: #selector(self.addPressed), forControlEvents: .touchUpInside)
         
@@ -396,6 +421,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.firstColorFieldNode.colorRemoved = { [weak self] in
             if let strongSelf = self {
+                strongSelf.colorRemoved?()
                 strongSelf.updateState({ current in
                     var updated = current
                     updated.selection = .first
@@ -435,6 +461,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.secondColorFieldNode.colorRemoved = { [weak self] in
             if let strongSelf = self {
+                strongSelf.colorRemoved?()
                 strongSelf.updateState({ current in
                     var updated = current
                     if updated.selection != .none {
@@ -462,6 +489,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
+                    updated.preview = true
                     switch strongSelf.state.selection {
                         case .first:
                             updated.firstColor = color
@@ -478,6 +506,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var updated = current
+                    updated.preview = false
                     switch strongSelf.state.selection {
                         case .first:
                             updated.firstColor = color
@@ -505,6 +534,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         var updateLayout = updateLayout
         let previousFirstColor = self.state.firstColor
         let previousSecondColor = self.state.secondColor
+        let previousPreview = self.state.preview
+        let previousRotation = self.state.rotation
         self.state = f(self.state)
         
         let firstColor: UIColor
@@ -533,7 +564,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         if firstColorWasRemovable != self.firstColorFieldNode.isRemovable {
             updateLayout = true
         }
-        
+    
         if updateLayout, let size = self.validLayout {
             switch self.state.selection {
                 case .first:
@@ -549,8 +580,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
         
-        if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb {
-            self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, updateLayout)
+        if self.state.firstColor?.argb != previousFirstColor?.argb || self.state.secondColor?.argb != previousSecondColor?.argb || self.state.preview != previousPreview {
+            self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, !self.state.preview)
         }
     }
     
@@ -582,8 +613,14 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
         
-        if let buttonSnapshotView = self.swapButton.view.snapshotContentTree() {
-            buttonSnapshotView.frame = self.swapButton.frame
+        let middleButton: ASDisplayNode
+        if self.rotateButton.alpha > 1.0 {
+            middleButton = self.rotateButton
+        } else {
+            middleButton = self.swapButton
+        }
+        if let buttonSnapshotView = middleButton.view.snapshotContentTree() {
+            buttonSnapshotView.frame = middleButton.frame
             self.view.addSubview(buttonSnapshotView)
             
             buttonSnapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: offset, y: 0.0), duration: 0.3, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, force: false) { _ in
@@ -591,6 +628,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
         
+        self.rotateButton.alpha = 0.0
         self.swapButton.alpha = 0.0
         
         let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
@@ -633,26 +671,47 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
         let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
-        let swapButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        let middleButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
-        transition.updateFrame(node: self.swapButton, frame: swapButtonFrame)
-        transition.updateFrame(node: self.addButton, frame: swapButtonFrame)
+        transition.updateFrame(node: self.rotateButton, frame: middleButtonFrame)
+        transition.updateFrame(node: self.swapButton, frame: middleButtonFrame)
+        transition.updateFrame(node: self.addButton, frame: middleButtonFrame)
         
+        let rotateButtonAlpha: CGFloat
         let swapButtonAlpha: CGFloat
         let addButtonAlpha: CGFloat
         if let _ = self.state.secondColor {
-            swapButtonAlpha = 1.0
+            if self.state.rotateAvailable {
+                rotateButtonAlpha = 1.0
+                swapButtonAlpha = 0.0
+            } else {
+                rotateButtonAlpha = 0.0
+                swapButtonAlpha = 1.0
+            }
             addButtonAlpha = 0.0
         } else {
             swapButtonAlpha = 0.0
+            rotateButtonAlpha = 0.0
             if self.state.secondColorAvailable {
                 addButtonAlpha = 1.0
             } else {
                 addButtonAlpha = 0.0
             }
         }
+        transition.updateAlpha(node: self.rotateButton, alpha: rotateButtonAlpha)
         transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
         transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)
+        
+        func degreesToRadians(_ degrees: CGFloat) -> CGFloat
+        {
+            var degrees = degrees
+            if degrees >= 270.0 {
+                degrees = degrees - 360.0
+            }
+            return degrees * CGFloat.pi / 180.0
+        }
+
+        transition.updateTransformRotation(node: self.rotateButton, angle: degreesToRadians(CGFloat(self.state.rotation)), beginWithCurrentState: true, completion: nil)
         
         self.firstColorFieldNode.isRemovable = self.state.secondColor != nil || (self.state.defaultColor != nil && self.state.firstColor != nil)
         self.secondColorFieldNode.isRemovable = true
@@ -673,6 +732,19 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.colorPickerNode.updateLayout(size: colorPickerSize, transition: transition)
     }
     
+    @objc private func rotatePressed() {
+        self.rotate?()
+        self.updateState({ current in
+            var updated = current
+            var newRotation = updated.rotation + 45
+            if newRotation >= 360 {
+                newRotation = 0
+            }
+            updated.rotation = newRotation
+            return updated
+        })
+    }
+    
     @objc private func swapPressed() {
         self.updateState({ current in
             var updated = current
@@ -686,6 +758,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
     @objc private func addPressed() {
         self.colorSelected?()
+        self.colorAdded?()
         
         self.firstColorFieldNode.setSkipEndEditingIfNeeded()
         
@@ -696,7 +769,19 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             let firstColor = current.firstColor ?? current.defaultColor
             if let color = firstColor {
                 updated.firstColor = color
-                updated.secondColor = generateGradientColors(color: color).1
+                
+                let secondColor: UIColor
+                if updated.simpleGradientGeneration {
+                    var colorHsb = color.hsb 
+                    if color.hsb.2 > 0.5 {
+                        secondColor = UIColor(hue: colorHsb.0, saturation: colorHsb.1, brightness: max(0.28, color.hsb.2 - 0.3), alpha: 1.0)
+                    } else {
+                        secondColor = UIColor(hue: colorHsb.0, saturation: colorHsb.1, brightness: min(0.88, color.hsb.2 + 0.3), alpha: 1.0)
+                    }
+                    updated.secondColor = secondColor
+                } else {
+                    updated.secondColor = generateGradientColors(color: color).1
+                }
             }
 
             return updated

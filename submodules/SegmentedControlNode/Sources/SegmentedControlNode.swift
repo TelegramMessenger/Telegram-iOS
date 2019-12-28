@@ -143,6 +143,16 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         }
     }
     
+    public func setSelectedIndex(_ index: Int, animated: Bool) {
+        guard index != self._selectedIndex else {
+            return
+        }
+        self._selectedIndex = index
+        if let layout = self.validLayout {
+            let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
+    
     public var selectedIndexChanged: (Int) -> Void = { _ in }
     public var selectedIndexShouldChange: (Int, @escaping (Bool) -> Void) -> Void = { _, f in
         f(true)

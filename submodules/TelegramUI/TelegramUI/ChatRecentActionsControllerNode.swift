@@ -146,7 +146,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         switch entry.entry.event.action {
                             case let .changeStickerPack(_, new):
                                 if let new = new {
-                                    strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: new, parentNavigationController: strongSelf.getNavigationController()), nil)
+                                    strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), nil)
                                     return true
                                 }
                             default:
@@ -161,7 +161,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, present: { c, a in
                     self?.presentController(c, a)
                 }, transitionNode: { messageId, media in
-                    var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {
@@ -195,7 +195,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, openMessageContextActions: { _, _, _, _ in
-        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
+        }, navigateToMessage: { _, _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -417,6 +417,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
+        }, dismissReplyMarkupMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -699,6 +700,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if !channel.hasPermission(.banMembers) {
                     canBan = false
                 }
+                if case .broadcast = channel.info {
+                    canBan = false
+                }
             }
             for member in adminsState.list {
                 if member.peer.id == author.id {
@@ -778,7 +782,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
-                        strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
+                        let packReference: StickerPackReference = .name(name)
+                        strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
@@ -786,7 +791,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
-                        }), nil)
+                        }, parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
@@ -800,12 +805,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             self?.presentController(c, a)
                         }, dismissInput: {
                             self?.view.endEditing(true)
-                        })
+                        }, contentContext: nil)
                     case .wallpaper:
                         break
                     case .theme:
                         break
                     case .wallet:
+                        break
+                    case .settings:
                         break
                 }
             }

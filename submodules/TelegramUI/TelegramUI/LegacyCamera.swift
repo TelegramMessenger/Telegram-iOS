@@ -20,7 +20,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     legacyController.deferScreenEdgeGestures = [.top]
 
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
-    
+
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: TGCameraControllerGenericIntent)

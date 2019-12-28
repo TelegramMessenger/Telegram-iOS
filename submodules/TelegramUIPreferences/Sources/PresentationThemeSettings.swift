@@ -10,6 +10,32 @@ public enum PresentationBuiltinThemeReference: Int32 {
     case night = 1
     case day = 2
     case nightAccent = 3
+    
+    public init(baseTheme: TelegramBaseTheme) {
+        switch baseTheme {
+            case .classic:
+                self = .dayClassic
+            case .day:
+                self = .day
+            case .night:
+                self = .night
+            case .tinted:
+                self = .nightAccent
+        }
+    }
+    
+    public var baseTheme: TelegramBaseTheme {
+        switch self {
+            case .dayClassic:
+                return .classic
+            case .day:
+                return .day
+            case .night:
+                return .night
+            case .nightAccent:
+                return .tinted
+        }
+    }
 }
 
 public struct WallpaperPresentationOptions: OptionSet {
@@ -96,7 +122,7 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
             return false
         }
         if lhs.resolvedWallpaper != rhs.resolvedWallpaper {
-            return false
+             return false
         }
         return true
     }
@@ -177,7 +203,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             acc = (acc &* 20261) &+ high
             acc = (acc &* 20261) &+ low
             
-            return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+            return Int32(bitPattern: acc & UInt32(0x7fffffff))
         }
         
         switch self {
@@ -193,6 +219,28 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
+    }
+    
+    public var generalThemeReference: PresentationThemeReference {
+        let generalThemeReference: PresentationThemeReference
+        if case let .cloud(theme) = self, let settings = theme.theme.settings {
+            generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+        } else {
+            generalThemeReference = self
+        }
+        return generalThemeReference
+    }
+}
+
+public func coloredThemeIndex(reference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?) -> Int64 {
+    if let accentColor = accentColor {
+        if case let .builtin(theme) = reference {
+            return reference.index * 1000 &+ Int64(accentColor.index)
+        } else {
+            return reference.index &+ Int64(accentColor.index)
+        }
+    } else {
+        return reference.index
     }
 }
 
@@ -314,6 +362,8 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     case black
     case white
     case custom
+    case preset
+    case theme
     
     public var color: UIColor {
         let value: UInt32
@@ -340,7 +390,7 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
                 value = 0x000000
             case .white:
                 value = 0xffffff
-            case .custom:
+            case .custom, .preset, .theme:
                 return .clear
         }
         return UIColor(rgb: value)
@@ -349,20 +399,47 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     public static func == (lhs: PresentationThemeAccentColor, rhs: PresentationThemeAccentColor) -> Bool {
-        return lhs.baseColor == rhs.baseColor && lhs.accentColor == rhs.accentColor && lhs.bubbleColors?.0 == rhs.bubbleColors?.0 && lhs.bubbleColors?.1 == rhs.bubbleColors?.1
+        return lhs.index == rhs.index && lhs.baseColor == rhs.baseColor && lhs.accentColor == rhs.accentColor && lhs.bubbleColors?.0 == rhs.bubbleColors?.0 && lhs.bubbleColors?.1 == rhs.bubbleColors?.1
     }
     
+    public var index: Int32
     public var baseColor: PresentationThemeBaseColor
     public var accentColor: Int32?
     public var bubbleColors: (Int32, Int32?)?
+    public var wallpaper: TelegramWallpaper?
+    public var themeIndex: Int64?
     
-    public init(baseColor: PresentationThemeBaseColor, accentColor: Int32? = nil, bubbleColors: (Int32, Int32?)? = nil) {
+    public init(baseColor: PresentationThemeBaseColor) {
+        if baseColor != .preset && baseColor != .custom {
+            self.index = baseColor.rawValue + 10
+        } else {
+            self.index = -1
+        }
+        self.baseColor = baseColor
+        self.accentColor = nil
+        self.bubbleColors = nil
+        self.wallpaper = nil
+    }
+    
+    public init(index: Int32, baseColor: PresentationThemeBaseColor, accentColor: Int32? = nil, bubbleColors: (Int32, Int32?)? = nil, wallpaper: TelegramWallpaper? = nil) {
+        self.index = index
         self.baseColor = baseColor
         self.accentColor = accentColor
         self.bubbleColors = bubbleColors
+        self.wallpaper = wallpaper
+    }
+    
+    public init(themeIndex: Int64) {
+        self.index = -1
+        self.baseColor = .theme
+        self.accentColor = nil
+        self.bubbleColors = nil
+        self.wallpaper = nil
+        self.themeIndex = themeIndex
     }
     
     public init(decoder: PostboxDecoder) {
+        self.index = decoder.decodeInt32ForKey("i", orElse: -1)
         self.baseColor = PresentationThemeBaseColor(rawValue: decoder.decodeInt32ForKey("b", orElse: 0)) ?? .blue
         self.accentColor = decoder.decodeOptionalInt32ForKey("c")
         if let bubbleTopColor = decoder.decodeOptionalInt32ForKey("bt") {
@@ -374,9 +451,12 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         } else {
             self.bubbleColors = nil
         }
+        self.wallpaper = decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.themeIndex = decoder.decodeOptionalInt64ForKey("t")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.index, forKey: "i")
         encoder.encodeInt32(self.baseColor.rawValue, forKey: "b")
         if let value = self.accentColor {
             encoder.encodeInt32(value, forKey: "c")
@@ -393,6 +473,16 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "bt")
             encoder.encodeNil(forKey: "bb")
+        }
+        if let wallpaper = self.wallpaper {
+            encoder.encodeObject(wallpaper, forKey: "w")
+        } else {
+            encoder.encodeNil(forKey: "w")
+        }
+        if let themeIndex = self.themeIndex {
+            encoder.encodeInt64(themeIndex, forKey: "t")
+        } else {
+            encoder.encodeNil(forKey: "t")
         }
     }
     
@@ -426,6 +516,10 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
        } else {
             return nil
        }
+    }
+    
+    public func withUpdatedWallpaper(_ wallpaper: TelegramWallpaper?) -> PresentationThemeAccentColor {
+        return PresentationThemeAccentColor(index: self.index, baseColor: self.baseColor, accentColor: self.accentColor, bubbleColors: self.bubbleColors, wallpaper: wallpaper)
     }
 }
 
@@ -536,6 +630,38 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
         return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.disableAnimations == rhs.disableAnimations
+    }
+    
+    public func withUpdatedTheme(_ theme: PresentationThemeReference) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedThemeSpecificAccentColors(_ themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedThemeSpecificChatWallpapers(_ themeSpecificChatWallpapers: [Int64: TelegramWallpaper]) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedUseSystemFont(_ useSystemFont: Bool) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedFontSize(_ fontSize: PresentationFontSize) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedAutomaticThemeSwitchSetting(_ automaticThemeSwitchSetting: AutomaticThemeSwitchSetting) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedLargeEmoji(_ largeEmoji: Bool) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: largeEmoji, disableAnimations: self.disableAnimations)
+    }
+    
+    public func withUpdatedDisableAnimations(_ disableAnimations: Bool) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, disableAnimations: disableAnimations)
     }
 }
 

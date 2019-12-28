@@ -32,8 +32,9 @@ class LocationPickerInteraction {
     let dismissInput: () -> Void
     let updateSendActionHighlight: (Bool) -> Void
     let openHomeWorkInfo: () -> Void
+    let showPlacesInThisArea: () -> Void
     
-    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void) {
+    init(sendLocation: @escaping (CLLocationCoordinate2D) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, sendVenue: @escaping (TelegramMediaMap) -> Void, toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, openSearch: @escaping () -> Void, updateSearchQuery: @escaping (String) -> Void, dismissSearch: @escaping () -> Void, dismissInput: @escaping () -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, openHomeWorkInfo: @escaping () -> Void, showPlacesInThisArea: @escaping ()-> Void) {
         self.sendLocation = sendLocation
         self.sendLiveLocation = sendLiveLocation
         self.sendVenue = sendVenue
@@ -47,6 +48,7 @@ class LocationPickerInteraction {
         self.dismissInput = dismissInput
         self.updateSendActionHighlight = updateSendActionHighlight
         self.openHomeWorkInfo = openHomeWorkInfo
+        self.showPlacesInThisArea = showPlacesInThisArea
     }
 }
 
@@ -103,7 +105,7 @@ public final class LocationPickerController: ViewController {
         let locationWithTimeout: (CLLocationCoordinate2D, Int32?) -> TelegramMediaMap = { coordinate, timeout in
             return TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: timeout)
         }
-        
+                
         self.interaction = LocationPickerInteraction(sendLocation: { [weak self] coordinate in
             guard let strongSelf = self else {
                 return
@@ -133,21 +135,21 @@ public final class LocationPickerController: ViewController {
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 15 * 60), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 15 * 60), nil)
                                 strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 60 * 60 - 1), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 60 * 60 - 1), nil)
                                 strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.completion(locationWithTimeout(coordinate, 8 * 60 * 60), nil)
+                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 8 * 60 * 60), nil)
                                 strongSelf.dismiss()
                             }
                         })
@@ -194,12 +196,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.controllerNode.updateState { state in
-                var state = state
-                state.displayingMapModeOptions = false
-                state.selectedLocation = .none
-                return state
-            }
+            strongSelf.controllerNode.goToUserLocation()
         }, goToCoordinate: { [weak self] coordinate in
             guard let strongSelf = self else {
                 return
@@ -208,6 +205,7 @@ public final class LocationPickerController: ViewController {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .location(coordinate, nil)
+                state.searchingVenuesAround = false
                 return state
             }
         }, openSearch: { [weak self] in
@@ -259,9 +257,13 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            
             let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
             strongSelf.present(controller, in: .window(.root))
+        }, showPlacesInThisArea: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.requestPlacesAtSelectedLocation()
         })
         
         self.scrollToTop = { [weak self] in

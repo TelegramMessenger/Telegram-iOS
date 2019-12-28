@@ -10,6 +10,7 @@ import AvatarNode
 import AppBundle
 import TelegramPresentationData
 import LocationResources
+import AccountContext
 
 let locationPinReuseIdentifier = "locationPin"
 
@@ -28,31 +29,44 @@ private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
 }
 
 class LocationPinAnnotation: NSObject, MKAnnotation {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     var coordinate: CLLocationCoordinate2D
     let location: TelegramMediaMap?
     let peer: Peer?
+    let forcedSelection: Bool
     
     var title: String? = ""
     var subtitle: String? = ""
     
-    init(account: Account, theme: PresentationTheme, peer: Peer) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, peer: Peer) {
+        self.context = context
         self.theme = theme
         self.location = nil
         self.peer = peer
         self.coordinate = kCLLocationCoordinate2DInvalid
+        self.forcedSelection = false
         super.init()
     }
     
-    init(account: Account, theme: PresentationTheme, location: TelegramMediaMap) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, location: TelegramMediaMap, forcedSelection: Bool = false) {
+        self.context = context
         self.theme = theme
         self.location = location
         self.peer = nil
         self.coordinate = location.coordinate
+        self.forcedSelection = forcedSelection
         super.init()
+    }
+    
+    var id: String {
+        if let peer = self.peer {
+            return "\(peer.id.toInt64())"
+        } else if let venueId = self.location?.venue?.id {
+            return venueId
+        } else {
+            return String(format: "%.5f_%.5f", self.coordinate.latitude, self.coordinate.longitude)
+        }
     }
 }
 
@@ -83,6 +97,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     var strokeLabelNode: ImmediateTextNode?
     var labelNode: ImmediateTextNode?
     
+    var initialized = false
     var appeared = false
     var animating = false
     
@@ -142,8 +157,14 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     var defaultZPosition: CGFloat {
-        if let annotation = self.annotation as? LocationPinAnnotation, let venueType = annotation.location?.venue?.type, ["home", "work"].contains(venueType) {
-            return -0.5
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            if annotation.forcedSelection {
+                return 0.0
+            } else if let venueType = annotation.location?.venue?.type, ["home", "work"].contains(venueType) {
+                return -0.5
+            } else {
+                return -1.0
+            }
         } else {
             return -1.0
         }
@@ -161,14 +182,14 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.dotNode.isHidden = true
                     self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
                     
-                    self.setPeer(account: annotation.account, theme: annotation.theme, peer: peer)
+                    self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
                     self.setSelected(true, animated: false)
                 } else if let location = annotation.location {
                     let venueType = annotation.location?.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
                     self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
-                    self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
-                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: venueType, background: false))
+                    self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
+                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
                     self.smallNode.image = generateSmallBackgroundImage(color: color)
                     self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
                     
@@ -179,6 +200,15 @@ class LocationPinAnnotationView: MKAnnotationView {
                         self.shadowNode.isHidden = true
                         self.smallNode.isHidden = false
                     }
+                    
+                    if annotation.forcedSelection {
+                        self.setSelected(true, animated: false)
+                    }
+                    
+                    if self.initialized && !self.appeared {
+                        self.appeared = true
+                        self.animateAppearance()
+                    }
                 }
             }
         }
@@ -187,10 +217,17 @@ class LocationPinAnnotationView: MKAnnotationView {
     override func prepareForReuse() {
         self.smallNode.isHidden = true
         self.backgroundNode.isHidden = false
+        self.appeared = false
     }
     
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
+        
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            if annotation.forcedSelection && !selected {
+                return
+            }
+        }
         
         if animated {
             self.layoutSubviews()
@@ -359,7 +396,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
     }
     
-    func setPeer(account: Account, theme: PresentationTheme, peer: Peer) {
+    func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer) {
         let avatarNode: AvatarNode
         if let currentAvatarNode = self.avatarNode {
             avatarNode = currentAvatarNode
@@ -372,7 +409,7 @@ class LocationPinAnnotationView: MKAnnotationView {
             self.addSubnode(avatarNode)
         }
         
-        avatarNode.setPeer(account: account, theme: theme, peer: peer)
+        avatarNode.setPeer(context: context, theme: theme, peer: peer)
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -436,7 +473,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     
     func setCustom(_ custom: Bool, animated: Bool) {
         if let annotation = self.annotation as? LocationPinAnnotation {
-            self.iconNode.setSignal(venueIcon(postbox: annotation.account.postbox, type: "", background: false))
+            self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: "", background: false))
         }
         
         if let avatarNode = self.avatarNode {
@@ -486,6 +523,10 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     func animateAppearance() {
+        guard let annotation = self.annotation as? LocationPinAnnotation, annotation.location != nil && !annotation.forcedSelection else {
+            return
+        }
+        
         self.smallNode.transform = CATransform3DMakeScale(0.1, 0.1, 1.0)
         
         let avatarNodeTransform = self.avatarNode?.transform
@@ -516,8 +557,13 @@ class LocationPinAnnotationView: MKAnnotationView {
         let smallIconApply = smallIconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.smallIconNode.bounds.size, boundingSize: self.smallIconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
         smallIconApply()
         
+        var arguments: VenueIconArguments?
+        if let annotation = self.annotation as? LocationPinAnnotation {
+            arguments = VenueIconArguments(defaultForegroundColor: annotation.theme.chat.inputPanel.actionControlForegroundColor)
+        }
+        
         let iconLayout = self.iconNode.asyncLayout()
-        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets()))
+        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: self.iconNode.bounds.size, boundingSize: self.iconNode.bounds.size, intrinsicInsets: UIEdgeInsets(), custom: arguments))
         iconApply()
         
         if let avatarNode = self.avatarNode {
@@ -528,10 +574,8 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if !self.appeared {
             self.appeared = true
-            
-            if let annotation = annotation as? LocationPinAnnotation, annotation.location != nil {
-                self.animateAppearance()
-            }
+            self.initialized = true
+            self.animateAppearance()
         }
     }
 }

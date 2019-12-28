@@ -725,6 +725,36 @@ public class Window1 {
             if let rootController = self._rootController {
                 if let rootController = rootController as? NavigationController {
                     rootController.statusBarHost = self.statusBarHost
+                    rootController.updateSupportedOrientations = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+                        let orientationToLock: UIInterfaceOrientationMask
+                        if strongSelf.windowLayout.size.width < strongSelf.windowLayout.size.height {
+                            orientationToLock = .portrait
+                        } else {
+                            orientationToLock = .landscape
+                        }
+                        if let _rootController = strongSelf._rootController {
+                            supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        }
+                        supportedOrientations = supportedOrientations.intersection(strongSelf.presentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        supportedOrientations = supportedOrientations.intersection(strongSelf.overlayPresentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+                        
+                        var resolvedOrientations: UIInterfaceOrientationMask
+                        switch strongSelf.windowLayout.metrics.widthClass {
+                        case .regular:
+                            resolvedOrientations = supportedOrientations.regularSize
+                        case .compact:
+                            resolvedOrientations = supportedOrientations.compactSize
+                        }
+                        if resolvedOrientations.isEmpty {
+                            resolvedOrientations = [.portrait]
+                        }
+                        strongSelf.hostView.updateSupportedInterfaceOrientations(resolvedOrientations)
+                    }
                     rootController.keyboardViewManager = self.keyboardViewManager
                     rootController.inCallNavigate = { [weak self] in
                         self?.inCallNavigate?()
@@ -1193,8 +1223,13 @@ public class Window1 {
     }
     
     public func forEachViewController(_ f: (ContainableController) -> Bool) {
-        if let navigationController = self._rootController as? NavigationController, let controller = navigationController.topOverlayController {
-            !f(controller)
+        if let navigationController = self._rootController as? NavigationController {
+            for case let controller as ContainableController in navigationController.viewControllers {
+                !f(controller)
+            }
+            if let controller = navigationController.topOverlayController {
+                !f(controller)
+            }
         }
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {

@@ -10,6 +10,7 @@ public enum AddGroupMemberError {
     case generic
     case groupFull
     case privacy
+    case tooManyChannels
 }
 
 public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
@@ -19,12 +20,14 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
                 return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id, userId: inputUser, fwdLimit: 100))
                 |> mapError { error -> AddGroupMemberError in
                     switch error.errorDescription {
-                        case "USERS_TOO_MUCH":
-                            return .groupFull
-                        case "USER_PRIVACY_RESTRICTED":
-                            return .privacy
-                        default:
-                            return .generic
+                    case "USERS_TOO_MUCH":
+                        return .groupFull
+                    case "USER_PRIVACY_RESTRICTED":
+                        return .privacy
+                    case "USER_CHANNELS_TOO_MUCH":
+                        return .tooManyChannels
+                    default:
+                        return .generic
                     }
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
@@ -95,7 +98,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
-                            case "USER_PRIVACY_RESTRICTED":
+                            case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
                                 return .fail(.restricted)
                             case "USER_BOT":
                                 return .fail(.bot(memberId))
@@ -191,7 +194,7 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
                 switch error.errorDescription {
                    case "CHANNELS_TOO_MUCH":
                         return .tooMuchJoined
-                    case "USER_PRIVACY_RESTRICTED":
+                    case "USER_PRIVACY_RESTRICTED", "USER_NOT_MUTUAL_CONTACT":
                         return .restricted
                     case "USERS_TOO_MUCH":
                         return .limitExceeded

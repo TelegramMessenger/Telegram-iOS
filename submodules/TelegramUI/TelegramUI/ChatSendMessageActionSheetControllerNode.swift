@@ -561,7 +561,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.validLayout = layout
         
         transition.updateFrame(node: self.textCoverNode, frame: self.textFieldFrame)
-        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 0.0))
+        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 1.0))
         
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))

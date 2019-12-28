@@ -22,7 +22,7 @@ final class NavigationOverlayContainer: ASDisplayNode {
         }
     }
     
-    init(controller: ViewController, blocksInteractionUntilReady: Bool, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
+    init(controller: ViewController, blocksInteractionUntilReady: Bool, controllerRemoved: @escaping (ViewController) -> Void, statusBarUpdated: @escaping (ContainedViewLayoutTransition) -> Void, modalStyleOverlayTransitionFactorUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.controller = controller
         self.blocksInteractionUntilReady = blocksInteractionUntilReady
         
@@ -37,6 +37,10 @@ final class NavigationOverlayContainer: ASDisplayNode {
         
         self.controller.statusBar.alphaUpdated = { transition in
             statusBarUpdated(transition)
+        }
+        
+        self.controller.modalStyleOverlayTransitionFactorUpdated = { transition in
+            modalStyleOverlayTransitionFactorUpdated(transition)
         }
         
         self.isReadyDisposable = (self.controller.ready.get()

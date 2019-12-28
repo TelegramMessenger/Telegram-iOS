@@ -37,6 +37,19 @@ public struct ReverseGeocodedPlacemark {
     public let city: String?
     public let country: String?
     
+    public var compactDisplayAddress: String? {
+        if let street = self.street {
+            return street
+        }
+        if let city = self.city {
+            return city
+        }
+        if let country = self.country {
+            return country
+        }
+        return nil
+    }
+    
     public var fullAddress: String {
         var components: [String] = []
         if let street = self.street {

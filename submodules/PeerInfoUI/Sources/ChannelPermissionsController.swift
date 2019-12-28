@@ -19,7 +19,7 @@ import TelegramPermissionsUI
 import ItemListPeerActionItem
 
 private final class ChannelPermissionsControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let updatePermission: (TelegramChatBannedRightsFlags, Bool) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -31,8 +31,8 @@ private final class ChannelPermissionsControllerArguments {
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
     let updateSlowmode: (Int32) -> Void
     
-    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
-        self.account = account
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, updateSlowmode: @escaping (Int32) -> Void) {
+        self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -270,7 +270,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     default:
                         break
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: canOpen ? {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
                 } : {
                     arguments.openPeerInfo(participant.peer)
@@ -472,6 +472,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var resetSlowmodeVisualValueImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -524,7 +525,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
-    let arguments = ChannelPermissionsControllerArguments(account: context.account, updatePermission: { rights, value in
+    let arguments = ChannelPermissionsControllerArguments(context: context, updatePermission: { rights, value in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { view in
@@ -728,17 +729,23 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 presentControllerImpl?(progress, nil)
                 
                 let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)
-                |> mapError { _ -> UpdateChannelSlowModeError in
-                    return .generic
-                }
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    return .single(nil)
+                |> mapError { error -> UpdateChannelSlowModeError in
+                    switch error {
+                    case .tooManyChannels:
+                        Queue.mainQueue().async {
+                            updateState { state in
+                                var state = state
+                                state.modifiedSlowmodeTimeout = nil
+                                return state
+                            }
+                            resetSlowmodeVisualValueImpl?()
+                        }
+                        return .tooManyChannels
+                    default:
+                        return .generic
+                    }
                 }
                 |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
-                    guard let upgradedPeerId = upgradedPeerId else {
-                        return .single(nil)
-                    }
                     return updateChannelSlowModeInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
                     |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
                         return .complete()
@@ -752,8 +759,15 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                         upgradedToSupergroupImpl?(peerId, {})
                     }
                     progress?.dismiss()
-                }, error: { [weak progress] _ in
+                }, error: { [weak progress] error in
                     progress?.dismiss()
+                    
+                    switch error {
+                    case .tooManyChannels:
+                        pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                    default:
+                        break
+                    }
                 }))
             }
         })
@@ -852,6 +866,16 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    resetSlowmodeVisualValueImpl = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatSlowmodeItemNode {
+                itemNode.forceSetValue(0)
+            }
+        }
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {

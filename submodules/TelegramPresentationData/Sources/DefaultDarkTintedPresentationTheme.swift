@@ -7,17 +7,14 @@ import TelegramUIPreferences
 private let defaultDarkTintedAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkTintedPresentationTheme = makeDefaultDarkTintedPresentationTheme(preview: false)
 
-//public func makeDarkAccentPresentationTheme(accentColor: UIColor?, bubbleColors: (UIColor, UIColor?)?, preview: Bool) -> PresentationTheme {
-//    var accentColor = accentColor ?? defaultDarkAccentColor
-//    if accentColor == PresentationThemeBaseColor.blue.color {
-//        accentColor = defaultDarkAccentColor
-//    }
-//    return makeDarkPresentationTheme(accentColor: accentColor, bubbleColors: bubbleColors, preview: preview)
-//}
-
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?) -> PresentationTheme {
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
+    }
+    
+    var accentColor = accentColor
+    if accentColor == PresentationThemeBaseColor.blue.color {
+        accentColor = defaultDarkTintedAccentColor
     }
     
     var intro = theme.intro
@@ -44,15 +41,21 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     var inputBackgroundColor: UIColor?
     var buttonStrokeColor: UIColor?
     
+    var suggestedWallpaper: TelegramWallpaper?
+    
     var bubbleColors = bubbleColors
     if bubbleColors == nil, editing {
+        if let accentColor = accentColor {
+            let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+            suggestedWallpaper = .color(color.argb)
+        }
+        
         let accentColor = accentColor ?? defaultDarkTintedAccentColor
         let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
         let topColor = bottomColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98)
         bubbleColors = (topColor, bottomColor)
     }
     
-    var accentColor = accentColor
     if let initialAccentColor = accentColor {
         let hsb = initialAccentColor.hsb
         accentColor = UIColor(hue: hsb.0, saturation: hsb.1, brightness: max(hsb.2, 0.18), alpha: 1.0)
@@ -217,12 +220,16 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     }
     
     var defaultWallpaper: TelegramWallpaper?
-    if let backgroundColors = backgroundColors {
+    if let forcedWallpaper = forcedWallpaper {
+        defaultWallpaper = forcedWallpaper
+    } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
+            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+            defaultWallpaper = .color(backgroundColors.0.argb)
         }
+    } else if let forcedWallpaper = suggestedWallpaper {
+        defaultWallpaper = forcedWallpaper
     }
     
     var outgoingBubbleFillColor: UIColor?
@@ -418,6 +425,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     
     return PresentationTheme(
         name: theme.name,
+        index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
         intro: intro,
@@ -433,7 +441,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
     )
 }
 
-public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> PresentationTheme {
+public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
     let accentColor = defaultDarkTintedAccentColor
     
     let secondaryBadgeTextColor: UIColor
@@ -668,6 +676,7 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
     
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: mainBackgroundColor,
+        panelBackgroundColorNoWallpaper: accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18),
         panelSeparatorColor: mainSeparatorColor,
         panelControlAccentColor: accentColor,
         panelControlColor: mainSecondaryTextColor.withAlphaComponent(0.5),
@@ -719,7 +728,7 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
     )
 
     let chat = PresentationThemeChat(
-        defaultWallpaper: .color(Int32(bitPattern: accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).rgb)),
+        defaultWallpaper: .color(accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18).argb),
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,
@@ -778,7 +787,8 @@ public func makeDefaultDarkTintedPresentationTheme(preview: Bool) -> Presentatio
     )
 
     return PresentationTheme(
-        name: .builtin(.nightAccent),
+        name: extendingThemeReference?.name ?? .builtin(.nightAccent),
+        index: extendingThemeReference?.index ?? PresentationThemeReference.builtin(.nightAccent).index,
         referenceTheme: .nightAccent,
         overallDarkAppearance: true,
         intro: intro,

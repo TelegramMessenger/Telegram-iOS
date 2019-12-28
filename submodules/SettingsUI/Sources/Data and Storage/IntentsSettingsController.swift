@@ -187,7 +187,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
             case let .accountHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .account(theme, peer, selected, _):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: arguments.context.account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedAccount(peer.id) }
                 }, setPeerIdWithRevealedOptions: { _, _ in}, removePeer: { _ in })
                 return ItemListTextItem(presentationData: presentationData, text: .plain(""), sectionId: self.section)
@@ -274,19 +274,19 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
             }
             let accountPeerId = context.account.peerId
             if previous.contacts && !updated.contacts {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .contact)
+                deleteAllSendMessageIntents()
             }
             if previous.savedMessages && !updated.savedMessages {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .savedMessages)
+                deleteAllSendMessageIntents()
             }
             if previous.privateChats && !updated.privateChats {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .privateChat)
+                deleteAllSendMessageIntents()
             }
             if previous.groups && !updated.groups {
-                deleteAllSendMessageIntents(accountPeerId: accountPeerId, subject: .group)
+                deleteAllSendMessageIntents()
             }
             if previous.account != updated.account, let previousAccount = previous.account {
-                deleteAllSendMessageIntents(accountPeerId: previousAccount)
+                deleteAllSendMessageIntents()
             }
         })
     }, resetAll: {

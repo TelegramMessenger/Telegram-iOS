@@ -42,7 +42,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
             }
         }, sendFile: nil,
         sendSticker: nil,
-        present: presentImpl, dismissInput: {})
+        present: presentImpl, dismissInput: {}, contentContext: nil)
     }
     
     let openLinkImpl: (String) -> Void = { [weak controller] url in
@@ -58,13 +58,14 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
-                        controller.present(StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
+                        let packReference: StickerPackReference = .name(name)
+                        controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .instantView(webpage, anchor):
                         (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                     case let .join(link):
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                             openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil))
-                        }), in: .window(.root))
+                        }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .wallet(address, amount, comment):
                         context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
                             (controller.navigationController as? NavigationController)?.pushViewController(c)

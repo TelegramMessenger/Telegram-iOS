@@ -75,6 +75,8 @@ public final class AccountStateManager {
     private let operationDisposable = MetaDisposable()
     private var operationTimer: SignalKitTimer?
     
+    private var removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId] = [:]
+    
     private var nextId: Int32 = 0
     private func getNextId() -> Int32 {
         self.nextId += 1
@@ -128,6 +130,11 @@ public final class AccountStateManager {
     private let significantStateUpdateCompletedPipe = ValuePipe<Void>()
     var significantStateUpdateCompleted: Signal<Void, NoError> {
         return self.significantStateUpdateCompletedPipe.signal()
+    }
+    
+    private let authorizationListUpdatesPipe = ValuePipe<Void>()
+    var authorizationListUpdates: Signal<Void, NoError> {
+        return self.authorizationListUpdatesPipe.signal()
     }
     
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
@@ -364,6 +371,7 @@ public final class AccountStateManager {
             case let .pollDifference(currentEvents):
                 self.operationTimer?.invalidate()
                 self.currentIsUpdatingValue = true
+                let queue = self.queue
                 let accountManager = self.accountManager
                 let postbox = self.postbox
                 let network = self.network
@@ -379,7 +387,7 @@ public final class AccountStateManager {
                     }
                 }
                 |> take(1)
-                |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                |> mapToSignal { [weak self] state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                     if let authorizedState = state.state {
                         var flags: Int32 = 0
                         var ptsTotalLimit: Int32? = nil
@@ -418,15 +426,17 @@ public final class AccountStateManager {
                                             return .single((nil, nil, false))
                                         } else {
                                             return finalStateWithDifference(postbox: postbox, network: network, state: state, difference: difference)
+                                                |> deliverOn(queue)
                                                 |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                                                     if !finalState.state.preCachedResources.isEmpty {
                                                         for (resource, data) in finalState.state.preCachedResources {
                                                             mediaBox.storeResourceData(resource.id, data: data)
                                                         }
                                                     }
+                                                    let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
                                                     return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
                                                         let startTime = CFAbsoluteTimeGetCurrent()
-                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
                                                         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                                         if deltaTime > 1.0 {
                                                             Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -530,8 +540,9 @@ public final class AccountStateManager {
                 let mediaBox = postbox.mediaBox
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(postbox: postbox, groups: groups)
-                |> mapToSignal { state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
+                |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
                     return finalStateWithUpdateGroups(postbox: postbox, network: network, state: state, groups: groups)
+                    |> deliverOn(queue)
                     |> mapToSignal { finalState in
                         if !finalState.discard && !finalState.state.preCachedResources.isEmpty {
                             for (resource, data) in finalState.state.preCachedResources {
@@ -539,12 +550,14 @@ public final class AccountStateManager {
                             }
                         }
                         
+                        let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
+                        
                         return postbox.transaction { transaction -> AccountReplayedFinalState? in
                             if finalState.discard {
                                 return nil
                             } else {
                                 let startTime = CFAbsoluteTimeGetCurrent()
-                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                 if deltaTime > 1.0 {
                                     Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -702,6 +715,10 @@ public final class AccountStateManager {
                 if !events.externallyUpdatedPeerId.isEmpty {
                     self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
                 }
+            
+                if events.authorizationListUpdated {
+                    self.authorizationListUpdatesPipe.putNext(Void())
+                }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {
                     self.operations.removeFirst()
@@ -749,9 +766,10 @@ public final class AccountStateManager {
                 let mediaBox = self.postbox.mediaBox
                 let network = self.network
                 let auxiliaryMethods = self.auxiliaryMethods
+                let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
                 let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
                     let startTime = CFAbsoluteTimeGetCurrent()
-                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
                     let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                     if deltaTime > 1.0 {
                         Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -1009,6 +1027,12 @@ public final class AccountStateManager {
             }
         }
         completion(nil)
+    }
+    
+    func removePossiblyDeliveredMessages(uniqueIds: [Int64: PeerId]) {
+        self.queue.async {
+            self.removePossiblyDeliveredMessagesUniqueIds.merge(uniqueIds, uniquingKeysWith: { _, rhs in rhs })
+        }
     }
 }
 

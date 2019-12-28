@@ -35,6 +35,7 @@ import AppLock
 import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
+import CoreSpotlight
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -374,6 +375,19 @@ final class SharedApplicationContext {
         let apiHash: String = buildConfig.apiHash
         let languagesCategory = "ios"
         
+        let autolockDeadine: Signal<Int32?, NoError>
+        if #available(iOS 10.0, *) {
+            autolockDeadine = .single(nil)
+        } else {
+            autolockDeadine = self.context.get()
+            |> mapToSignal { context -> Signal<Int32?, NoError> in
+                guard let context = context else {
+                    return .single(nil)
+                }
+                return context.context.sharedContext.appLockContext.autolockDeadline
+            }
+        }
+        
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
@@ -383,7 +397,7 @@ final class SharedApplicationContext {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
@@ -803,7 +817,7 @@ final class SharedApplicationContext {
                 }
                 var exists = false
                 strongSelf.mainWindow.forEachViewController { controller in
-                    if controller is ThemeSettingsCrossfadeController {
+                    if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
                         exists = true
                     }
                     return true
@@ -961,7 +975,7 @@ final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
                 }
@@ -974,11 +988,12 @@ final class SharedApplicationContext {
                     }
                     return result
                 }
-                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings)?, NoError> in
                     if let account = account {
-                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings)? in
+                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings, ContentSettings)? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings)
+                            let contentSettings = getContentSettings(transaction: transaction)
+                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings, contentSettings)
                         }
                     } else {
                         return .single(nil)
@@ -987,9 +1002,9 @@ final class SharedApplicationContext {
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings in
                     let tonContext = StoredTonContext(basePath: account.basePath, postbox: account.postbox, network: account.network, keychain: tonKeychain)
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
@@ -1217,14 +1232,12 @@ final class SharedApplicationContext {
             guard let strongSelf = self else {
                 return
             }
-            for peerId in loggedOutAccountPeerIds {
-                deleteAllSendMessageIntents(accountPeerId: peerId)
-            }
-            
+
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
                     if peerId == updated.account {
+                        deleteAllSendMessageIntents()
                         updated = updated.withUpdatedAccount(nil)
                         break
                     }
@@ -1825,6 +1838,53 @@ final class SharedApplicationContext {
         
         if userActivity.activityType == NSUserActivityTypeBrowsingWeb, let url = userActivity.webpageURL {
             self.openUrl(url: url)
+        }
+        
+        if userActivity.activityType == CSSearchableItemActionType {
+            if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String, uniqueIdentifier.hasPrefix("contact-") {
+                if let peerIdValue = Int64(String(uniqueIdentifier[uniqueIdentifier.index(uniqueIdentifier.startIndex, offsetBy: "contact-".count)...])) {
+                    let peerId = PeerId(peerIdValue)
+                
+                    let signal = self.sharedContextPromise.get()
+                    |> take(1)
+                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                        return sharedApplicationContext.sharedContext.activeAccounts
+                        |> take(1)
+                        |> mapToSignal { primary, accounts, _ -> Signal<(AccountRecordId?, [Account?]), NoError> in
+                            return combineLatest(accounts.map { _, account, _ -> Signal<Account?, NoError> in
+                                return account.postbox.transaction { transaction -> Account? in
+                                    if transaction.getPeer(peerId) != nil {
+                                        return account
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            })
+                            |> map { accounts -> (AccountRecordId?, [Account?]) in
+                                return (primary?.id, accounts)
+                            }
+                        }
+                    }
+                    let _ = (signal
+                    |> deliverOnMainQueue).start(next: { primary, accounts in
+                        if let primary = primary {
+                            for account in accounts {
+                                if let account = account, account.id == primary {
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId)
+                                    return
+                                }
+                            }
+                        }
+                        
+                        for account in accounts {
+                            if let account = account {
+                                self.openChatWhenReady(accountId: account.id, peerId: peerId)
+                                return
+                            }
+                        }
+                    })
+                }
+            }
         }
         
         return true

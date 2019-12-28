@@ -16,9 +16,10 @@ import AlertUI
 import PresentationDataUtils
 import TelegramNotices
 import ItemListPeerItem
+import AccountContext
 
 private final class ChannelVisibilityControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateCurrentType: (CurrentChannelType) -> Void
     let updatePublicLinkText: (String?, String) -> Void
@@ -30,8 +31,8 @@ private final class ChannelVisibilityControllerArguments {
     let revokePrivateLink: () -> Void
     let sharePrivateLink: () -> Void
     
-    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
+        self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
         self.scrollToPublicLinkText = scrollToPublicLinkText
@@ -342,7 +343,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -651,7 +652,12 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
                 
-                entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                switch selectedType {
+                case .publicChannel:
+                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                case .privateChannel:
+                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
+                }
                 
                 switch selectedType {
                     case .publicChannel:
@@ -828,6 +834,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
     var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var clearHighlightImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -848,7 +855,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
     }).start())
     
-    let arguments = ChannelVisibilityControllerArguments(account: context.account, updateCurrentType: { type in
+    let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)
         }
@@ -1093,14 +1100,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                            guard let upgradedPeerId = upgradedPeerId else {
-                                return .single(nil)
-                            }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
                             return updateAddressName(account: context.account, domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
@@ -1109,6 +1109,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                 return .complete()
                             }
                             |> then(.single(upgradedPeerId))
+                            |> castError(ConvertGroupToSupergroupError.self)
                         }
                         |> deliverOnMainQueue
                         
@@ -1121,11 +1122,16 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             } else {
                                 dismissImpl?()
                             }
-                        }, error: { _ in
+                        }, error: { error in
                             updateState { state in
                                 return state.withUpdatedUpdatingAddressName(false)
                             }
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                            default:
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            }
                         }))
                     }
                     
@@ -1326,6 +1332,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     clearHighlightImpl = { [weak controller] in
         controller?.clearItemNodesHighlight(animated: true)

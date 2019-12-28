@@ -21,6 +21,8 @@ def apple_lib(
         deps = [],
         exported_deps = [],
         additional_linker_flags = None,
+        exported_preprocessor_flags = [],
+        exported_linker_flags = [],
         frameworks = [],
         weak_frameworks = [],
         swift_version = None,
@@ -114,7 +116,7 @@ def apple_lib(
         else:
             linker_flags = []
 
-        resolved_exported_linker_flags = linker_flags + additional_linker_flags
+        resolved_exported_linker_flags = exported_linker_flags + linker_flags + additional_linker_flags
 
         if native.read_config("custom", "mode") == "project":
             resolved_frameworks = resolved_frameworks + ["$SDKROOT/System/Library/Frameworks/%s.framework" % x for x in weak_frameworks]
@@ -140,6 +142,7 @@ def apple_lib(
             platform_compiler_flags = platform_compiler_flags,
             swift_compiler_flags = swift_compiler_flags,
             preferred_linkage = "static",
+            exported_preprocessor_flags = exported_preprocessor_flags,
         )
 
 def static_library(
@@ -152,6 +155,8 @@ def static_library(
         extra_xcode_files = [],
         deps = [],
         additional_linker_flags = None,
+        exported_preprocessor_flags = [],
+        exported_linker_flags = [],
         frameworks = [],
         weak_frameworks = [],
         info_plist = None,
@@ -161,7 +166,8 @@ def static_library(
         platform_compiler_flags = None,
         swift_compiler_flags = None,
         warning_as_error = False,
-        suppress_warnings = True):
+        suppress_warnings = True
+    ):
     apple_lib(
         name = name,
         srcs = srcs,
@@ -175,6 +181,8 @@ def static_library(
         extra_xcode_files = extra_xcode_files,
         deps = deps,
         additional_linker_flags = additional_linker_flags,
+        exported_preprocessor_flags = exported_preprocessor_flags,
+        exported_linker_flags = exported_linker_flags,
         frameworks = frameworks,
         weak_frameworks = weak_frameworks,
         warning_as_error = warning_as_error,

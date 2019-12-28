@@ -47,7 +47,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, presentationData: PresentationData, interaction: InviteContactsInteraction) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, interaction: InviteContactsInteraction) -> ListViewItem {
         switch self {
             case let .option(_, option, theme, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, header: nil, action: option.action)
@@ -59,7 +59,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                     status = .none
                 }
                 let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.toggleContact(id)
                 })
         }
@@ -202,12 +202,12 @@ private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceC
     return entries
 }
 
-private func preparedInviteContactsTransition(account: Account, presentationData: PresentationData, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, interaction: InviteContactsInteraction, isLoading: Bool, firstTime: Bool, crossfade: Bool) -> InviteContactsTransition {
+private func preparedInviteContactsTransition(context: AccountContext, presentationData: PresentationData, from fromEntries: [InviteContactsEntry], to toEntries: [InviteContactsEntry], sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, interaction: InviteContactsInteraction, isLoading: Bool, firstTime: Bool, crossfade: Bool) -> InviteContactsTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
     return InviteContactsTransition(deletions: deletions, insertions: insertions, updates: updates, sortedContacts: sortedContacts, isLoading: isLoading, firstTime: firstTime, crossfade: crossfade)
 }
@@ -247,7 +247,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         didSet {
             if self.selectionState != oldValue {
                 self.selectionStatePromise.set(.single(self.selectionState))
-                self.countPanelNode.badge = "\(self.selectionState.selectedContactIndices.count)"
+                self.countPanelNode.count = self.selectionState.selectedContactIndices.count
                 if oldValue.selectedContactIndices.isEmpty != self.selectionState.selectedContactIndices.isEmpty {
                     if let (layout, navigationHeight, actualNavigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .animated(duration: 0.3, curve: .spring))
@@ -416,7 +416,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 let previousContacts = currentSortedContacts.with { $0 }
                 let crossfade = previous != nil && previousContacts == nil
                 
-                return .single(preparedInviteContactsTransition(account: context.account, presentationData: presentationData, from: previous ?? [], to: entries, sortedContacts: sortedContacts, interaction: interaction, isLoading: sortedContacts == nil, firstTime: previous == nil, crossfade: crossfade))
+                return .single(preparedInviteContactsTransition(context: context, presentationData: presentationData, from: previous ?? [], to: entries, sortedContacts: sortedContacts, interaction: interaction, isLoading: sortedContacts == nil, firstTime: previous == nil, crossfade: crossfade))
             }
             return signal
             |> runOn(processingQueue)

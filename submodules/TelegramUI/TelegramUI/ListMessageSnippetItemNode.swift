@@ -467,10 +467,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let item = self.item, item.message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
-            return (self.iconImageNode, { [weak iconImageNode] in
+            return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in
                 return (iconImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
@@ -501,12 +501,12 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                 } else {
                     if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .link) {
-                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                     }
                 }
             } else {
                 if !item.controllerInteraction.openMessage(item.message, .default) {
-                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                    item.controllerInteraction.openUrl(currentPrimaryUrl, false, false, nil)
                 }
             }
         }
@@ -556,10 +556,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url), item.message)
                                 } else if url == self.currentPrimaryUrl {
                                     if !item.controllerInteraction.openMessage(item.message, .default) {
-                                        item.controllerInteraction.openUrl(url, false, false)
+                                        item.controllerInteraction.openUrl(url, false, false, nil)
                                     }
                                 } else {
-                                    item.controllerInteraction.openUrl(url, false, true)
+                                    item.controllerInteraction.openUrl(url, false, true, nil)
                                 }
                             }
                         case .hold, .doubleTap:

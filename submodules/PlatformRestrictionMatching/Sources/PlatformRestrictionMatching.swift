@@ -1,13 +1,14 @@
 import Foundation
 import TelegramCore
 import SyncCore
-import SyncCore
 
 public extension RestrictedContentMessageAttribute {
-    func platformText(platform: String) -> String? {
+    func platformText(platform: String, contentSettings: ContentSettings) -> String? {
         for rule in self.rules {
             if rule.platform == "all" || rule.platform == "ios" {
-                return rule.text
+                if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
+                    return rule.text
+                }
             }
         }
         return nil

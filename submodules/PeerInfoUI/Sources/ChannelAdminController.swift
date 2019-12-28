@@ -18,7 +18,7 @@ import LocalizedPeerData
 private let rankMaxLength: Int32 = 16
 
 private final class ChannelAdminControllerArguments {
-    let account: Account
+    let context: AccountContext
     let toggleRight: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
     let toggleRightWhileDisabled: (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void
     let transferOwnership: () -> Void
@@ -28,8 +28,8 @@ private final class ChannelAdminControllerArguments {
     let dismissInput: () -> Void
     let animateError: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, toggleRight: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void) {
+        self.context = context
         self.toggleRight = toggleRight
         self.toggleRightWhileDisabled = toggleRightWhileDisabled
         self.transferOwnership = transferOwnership
@@ -369,7 +369,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rankTitle(theme, text, count, limit):
@@ -791,6 +791,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var errorImpl: (() -> Void)?
     var scrollToRankImpl: (() -> Void)?
     
@@ -800,7 +801,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
         upgradedToSupergroup(peerId, completion)
     }
     
-    let arguments = ChannelAdminControllerArguments(account: context.account, toggleRight: { right, flags in
+    let arguments = ChannelAdminControllerArguments(context: context, toggleRight: { right, flags in
         updateState { current in
             var updated = flags
             if flags.contains(right) {
@@ -1062,12 +1063,17 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 return current.withUpdatedUpdating(true)
                             }
                             updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
-                                if case let .addMemberError(error) = error, case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                    var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                    if case .group = channel.info {
-                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                if case let .addMemberError(error) = error, let admin = adminView.peers[adminView.peerId] {
+                                    if case .restricted = error {
+                                        var text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        if case .group = channel.info {
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        }
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    } else if case .tooMuchJoined = error {
+                                        let text = presentationData.strings.Invite_ChannelsTooMuch
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 dismissImpl?()
                             }, completed: {
@@ -1115,22 +1121,31 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                 dismissImpl?()
                             }))
                         } else if updateFlags != defaultFlags || updateRank != nil {
+                            enum WrappedUpdateChannelAdminRightsError {
+                                case direct(UpdateChannelAdminRightsError)
+                                case conversionTooManyChannels
+                                case conversionFailed
+                            }
+                            
                             let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                             |> map(Optional.init)
-                            |> `catch` { error -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                            |> `catch` { error -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                 switch error {
                                 case .tooManyChannels:
-                                    return .fail(.addMemberError(.tooMuchJoined))
+                                    return .fail(.conversionTooManyChannels)
                                 default:
-                                    return .fail(.generic)
+                                    return .fail(.conversionFailed)
                                 }
                             }
-                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                 guard let upgradedPeerId = upgradedPeerId else {
-                                    return .fail(.generic)
+                                    return .fail(.conversionFailed)
                                 }
                                 return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags), rank: updateRank)
-                                |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelAdminRightsError> in
+                                |> mapError { error -> WrappedUpdateChannelAdminRightsError in
+                                    return .direct(error)
+                                }
+                                |> mapToSignal { _ -> Signal<PeerId?, WrappedUpdateChannelAdminRightsError> in
                                     return .complete()
                                 }
                                 |> then(.single(upgradedPeerId))
@@ -1147,14 +1162,23 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     })
                                 }
                             }, error: { error in
-                                if case let .addMemberError(error) = error {
-                                    var text = presentationData.strings.Login_UnknownError
-                                    if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                        text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
-                                    } else if case .tooMuchJoined = error {
-                                        text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                updateState { current in
+                                    return current.withUpdatedUpdating(false)
+                                }
+                                
+                                switch error {
+                                case let .direct(error):
+                                    if case let .addMemberError(error) = error {
+                                        var text = presentationData.strings.Login_UnknownError
+                                        if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).0
+                                        } else if case .tooMuchJoined = error {
+                                            text = presentationData.strings.Invite_ChannelsTooMuch
+                                        }
+                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                case .conversionFailed, .conversionTooManyChannels:
+                                    pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
                                 }
                                 
                                 dismissImpl?()
@@ -1169,7 +1193,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             })
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Channel_Management_LabelEditor), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(initialParticipant?.adminInfo == nil ? presentationData.strings.Channel_Management_AddModerator : presentationData.strings.Channel_Moderator_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, adminView: adminView, initialParticipant: initialParticipant, canEdit: canEdit), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: nil, emptyStateItem: nil, animateChanges: true)
         
@@ -1191,6 +1215,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     
     let hapticFeedback = HapticFeedback()

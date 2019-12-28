@@ -30,7 +30,7 @@ private enum DeviceContactInfoAction {
 }
 
 private final class DeviceContactInfoControllerArguments {
-    let account: Account
+    let context: AccountContext
     let isPlain: Bool
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updatePhone: (Int64, String) -> Void
@@ -46,8 +46,8 @@ private final class DeviceContactInfoControllerArguments {
     let displayCopyContextMenu: (DeviceContactInfoEntryTag, String) -> Void
     let updateShareViaException: (Bool) -> Void
     
-    init(account: Account, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void) {
+        self.context = context
         self.isPlain = isPlain
         self.updateEditingName = updateEditingName
         self.updatePhone = updatePhone
@@ -396,7 +396,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
@@ -440,7 +440,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
             case let .phoneNumberShareViaExceptionInfo(_, theme, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .editingPhoneNumber(_, theme, strings, id, title, label, value, hasActiveRevealControls):
-                return UserInfoEditingPhoneItem(theme: theme, strings: strings, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
+                return UserInfoEditingPhoneItem(presentationData: presentationData, id: id, label: title, value: value, editing: UserInfoEditingPhoneItemEditing(editable: true, hasActiveRevealControls: hasActiveRevealControls), sectionId: self.section, setPhoneIdWithRevealedOptions: { lhs, rhs in
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
                     arguments.updatePhone(id, value)
@@ -450,7 +450,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
             case let .addPhoneNumber(_, theme, title):
-                return UserInfoEditingPhoneActionItem(theme: theme, title: title, sectionId: self.section, action: {
+                return UserInfoEditingPhoneActionItem(presentationData: presentationData, title: title, sectionId: self.section, action: {
                     arguments.addPhoneNumber()
                 })
             case let .email(_, index, theme, title, label, value, selected):
@@ -923,7 +923,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         shareViaException = shareViaExceptionValue
     }
     
-    let arguments = DeviceContactInfoControllerArguments(account: context.account, isPlain: !isShare, updateEditingName: { editingName in
+    let arguments = DeviceContactInfoControllerArguments(context: context, isPlain: !isShare, updateEditingName: { editingName in
         updateState { state in
             var state = state
             if let _ = state.editingState {

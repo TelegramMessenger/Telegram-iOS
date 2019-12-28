@@ -1221,7 +1221,7 @@ public final class AccountViewTracker {
                 return true
             }
             
-            let key = PostboxViewKey.globalMessageTags(globalTag: type == .all ? GlobalMessageTags.Calls : GlobalMessageTags.MissedCalls, position: index, count: 200, groupingPredicate: groupingPredicate)
+            let key = PostboxViewKey.globalMessageTags(globalTag: type == .all ? GlobalMessageTags.Calls : GlobalMessageTags.MissedCalls, position: index, count: count, groupingPredicate: groupingPredicate)
             let signal = account.postbox.combinedView(keys: [key]) |> map { view -> GlobalMessageTagsView in
                 let messageView = view.views[key] as! GlobalMessageTagsView
                 return messageView

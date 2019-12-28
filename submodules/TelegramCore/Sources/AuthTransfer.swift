@@ -9,35 +9,51 @@ public struct AuthTransferExportedToken {
     public let validUntil: Int32
 }
 
-public struct AuthTransferTokenInfo {
-    public let datacenterId: Int32
-    public let authKeyId: Int64
-    public let deviceModel: String
-    public let platform: String
-    public let systemVersion: String
-    public let apiId: Int32
-    public let appName: String
-    public let appVersion: String
-    public let ip: String
-    public let region: String
-}
-
 public enum ExportAuthTransferTokenError {
     case generic
+    case limitExceeded
 }
 
 public enum ExportAuthTransferTokenResult {
     case displayToken(AuthTransferExportedToken)
     case changeAccountAndRetry(UnauthorizedAccount)
     case loggedIn
+    case passwordRequested
 }
 
 public func exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, otherAccountUserIds: [Int32], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
     return account.network.request(Api.functions.auth.exportLoginToken(apiId: account.networkArguments.apiId, apiHash: account.networkArguments.apiHash, exceptIds: otherAccountUserIds))
-    |> mapError { _ -> ExportAuthTransferTokenError in
-        return .generic
+    |> map(Optional.init)
+    |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+        if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
+            return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+            |> mapError { error -> ExportAuthTransferTokenError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else {
+                    return .generic
+                }
+            }
+            |> mapToSignal { result -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                switch result {
+                case let .password(password):
+                    return account.postbox.transaction { transaction -> Api.auth.LoginToken? in
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
+                        return nil
+                    }
+                    |> castError(ExportAuthTransferTokenError.self)
+                    
+                    return .single(nil)
+                }
+            }
+        } else {
+            return .fail(.generic)
+        }
     }
     |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
+        guard let result = result else {
+            return .single(.passwordRequested)
+        }
         switch result {
         case let .loginToken(expires, token):
             return .single(.displayToken(AuthTransferExportedToken(value: token.makeData(), validUntil: expires)))
@@ -47,12 +63,36 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
             |> castError(ExportAuthTransferTokenError.self)
             |> mapToSignal { updatedAccount -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
                 return updatedAccount.network.request(Api.functions.auth.importLoginToken(token: token))
-                |> mapError { _ -> ExportAuthTransferTokenError in
-                    return .generic
+                |> map(Optional.init)
+                |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                    if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
+                        return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+                        |> mapError { error -> ExportAuthTransferTokenError in
+                            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                                return .limitExceeded
+                            } else {
+                                return .generic
+                            }
+                        }
+                        |> mapToSignal { result -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
+                            switch result {
+                            case let .password(password):
+                                return account.postbox.transaction { transaction -> Api.auth.LoginToken? in
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
+                                    return nil
+                                }
+                                |> castError(ExportAuthTransferTokenError.self)
+                                
+                                return .single(nil)
+                            }
+                        }
+                    } else {
+                        return .fail(.generic)
+                    }
                 }
                 |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
                     switch result {
-                    case let .loginTokenSuccess(authorization):
+                    case let .loginTokenSuccess(authorization)?:
                         switch authorization {
                         case let .authorization(_, _, user):
                             return updatedAccount.postbox.transaction { transaction -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
@@ -99,16 +139,16 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
     }
 }
 
-public enum GetAuthTransferTokenInfoError {
+public enum ApproveAuthTransferTokenError {
     case generic
     case invalid
     case expired
     case alreadyAccepted
 }
 
-public func getAuthTransferTokenInfo(network: Network, token: Data) -> Signal<AuthTransferTokenInfo, GetAuthTransferTokenInfoError> {
-    return network.request(Api.functions.auth.checkLoginToken(token: Buffer(data: token)))
-    |> mapError { error -> GetAuthTransferTokenInfoError in
+public func approveAuthTransferToken(account: Account, token: Data, activeSessionsContext: ActiveSessionsContext) -> Signal<RecentAccountSession, ApproveAuthTransferTokenError> {
+    return account.network.request(Api.functions.auth.acceptLoginToken(token: Buffer(data: token)))
+    |> mapError { error -> ApproveAuthTransferTokenError in
         switch error.errorDescription {
         case "AUTH_TOKEN_INVALID":
             return .invalid
@@ -120,25 +160,9 @@ public func getAuthTransferTokenInfo(network: Network, token: Data) -> Signal<Au
             return .generic
         }
     }
-    |> map { result -> AuthTransferTokenInfo in
-        switch result {
-        case let .loginTokenInfo(dcId, authKeyId, deviceModel, platform, systemVersion, apiId, appName, appVersion, ip, region):
-            return AuthTransferTokenInfo(datacenterId: dcId, authKeyId: authKeyId, deviceModel: deviceModel, platform: platform, systemVersion: systemVersion, apiId: apiId, appName: appName, appVersion: appVersion, ip: ip, region: region)
-        }
-    }
-}
-
-public enum ApproveAuthTransferTokenError {
-    case generic
-}
-
-public func approveAuthTransferToken(account: Account, token: Data) -> Signal<Never, ApproveAuthTransferTokenError> {
-    return account.network.request(Api.functions.auth.acceptLoginToken(token: Buffer(data: token)))
-    |> mapError { _ -> ApproveAuthTransferTokenError in
-        return .generic
-    }
-    |> mapToSignal { updates -> Signal<Never, ApproveAuthTransferTokenError> in
-        account.stateManager.addUpdates(updates)
-        return .complete()
+    |> mapToSignal { authorization -> Signal<RecentAccountSession, ApproveAuthTransferTokenError> in
+        let session = RecentAccountSession(apiAuthorization: authorization)
+        activeSessionsContext.addSession(session)
+        return .single(session)
     }
 }

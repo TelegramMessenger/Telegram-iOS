@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import MergeLists
+import AccountContext
 
 enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case savedStickers = 2
@@ -242,7 +243,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ListViewItem {
+    func item(context: AccountContext, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ListViewItem {
         switch self {
             case let .recentGifs(theme):
                 return ChatMediaInputRecentGifsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
@@ -270,11 +271,11 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 })
             case let .peerSpecific(theme, peer):
                 let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0)
-                return ChatMediaInputPeerSpecificItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: collectionId, peer: peer, theme: theme, selected: {
+                return ChatMediaInputPeerSpecificItem(context: context, inputNodeInteraction: inputNodeInteraction, collectionId: collectionId, peer: peer, theme: theme, selected: {
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
             case let .stickerPack(index, info, topItem, theme):
-                return ChatMediaInputStickerPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, selected: {
+                return ChatMediaInputStickerPackItem(account: context.account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, selected: {
                     inputNodeInteraction.navigateToCollectionId(info.id)
                 })
         }

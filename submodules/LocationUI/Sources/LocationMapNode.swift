@@ -4,6 +4,7 @@ import SwiftSignalKit
 import MapKit
 
 let defaultMapSpan = MKCoordinateSpan(latitudeDelta: 0.016, longitudeDelta: 0.016)
+let viewMapSpan = MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
 private let pinOffset = CGPoint(x: 0.0, y: 33.0)
 
 public enum LocationMapMode {
@@ -35,12 +36,33 @@ private class PickerAnnotationContainerView: UIView {
 
 private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
     var customHitTest: ((CGPoint) -> Bool)?
+    private var allowSelectionChanges = true
     
     @objc override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let customHitTest = self.customHitTest, customHitTest(gestureRecognizer.location(in: self)) {
             return false
         }
-        return true
+        return self.allowSelectionChanges
+    }
+    
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let pointInside = super.point(inside: point, with: event)
+        if !pointInside {
+            return pointInside
+        }
+        
+        for annotation in self.annotations(in: self.visibleMapRect) where annotation is LocationPinAnnotation {
+            guard let view = self.view(for: annotation as! MKAnnotation) else {
+                continue
+            }
+            if view.frame.insetBy(dx: -16.0, dy: -16.0).contains(point) {
+                self.allowSelectionChanges = true
+                return true
+            }
+        }
+        self.allowSelectionChanges = false
+        
+        return pointInside
     }
 }
 
@@ -119,7 +141,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
-    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, animated: Bool = false) {
+    func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, hidePicker: Bool = false, animated: Bool = false) {
         let region = MKCoordinateRegion(center: coordinate, span: span)
         self.ignoreRegionChanges = true
         if offset == CGPoint() {
@@ -135,7 +157,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 self.returnedToUserLocation = true
                 self.pickerAnnotationView?.setRaised(true, animated: true)
             }
-        } else if self.hasPickerAnnotation, let customUserLocationAnnotationView = self.customUserLocationAnnotationView, customUserLocationAnnotationView.isHidden {
+        } else if self.hasPickerAnnotation, let customUserLocationAnnotationView = self.customUserLocationAnnotationView, customUserLocationAnnotationView.isHidden, hidePicker {
             self.pickerAnnotationContainerView.isHidden = true
             customUserLocationAnnotationView.setSelected(false, animated: false)
             customUserLocationAnnotationView.isHidden = false
@@ -331,9 +353,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             
             var dict: [String: LocationPinAnnotation] = [:]
             for annotation in self.annotations {
-                if let identifier = annotation.location?.venue?.id {
-                    dict[identifier] = annotation
-                }
+                dict[annotation.id] = annotation
             }
             
             var annotationsToRemove = Set<LocationPinAnnotation>()
@@ -342,9 +362,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                     continue
                 }
                 
-                if let identifier = annotation.location?.venue?.id, let updatedAnnotation = dict[identifier] {
+                if let updatedAnnotation = dict[annotation.id] {
                     annotation.coordinate = updatedAnnotation.coordinate
-                    dict[identifier] = nil
+                    dict[annotation.id] = nil
                 } else {
                     annotationsToRemove.insert(annotation)
                 }

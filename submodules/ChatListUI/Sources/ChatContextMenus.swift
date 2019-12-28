@@ -177,7 +177,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
             if case .search = source {
                 if let channel = peer as? TelegramChannel {
                     items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_JoinChannel, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                        var createSignal = joinChannel(account: context.account, peerId: peerId)
+                        var createSignal = context.peerChannelMemberCategoriesContextsManager.join(account: context.account, peerId: peerId)
                         var cancelImpl: (() -> Void)?
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

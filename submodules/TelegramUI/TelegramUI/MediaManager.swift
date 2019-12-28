@@ -8,6 +8,7 @@ import SyncCore
 import MediaPlayer
 import TelegramAudio
 import UniversalMediaPlayer
+import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import TelegramUniversalVideoContent
@@ -61,6 +62,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     private let accountManager: AccountManager
     private let inForeground: Signal<Bool, NoError>
+    private let presentationData: Signal<PresentationData, NoError>
     
     public let audioSession: ManagedAudioSession
     public let overlayMediaManager: OverlayMediaManager = OverlayMediaManager()
@@ -173,9 +175,10 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>) {
+    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
+        self.presentationData = presentationData
         
         self.audioSession = sharedAudioSession
         
@@ -205,8 +208,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         
         var currentGlobalControlsOptions = GlobalControlOptions()
         
-        self.globalControlsDisposable.set((self.globalMediaPlayerState
-        |> deliverOnMainQueue).start(next: { stateAndType in
+        self.globalControlsDisposable.set((combineLatest(self.globalMediaPlayerState, self.presentationData)
+        |> deliverOnMainQueue).start(next: { stateAndType, presentationData in
             var updatedGlobalControlOptions = GlobalControlOptions()
             if let (_, stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
                 if type == .music {
@@ -234,8 +237,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         case let .music(title, performer, artworkValue, _):
                             artwork = artworkValue
                             
-                            let titleText: String = title ?? "Unknown Track"
-                            let subtitleText: String = performer ?? "Unknown Artist"
+                            let titleText: String = title ?? presentationData.strings.MediaPlayer_UnknownTrack
+                            let subtitleText: String = performer ?? presentationData.strings.MediaPlayer_UnknownArtist
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                             nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText

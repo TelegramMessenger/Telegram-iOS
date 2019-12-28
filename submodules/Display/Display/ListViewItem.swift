@@ -5,6 +5,7 @@ import SwiftSignalKit
 public enum ListViewItemUpdateAnimation {
     case None
     case System(duration: Double)
+    case Crossfade
     
     public var isAnimated: Bool {
         if case .None = self {

@@ -10,6 +10,10 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import AppBundle
+import StickerPackPreviewUI
+import OverlayStatusController
+import PresentationDataUtils
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
@@ -156,6 +160,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _rightBarButtonItem = Promise<UIBarButtonItem?>()
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
@@ -230,8 +235,51 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 self._ready.set(.single(Void()))
             }
+            if imageReference.media.flags.contains(.hasStickers) {
+                let rightBarButtonItem = UIBarButtonItem(image: UIImage(bundleImageName: "Media Gallery/Stickers"), style: .plain, target: self, action: #selector(self.openStickersButtonPressed))
+                self._rightBarButtonItem.set(.single(rightBarButtonItem))
+            }
         }
         self.contextAndMedia = (self.context, imageReference.abstract)
+    }
+    
+    @objc func openStickersButtonPressed() {
+        guard let (context, media) = self.contextAndMedia else {
+            return
+        }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            guard let strongSelf = self else {
+                return EmptyDisposable
+            }
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            (strongSelf.baseNavigationController()?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let signal = stickerPacksAttachedToMedia(account: context.account, media: media)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        let _ = (signal
+        |> deliverOnMainQueue).start(next: { [weak self] packs in
+            guard let strongSelf = self, !packs.isEmpty else {
+                return
+            }
+            let baseNavigationController = strongSelf.baseNavigationController()
+            baseNavigationController?.view.endEditing(true)
+            let controller = StickerPackScreen(context: context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil)
+            (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+        })
     }
     
     func setFile(context: AccountContext, fileReference: FileMediaReference) {
@@ -302,14 +350,20 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }))
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let (maybeSurfaceCopyView, _) = node.1()
-        let (maybeCopyView, copyViewBackgrond) = node.1()
+        /*let projectedScale = CGPoint(x: self.imageNode.view.bounds.width / node.1.width, y: self.imageNode.view.bounds.height / node.1.height)
+        let scaledLocalImageViewBounds = CGRect(x: -node.1.minX * projectedScale.x, y: -node.1.minY * projectedScale.y, width: node.0.bounds.width * projectedScale.x, height: node.0.bounds.height * projectedScale.y)*/
+        
+        let scaledLocalImageViewBounds = self.imageNode.view.bounds
+        
+        let transformedCopyViewFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: self.view)
+        
+        let (maybeSurfaceCopyView, _) = node.2()
+        let (maybeCopyView, copyViewBackgrond) = node.2()
         copyViewBackgrond?.alpha = 0.0
         let surfaceCopyView = maybeSurfaceCopyView!
         let copyView = maybeCopyView!
@@ -320,7 +374,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceFinalFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
+            transformedSurfaceFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
         }
         
         if let transformedSurfaceFrame = transformedSurfaceFrame {
@@ -330,7 +384,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
-        copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+        copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
         surfaceCopyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         
@@ -361,7 +415,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         self.fetchDisposable.set(nil)
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
@@ -373,8 +427,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let (maybeSurfaceCopyView, _) = node.1()
-        let (maybeCopyView, copyViewBackgrond) = node.1()
+        let (maybeSurfaceCopyView, _) = node.2()
+        let (maybeCopyView, copyViewBackgrond) = node.2()
         copyViewBackgrond?.alpha = 0.0
         let surfaceCopyView = maybeSurfaceCopyView!
         let copyView = maybeCopyView!
@@ -445,6 +499,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    override func rightBarButtonItem() -> Signal<UIBarButtonItem?, NoError> {
+        return self._rightBarButtonItem.get()
     }
     
     override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {

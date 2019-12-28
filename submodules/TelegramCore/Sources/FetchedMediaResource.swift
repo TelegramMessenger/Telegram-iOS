@@ -141,6 +141,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case savedGifs
     case peer(peer: PeerReference)
     case wallpapers
+    case themes
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -402,6 +403,26 @@ final class MediaReferenceRevalidationContext {
             }
         }
     }
+    
+    func themes(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramTheme], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .themes, background: background, request: { next, error in
+            return (telegramThemes(postbox: postbox, network: network, accountManager: nil, forceUpdate: true)
+            |> take(1)
+            |> mapError { _ -> RevalidateMediaReferenceError in
+                return .generic
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<[TelegramTheme], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramTheme] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }
 
 struct RevalidatedMediaResource {
@@ -582,6 +603,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                                 return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                             }
                         }
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .theme(themeReference, resource):
+            return revalidationContext.themes(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+            |> mapToSignal { themes -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                for theme in themes {
+                    if let file = theme.file, file.resource.id.isEqual(to: resource.id)  {
+                        return .single(RevalidatedMediaResource(updatedResource: file.resource, updatedReference: nil))
                     }
                 }
                 return .fail(.generic)

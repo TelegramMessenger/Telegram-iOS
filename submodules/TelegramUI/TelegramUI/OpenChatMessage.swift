@@ -20,6 +20,7 @@ import SettingsUI
 import AlertUI
 import PresentationDataUtils
 import ShareController
+import UndoUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -270,7 +271,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 
                 params.dismissInput()
                 params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
                         selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
                     }
@@ -283,6 +284,15 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .map(mapMedia):
                 params.dismissInput()
                 
+//                let controllerParams = LocationViewParams(sendLiveLocation: { location in
+//                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
+//                    params.enqueueMessage(outMessage)
+//                }, stopLiveLocation: {
+//                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
+//                }, openUrl: params.openUrl, openPeer: { peer in
+//                    params.openPeer(peer, .info)
+//                })
+//                let controller = LocationViewController(context: params.context, mapMedia: mapMedia, params: controllerParams)
                 let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
                     params.openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
@@ -295,8 +305,31 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackPreviewController(context: params.context, stickerPack: reference, parentNavigationController: params.navigationController)
-                controller.sendSticker = params.sendSticker
+                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], sendSticker: params.sendSticker, actionPerformed: { info, items, action in
+                    let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
+                    var animateInAsReplacement = false
+                    if let navigationController = params.navigationController {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    switch action {
+                    case .add:
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }))
+                    case let .remove(positionInList):
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, account: params.context.account), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = addStickerPackInteractively(postbox: params.context.account.postbox, info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }))
+                    }
+                })
                 params.dismissInput()
                 params.present(controller, nil)
                 return true
@@ -306,7 +339,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
-                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                    if let fileName = file.fileName, fileName.hasSuffix(".svgbg") {
+                        let controller = WallpaperGalleryController(context: params.context, source: .wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: true, isDark: false, slug: "", file: file, settings: WallpaperSettings()), nil, nil, nil, nil, nil, nil))
+                        params.present(controller, nil)
+                    } else {
+                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                    }
                 }
                 return true
             case let .audio(file):
@@ -478,12 +516,12 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
                     switch parameter {
-                        case let .slug(slug, options, color, intensity):
-                            source = .slug(slug, content.file, options, color, intensity, message)
+                        case let .slug(slug, options, firstColor, secondColor, intensity, rotation):
+                            source = .slug(slug, content.file, options, firstColor, secondColor, intensity, rotation, message)
                         case let .color(color):
-                            source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil, message)
-                        case let .gradient(topColor, bottomColor):
-                            source = .wallpaper(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings()), nil, nil, nil, message)
+                            source = .wallpaper(.color(color.argb), nil, nil, nil, nil, nil, message)
+                        case let .gradient(topColor, bottomColor, rotation):
+                            source = .wallpaper(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)), nil, nil, nil, nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)
@@ -500,20 +538,39 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
             let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 var file: TelegramMediaFile?
-                let mimeType = "application/x-tgtheme-ios"
-                if let contentFiles = content.files, let filteredFile = contentFiles.filter({ $0.mimeType == mimeType }).first {
-                    file = filteredFile
-                } else if let contentFile = content.file, contentFile.mimeType == mimeType {
+                var settings: TelegramThemeSettings?
+                let themeMimeType = "application/x-tgtheme-ios"
+                
+                for attribute in content.attributes {
+                    if case let .theme(attribute) = attribute {
+                        if let attributeSettings = attribute.settings {
+                            settings = attributeSettings
+                        } else if let filteredFile = attribute.files.filter({ $0.mimeType == themeMimeType }).first {
+                            file = filteredFile
+                        }
+                    }
+                }
+                
+                if file == nil && settings == nil, let contentFile = content.file, contentFile.mimeType == themeMimeType {
                     file = contentFile
                 }
                 let displayUnsupportedAlert: () -> Void = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     present(textAlertController(context: context, title: nil, text: presentationData.strings.Theme_Unsupported, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
-                if case let .theme(slug) = resolvedUrl, let file = file {
-                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                        if let theme = makePresentationTheme(data: data) {
-                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                if case let .theme(slug) = resolvedUrl {
+                    if let file = file {
+                        if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            if let theme = makePresentationTheme(data: data) {
+                                let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                                pushController(controller)
+                            } else {
+                                displayUnsupportedAlert()
+                            }
+                        }
+                    } else if let settings = settings {
+                        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: UInt32(bitPattern: settings.accentColor)), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: UInt32(bitPattern: $0.top)), UIColor(argb: UInt32(bitPattern: $0.bottom))) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false) {
+                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .themeSettings(slug, settings))
                             pushController(controller)
                         } else {
                             displayUnsupportedAlert()

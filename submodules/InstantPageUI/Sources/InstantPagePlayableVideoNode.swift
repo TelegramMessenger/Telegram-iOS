@@ -47,7 +47,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         
         var imageReference: ImageMediaReference?
         if let file = media.media as? TelegramMediaFile, let presentation = smallestImageRepresentation(file.previewRepresentations) {
-            let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
+            let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
             imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
         }
         
@@ -149,9 +149,9 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         }
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if media == self.media {
-            return (self, { [weak self] in
+            return (self, self.bounds, { [weak self] in
                 return (self?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {

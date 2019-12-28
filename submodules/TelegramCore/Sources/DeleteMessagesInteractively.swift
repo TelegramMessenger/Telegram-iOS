@@ -6,63 +6,92 @@ import MtProtoKit
 
 import SyncCore
 
-public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMessageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        var messageIds: [MessageId] = []
-        if deleteAllInGroup {
-            for id in initialMessageIds {
-                if let group = transaction.getMessageGroup(id) ?? transaction.getMessageForwardedGroup(id) {
-                    for message in group {
-                        if !messageIds.contains(message.id) {
-                            messageIds.append(message.id)
-                        }
+public func deleteMessagesInteractively(account: Account, messageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        deleteMessagesInteractively(transaction: transaction, stateManager: account.stateManager, postbox: account.postbox, messageIds: messageIds, type: type, removeIfPossiblyDelivered: true)
+    }
+}
+    
+func deleteMessagesInteractively(transaction: Transaction, stateManager: AccountStateManager?, postbox: Postbox, messageIds initialMessageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false, removeIfPossiblyDelivered: Bool) {
+    var messageIds: [MessageId] = []
+    if deleteAllInGroup {
+        for id in initialMessageIds {
+            if let group = transaction.getMessageGroup(id) ?? transaction.getMessageForwardedGroup(id) {
+                for message in group {
+                    if !messageIds.contains(message.id) {
+                        messageIds.append(message.id)
                     }
-                } else {
-                    messageIds.append(id)
+                }
+            } else {
+                messageIds.append(id)
+            }
+        }
+    } else {
+        messageIds = initialMessageIds
+    }
+    
+    var messageIdsByPeerId: [PeerId: [MessageId]] = [:]
+    for id in messageIds {
+        if messageIdsByPeerId[id.peerId] == nil {
+            messageIdsByPeerId[id.peerId] = [id]
+        } else {
+            messageIdsByPeerId[id.peerId]!.append(id)
+        }
+    }
+    
+    var uniqueIds: [Int64: PeerId] = [:]
+    
+    for (peerId, peerMessageIds) in messageIdsByPeerId {
+        for id in peerMessageIds {
+            if let message = transaction.getMessage(id) {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                        uniqueIds[attribute.uniqueId] = peerId
+                    }
                 }
             }
-        } else {
-            messageIds = initialMessageIds
         }
         
-        var messageIdsByPeerId: [PeerId: [MessageId]] = [:]
-        for id in messageIds {
-            if messageIdsByPeerId[id.peerId] == nil {
-                messageIdsByPeerId[id.peerId] = [id]
-            } else {
-                messageIdsByPeerId[id.peerId]!.append(id)
+        if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
+            let remoteMessageIds = peerMessageIds.filter { id in
+                if id.namespace == Namespaces.Message.Local {
+                    return false
+                }
+                return true
             }
-        }
-        for (peerId, peerMessageIds) in messageIdsByPeerId {
-            if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
-                cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, messageIds: peerMessageIds, type: CloudChatRemoveMessagesType(type))
-            } else if peerId.namespace == Namespaces.Peer.SecretChat {
-                if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
-                    var layer: SecretChatLayer?
-                    switch state.embeddedState {
-                        case .terminated, .handshake:
-                            break
-                        case .basicLayer:
-                            layer = .layer8
-                        case let .sequenceBasedLayer(sequenceState):
-                            layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+            if !remoteMessageIds.isEmpty {
+                cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, messageIds: remoteMessageIds, type: CloudChatRemoveMessagesType(type))
+            }
+        } else if peerId.namespace == Namespaces.Peer.SecretChat {
+            if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                var layer: SecretChatLayer?
+                switch state.embeddedState {
+                    case .terminated, .handshake:
+                        break
+                    case .basicLayer:
+                        layer = .layer8
+                    case let .sequenceBasedLayer(sequenceState):
+                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                }
+                if let layer = layer {
+                    var globallyUniqueIds: [Int64] = []
+                    for messageId in peerMessageIds {
+                        if let message = transaction.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
+                            globallyUniqueIds.append(globallyUniqueId)
+                        }
                     }
-                    if let layer = layer {
-                        var globallyUniqueIds: [Int64] = []
-                        for messageId in peerMessageIds {
-                            if let message = transaction.getMessage(messageId), let globallyUniqueId = message.globallyUniqueId {
-                                globallyUniqueIds.append(globallyUniqueId)
-                            }
-                        }
-                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: globallyUniqueIds), state: state)
-                        if updatedState != state {
-                            transaction.setPeerChatState(peerId, state: updatedState)
-                        }
+                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.deleteMessages(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: globallyUniqueIds), state: state)
+                    if updatedState != state {
+                        transaction.setPeerChatState(peerId, state: updatedState)
                     }
                 }
             }
         }
-        deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: messageIds)
+    }
+    deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: messageIds)
+    
+    if !uniqueIds.isEmpty && removeIfPossiblyDelivered {
+        stateManager?.removePossiblyDeliveredMessages(uniqueIds: uniqueIds)
     }
 }
 

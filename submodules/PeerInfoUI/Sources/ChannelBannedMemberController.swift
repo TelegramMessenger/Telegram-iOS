@@ -16,14 +16,14 @@ import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
 
 private final class ChannelBannedMemberControllerArguments {
-    let account: Account
+    let context: AccountContext
     let toggleRight: (TelegramChatBannedRightsFlags, Bool) -> Void
     let toggleRightWhileDisabled: (TelegramChatBannedRightsFlags) -> Void
     let openTimeout: () -> Void
     let delete: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatBannedRightsFlags) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatBannedRightsFlags) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void) {
+        self.context = context
         self.toggleRight = toggleRight
         self.toggleRightWhileDisabled = toggleRightWhileDisabled
         self.openTimeout = openTimeout
@@ -225,7 +225,7 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelBannedMemberControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightsHeader(theme, text):
@@ -390,11 +390,12 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     
     let peerView = Promise<PeerView>()
     peerView.set(context.account.viewTracker.peerView(peerId))
     
-    let arguments = ChannelBannedMemberControllerArguments(account: context.account, toggleRight: { rights, value in
+    let arguments = ChannelBannedMemberControllerArguments(context: context, toggleRight: { rights, value in
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { view in
@@ -654,7 +655,15 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                 if peerId.namespace == Namespaces.Peer.CloudGroup {
                                     let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                                     |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<PeerId?, NoError> in
+                                    |> `catch` { error -> Signal<PeerId?, NoError> in
+                                        switch error {
+                                        case .tooManyChannels:
+                                            Queue.mainQueue().async {
+                                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                                            }
+                                        default:
+                                            break
+                                        }
                                         return .single(nil)
                                     }
                                     |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
@@ -679,6 +688,12 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                             upgradedToSupergroup(upgradedPeerId, {
                                                 dismissImpl?()
                                             })
+                                        } else {
+                                            updateState { current in
+                                                var current = current
+                                                current.updating = false
+                                                return current
+                                            }
                                         }
                                     }, error: { _ in
                                         updateState { current in
@@ -747,6 +762,9 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     return controller
 }

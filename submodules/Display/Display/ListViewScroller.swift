@@ -23,6 +23,19 @@ class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
         return false
     }
     
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer is UIPanGestureRecognizer, let gestureRecognizers = gestureRecognizer.view?.gestureRecognizers {
+            for otherGestureRecognizer in gestureRecognizers {
+                if otherGestureRecognizer !== gestureRecognizer, let panGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer, panGestureRecognizer.minimumNumberOfTouches == 2 {
+                    return gestureRecognizer.numberOfTouches < 2
+                }
+            }
+            return true
+        } else {
+            return true
+        }
+    }
+    
     #if os(iOS)
     override func touchesShouldCancel(in view: UIView) -> Bool {
         return true

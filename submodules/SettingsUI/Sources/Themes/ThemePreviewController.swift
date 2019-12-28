@@ -15,11 +15,13 @@ import WallpaperResources
 import OverlayStatusController
 import AppBundle
 import PresentationDataUtils
+import UndoUI
 
 public enum ThemePreviewSource {
-    case settings(PresentationThemeReference)
+    case settings(PresentationThemeReference, TelegramWallpaper?)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
+    case themeSettings(String, TelegramThemeSettings)
     case media(AnyMediaReference)
 }
 
@@ -34,6 +36,13 @@ public final class ThemePreviewController: ViewController {
         return self.displayNode as! ThemePreviewControllerNode
     }
         
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
+    private var validLayout: ContainerViewLayout?
+    
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -55,38 +64,63 @@ public final class ThemePreviewController: ViewController {
         self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .modal
         
+        var hasInstallsCount = false
         let themeName: String
-        if case let .theme(theme) = source {
-            themeName = theme.title
-            self.theme.set(.single(theme))
-        } else if case let .slug(slug, _) = source {
-            self.theme.set(getTheme(account: context.account, slug: slug)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
-                return .single(nil)
-            })
-            themeName = previewTheme.name.string
-            
-            self.presentationTheme.set(.single(self.previewTheme)
-            |> then(
-                self.theme.get()
-                |> mapToSignal { theme in
-                    if let file = theme?.file {
-                        return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
-                        |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
-                            guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
-                                return .complete()
-                            }
-                            return .single(presentationTheme)
-                        }
-                    } else {
-                        return .complete()
+        switch source {
+            case let .theme(theme):
+                themeName = theme.title
+                self.theme.set(.single(theme)
+                |> then(
+                    getTheme(account: context.account, slug: theme.slug)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                        return .single(nil)
                     }
+                    |> filter { $0 != nil }
+                ))
+                hasInstallsCount = true
+            case let .slug(slug, _), let .themeSettings(slug, _):
+                self.theme.set(getTheme(account: context.account, slug: slug)
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                    return .single(nil)
+                })
+                themeName = previewTheme.name.string
+                
+                self.presentationTheme.set(.single(self.previewTheme)
+                |> then(
+                    self.theme.get()
+                    |> mapToSignal { theme in
+                        if let file = theme?.file {
+                            return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, reference: .standalone(resource: file.resource))
+                                |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
+                                    guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
+                                        return .complete()
+                                    }
+                                    return .single(presentationTheme)
+                            }
+                        } else {
+                            return .complete()
+                        }
+                    }
+                ))
+                hasInstallsCount = true
+            case let .settings(themeReference, _):
+                if case let .cloud(theme) = themeReference {
+                    self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                        return .single(nil)
+                    })
+                    themeName = theme.theme.title
+                    hasInstallsCount = true
+                } else {
+                    self.theme.set(.single(nil))
+                    themeName = previewTheme.name.string
                 }
-            ))
-        } else {
-            self.theme.set(.single(nil))
-            themeName = previewTheme.name.string
+            default:
+                self.theme.set(.single(nil))
+                themeName = previewTheme.name.string
         }
         
         var isPreview = false
@@ -95,7 +129,7 @@ public final class ThemePreviewController: ViewController {
         }
         
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        titleView.title = CounterContollerTitle(title: themeName, counter: isPreview ? "" : " ")
+        titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? " " : "")
         self.navigationItem.titleView = titleView
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
@@ -152,7 +186,13 @@ public final class ThemePreviewController: ViewController {
         if case .settings = self.source {
             isPreview = true
         }
-        self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, dismiss: { [weak self] in
+        
+        var initialWallpaper: TelegramWallpaper?
+        if case let .settings(_, currentWallpaper) = self.source, let wallpaper = currentWallpaper {
+            initialWallpaper = wallpaper
+        }
+        
+        self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, initialWallpaper: initialWallpaper, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -160,14 +200,16 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.apply()
             }
-        }, isPreview: isPreview)
+        }, isPreview: isPreview, ready: self._ready)
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
-        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+        if let initialWallpaper = initialWallpaper {
+            self.controllerNode.wallpaperPromise.set(.single(initialWallpaper))
+        } else if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
             self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug, settings: file.settings)
-            |> mapToSignal { wallpaper in
-                return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
+            |> mapToSignal { wallpaper in                
+                return .single(wallpaper?.wallpaper ?? .color(previewTheme.chatList.backgroundColor.argb))
             })
         } else {
             self.controllerNode.wallpaperPromise.set(.single(previewTheme.chat.defaultWallpaper))
@@ -184,9 +226,9 @@ public final class ThemePreviewController: ViewController {
         let disposable = self.applyDisposable
         
         switch self.source {
-            case let .settings(reference):
+            case let .settings(reference, _):
                 theme = .single(reference)
-            case .theme, .slug:
+            case .theme, .slug, .themeSettings:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
                 |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
                     if let theme = theme {
@@ -247,7 +289,7 @@ public final class ThemePreviewController: ViewController {
                         |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
                             let similarTheme = themes.first(where: { $0.isCreator && $0.title == info.title })
                             if let similarTheme = similarTheme {
-                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData, settings: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
@@ -266,7 +308,7 @@ public final class ThemePreviewController: ViewController {
                                 }
                                 
                             } else {
-                                return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData, settings: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
@@ -290,35 +332,52 @@ public final class ThemePreviewController: ViewController {
                     return .single(theme)
             }
         }
-        |> mapToSignal { updatedTheme -> Signal<Void, NoError> in
+        |> mapToSignal { updatedTheme -> Signal<(PresentationThemeReference, Bool)?, NoError> in
             if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
-            return context.sharedContext.accountManager.transaction { transaction -> Void in
-                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                
+            let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+            var switchingFromDefaultTheme = false
+            
+            return context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference, Bool)? in
+                var previousDefaultTheme: (PresentationThemeReference, Bool)?
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                    let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
-                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                    themeSpecificChatWallpapers[updatedTheme.index] = nil
-                    
-                    var theme = current.theme
-                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                    if autoNightModeTriggered {
-                        automaticThemeSwitchSetting.theme = updatedTheme
+                    let currentSettings: PresentationThemeSettings
+                    if let entry = entry as? PresentationThemeSettings {
+                        currentSettings = entry
                     } else {
-                        theme = updatedTheme
+                        currentSettings = PresentationThemeSettings.defaultSettings
                     }
                     
-                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    var updatedSettings: PresentationThemeSettings
+                    if autoNightModeTriggered {
+                        if case .builtin = currentSettings.automaticThemeSwitchSetting.theme {
+                            previousDefaultTheme = (currentSettings.automaticThemeSwitchSetting.theme, true)
+                        }
+                        
+                        var automaticThemeSwitchSetting = currentSettings.automaticThemeSwitchSetting
+                        automaticThemeSwitchSetting.theme = updatedTheme
+                        updatedSettings = currentSettings.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                    } else {
+                        if case .builtin = currentSettings.theme {
+                            previousDefaultTheme = (currentSettings.theme, false)
+                        }
+                         
+                        updatedSettings = currentSettings.withUpdatedTheme(updatedTheme)
+                    }
+                    
+                    var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
+                    themeSpecificChatWallpapers[updatedTheme.index] = nil
+                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                 })
+                return previousDefaultTheme
             }
         }
         
         var cancelImpl: (() -> Void)?
         let progress = Signal<Never, NoError> { [weak self] subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             self?.present(controller, in: .window(.root))
@@ -341,9 +400,34 @@ public final class ThemePreviewController: ViewController {
                 progressDisposable.dispose()
             }
         }
-        |> deliverOnMainQueue).start(completed: {[weak self] in
-            if let strongSelf = self {
+        |> deliverOnMainQueue).start(next: { [weak self] previousDefaultTheme in
+            if let strongSelf = self, let layout = strongSelf.validLayout, layout.size.width >= 375.0  {
                 Queue.mainQueue().after(0.3) {
+                    let navigationController = strongSelf.navigationController as? NavigationController
+                    if let (previousDefaultTheme, autoNightMode) = previousDefaultTheme {
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: true, animateInAsReplacement: false, action: { value in
+                            if value == .undo {
+                                let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
+                                    var updated: PresentationThemeSettings
+                                    if autoNightMode {
+                                        var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                        automaticThemeSwitchSetting.theme = previousDefaultTheme
+                                        updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                                    } else {
+                                        updated = current.withUpdatedTheme(previousDefaultTheme)
+                                    }
+                                    return updated
+                                }).start()
+                                return true
+                            } else if value == .info {
+                                let controller = themeSettingsController(context: context)
+                                controller.navigationPresentation = .modal
+                                navigationController?.pushViewController(controller, animated: true)
+                                return true
+                            }
+                            return false
+                        }), in: .window(.root))
+                    }
                     strongSelf.dismiss()
                 }
             }
@@ -352,6 +436,8 @@ public final class ThemePreviewController: ViewController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.validLayout = layout
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
@@ -365,7 +451,7 @@ public final class ThemePreviewController: ViewController {
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")
                 preferredAction = .default
-            case let .slug(slug, _):
+            case let .slug(slug, _), let .themeSettings(slug, _):
                 subject = .url("https://t.me/addtheme/\(slug)")
                 preferredAction = .default
             case let .media(media):

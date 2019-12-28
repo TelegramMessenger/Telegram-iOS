@@ -47,7 +47,7 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
         return nil
     }
     
-    func dismissReactions(into targetNode: ASImageNode?, hideTarget: Bool) {
+    func dismissReactions(into targetNode: ASDisplayNode?, hideTarget: Bool) {
         if let currentNode = self.currentNode {
             currentNode.animateOut(into: targetNode, hideTarget: hideTarget, completion: { [weak currentNode] in
                 currentNode?.removeFromSupernode()

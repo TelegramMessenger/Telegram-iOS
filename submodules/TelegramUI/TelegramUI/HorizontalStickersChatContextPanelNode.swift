@@ -7,6 +7,7 @@ import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
@@ -109,7 +110,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.strings = strings
         
         self.backgroundNode = ASImageNode()
@@ -136,7 +137,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         self.stickersInteraction = HorizontalStickersChatContextPanelInteraction()
         
-        super.init(context: context, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
         
         self.placement = .overTextInput
         self.isOpaque = false
@@ -151,6 +152,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        self.gridNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.gridNode.view.disablesInteractiveKeyboardGestureRecognizer = true
         
         self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
             if let strongSelf = self {
@@ -187,14 +191,13 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                             switch attribute {
                                             case let .Sticker(_, packReference, _):
                                                 if let packReference = packReference {
-                                                    let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
-                                                    controller.sendSticker = { file, sourceNode, sourceRect in
+                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                                             return controllerInteraction.sendSticker(file, true, sourceNode, sourceRect)
                                                         } else {
                                                             return false
                                                         }
-                                                    }
+                                                    })
                                                     
                                                     controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                     controllerInteraction.presentController(controller, nil)
@@ -315,6 +318,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
+        self.layer.allowsGroupOpacity = true
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })

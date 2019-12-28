@@ -165,9 +165,9 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                                                 if let path = mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                                                     accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
                                                     let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
-                                                    if file.isPattern {
+                                                    if wallpaper.isPattern {
                                                         if let color = file.settings.color, let intensity = file.settings.intensity {
-                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start()
+                                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true).start()
                                                         }
                                                     } else {
                                                         if file.settings.blur {

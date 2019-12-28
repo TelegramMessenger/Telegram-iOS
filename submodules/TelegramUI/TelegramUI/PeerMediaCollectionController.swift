@@ -245,7 +245,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                                     c.dismiss(completion: {
                                                         if let strongSelf = self {
                                                             strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
                                                         }
                                                     })
                                                 })))
@@ -264,7 +264,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                                     c.dismiss(completion: {
                                                         if let strongSelf = self {
                                                             strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                                            let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                                            let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
                                                         }
                                                     })
                                                 })))
@@ -313,7 +313,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
                     }
                 }
-            }, clickThroughMessage: { [weak self] in
+            }, tapMessage: nil, clickThroughMessage: { [weak self] in
                 self?.view.endEditing(true)
             }, toggleMessagesSelection: { [weak self] ids, value in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
@@ -328,7 +328,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             }, requestMessageActionCallback: { _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
-            }, openUrl: { [weak self] url, _, external in
+            }, openUrl: { [weak self] url, _, external, _ in
                 self?.openUrl(url, external: external ?? false)
             }, shareCurrentLocation: {
             }, shareAccountContact: {
@@ -423,6 +423,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
+        }, dismissReplyMarkupMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -754,7 +755,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                    if let strongSelf = self, peer.restrictionText(platform: "ios") == nil {
+                                    if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
                                         if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                         }
@@ -774,7 +775,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     self?.present(c, in: .window(.root), with: a)
                 }, dismissInput: {
                     self?.view.endEditing(true)
-                })
+                }, contentContext: nil)
             }
         }))
     }
@@ -893,7 +894,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                         }))
                     }
@@ -910,7 +911,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
                             }
                         }))
                     }

@@ -35,7 +35,7 @@ final class ListMessageItem: ListViewItem {
         self.controllerInteraction = controllerInteraction
         self.message = message
         if displayHeader {
-            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings)
+            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings, fontSize: fontSize)
         } else {
             self.header = nil
         }

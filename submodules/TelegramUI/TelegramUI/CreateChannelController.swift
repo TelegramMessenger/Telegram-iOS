@@ -19,7 +19,7 @@ import PeerInfoUI
 import MapResourceToAvatarSizes
 
 private struct CreateChannelArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
@@ -139,9 +139,10 @@ private enum CreateChannelEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateChannelArguments
         switch self {
             case let .channelInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
+                    arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateChannelEntryTag.info)
             case let .setProfilePhoto(theme, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -188,7 +189,6 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.channelInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
-    entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Channel_UpdatePhotoItem))
     
     entries.append(.descriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, state.editingDescriptionText))
     entries.append(.descriptionInfo(presentationData.theme, presentationData.strings.Channel_About_Help))
@@ -205,6 +205,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     }
     
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var endEditingImpl: (() -> Void)?
     
@@ -214,7 +215,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
-    let arguments = CreateChannelArguments(account: context.account, updateEditingName: { editingName in
+    let arguments = CreateChannelArguments(context: context, updateEditingName: { editingName in
         updateState { current in
             var current = current
             switch editingName {
@@ -273,7 +274,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     case .generic, .tooMuchLocationBasedGroups:
                         text = presentationData.strings.Login_UnknownError
                     case .tooMuchJoined:
-                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
+                        pushControllerImpl?(oldChannelsController(context: context, intent: .create))
+                        return
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
                     default:
@@ -383,6 +385,9 @@ public func createChannelController(context: AccountContext) -> ViewController {
     let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
+    }
+    pushControllerImpl = { [weak controller] value in
+        controller?.push(value)
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)

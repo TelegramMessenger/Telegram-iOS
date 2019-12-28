@@ -7,16 +7,19 @@ import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import TelegramUIPreferences
 
 final class HashtagChatInputPanelItem: ListViewItem {
     fileprivate let theme: PresentationTheme
+    fileprivate let fontSize: PresentationFontSize
     fileprivate let text: String
     private let hashtagSelected: (String) -> Void
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, text: String, hashtagSelected: @escaping (String) -> Void) {
+    public init(theme: PresentationTheme, fontSize: PresentationFontSize, text: String, hashtagSelected: @escaping (String) -> Void) {
         self.theme = theme
+        self.fontSize = fontSize
         self.text = text
         self.hashtagSelected = hashtagSelected
     }
@@ -73,8 +76,6 @@ final class HashtagChatInputPanelItem: ListViewItem {
     }
 }
 
-private let textFont = Font.medium(14.0)
-
 final class HashtagChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 42.0
     private let textNode: TextNode
@@ -115,6 +116,8 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: HashtagChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         return { [weak self] item, params, mergedTop, mergedBottom in
+            let textFont = Font.medium(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let leftInset: CGFloat = 15.0 + params.leftInset

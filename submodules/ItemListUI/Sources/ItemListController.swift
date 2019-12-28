@@ -115,6 +115,8 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     
     private var validLayout: ContainerViewLayout?
     
+    public var additionalInsets: UIEdgeInsets = UIEdgeInsets()
+    
     private var didPlayPresentationAnimation = false
     public private(set) var didAppearOnce = false
     public var didAppear: ((Bool) -> Void)?
@@ -459,7 +461,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         
         self.validLayout = layout
         
-        (self.displayNode as! ItemListControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        (self.displayNode as! ItemListControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition, additionalInsets: self.additionalInsets)
     }
 
     @objc func leftNavigationButtonPressed() {
@@ -535,8 +537,8 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
-    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true) {
-        (self.displayNode as! ItemListControllerNode).listNode.ensureItemNodeVisible(itemNode, animated: animated)
+    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
+        (self.displayNode as! ItemListControllerNode).listNode.ensureItemNodeVisible(itemNode, animated: animated, curve: curve)
     }
     
     public func afterLayout(_ f: @escaping () -> Void) {

@@ -15,41 +15,7 @@ import PresentationDataUtils
 import AccountContext
 import SearchBarNode
 import SearchUI
-
-private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
-    switch lhs {
-        case .builtin:
-            if case .builtin = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .color(color):
-            if case .color(color) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .gradient(topColor, bottomColor, _):
-            if case .gradient(topColor, bottomColor, _) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .image(representations, _):
-            if case .image(representations, _) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .file(_, _, _, _, _, _, lhsSlug, _, lhsSettings):
-            if case let .file(_, _, _, _, _, _, rhsSlug, _, rhsSettings) = rhs, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
-                return true
-            } else {
-                return false
-            }
-    }
-}
+import WallpaperResources
 
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool
@@ -108,10 +74,10 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
             case .builtin:
                 return 0
             case let .color(color):
-                return (Int64(1) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+                return (Int64(1) << 32) | Int64(bitPattern: UInt64(color))
             case let .gradient(topColor, bottomColor, _):
-                var hash: UInt32 = UInt32(bitPattern: topColor)
-                hash = hash &* 31 &+ UInt32(bitPattern: bottomColor)
+                var hash: UInt32 = topColor
+                hash = hash &* 31 &+ bottomColor
                 return (Int64(2) << 32) | Int64(hash)
             case let .file(id, _, _, _, _, _, _, _, settings):
                 var hash: Int = id.hashValue
@@ -386,13 +352,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var isSelectedEditable = true
             if case .builtin = presentationData.chatWallpaper {
                 isSelectedEditable = false
-            } else if areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+            } else if presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 isSelectedEditable = false
             }
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: isSelectedEditable, isSelected: true), at: 0)
             
             var defaultWallpaper: TelegramWallpaper?
-            if !areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+            if !presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
                 if case .builtin = presentationData.theme.chat.defaultWallpaper {
                 } else {
                     defaultWallpaper = presentationData.theme.chat.defaultWallpaper
@@ -417,12 +383,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (file.isPattern && file.settings.color == nil) {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (wallpaper.isPattern && file.settings.color == nil) {
                     continue
                 }
-                let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
+                let selected = presentationData.chatWallpaper.isBasicallyEqual(to: wallpaper)
                 var isDefault = false
-                if let defaultWallpaper = defaultWallpaper, areWallpapersEqual(defaultWallpaper, wallpaper) {
+                if let defaultWallpaper = defaultWallpaper, defaultWallpaper.isBasicallyEqual(to: wallpaper) {
                     isDefault = true
                 }
                 var isEditable = true

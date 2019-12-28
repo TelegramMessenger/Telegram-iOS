@@ -105,6 +105,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                         return result
                     }
                     
+                    let autoNightModeTriggered = presentationData.autoNightModeTriggered ?? false
                     disposable.set(uploadSignal.start(next: { [weak self] status in
                         guard let strongSelf = self else {
                             return
@@ -116,20 +117,24 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                                     let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                                 }
                                 
-                                if strongSelf.currentPresentationData?.theme.name == presentationData.theme.name {
-                                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
-                                        let updatedWallpaper: TelegramWallpaper
-                                        if let currentSettings = currentWallpaper.settings {
-                                            updatedWallpaper = wallpaper.withUpdatedSettings(currentSettings)
-                                        } else {
-                                            updatedWallpaper = wallpaper
-                                        }
-                                        
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        themeSpecificChatWallpapers[current.theme.index] = updatedWallpaper
-                                        return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                    })).start()
-                                }
+                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
+                                    let updatedWallpaper: TelegramWallpaper
+                                    if let currentSettings = currentWallpaper.settings {
+                                        updatedWallpaper = wallpaper.withUpdatedSettings(currentSettings)
+                                    } else {
+                                        updatedWallpaper = wallpaper
+                                    }
+                                    let themeReference: PresentationThemeReference
+                                    if autoNightModeTriggered {
+                                        themeReference = current.automaticThemeSwitchSetting.theme
+                                    } else {
+                                        themeReference = current.theme
+                                    }
+                                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                    themeSpecificChatWallpapers[themeReference.index] = updatedWallpaper
+                                    themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: current.themeSpecificAccentColors[themeReference.index])] = updatedWallpaper
+                                    return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                })).start()
                             }
                             
                             if case let .file(_, _, _, _, _, _, _, file, settings) = wallpaper, settings.blur {

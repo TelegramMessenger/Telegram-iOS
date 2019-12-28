@@ -50,9 +50,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         super.didLoad()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
-            return (imageNode, { [weak imageNode] in
+            return (imageNode, imageNode.bounds, { [weak imageNode] in
                 return (imageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else {

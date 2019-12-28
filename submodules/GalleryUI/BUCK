@@ -23,6 +23,9 @@ static_library(
         "//submodules/SwipeToDismissGesture:SwipeToDismissGesture",
         "//submodules/CheckNode:CheckNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

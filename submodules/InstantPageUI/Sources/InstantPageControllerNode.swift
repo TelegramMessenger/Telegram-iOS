@@ -23,6 +23,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
     private var nameDisplayOrder: PresentationPersonNameOrder
+    private let autoNightModeTriggered: Bool
     private var dateTimeFormat: PresentationDateTimeFormat
     private var theme: InstantPageTheme?
     private let sourcePeerType: MediaAutoDownloadPeerType
@@ -87,17 +88,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
+        self.autoNightModeTriggered = autoNightModeTriggered
         self.strings = strings
         self.settings = settings
         let themeReferenceDate = Date()
         self.themeReferenceDate = themeReferenceDate
         self.theme = settings.flatMap { settings in
-            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate).0, settings: settings)
+            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate, forceDarkTheme: autoNightModeTriggered).0, settings: settings)
         }
         self.sourcePeerType = sourcePeerType
         self.statusBar = statusBar
@@ -162,7 +164,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadProgressDisposable.dispose()
     }
     
-    func update(settings: InstantPagePresentationSettings, strings: PresentationStrings) {
+    func update(settings: InstantPagePresentationSettings, themeSettings: PresentationThemeSettings?, strings: PresentationStrings) {
         if self.settings != settings || self.strings !== strings {
             let previousSettings = self.settings
             var updateLayout = previousSettings == nil
@@ -174,7 +176,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             self.settings = settings
-            let themeType = instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate)
+            self.themeSettings = themeSettings
+            let themeType = instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate, forceDarkTheme: self.autoNightModeTriggered)
             let theme = instantPageThemeForType(themeType.0, settings: settings)
             self.theme = theme
             self.strings = strings
@@ -872,12 +875,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
@@ -888,7 +891,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
             if let strongSelf = self {
                 for (_, itemNode) in strongSelf.visibleItemsWithNodes {
-                    if let (node, _) = itemNode.transitionNode(media: media) {
+                    if let (node, _, _) = itemNode.transitionNode(media: media) {
                         return (strongSelf.scrollNode, node.convert(node.bounds, to: strongSelf.scrollNode), strongSelf, strongSelf.bounds)
                     }
                 }
@@ -1191,7 +1194,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             self?.present(c, a)
                         }, dismissInput: {
                             self?.view.endEditing(true)
-                        })
+                        }, contentContext: nil)
                 }
             }
         }))
@@ -1335,9 +1338,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         if self.settingsNode == nil {
-            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
+            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate, forceDarkTheme: self.autoNightModeTriggered), applySettings: { [weak self] settings in
                 if let strongSelf = self {
-                    strongSelf.update(settings: settings, strings: strongSelf.strings)
+                    strongSelf.update(settings: settings, themeSettings: strongSelf.themeSettings, strings: strongSelf.strings)
                     let _ = updateInstantPagePresentationSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { _ in
                         return settings
                     }).start()

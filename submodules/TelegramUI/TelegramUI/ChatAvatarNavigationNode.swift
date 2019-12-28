@@ -32,6 +32,13 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    var contextActionIsEnabled: Bool = true {
+        didSet {
+            if self.contextActionIsEnabled != oldValue {
+                self.containerNode.isGestureEnabled = self.contextActionIsEnabled
+            }
+        }
+    }
     
     weak var chatController: ChatControllerImpl? {
         didSet {

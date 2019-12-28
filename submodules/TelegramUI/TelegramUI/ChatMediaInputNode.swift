@@ -15,6 +15,8 @@ import PeerInfoUI
 import SettingsUI
 import ContextUI
 import GalleryUI
+import OverlayStatusController
+import PresentationDataUtils
 
 private struct PeerSpecificPackData {
     let peer: Peer
@@ -44,17 +46,17 @@ private struct ChatMediaInputGridTransition {
     let animated: Bool
 }
 
-private func preparedChatMediaInputPanelEntryTransition(account: Account, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
+private func preparedChatMediaInputPanelEntryTransition(context: AccountContext, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
     
     return ChatMediaInputPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-private func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemCollectionsView, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputGridTransition {
+private func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemCollectionsView, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingInteraction: TrendingPaneInteraction) -> ChatMediaInputGridTransition {
     var stationaryItems: GridNodeStationaryItems = .none
     var scrollToItem: GridNodeScrollToItem?
     var animated = false
@@ -62,10 +64,10 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
         case .initial:
             for i in (0 ..< toEntries.count).reversed() {
                 switch toEntries[i] {
-                    case .search, .peerSpecificSetup:
-                        break
-                    case .sticker:
-                        scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .immediate, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                case .search, .peerSpecificSetup, .trending:
+                    break
+                case .sticker:
+                    scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .immediate, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
                 }
             }
         case .generic:
@@ -131,16 +133,16 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, trendingInteraction: trendingInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interfaceInteraction: interfaceInteraction, inputNodeInteraction: inputNodeInteraction, trendingInteraction: trendingInteraction)) }
     
     var firstIndexInSectionOffset = 0
     if !toEntries.isEmpty {
         switch toEntries[0].index {
-            case .search, .peerSpecificSetup:
-                break
-            case let .collectionIndex(index):
-                firstIndexInSectionOffset = Int(index.itemIndex.index)
+        case .search, .peerSpecificSetup, .trending:
+            break
+        case let .collectionIndex(index):
+            firstIndexInSectionOffset = Int(index.itemIndex.index)
         }
     }
     
@@ -444,7 +446,7 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
@@ -457,7 +459,12 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
-        self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        
+        if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
+            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+        } else {
+            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        }
         
         self.collectionListSeparator = ASDisplayNode()
         self.collectionListSeparator.isLayerBacked = true
@@ -704,21 +711,55 @@ final class ChatMediaInputNode: ChatInputNode {
             peerSpecificPack = .single((nil, .none))
         }
         
-        let hasUnreadTrending = context.account.viewTracker.featuredStickerPacks()
-        |> map { packs -> Bool in
-            for pack in packs {
-                if pack.unread {
-                    return true
-                }
+        let trendingInteraction = TrendingPaneInteraction(installPack: { [weak self] info in
+            guard let strongSelf = self, let info = info as? StickerPackCollectionInfo else {
+                return
             }
-            return false
-        }
-        |> distinctUntilChanged
+            let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                switch result {
+                    case let .result(info, items, installed):
+                        if installed {
+                            return .complete()
+                        } else {
+                            return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                        }
+                    case .fetching:
+                        break
+                    case .none:
+                        break
+                }
+                return .complete()
+            }
+            |> deliverOnMainQueue).start(completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            })
+        }, openPack: { [weak self] info in
+            guard let strongSelf = self, let info = info as? StickerPackCollectionInfo else {
+                return
+            }
+            strongSelf.view.window?.endEditing(true)
+            let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
+                if let strongSelf = self {
+                    return strongSelf.controllerInteraction.sendSticker(fileReference, false, sourceNode, sourceRect)
+                } else {
+                    return false
+                }
+            })
+            strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }, getItemIsPreviewed: { item in
+            return getItemIsPreviewedImpl?(item) ?? false
+        })
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, hasUnreadTrending, self.themeAndStringsPromise.get())
-        |> map { viewAndUpdate, peerSpecificPack, hasUnreadTrending, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get())
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -736,10 +777,35 @@ final class ChatMediaInputNode: ChatInputNode {
                     savedStickers = orderedView
                 }
             }
+            
+            var installedPacks = Set<ItemCollectionId>()
+            for info in view.collectionInfos {
+                installedPacks.insert(info.0)
+            }
+            
+            var hasUnreadTrending = false
+            for pack in trendingPacks {
+                if pack.unread {
+                    hasUnreadTrending = true
+                    break
+                }
+            }
+            
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, hasUnreadTrending: hasUnreadTrending, theme: theme)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
+            
+            if view.higher == nil {
+                var index = 0
+                for item in trendingPacks {
+                    if !installedPacks.contains(item.info.id) {
+                        gridEntries.append(.trending(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
+                        index += 1
+                    }
+                }
+            }
+            
             let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
-            return (view, preparedChatMediaInputPanelEntryTransition(account: context.account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
+            return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
         }
         
         self.disposable.set((transitions
@@ -852,12 +918,17 @@ final class ChatMediaInputNode: ChatInputNode {
         self.searchContainerNodeLoadedDisposable.dispose()
     }
     
-    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    private func updateThemeAndStrings(chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme || self.strings !== strings {
             self.theme = theme
             self.strings = strings
             
-            self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+            if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
+                self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
+            } else {
+                self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+            }
+            
             self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
             self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
             
@@ -914,14 +985,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
-                                                            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                            controller.sendSticker = { file, sourceNode, sourceRect in
+                                                            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
                                                                     return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
                                                                 } else {
                                                                     return false
                                                                 }
-                                                            }
+                                                            })
                                                             
                                                             strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                             strongSelf.controllerInteraction.presentController(controller, nil)
@@ -1029,14 +1099,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
-                                                                    let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                                    controller.sendSticker = { file, sourceNode, sourceRect in
-                                                                        if let strongSelf = self {
-                                                                            return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
-                                                                        } else {
-                                                                            return false
-                                                                        }
-                                                                    }
+                                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                                                                                                               if let strongSelf = self {
+                                                                                                                                                   return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                                                                                               } else {
+                                                                                                                                                   return false
+                                                                                                                                               }
+                                                                    })
                                                           
                                                                     strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
                                                                     strongSelf.controllerInteraction.presentController(controller, nil)
@@ -1086,14 +1155,23 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     private func setCurrentPane(_ pane: ChatMediaInputPaneType, transition: ContainedViewLayoutTransition, collectionIdHint: Int32? = nil) {
+        var transition = transition
+        
         if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
+            //let previousTrendingPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
+            let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
+            //let updatedTrendingPanelIsActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
+            
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+                transition = .immediate
+            }*/
+            
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: transition, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
                 self.updateAppearanceTransition(transition: transition)
             }
-            let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             if updatedGifPanelWasActive != previousGifPanelWasActive {
                 self.gifPaneIsActiveUpdated(updatedGifPanelWasActive)
             }
@@ -1109,6 +1187,20 @@ final class ChatMediaInputNode: ChatInputNode {
                 case .trending:
                     self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
             }
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+                self.controllerInteraction.updateInputMode { current in
+                    switch current {
+                    case let .media(mode, _):
+                        if updatedTrendingPanelIsActive {
+                            return .media(mode: mode, expanded: .content)
+                        } else {
+                            return .media(mode: mode, expanded: nil)
+                        }
+                    default:
+                        return current
+                    }
+                }
+            }*/
         } else {
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
@@ -1250,7 +1342,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
-            self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
+            self.updateThemeAndStrings(chatWallpaper: interfaceState.chatWallpaper, theme: interfaceState.theme, strings: interfaceState.strings)
         }
         
         var displaySearch = false

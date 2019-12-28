@@ -165,14 +165,16 @@ private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
 public final class InitialPresentationDataAndSettings {
     public let presentationData: PresentationData
     public let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+    public let autodownloadSettings: AutodownloadSettings
     public let callListSettings: CallListSettings
     public let inAppNotificationSettings: InAppNotificationSettings
     public let mediaInputSettings: MediaInputSettings
     public let experimentalUISettings: ExperimentalUISettings
     
-    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
+        self.autodownloadSettings = autodownloadSettings
         self.callListSettings = callListSettings
         self.inAppNotificationSettings = inAppNotificationSettings
         self.mediaInputSettings = mediaInputSettings
@@ -201,6 +203,13 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+        }
+        
+        let autodownloadSettings: AutodownloadSettings
+        if let value = transaction.getSharedData(SharedDataKeys.autodownloadSettings) as? AutodownloadSettings {
+            autodownloadSettings = value
+        } else {
+            autodownloadSettings = .defaultSettings
         }
         
         let callListSettings: CallListSettings
@@ -239,11 +248,11 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
             autoNightModeTriggered = false
         }
         
-        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-        let effectiveBubbleColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.customBubbleColors
+        let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
+        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors) ?? defaultPresentationTheme
         
-        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors) ?? defaultPresentationTheme
-        let effectiveChatWallpaper: TelegramWallpaper = themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] ?? theme.chat.defaultWallpaper
+        
+        let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
@@ -254,7 +263,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         }
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: resolveFontSize(settings: themeSettings), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, fontSize: resolveFontSize(settings: themeSettings), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -386,9 +395,9 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
         case .builtin:
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
-            return serviceColor(with: UIColor(rgb: UInt32(bitPattern: color)))
+            return serviceColor(with: UIColor(argb: color))
         case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
             return serviceColor(with: mixedColor)
         case .image:
             if let image = wallpaper.1 {
@@ -396,8 +405,18 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
             }
-        case .file:
-            if let image = wallpaper.1 {
+        case let .file(file):
+            if wallpaper.0.isPattern {
+                if let color = file.settings.color {
+                    var mixedColor = UIColor(argb: color)
+                    if let bottomColor = file.settings.bottomColor {
+                        mixedColor = mixedColor.mixedWith(UIColor(argb: bottomColor), alpha: 0.5)
+                    }
+                    return serviceColor(with: mixedColor)
+                } else {
+                    return UIColor(rgb: 0x000000, alpha: 0.3)
+                }
+            } else if let image = wallpaper.1 {
                 return serviceColor(with: averageColor(from: image))
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
@@ -431,9 +450,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
         case .builtin:
             return .single(UIColor(rgb: 0x748391, alpha: 0.45))
         case let .color(color):
-            return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
+            return .single(serviceColor(with: UIColor(argb: color)))
         case let .gradient(topColor, bottomColor, _):
-            let mixedColor = UIColor(rgb: UInt32(bitPattern: topColor)).mixedWith(UIColor(rgb: UInt32(bitPattern: bottomColor)), alpha: 0.5)
+            let mixedColor = UIColor(argb: topColor).mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
             return .single(serviceColor(with: mixedColor))
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
@@ -456,9 +475,13 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                 return .single(UIColor(rgb: 0x000000, alpha: 0.3))
             }
         case let .file(file):
-            if file.isPattern {
+            if wallpaper.isPattern {
                 if let color = file.settings.color {
-                    return .single(serviceColor(with: UIColor(rgb: UInt32(bitPattern: color))))
+                    var mixedColor = UIColor(argb: color)
+                    if let bottomColor = file.settings.bottomColor {
+                        mixedColor = mixedColor.mixedWith(UIColor(rgb: bottomColor), alpha: 0.5)
+                    }
+                    return .single(serviceColor(with: mixedColor))
                 } else {
                     return .single(UIColor(rgb: 0x000000, alpha: 0.3))
                 }
@@ -493,11 +516,14 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         
         let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
+        let currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+        
         let currentWallpaper: TelegramWallpaper
-        if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index] {
+        if let themeSpecificWallpaper = themeSpecificWallpaper {
             currentWallpaper = themeSpecificWallpaper
         } else {
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: nil, bubbleColors: nil) ?? defaultPresentationTheme
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors, wallpaper: currentColors?.wallpaper) ?? defaultPresentationTheme
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
@@ -511,29 +537,36 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                     |> distinctUntilChanged
                     |> map { autoNightModeTriggered in
                         var effectiveTheme: PresentationThemeReference
-                        var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
+                        var effectiveChatWallpaper = currentWallpaper
+                        var effectiveColors = currentColors
                         
+                        var switchedToNightModeWallpaper = false
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
-                            if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
+                            effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                            let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                            
+                            if let themeSpecificWallpaper = themeSpecificWallpaper {
                                 effectiveChatWallpaper = themeSpecificWallpaper
+                                switchedToNightModeWallpaper = true
                             }
                             effectiveTheme = automaticTheme
                         } else {
                             effectiveTheme = themeSettings.theme
                         }
                         
-                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-                        let effectiveBubbleColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.customBubbleColors
+                        if let colors = effectiveColors, colors.baseColor == .theme {
+                            effectiveColors = nil
+                        }
                         
-                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, bubbleColors: effectiveBubbleColors, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors, wallpaper: effectiveColors?.wallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
-                        if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
+                        if autoNightModeTriggered && !switchedToNightModeWallpaper {
                             switch effectiveChatWallpaper {
                                 case .builtin, .color, .gradient:
                                     effectiveChatWallpaper = themeValue.chat.defaultWallpaper
                                 case let .file(file):
-                                    if file.isPattern {
+                                    if effectiveChatWallpaper.isPattern {
                                         effectiveChatWallpaper = themeValue.chat.defaultWallpaper
                                     }
                                 default:

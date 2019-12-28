@@ -64,7 +64,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.textAccessibilityOverlayNode)
         
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
-            self?.item?.controllerInteraction.openUrl(url, false, false)
+            self?.item?.controllerInteraction.openUrl(url, false, false, nil)
         }
         
         self.statusNode.openReactions = { [weak self] in
@@ -579,7 +579,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, Int)? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionNode(value: value)
         }

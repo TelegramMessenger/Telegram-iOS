@@ -6,6 +6,7 @@ import SyncCore
 
 public enum UpdateChannelSlowModeError {
     case generic
+    case tooManyChannels
 }
 
 public func updateChannelSlowModeInteractively(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {

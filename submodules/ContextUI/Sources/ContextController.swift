@@ -69,6 +69,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let attemptTransitionControllerIntoNavigation: () -> Void
     private let getController: () -> ContextController?
     private weak var gesture: ContextGesture?
+    private var displayTextSelectionTip: Bool
     
     private var didSetItemsReady = false
     let itemsReady = Promise<Bool>()
@@ -107,7 +108,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
-    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
+    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void, displayTextSelectionTip: Bool) {
         self.presentationData = presentationData
         self.source = source
         self.items = items
@@ -116,6 +117,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.beganAnimatingOut = beganAnimatingOut
         self.attemptTransitionControllerIntoNavigation = attemptTransitionControllerIntoNavigation
         self.gesture = gesture
+        self.displayTextSelectionTip = displayTextSelectionTip
         
         self.getController = { [weak controller] in
             return controller
@@ -163,7 +165,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             beginDismiss(result)
         }, feedbackTap: {
             feedbackTap?()
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         
         if !reactionItems.isEmpty {
             let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
@@ -528,6 +530,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }, completion: { [weak self] in
                     self?.didCompleteAnimationIn = true
                     self?.hapticFeedback.prepareTap()
+                    self?.actionsContainerNode.animateIn()
                 })
             }
         } else {
@@ -535,6 +538,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.effectView.effect = makeCustomZoomBlurEffect()
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
+                self?.actionsContainerNode.animateIn()
             })
         }
         
@@ -920,7 +924,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func animateOutToReaction(value: String, into targetNode: ASImageNode, hideNode: Bool, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: String, into targetNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.animateOut(result: .default, completion: completion)
             return
@@ -970,7 +974,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self?.beginDismiss(result)
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
@@ -982,6 +986,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if !self.didSetItemsReady {
             self.didSetItemsReady = true
+            self.displayTextSelectionTip = false
             self.itemsReady.set(.single(true))
         }
     }
@@ -1374,6 +1379,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private weak var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private weak var gesture: ContextGesture?
+    private let displayTextSelectionTip: Bool
     
     private var animatedDidAppear = false
     private var wasDismissed = false
@@ -1384,7 +1390,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((String) -> Void)?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, displayTextSelectionTip: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
@@ -1392,6 +1398,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.reactionItems = reactionItems
         self.recognizer = recognizer
         self.gesture = gesture
+        self.displayTextSelectionTip = displayTextSelectionTip
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1425,7 +1432,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             default:
                 break
             }
-        })
+        }, displayTextSelectionTip: self.displayTextSelectionTip)
         
         self.displayNodeDidLoad()
         
@@ -1481,7 +1488,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.dismiss(result: .default, completion: completion)
     }
     
-    public func dismissWithReaction(value: String, into targetNode: ASImageNode, hideNode: Bool, completion: (() -> Void)?) {
+    public func dismissWithReaction(value: String, into targetNode: ASDisplayNode, hideNode: Bool, completion: (() -> Void)?) {
         if !self.wasDismissed {
             self.wasDismissed = true
             self.controllerNode.animateOutToReaction(value: value, into: targetNode, hideNode: hideNode, completion: { [weak self] in

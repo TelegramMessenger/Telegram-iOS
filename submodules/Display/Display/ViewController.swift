@@ -131,6 +131,15 @@ public enum ViewControllerNavigationPresentation {
     
     public var tabBarItemDebugTapAction: (() -> Void)?
     
+    public private(set) var modalStyleOverlayTransitionFactor: CGFloat = 0.0
+    public var modalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public func updateModalStyleOverlayTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.modalStyleOverlayTransitionFactor != value {
+            self.modalStyleOverlayTransitionFactor = value
+            self.modalStyleOverlayTransitionFactorUpdated?(transition)
+        }
+    }
+    
     private var _displayNode: ASDisplayNode?
     public final var displayNode: ASDisplayNode {
         get {
@@ -448,8 +457,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
-        super.present(viewControllerToPresent, animated: flag, completion: completion)
-        return
+        self.view.window?.rootViewController?.present(viewControllerToPresent, animated: flag, completion: completion)
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {

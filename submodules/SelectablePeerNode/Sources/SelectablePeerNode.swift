@@ -12,6 +12,7 @@ import PeerOnlineMarkerNode
 import LegacyComponents
 import ContextUI
 import LocalizedPeerData
+import AccountContext
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
@@ -135,7 +136,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
     }
     
-    public func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
             return
@@ -145,7 +146,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         let text: String
         var overrideImage: AvatarNodeImageOverride?
-        if peer.peerId == account.peerId {
+        if peer.peerId == context.account.peerId {
             text = strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
         } else {
@@ -156,7 +157,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(account: account, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
         let (onlineSize, onlineApply) = onlineLayout(online)

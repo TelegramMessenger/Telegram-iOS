@@ -14,15 +14,15 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private final class SelectivePrivacyPeersControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     let addPeer: () -> Void
     let openPeer: (PeerId) -> Void
     
-    init(account: Account, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (PeerId) -> Void) {
-        self.account = account
+    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (PeerId) -> Void) {
+        self.context = context
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
         self.addPeer = addPeer
@@ -167,7 +167,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                         }
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer.peer.id)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -253,7 +253,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         return Array(initialPeers.values)
     })
     
-    let arguments = SelectivePrivacyPeersControllerArguments(account: context.account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+    let arguments = SelectivePrivacyPeersControllerArguments(context: context, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
                 return state.withUpdatedPeerIdWithRevealedOptions(peerId)

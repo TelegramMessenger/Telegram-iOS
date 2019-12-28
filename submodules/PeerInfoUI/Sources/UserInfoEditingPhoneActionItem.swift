@@ -8,13 +8,13 @@ import ItemListUI
 import PresentationDataUtils
 
 class UserInfoEditingPhoneActionItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let presentationData: ItemListPresentationData
     let title: String
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, sectionId: ItemListSectionId, action: @escaping () -> Void, tag: Any? = nil) {
-        self.theme = theme
+    init(presentationData: ItemListPresentationData, title: String, sectionId: ItemListSectionId, action: @escaping () -> Void, tag: Any? = nil) {
+        self.presentationData = presentationData
         self.title = title
         self.sectionId = sectionId
         self.action = action
@@ -60,8 +60,6 @@ class UserInfoEditingPhoneActionItem: ListViewItem, ItemListItem {
         self.action()
     }
 }
-
-private let titleFont = Font.regular(15.0)
 
 class UserInfoEditingPhoneActionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -114,15 +112,17 @@ class UserInfoEditingPhoneActionItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
+            let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
             }
             
-            let textColor = item.theme.list.itemAccentColor
+            let textColor = item.presentationData.theme.list.itemAccentColor
             
-            let iconImage = PresentationResourcesItemList.addPhoneIcon(item.theme)
+            let iconImage = PresentationResourcesItemList.addPhoneIcon(item.presentationData.theme)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -133,9 +133,9 @@ class UserInfoEditingPhoneActionItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
 
-            itemBackgroundColor = item.theme.list.plainBackgroundColor
-            itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-            contentSize = CGSize(width: params.width, height: 44.0)
+            itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+            itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+            contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
             insets = itemListNeighborsPlainInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -148,7 +148,7 @@ class UserInfoEditingPhoneActionItemNode: ListViewItemNode {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     strongSelf.iconNode.image = iconImage

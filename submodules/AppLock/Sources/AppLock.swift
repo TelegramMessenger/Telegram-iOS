@@ -80,6 +80,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let currentState = Promise<LockState>()
     
     private let autolockTimeout = ValuePromise<Int32?>(nil, ignoreRepeated: true)
+    private let autolockReportTimeout = ValuePromise<Int32?>(nil, ignoreRepeated: true)
     
     private let isCurrentlyLockedPromise = Promise<Bool>()
     public var isCurrentlyLocked: Signal<Bool, NoError> {
@@ -148,10 +149,24 @@ public final class AppLockContextImpl: AppLockContext {
                 }
                 
                 strongSelf.autolockTimeout.set(nil)
+                strongSelf.autolockReportTimeout.set(nil)
             } else {
                 if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
+                
+                if !appInForeground {
+                    if let autolockTimeout = passcodeSettings.autolockTimeout {
+                        strongSelf.autolockReportTimeout.set(autolockTimeout)
+                    } else if state.isManuallyLocked {
+                        strongSelf.autolockReportTimeout.set(1)
+                    } else {
+                        strongSelf.autolockReportTimeout.set(nil)
+                    }
+                } else {
+                    strongSelf.autolockReportTimeout.set(nil)
+                }
+                
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
                 if isLocked(passcodeSettings: passcodeSettings, state: state, isApplicationActive: appInForeground) {
@@ -188,7 +203,10 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.presentedOverCoveringView = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
-                            rootViewController.dismiss(animated: false, completion: nil)
+                            if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                            } else {
+                                rootViewController.dismiss(animated: false, completion: nil)
+                            }
                         }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
@@ -209,7 +227,10 @@ public final class AppLockContextImpl: AppLockContext {
                     window.coveringView = coveringView
                     
                     if let rootViewController = strongSelf.rootController {
-                        rootViewController.dismiss(animated: false, completion: nil)
+                        if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                        } else {
+                            rootViewController.dismiss(animated: false, completion: nil)
+                        }
                     }
                 }
             } else {
@@ -286,6 +307,18 @@ public final class AppLockContextImpl: AppLockContext {
         |> map { state in
             return state.unlockAttemts.flatMap { unlockAttemts in
                 return AccessChallengeAttempts(count: unlockAttemts.count, bootTimestamp: unlockAttemts.timestamp.bootTimestamp, uptime: unlockAttemts.timestamp.uptime)
+            }
+        }
+    }
+    
+    public var autolockDeadline: Signal<Int32?, NoError> {
+        return self.autolockReportTimeout.get()
+        |> distinctUntilChanged
+        |> map { value -> Int32? in
+            if let value = value {
+                return Int32(Date().timeIntervalSince1970) + value
+            } else {
+                return nil
             }
         }
     }

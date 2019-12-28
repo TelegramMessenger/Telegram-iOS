@@ -28,7 +28,7 @@ import ItemListAddressItem
 import ItemListVenueItem
 
 private struct CreateGroupArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let done: () -> Void
@@ -233,7 +233,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.changeProfilePhoto()
@@ -243,11 +243,11 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .member(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, presence):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .locationHeader(theme, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .location(theme, location):
-                let imageSignal = chatMapSnapshotImage(account: arguments.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
             case let .changeLocation(theme, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -258,7 +258,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .venueHeader(theme, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .venue(_, theme, venue):
-                return ItemListVenueItem(presentationData: presentationData, account: arguments.account, venue: venue, sectionId: self.section, style: .blocks, action: {
+                return ItemListVenueItem(presentationData: presentationData, account: arguments.context.account, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }
@@ -300,7 +300,6 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
-    //entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
     
     var peers: [Peer] = []
     for peerId in peerIds {
@@ -401,7 +400,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         |> map(Optional.init))
     }
     
-    let arguments = CreateGroupArguments(account: context.account, updateEditingName: { editingName in
+    let arguments = CreateGroupArguments(context: context, updateEditingName: { editingName in
         updateState { current in
             var current = current
             current.editingName = editingName
@@ -531,7 +530,8 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     case .restricted:
                         text = presentationData.strings.Common_ActionNotAllowedError
                     case .tooMuchJoined:
-                        text = presentationData.strings.CreateGroup_ChannelsTooMuch
+                        pushImpl?(oldChannelsController(context: context, intent: .create))
+                        return
                     case .tooMuchLocationBasedGroups:
                         text = presentationData.strings.CreateGroup_ErrorLocatedGroupsTooMuch
                     default:

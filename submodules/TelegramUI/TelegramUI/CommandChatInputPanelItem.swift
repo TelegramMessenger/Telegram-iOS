@@ -7,19 +7,23 @@ import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import TelegramUIPreferences
 import AvatarNode
+import AccountContext
 
 final class CommandChatInputPanelItem: ListViewItem {
-    fileprivate let account: Account
+    fileprivate let context: AccountContext
     fileprivate let theme: PresentationTheme
+    fileprivate let fontSize: PresentationFontSize
     fileprivate let command: PeerCommand
     fileprivate let commandSelected: (PeerCommand, Bool) -> Void
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, fontSize: PresentationFontSize, command: PeerCommand, commandSelected: @escaping (PeerCommand, Bool) -> Void) {
+        self.context = context
         self.theme = theme
+        self.fontSize = fontSize
         self.command = command
         self.commandSelected = commandSelected
     }
@@ -77,8 +81,6 @@ final class CommandChatInputPanelItem: ListViewItem {
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
-private let textFont = Font.medium(14.0)
-private let descriptionFont = Font.regular(14.0)
 
 final class CommandChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 42.0
@@ -133,6 +135,9 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         return { [weak self] item, params, mergedTop, mergedBottom in
+            let textFont = Font.medium(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            
             let leftInset: CGFloat = 55.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
             
@@ -160,7 +165,7 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.arrowNode.setImage(iconImage, for: [])
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

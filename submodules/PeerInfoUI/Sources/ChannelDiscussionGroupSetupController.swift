@@ -17,13 +17,13 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
-    let account: Account
+    let context: AccountContext
     let createGroup: () -> Void
     let selectGroup: (PeerId) -> Void
     let unlinkGroup: () -> Void
     
-    init(account: Account, createGroup: @escaping () -> Void, selectGroup: @escaping (PeerId) -> Void, unlinkGroup: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, createGroup: @escaping () -> Void, selectGroup: @escaping (PeerId) -> Void, unlinkGroup: @escaping () -> Void) {
+        self.context = context
         self.createGroup = createGroup
         self.selectGroup = selectGroup
         self.unlinkGroup = unlinkGroup
@@ -144,7 +144,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = strings.Channel_DiscussionGroup_PrivateGroup
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, account: arguments.account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .groupsInfo(theme, title):
@@ -237,7 +237,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     let applyGroupDisposable = MetaDisposable()
     actionsDisposable.add(applyGroupDisposable)
     
-    let arguments = ChannelDiscussionGroupSetupControllerArguments(account: context.account, createGroup: {
+    let arguments = ChannelDiscussionGroupSetupControllerArguments(context: context, createGroup: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             transaction.getPeer(peerId)
         }
@@ -315,8 +315,13 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     var updatedPeerId: PeerId? = nil
                     if let legacyGroup = groupPeer as? TelegramGroup {
                         applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
-                        |> mapError { _ -> ChannelDiscussionGroupError in
-                            return .generic
+                        |> mapError { error -> ChannelDiscussionGroupError in
+                            switch error {
+                            case .tooManyChannels:
+                                return .tooManyChannels
+                            default:
+                                return .generic
+                            }
                         }
                         |> deliverOnMainQueue
                         |> mapToSignal { resultPeerId -> Signal<Bool, ChannelDiscussionGroupError> in
@@ -378,6 +383,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     applyGroupDisposable.set((applySignal
                     |> deliverOnMainQueue).start(error: { error in
                         switch error {
+                            case .tooManyChannels:
+                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
                             case .generic, .hasNotPermissions:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)

@@ -14,7 +14,56 @@ import TemporaryCachedPeerDataManager
 import ChatListSearchItemNode
 import Emoji
 
-private let historyMessageCount: Int = 100
+private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
+    private let selectionGestureActivationThreshold: CGFloat = 5.0
+    
+    var recognized: Bool? = nil
+    var initialLocation: CGPoint = CGPoint()
+    
+    var shouldBegin: (() -> Bool)?
+    
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        
+        self.minimumNumberOfTouches = 2
+        self.maximumNumberOfTouches = 2
+    }
+    
+    override func reset() {
+        super.reset()
+        
+        self.recognized = nil
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if let shouldBegin = self.shouldBegin, !shouldBegin() {
+            self.state = .failed
+        } else {
+            let touch = touches.first!
+            self.initialLocation = touch.location(in: self.view)
+        }
+    }
+    
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        let location = touches.first!.location(in: self.view)
+        let translation = location.offsetBy(dx: -self.initialLocation.x, dy: -self.initialLocation.y)
+        
+        if self.recognized == nil {
+            if (fabs(translation.y) >= selectionGestureActivationThreshold) {
+                self.recognized = true
+            }
+        }
+        
+        if let recognized = self.recognized, recognized {
+            super.touchesMoved(touches, with: event)
+        }
+    }
+}
+
+private let historyMessageCount: Int = 90
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
@@ -873,6 +922,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self?.isInteractivelyScrollingValue = false
             self?.isInteractivelyScrollingPromise.set(false)
         }
+        
+        let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        self.view.addGestureRecognizer(selectionRecognizer)
     }
     
     deinit {
@@ -1594,5 +1646,138 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
         }
+    }
+
+    private func messagesAtPoint(_ point: CGPoint) -> [Message]? {
+        var resultMessages: [Message]?
+        self.forEachVisibleItemNode { itemNode in
+            if resultMessages == nil, let itemNode = itemNode as? ListViewItemNode, itemNode.frame.contains(point) {
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item as? ChatMessageItem {
+                    switch item.content {
+                        case let .message(message, _, _ , _):
+                            resultMessages = [message]
+                        case let .group(messages):
+                            resultMessages = messages.map { $0.0 }
+                    }
+                }
+            }
+        }
+        return resultMessages
+    }
+    
+    private var selectionPanState: (selecting: Bool, initialMessageId: MessageId, toggledMessageIds: [[MessageId]])?
+    private var selectionScrollActivationTimer: SwiftSignalKit.Timer?
+    private var selectionScrollDisplayLink: ConstantDisplayLinkAnimator?
+    private var selectionScrollDelta: CGFloat?
+    private var selectionLastLocation: CGPoint?
+    
+    @objc private func selectionPanGesture(_ recognizer: UIGestureRecognizer) -> Void {
+        let location = recognizer.location(in: self.view)
+        switch recognizer.state {
+            case .began:
+                if let messages = self.messagesAtPoint(location), let message = messages.first {
+                    let selecting = !(self.controllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false)
+                    self.selectionPanState = (selecting, message.id, [])
+                    self.controllerInteraction.toggleMessagesSelection(messages.map { $0.id }, selecting)
+                }
+            case .changed:
+                self.handlePanSelection(location: location)
+                self.selectionLastLocation = location
+            case .ended, .failed, .cancelled:
+                self.selectionPanState = nil
+                self.selectionScrollDisplayLink = nil
+                self.selectionScrollActivationTimer?.invalidate()
+                self.selectionScrollActivationTimer = nil
+                self.selectionScrollDelta = nil
+                self.selectionLastLocation = nil
+                self.selectionScrollSkipUpdate = false
+            case .possible:
+                break
+        }
+    }
+    
+    private func handlePanSelection(location: CGPoint) {
+        if let state = self.selectionPanState {
+            if let messages = self.messagesAtPoint(location), let message = messages.first {
+                if message.id == state.initialMessageId {
+                    if !state.toggledMessageIds.isEmpty {
+                        self.controllerInteraction.toggleMessagesSelection(state.toggledMessageIds.flatMap { $0 }, !state.selecting)
+                        self.selectionPanState = (state.selecting, state.initialMessageId, [])
+                    }
+                } else if state.toggledMessageIds.last?.first != message.id {
+                    var updatedToggledMessageIds: [[MessageId]] = []
+                    var previouslyToggled = false
+                    for i in (0 ..< state.toggledMessageIds.count) {
+                        if let messageId = state.toggledMessageIds[i].first {
+                            if messageId == message.id {
+                                previouslyToggled = true
+                                updatedToggledMessageIds = Array(state.toggledMessageIds.prefix(i + 1))
+                                
+                                let messageIdsToToggle = Array(state.toggledMessageIds.suffix(state.toggledMessageIds.count - i - 1)).flatMap { $0 }
+                                self.controllerInteraction.toggleMessagesSelection(messageIdsToToggle, !state.selecting)
+                                break
+                            }
+                        }
+                    }
+                    
+                    if !previouslyToggled {
+                        updatedToggledMessageIds = state.toggledMessageIds
+                        let isSelected = (self.controllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false)
+                        if state.selecting != isSelected {
+                            let messageIds = messages.map { $0.id }
+                            updatedToggledMessageIds.append(messageIds)
+                            self.controllerInteraction.toggleMessagesSelection(messageIds, state.selecting)
+                        }
+                    }
+                    
+                    self.selectionPanState = (state.selecting, state.initialMessageId, updatedToggledMessageIds)
+                }
+            }
+        
+            let scrollingAreaHeight: CGFloat = 50.0
+            if location.y < scrollingAreaHeight + self.insets.top || location.y > self.frame.height - scrollingAreaHeight - self.insets.bottom {
+                if location.y < self.frame.height / 2.0 {
+                    self.selectionScrollDelta = (scrollingAreaHeight - (location.y - self.insets.top)) / scrollingAreaHeight
+                } else {
+                    self.selectionScrollDelta = -(scrollingAreaHeight - min(scrollingAreaHeight, max(0.0, (self.frame.height - self.insets.bottom - location.y)))) / scrollingAreaHeight
+                }
+                if let displayLink = self.selectionScrollDisplayLink {
+                    displayLink.isPaused = false
+                } else {
+                    if let _ = self.selectionScrollActivationTimer {
+                    } else {
+                        let timer = SwiftSignalKit.Timer(timeout: 0.45, repeat: false, completion: { [weak self] in
+                            self?.setupSelectionScrolling()
+                        }, queue: .mainQueue())
+                        timer.start()
+                        self.selectionScrollActivationTimer = timer
+                    }
+                }
+            } else {
+                self.selectionScrollDisplayLink?.isPaused = true
+                self.selectionScrollActivationTimer?.invalidate()
+                self.selectionScrollActivationTimer = nil
+            }
+        }
+    }
+    
+    private var selectionScrollSkipUpdate = false
+    private func setupSelectionScrolling() {
+        self.selectionScrollDisplayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+            self?.selectionScrollActivationTimer = nil
+            if let strongSelf = self, let delta = strongSelf.selectionScrollDelta {
+                let distance: CGFloat = 15.0 * min(1.0, 0.15 + abs(delta * delta))
+                let direction: ListViewScrollDirection = delta > 0.0 ? .up : .down
+                strongSelf.scrollWithDirection(direction, distance: distance)
+                
+                if let location = strongSelf.selectionLastLocation {
+                    if !strongSelf.selectionScrollSkipUpdate {
+                        strongSelf.handlePanSelection(location: location)
+                    }
+                    strongSelf.selectionScrollSkipUpdate = !strongSelf.selectionScrollSkipUpdate
+                }
+            }
+        })
+        self.selectionScrollDisplayLink?.isPaused = false
     }
 }

@@ -7,20 +7,24 @@ import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import TelegramUIPreferences
 import AvatarNode
+import AccountContext
 
 final class MentionChatInputPanelItem: ListViewItem {
-    fileprivate let account: Account
+    fileprivate let context: AccountContext
     fileprivate let theme: PresentationTheme
+    fileprivate let fontSize: PresentationFontSize
     fileprivate let inverted: Bool
     fileprivate let peer: Peer
     private let peerSelected: (Peer) -> Void
     
     let selectable: Bool = true
     
-    public init(account: Account, theme: PresentationTheme, inverted: Bool, peer: Peer, peerSelected: @escaping (Peer) -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, fontSize: PresentationFontSize, inverted: Bool, peer: Peer, peerSelected: @escaping (Peer) -> Void) {
+        self.context = context
         self.theme = theme
+        self.fontSize = fontSize
         self.inverted = inverted
         self.peer = peer
         self.peerSelected = peerSelected
@@ -79,8 +83,6 @@ final class MentionChatInputPanelItem: ListViewItem {
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
-private let primaryFont = Font.medium(14.0)
-private let secondaryFont = Font.regular(14.0)
 
 final class MentionChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 42.0
@@ -132,6 +134,9 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
         let previousItem = self.item
         
         return { [weak self] item, params, mergedTop, mergedBottom in
+            let primaryFont = Font.medium(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let secondaryFont = Font.regular(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            
             let leftInset: CGFloat = 55.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
             
@@ -167,7 +172,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

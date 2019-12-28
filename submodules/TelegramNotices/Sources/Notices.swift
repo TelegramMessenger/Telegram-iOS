@@ -133,6 +133,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case cellularDataPermissionWarning = 13
     case chatMessageSearchResultsTip = 14
     case chatMessageOptionsTip = 15
+    case chatTextSelectionTip = 16
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -237,6 +238,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatMessageOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatMessageOptionsTip.key)
+    }
+    
+    static func chatTextSelectionTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatTextSelectionTip.key)
     }
 }
 
@@ -570,6 +575,28 @@ public struct ApplicationSpecificNotice {
             currentValue += count
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+    
+    public static func getChatTextSelectionTips(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatTextSelectionTips(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
     

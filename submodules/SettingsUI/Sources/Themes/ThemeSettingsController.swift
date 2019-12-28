@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AlertUI
 import PresentationDataUtils
+import MediaResources
 import WallpaperResources
 import ShareController
 import AccountContext
@@ -71,17 +72,18 @@ private final class ThemeSettingsControllerArguments {
     let selectTheme: (PresentationThemeReference) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
-    let selectAccentColor: (PresentationThemeAccentColor) -> Void
-    let openAccentColorPicker: (PresentationThemeReference) -> Void
+    let selectAccentColor: (PresentationThemeAccentColor?) -> Void
+    let openAccentColorPicker: (PresentationThemeReference, Bool) -> Void
     let openAutoNightTheme: () -> Void
     let openTextSize: () -> Void
     let toggleLargeEmoji: (Bool) -> Void
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (String) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
-    let contextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
+    let themeContextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
+    let colorContextAction: (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, contextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
@@ -94,7 +96,8 @@ private final class ThemeSettingsControllerArguments {
         self.disableAnimations = disableAnimations
         self.selectAppIcon = selectAppIcon
         self.editTheme = editTheme
-        self.contextAction = contextAction
+        self.themeContextAction = themeContextAction
+        self.colorContextAction = colorContextAction
     }
 }
 
@@ -130,10 +133,10 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSize(PresentationTheme, PresentationFontSize)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
     case wallpaper(PresentationTheme, String)
-    case accentColor(PresentationTheme, PresentationThemeReference, PresentationThemeAccentColor?)
+    case accentColor(PresentationTheme, PresentationThemeReference, PresentationThemeReference, [PresentationThemeReference], ThemeSettingsColorOption?)
     case autoNightTheme(PresentationTheme, String, String)
     case textSize(PresentationTheme, String, String)
-    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], PresentationThemeAccentColor?)
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], [Int64: TelegramWallpaper], PresentationThemeAccentColor?)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], String?)
     case otherHeader(PresentationTheme, String)
@@ -205,8 +208,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .accentColor(lhsTheme, lhsCurrentTheme, lhsColor):
-                if case let .accentColor(rhsTheme, rhsCurrentTheme, rhsColor) = rhs, lhsTheme === rhsTheme, lhsCurrentTheme == rhsCurrentTheme, lhsColor == rhsColor {
+            case let .accentColor(lhsTheme, lhsGeneralTheme, lhsCurrentTheme, lhsThemes, lhsColor):
+                if case let .accentColor(rhsTheme, rhsGeneralTheme, rhsCurrentTheme, rhsThemes, rhsColor) = rhs, lhsTheme === rhsTheme, lhsCurrentTheme == rhsCurrentTheme, lhsThemes == rhsThemes, lhsColor == rhsColor {
                     return true
                 } else {
                     return false
@@ -229,8 +232,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors, lhsCurrentColor):
-                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors, rhsCurrentColor) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors, lhsCurrentColor == rhsCurrentColor {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsAllThemes, lhsCurrentTheme, lhsThemeAccentColors, lhsThemeSpecificChatWallpapers, lhsCurrentColor):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsAllThemes, rhsCurrentTheme, rhsThemeAccentColors, rhsThemeSpecificChatWallpapers, rhsCurrentColor) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsAllThemes == rhsAllThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors, lhsThemeSpecificChatWallpapers == rhsThemeSpecificChatWallpapers, lhsCurrentColor == rhsCurrentColor {
                     return true
                 } else {
                     return false
@@ -305,11 +308,40 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
                 })
-            case let .accentColor(theme, currentTheme, color):
-                var defaultColor = PresentationThemeAccentColor(baseColor: .blue)
+            case let .accentColor(theme, generalThemeReference, currentTheme, themes, color):
+                var colorItems: [ThemeSettingsAccentColor] = []
+                
+                for theme in themes {
+                    colorItems.append(.theme(theme))
+                }
+                                
+                var defaultColor: PresentationThemeAccentColor? = PresentationThemeAccentColor(baseColor: .blue)
                 var colors = PresentationThemeBaseColor.allCases
-                if case let .builtin(name) = currentTheme {
-                    if name == .night || name == .nightAccent {
+                colors = colors.filter { $0 != .custom && $0 != .preset && $0 != .theme }
+                if case let .builtin(name) = generalThemeReference {
+                    if name == .dayClassic {
+                        colorItems.append(.default)
+                        defaultColor = nil
+                        
+                        for preset in dayClassicColorPresets {
+                            colorItems.append(.preset(preset))
+                        }
+                    } else if name == .day {
+                        colorItems.append(.color(.blue))
+                        colors = colors.filter { $0 != .blue }
+                        
+                        for preset in dayColorPresets {
+                            colorItems.append(.preset(preset))
+                        }
+                    } else if name == .night {
+                        colorItems.append(.color(.blue))
+                        colors = colors.filter { $0 != .blue }
+                        
+                        for preset in nightColorPresets {
+                            colorItems.append(.preset(preset))
+                        }
+                    }
+                    if name != .day {
                         colors = colors.filter { $0 != .black }
                     }
                     if name == .night {
@@ -319,14 +351,24 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                         colors = colors.filter { $0 != .white }
                     }
                 }
-                let currentColor = color ?? defaultColor
-                if currentColor.baseColor != .custom {
-                    colors = colors.filter { $0 != .custom }
-                }
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: currentColor, updated: { color in
-                    arguments.selectAccentColor(color)
-                }, openColorPicker: {
-                    arguments.openAccentColorPicker(currentTheme)
+                let currentColor = color ?? defaultColor.flatMap { .accentColor($0) }
+                colorItems.append(contentsOf: colors.map { .color($0) })
+                
+                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
+                    if let color = color {
+                        switch color {
+                            case let .accentColor(color):
+                                arguments.selectAccentColor(color)
+                            case let .theme(theme):
+                                arguments.selectTheme(theme)
+                        }
+                    } else {
+                        arguments.selectAccentColor(nil)
+                    }
+                }, contextAction: { isCurrent, theme, color, node, gesture in
+                    arguments.colorContextAction(isCurrent, theme, color, node, gesture)
+                }, openColorPicker: { create in
+                    arguments.openAccentColorPicker(currentTheme, create)
                 }, tag: ThemeSettingsEntryTag.accentColor)
             case let .autoNightTheme(theme, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -338,9 +380,9 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, _):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, displayUnsupported: true, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
-                    if case let .cloud(theme) = theme, theme.theme.file == nil {
+            case let .themeItem(theme, strings, themes, allThemes, currentTheme, themeSpecificAccentColors, themeSpecificChatWallpapers, _):
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, allThemes: allThemes, displayUnsupported: true, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, currentTheme: currentTheme, updatedTheme: { theme in
+                    if case let .cloud(theme) = theme, theme.theme.file == nil && theme.theme.settings == nil {
                         if theme.theme.isCreator {
                             arguments.editTheme(theme)
                         }
@@ -348,8 +390,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                         arguments.selectTheme(theme)
                     }
                 }, contextAction: { theme, node, gesture in
-                    arguments.contextAction(theme.index == currentTheme.index, theme, node, gesture)
-                })
+                    arguments.themeContextAction(theme.index == currentTheme.index, theme, node, gesture)
+                }, tag: ThemeSettingsEntryTag.theme)
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .iconItem(theme, strings, icons, value):
@@ -372,23 +414,54 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], availableThemes: [PresentationThemeReference], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
+    let strings = presentationData.strings
     let title = presentationData.autoNightModeTriggered ? strings.Appearance_ColorThemeNight.uppercased() : strings.Appearance_ColorTheme.uppercased()
     entries.append(.themeListHeader(presentationData.theme, title))
-    entries.append(.chatPreview(presentationData.theme, theme, wallpaper, presentationData.fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
+    entries.append(.chatPreview(presentationData.theme, presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
-    entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
+    let generalThemes: [PresentationThemeReference] = availableThemes.filter { reference in
+        if case let .cloud(theme) = reference {
+            return theme.theme.settings == nil
+        } else {
+            return true
+        }
+    }
     
-    if case let .builtin(theme) = themeReference, theme != .dayClassic {
-        entries.append(.accentColor(presentationData.theme, themeReference, themeSpecificAccentColors[themeReference.index]))
+    let generalThemeReference: PresentationThemeReference
+    if case let .cloud(theme) = themeReference, let settings = theme.theme.settings {
+        generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+    } else {
+        generalThemeReference = themeReference
+    }
+    
+    entries.append(.themeItem(presentationData.theme, presentationData.strings, generalThemes, availableThemes, themeReference, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificChatWallpapers, presentationThemeSettings.themeSpecificAccentColors[themeReference.index]))
+    
+    if case let .builtin(builtinTheme) = generalThemeReference {
+        let colorThemes = availableThemes.filter { reference in
+            if case let .cloud(theme) = reference, let settings = theme.theme.settings, settings.baseTheme == builtinTheme.baseTheme {
+                return true
+            } else {
+                return false
+            }
+        }
+        
+        var colorOption: ThemeSettingsColorOption?
+        if case let .builtin(theme) = themeReference {
+            colorOption = presentationThemeSettings.themeSpecificAccentColors[themeReference.index].flatMap { .accentColor($0) }
+        } else {
+            colorOption = .theme(themeReference)
+        }
+                
+        entries.append(.accentColor(presentationData.theme, generalThemeReference, themeReference, colorThemes, colorOption))
     }
     
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
     let autoNightMode: String
-    switch autoNightSettings.trigger {
+    switch presentationThemeSettings.automaticThemeSwitchSetting.trigger {
         case .system:
             if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
                 autoNightMode = strings.AutoNightTheme_System
@@ -412,29 +485,36 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
     
-    //entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
-    //entries.append(.fontSize(presentationData.theme, fontSize))
-    
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
         entries.append(.iconItem(presentationData.theme, presentationData.strings, availableAppIcons, currentAppIconName))
     }
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
-    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, largeEmoji))
-    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
+    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, presentationData.largeEmoji))
+    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.disableAnimations))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
     return entries
 }
 
+public protocol ThemeSettingsController {
+    
+}
+
+private final class ThemeSettingsControllerImpl: ItemListController, ThemeSettingsController {
+}
+
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var updateControllersImpl: ((([UIViewController]) -> [UIViewController]) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
+    var presentCrossfadeControllerImpl: ((Bool) -> Void)?
     
     var selectThemeImpl: ((PresentationThemeReference) -> Void)?
+    var selectAccentColorImpl: ((PresentationThemeAccentColor?) -> Void)?
     var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
@@ -455,39 +535,21 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
+    let removedThemeIndexesPromise = Promise<Set<Int64>>(Set())
+    let removedThemeIndexes = Atomic<Set<Int64>>(value: Set())
+    
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         selectThemeImpl?(theme)
-    }, selectFontSize: { size in
+    }, selectFontSize: { fontSize in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+            return current.withUpdatedFontSize(fontSize)
         }).start()
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(context: context))
-    }, selectAccentColor: { color in
-        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-            var currentTheme = current.theme
-            if autoNightModeTriggered {
-                currentTheme = current.automaticThemeSwitchSetting.theme
-            }
-
-            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color.color, bubbleColors: nil) else {
-                return current
-            }
-            
-            var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-            var themeSpecificAccentColors = current.themeSpecificAccentColors
-            themeSpecificAccentColors[currentTheme.index] = color
-
-            if let wallpaper = current.themeSpecificChatWallpapers[currentTheme.index], wallpaper.hasWallpaper {
-            } else {
-                themeSpecificChatWallpapers[currentTheme.index] = theme.chat.defaultWallpaper
-            }
-            
-            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-        }).start()
-    }, openAccentColorPicker: { themeReference in
-        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: themeReference))
+    }, selectAccentColor: { accentColor in
+        selectAccentColorImpl?(accentColor)
+    }, openAccentColorPicker: { themeReference, create in
+        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: themeReference, create: create))
         pushControllerImpl?(controller)
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
@@ -500,11 +562,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         })
     }, toggleLargeEmoji: { largeEmoji in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: largeEmoji,  disableAnimations: current.disableAnimations)
+            return current.withUpdatedLargeEmoji(largeEmoji)
         }).start()
-    }, disableAnimations: { value in
+    }, disableAnimations: { disableAnimations in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return PresentationThemeSettings(theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: value)
+            return current.withUpdatedDisableAnimations(disableAnimations)
         }).start()
     }, selectAppIcon: { name in
         currentAppIconName.set(name)
@@ -517,20 +579,56 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             }
         })
         pushControllerImpl?(controller)
-    }, contextAction: { isCurrent, reference, node, gesture in
-        let _ = (context.sharedContext.accountManager.transaction { transaction -> PresentationThemeAccentColor? in
+    }, themeContextAction: { isCurrent, reference, node, gesture in
+        let _ = (context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeAccentColor?, TelegramWallpaper?) in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
-            return settings.themeSpecificAccentColors[reference.index]
-        } |> map { accentColor in
-            return makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors)
+            let accentColor = settings.themeSpecificAccentColors[reference.index]
+            var wallpaper: TelegramWallpaper?
+            if let accentColor = accentColor {
+                wallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: reference, accentColor: accentColor)]
+            }
+            if wallpaper == nil {
+                wallpaper = settings.themeSpecificChatWallpapers[reference.index]
+            }
+            return (accentColor, wallpaper)
         }
-        |> deliverOnMainQueue).start(next: { theme in
+        |> map { accentColor, wallpaper -> (PresentationThemeAccentColor?, TelegramWallpaper) in
+            let effectiveWallpaper: TelegramWallpaper
+            if let wallpaper = wallpaper {
+                effectiveWallpaper = wallpaper
+            } else {
+                let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
+            }
+            return (accentColor, effectiveWallpaper)
+        }
+        |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationThemeAccentColor?, TelegramWallpaper), NoError> in
+            if case let .file(file) = wallpaper, file.id == 0 {
+                return cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                |> map { cachedWallpaper in
+                    if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
+                        return (accentColor, wallpaper)
+                    } else {
+                        return (accentColor, .builtin(WallpaperSettings()))
+                    }
+                }
+            } else {
+                return .single((accentColor, wallpaper))
+            }
+        }
+        |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in
+            return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
+            |> map { serviceBackgroundColor in
+                return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor), wallpaper)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { theme, wallpaper in
             guard let theme = theme else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let strings = presentationData.strings
-            let themeController = ThemePreviewController(context: context, previewTheme: theme, source: .settings(reference))
+            let themeController = ThemePreviewController(context: context, previewTheme: theme, source: .settings(reference, wallpaper))
             var items: [ContextMenuItem] = []
             
             if case let .cloud(theme) = reference {
@@ -548,21 +646,44 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     })))
                 } else {
                     items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                        guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: nil, bubbleColors: nil, backgroundColors: nil, preview: false) else {
+                        guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, preview: false) else {
                             return
                         }
                         
-                        let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, defaultThemeReference: nil, completion: { result in
-                            let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
-                                if let navigationController = getNavigationControllerImpl?() {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                                }
-                            })
-                            pushControllerImpl?(controller)
-                        }))
+                        let resolvedWallpaper: Signal<TelegramWallpaper, NoError>
+                        if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                            |> map { cachedWallpaper -> TelegramWallpaper in
+                                return cachedWallpaper?.wallpaper ?? theme.chat.defaultWallpaper
+                            }
+                        } else {
+                            resolvedWallpaper = .single(theme.chat.defaultWallpaper)
+                        }
                         
-                        c.dismiss(completion: {
-                            pushControllerImpl?(controller)
+                        let _ = (resolvedWallpaper
+                        |> deliverOnMainQueue).start(next: { wallpaper in
+                            let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, generalThemeReference: reference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
+                                let controller = editThemeController(context: context, mode: .create(result, nil), navigateToChat: { peerId in
+                                    if let navigationController = getNavigationControllerImpl?() {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                    }
+                                })
+                                updateControllersImpl?({ controllers in
+                                    var controllers = controllers
+                                    controllers = controllers.filter { controller in
+                                        if controller is ThemeAccentColorController {
+                                            return false
+                                        }
+                                        return true
+                                    }
+                                    controllers.append(controller)
+                                    return controllers
+                                })
+                            }))
+                            
+                            c.dismiss(completion: {
+                                pushControllerImpl?(controller)
+                            })
                         })
                     })))
                 }
@@ -578,18 +699,32 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
+                            let _ = (cloudThemes.get()
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { themes in
+                                removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                    var updated = value
+                                    updated.insert(theme.theme.id)
+                                    return updated
+                                })))
+                                
                                 if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
-                                    let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
-                                    let newTheme: PresentationThemeReference
-                                    if let previousThemeIndex = previousThemeIndex {
-                                        newTheme = .cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil))
+                                    if let settings = theme.theme.settings {
+                                        if settings.baseTheme == .night {
+                                            selectAccentColorImpl?(PresentationThemeAccentColor(baseColor: .blue))
+                                        } else {
+                                            selectAccentColorImpl?(nil)
+                                        }
                                     } else {
-                                        newTheme = .builtin(.nightAccent)
+                                        let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
+                                        let newTheme: PresentationThemeReference
+                                        if let previousThemeIndex = previousThemeIndex {
+                                            newTheme = .cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil))
+                                        } else {
+                                            newTheme = .builtin(.nightAccent)
+                                        }
+                                        selectThemeImpl?(newTheme)
                                     }
-                                    selectThemeImpl?(newTheme)
                                 }
                                 
                                 let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
@@ -607,7 +742,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
                     c.dismiss(completion: {
-                        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: reference))
+                        let controller = ThemeAccentColorController(context: context, mode: .colors(themeReference: reference, create: true))
                         pushControllerImpl?(controller)
                     })
                 })))
@@ -616,13 +751,218 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: themeController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
             presentInGlobalOverlayImpl?(contextController, nil)
         })
+    }, colorContextAction: { isCurrent, reference, accentColor, node, gesture in
+        let _ = (context.sharedContext.accountManager.transaction { transaction -> (ThemeSettingsColorOption?, TelegramWallpaper?) in
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
+            var wallpaper: TelegramWallpaper?
+            if let accentColor = accentColor {
+                switch accentColor {
+                    case let .accentColor(accentColor):
+                        wallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: reference, accentColor: accentColor)]
+                        if wallpaper == nil {
+                            wallpaper = settings.themeSpecificChatWallpapers[reference.index]
+                        }
+                    case let .theme(theme):
+                        wallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: theme, accentColor: nil)]
+                }
+            } else {
+                if wallpaper == nil {
+                    wallpaper = settings.themeSpecificChatWallpapers[reference.index]
+                }
+            }
+            return (accentColor, wallpaper)
+        } |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, PresentationThemeReference, TelegramWallpaper?), NoError> in
+            let generalThemeReference: PresentationThemeReference
+            if let accentColor = accentColor, case let .cloud(theme) = reference, let settings = theme.theme.settings {
+                generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+            } else {
+                generalThemeReference = reference
+            }
+            
+            let effectiveWallpaper: TelegramWallpaper
+            let effectiveThemeReference: PresentationThemeReference
+            if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
+                effectiveThemeReference = themeReference
+            } else {
+                effectiveThemeReference = reference
+            }
+            
+            if let wallpaper = wallpaper {
+                effectiveWallpaper = wallpaper
+            } else {
+                let theme: PresentationTheme?
+                if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
+                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference)
+                } else {
+                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
+                }
+                effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
+            }
+            
+            let wallpaperSignal: Signal<TelegramWallpaper, NoError>
+            if case let .file(file) = effectiveWallpaper, file.id == 0 {
+                wallpaperSignal = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                |> map { cachedWallpaper in
+                    return cachedWallpaper?.wallpaper ?? effectiveWallpaper
+                }
+            } else {
+                wallpaperSignal = .single(effectiveWallpaper)
+            }
+            
+            return wallpaperSignal
+            |> mapToSignal { wallpaper in
+                return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
+                |> map { serviceBackgroundColor in
+                    return (wallpaper, serviceBackgroundColor)
+                }
+            }
+            |> map { wallpaper, serviceBackgroundColor in
+                if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
+                    return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, serviceBackgroundColor: serviceBackgroundColor), effectiveThemeReference, wallpaper)
+                } else {
+                    return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor), effectiveThemeReference, wallpaper)
+                }
+            }
+        }
+        |> deliverOnMainQueue).start(next: { theme, effectiveThemeReference, wallpaper in
+            guard let theme = theme else {
+                return
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let strings = presentationData.strings
+            let themeController = ThemePreviewController(context: context, previewTheme: theme, source: .settings(effectiveThemeReference, wallpaper))
+            var items: [ContextMenuItem] = []
+            
+            if let accentColor = accentColor {
+                if case let .accentColor(color) = accentColor, color.baseColor != .custom {
+                } else if case let .theme(theme) = accentColor, case let .cloud(cloudTheme) = theme {
+                    if cloudTheme.theme.isCreator {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_EditTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                            let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
+                                if let navigationController = getNavigationControllerImpl?() {
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                }
+                            })
+                            
+                            c.dismiss(completion: {
+                                pushControllerImpl?(controller)
+                            })
+                        })))
+                    } else {
+                        items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, preview: false) else {
+                                return
+                            }
+                            
+                            let resolvedWallpaper: Signal<TelegramWallpaper, NoError>
+                            if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                                resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+                                |> map { cachedWallpaper -> TelegramWallpaper in
+                                    return cachedWallpaper?.wallpaper ?? theme.chat.defaultWallpaper
+                                }
+                            } else {
+                                resolvedWallpaper = .single(theme.chat.defaultWallpaper)
+                            }
+                            
+                            let _ = (resolvedWallpaper
+                            |> deliverOnMainQueue).start(next: { wallpaper in
+                                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, generalThemeReference: reference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
+                                    let controller = editThemeController(context: context, mode: .create(result, nil), navigateToChat: { peerId in
+                                        if let navigationController = getNavigationControllerImpl?() {
+                                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                        }
+                                    })
+                                    updateControllersImpl?({ controllers in
+                                        var controllers = controllers
+                                        controllers = controllers.filter { controller in
+                                            if controller is ThemeAccentColorController {
+                                                return false
+                                            }
+                                            return true
+                                        }
+                                        controllers.append(controller)
+                                        return controllers
+                                    })
+                                }))
+                                
+                                c.dismiss(completion: {
+                                    pushControllerImpl?(controller)
+                                })
+                            })
+                        })))
+                    }
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_ShareTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                        c.dismiss(completion: {
+                            let controller = ShareController(context: context, subject: .url("https://t.me/addtheme/\(cloudTheme.theme.slug)"), preferredAction: .default)
+                            presentControllerImpl?(controller, nil)
+                        })
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
+                        c.dismiss(completion: {
+                            let actionSheet = ActionSheetController(presentationData: presentationData)
+                            var items: [ActionSheetItem] = []
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                let _ = (cloudThemes.get()
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { themes in
+                                    removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                         var updated = value
+                                         updated.insert(cloudTheme.theme.id)
+                                         return updated
+                                     })))
+                                    
+                                    if isCurrent, let settings = cloudTheme.theme.settings {
+                                        let colorThemes = themes.filter { theme in
+                                            if let settings = theme.settings {
+                                                return true
+                                            } else {
+                                                return false
+                                            }
+                                        }
+                                        
+                                        if let currentThemeIndex = colorThemes.firstIndex(where: { $0.id == cloudTheme.theme.id }) {
+                                            let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
+                                            let newTheme: PresentationThemeReference
+                                            if let previousThemeIndex = previousThemeIndex {
+                                                selectThemeImpl?(.cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil)))
+                                            } else {
+                                                if settings.baseTheme == .night {
+                                                    selectAccentColorImpl?(PresentationThemeAccentColor(baseColor: .blue))
+                                                } else {
+                                                    selectAccentColorImpl?(nil)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: cloudTheme.theme).start()
+                                })
+                            }))
+                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                            presentControllerImpl?(actionSheet, nil)
+                        })
+                    })))
+                }
+            }
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: themeController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+            presentInGlobalOverlayImpl?(contextController, nil)
+        })
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let previousThemeReference = Atomic<PresentationThemeReference?>(value: nil)
+    let previousAccentColor = Atomic<PresentationThemeAccentColor?>(value: nil)
+    
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get())
+        |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
-        let fontSize = settings.fontSize
+        let fontSize = presentationData.fontSize
         let dateTimeFormat = presentationData.dateTimeFormat
         let largeEmoji = presentationData.largeEmoji
         let disableAnimations = presentationData.disableAnimations
@@ -634,9 +974,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             themeReference = settings.theme
         }
         
-        let theme = presentationData.theme
-        let accentColor = settings.themeSpecificAccentColors[themeReference.index]?.color
-        let wallpaper = presentationData.chatWallpaper
+        let accentColor = settings.themeSpecificAccentColors[themeReference.index]
         
         let rightNavigationButton = ItemListNavigationButton(content: .icon(.add), style: .regular, enabled: true, action: {
             moreImpl?()
@@ -649,7 +987,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
         
-        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }.filter { !removedThemeIndexes.contains($0.index) }
         
         var availableThemes = defaultThemes
         if defaultThemes.first(where: { $0.index == themeReference.index }) == nil && cloudThemes.first(where: { $0.index == themeReference.index }) == nil {
@@ -658,12 +996,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         availableThemes.append(contentsOf: cloudThemes)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, theme: theme, themeReference: themeReference, themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
-                
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        
         return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = ThemeSettingsControllerImpl(context: context, state: signal)
     controller.alwaysSynchronous = true
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
@@ -671,14 +1009,82 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
     }
+    updateControllersImpl = { [weak controller] f in
+        if let navigationController = controller?.navigationController as? NavigationController {
+            navigationController.setViewControllers(f(navigationController.viewControllers), animated: true)
+        }
+    }
     presentInGlobalOverlayImpl = { [weak controller] c, a in
         controller?.presentInGlobalOverlay(c, with: a)
     }
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
     }
+    presentCrossfadeControllerImpl = { [weak controller] hasAccentColors in
+        if let controller = controller, controller.isNodeLoaded, let navigationController = controller.navigationController as? NavigationController, navigationController.topViewController === controller {
+            var topOffset: CGFloat?
+            var bottomOffset: CGFloat?
+            var leftOffset: CGFloat?
+            var themeItemNode: ThemeSettingsThemeItemNode?
+            var colorItemNode: ThemeSettingsAccentColorItemNode?
+            
+            var view = controller.navigationController?.view
+            
+            let controllerFrame = controller.view.convert(controller.view.bounds, to: controller.navigationController?.view)
+            if controllerFrame.minX > 0.0 {
+                leftOffset = controllerFrame.minX
+            }
+            if controllerFrame.minY > 100.0 {
+                view = nil
+            }
+            
+            controller.forEachItemNode { node in
+                if let itemNode = node as? ItemListItemNode {
+                    if let itemTag = itemNode.tag {
+                        if itemTag.isEqual(to: ThemeSettingsEntryTag.theme) {
+                            let frame = node.view.convert(node.view.bounds, to: controller.navigationController?.view)
+                            topOffset = frame.minY
+                            bottomOffset = frame.maxY
+                            if let itemNode = node as? ThemeSettingsThemeItemNode {
+                                themeItemNode = itemNode
+                            }
+                        } else if itemTag.isEqual(to: ThemeSettingsEntryTag.accentColor) && hasAccentColors {
+                            let frame = node.view.convert(node.view.bounds, to: controller.navigationController?.view)
+                            bottomOffset = frame.maxY
+                            if let itemNode = node as? ThemeSettingsAccentColorItemNode {
+                                colorItemNode = itemNode
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if let navigationBar = controller.navigationBar {
+                if let offset = topOffset {
+                    topOffset = max(offset, navigationBar.frame.maxY)
+                } else {
+                    topOffset = navigationBar.frame.maxY
+                }
+            }
+            
+            if view != nil {
+                themeItemNode?.prepareCrossfadeTransition()
+                colorItemNode?.prepareCrossfadeTransition()
+            }
+            
+            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset)
+            crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
+                if view != nil {
+                    themeItemNode?.animateCrossfadeTransition()
+                    colorItemNode?.animateCrossfadeTransition()
+                }
+            }
+            
+            context.sharedContext.presentGlobalController(crossfadeController, nil)
+        }
+    }
     selectThemeImpl = { theme in
-        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, bubbleColors: nil, serviceBackgroundColor: .black) else {
+        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme) else {
             return
         }
         
@@ -700,33 +1106,139 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: cloudTheme).start()
         
-        let _ = (resolvedWallpaper
-        |> mapToSignal { resolvedWallpaper -> Signal<Void, NoError> in
+        let currentTheme = context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference) in
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
+            if autoNightModeTriggered {
+                return settings.automaticThemeSwitchSetting.theme
+            } else {
+                return settings.theme
+            }
+        }
+        
+        let _ = (combineLatest(resolvedWallpaper, currentTheme)
+        |> map { resolvedWallpaper, currentTheme -> Bool in
             var updatedTheme = theme
+            var currentThemeBaseIndex: Int64?
+            if case let .cloud(info) = currentTheme, let settings = info.theme.settings {
+                currentThemeBaseIndex = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)).index
+            } else {
+                currentThemeBaseIndex = currentTheme.index
+            }
+            
+            var baseThemeIndex: Int64?
+            var updatedThemeBaseIndex: Int64?
             if case let .cloud(info) = theme {
                 updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+                if let settings = info.theme.settings {
+                    baseThemeIndex = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)).index
+                    updatedThemeBaseIndex = baseThemeIndex
+                }
+            } else {
+                updatedThemeBaseIndex = theme.index
             }
-            return (context.sharedContext.accountManager.transaction { transaction -> Void in
-                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                    let current: PresentationThemeSettings
-                    if let entry = entry as? PresentationThemeSettings {
-                        current = entry
-                    } else {
-                        current = PresentationThemeSettings.defaultSettings
+
+            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                var updatedThemeSpecificAccentColors = current.themeSpecificAccentColors
+                if let baseThemeIndex = baseThemeIndex {
+                    updatedThemeSpecificAccentColors[baseThemeIndex] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
+                }
+                
+                if autoNightModeTriggered {
+                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                    updatedAutomaticThemeSwitchSetting.theme = updatedTheme
+                    
+                    return current.withUpdatedAutomaticThemeSwitchSetting(updatedAutomaticThemeSwitchSetting).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
+                } else {
+                    return current.withUpdatedTheme(updatedTheme).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
+                }
+            }).start()
+            
+            return currentThemeBaseIndex != updatedThemeBaseIndex
+        } |> deliverOnMainQueue).start(next: { crossfadeAccentColors in
+            presentCrossfadeControllerImpl?((cloudTheme == nil || cloudTheme?.settings != nil) && !crossfadeAccentColors)
+        })
+    }
+    selectAccentColorImpl = { accentColor in
+        var wallpaperSignal: Signal<TelegramWallpaper?, NoError> = .single(nil)
+        if let colorWallpaper = accentColor?.wallpaper, case let .file(file) = colorWallpaper {
+            wallpaperSignal = cachedWallpaper(account: context.account, slug: file.slug, settings: colorWallpaper.settings)
+            |> mapToSignal { cachedWallpaper in
+                if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
+                    let resource = file.file.resource
+                    let representation = CachedPatternWallpaperRepresentation(color: file.settings.color ?? 0xd6e2ee, bottomColor: file.settings.bottomColor, intensity: file.settings.intensity ?? 50, rotation: file.settings.rotation)
+                    
+                    var data: Data?
+                    if let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                        data = maybeData
+                    } else if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                        data = maybeData
                     }
                     
-                    var theme = current.theme
-                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                    if autoNightModeTriggered {
-                        automaticThemeSwitchSetting.theme = updatedTheme
+                    if let data = data {
+                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                        return (context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                            |> filter({ $0.complete })
+                            |> take(1)
+                            |> mapToSignal { _ -> Signal<TelegramWallpaper?, NoError> in
+                                return .single(wallpaper)
+                            })
                     } else {
-                        theme = updatedTheme
+                        return .single(nil)
                     }
-                                                            
-                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                })
-            })
-        }).start()
+                } else {
+                    return .single(nil)
+                }
+            }
+        }
+        
+        let _ = (wallpaperSignal
+        |> deliverOnMainQueue).start(next: { presetWallpaper in
+            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+                var currentTheme = current.theme
+                if autoNightModeTriggered {
+                    currentTheme = current.automaticThemeSwitchSetting.theme
+                }
+                
+                let generalThemeReference: PresentationThemeReference
+                if case let .cloud(theme) = currentTheme, let settings = theme.theme.settings {
+                    generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+                } else {
+                    generalThemeReference = currentTheme
+                }
+                
+                currentTheme = generalThemeReference
+                var updatedTheme = current.theme
+                var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                
+                if autoNightModeTriggered {
+                    updatedAutomaticThemeSwitchSetting.theme = generalThemeReference
+                } else {
+                    updatedTheme = generalThemeReference
+                }
+                
+                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper) else {
+                    return current
+                }
+                
+                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                var themeSpecificAccentColors = current.themeSpecificAccentColors
+                themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
+                
+                if case let .builtin(theme) = generalThemeReference {
+                    if let wallpaper = current.themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)], wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
+                        themeSpecificChatWallpapers[currentTheme.index] = nil
+                        if let accentColor = accentColor {
+                            themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)] = nil
+                        }
+                    }
+                }
+                
+                return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+            }).start()
+            
+            presentCrossfadeControllerImpl?(true)
+        })
     }
     moreImpl = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -735,10 +1247,10 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_CreateTheme, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
             
-            let _ = (context.sharedContext.accountManager.transaction { transaction -> PresentationThemeReference? in
+            let _ = (context.sharedContext.accountManager.transaction { transaction -> PresentationThemeReference in
                 let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
                 
-                var themeReference: PresentationThemeReference?
+                let themeReference: PresentationThemeReference
                 let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
                 if autoNightModeTriggered {
                     themeReference = settings.automaticThemeSwitchSetting.theme
@@ -746,23 +1258,15 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     themeReference = settings.theme
                 }
                 
-                if let themeReference = themeReference, case .builtin = themeReference {
-                } else {
-                    themeReference = nil
-                }
                 return themeReference
             }
             |> deliverOnMainQueue).start(next: { themeReference in
-                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, defaultThemeReference: themeReference, completion: { result in
-                    let controller = editThemeController(context: context, mode: .create(result), navigateToChat: { peerId in
-                        if let navigationController = getNavigationControllerImpl?() {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                        }
-                    })
-                    pushControllerImpl?(controller)
-                }))
+                let controller = editThemeController(context: context, mode: .create(nil, nil), navigateToChat: { peerId in
+                    if let navigationController = getNavigationControllerImpl?() {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                    }
+                })
                 pushControllerImpl?(controller)
-                
             })
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -776,11 +1280,70 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 }
 
 public final class ThemeSettingsCrossfadeController: ViewController {
-    private let snapshotView: UIView?
+    private var snapshotView: UIView?
     
-    public init() {
-        self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
-        
+    private var topSnapshotView: UIView?
+    private var bottomSnapshotView: UIView?
+    private var sideSnapshotView: UIView?
+    
+    fileprivate var didAppear: (() -> Void)?
+    
+    public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil, leftOffset: CGFloat? = nil) {
+        if let view = view {
+            if var leftOffset = leftOffset {
+                leftOffset += UIScreenPixel
+                
+                if let view = view.snapshotView(afterScreenUpdates: false) {
+                    let clipView = UIView()
+                    clipView.clipsToBounds = true
+                    clipView.addSubview(view)
+                    
+                    view.clipsToBounds = true
+                    view.contentMode = .topLeft
+                    
+                    if let topOffset = topOffset, let bottomOffset = bottomOffset {
+                        var frame = view.frame
+                        frame.origin.y = topOffset
+                        frame.size.width = leftOffset
+                        frame.size.height = bottomOffset - topOffset
+                        clipView.frame = frame
+                        
+                        frame = view.frame
+                        frame.origin.y = -topOffset
+                        frame.size.width = leftOffset
+                        frame.size.height = bottomOffset
+                        view.frame = frame
+                    }
+                
+                    self.sideSnapshotView = clipView
+                }
+            }
+            
+            if let view = view.snapshotView(afterScreenUpdates: false) {
+                view.clipsToBounds = true
+                view.contentMode = .top
+                if let topOffset = topOffset {
+                    var frame = view.frame
+                    frame.size.height = topOffset
+                    view.frame = frame
+                }
+                self.topSnapshotView = view
+            }
+            
+            if let view = view.snapshotView(afterScreenUpdates: false) {
+                view.clipsToBounds = true
+                view.contentMode = .bottom
+                if let bottomOffset = bottomOffset {
+                    var frame = view.frame
+                    frame.origin.y = bottomOffset
+                    frame.size.height -= bottomOffset
+                    view.frame = frame
+                }
+                self.bottomSnapshotView = view
+            }
+        } else {
+            self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
+        }
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
@@ -799,6 +1362,15 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         if let snapshotView = self.snapshotView {
             self.displayNode.view.addSubview(snapshotView)
         }
+        if let topSnapshotView = self.topSnapshotView {
+            self.displayNode.view.addSubview(topSnapshotView)
+        }
+        if let bottomSnapshotView = self.bottomSnapshotView {
+            self.displayNode.view.addSubview(bottomSnapshotView)
+        }
+        if let sideSnapshotView = self.sideSnapshotView {
+             self.displayNode.view.addSubview(sideSnapshotView)
+         }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -807,5 +1379,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         self.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
+        
+        self.didAppear?()
     }
 }

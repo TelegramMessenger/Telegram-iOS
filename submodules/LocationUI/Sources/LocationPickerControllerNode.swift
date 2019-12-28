@@ -227,12 +227,14 @@ struct LocationPickerState {
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationPickerLocation
     var forceSelection: Bool
+    var searchingVenuesAround: Bool
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .none
         self.forceSelection = false
+        self.searchingVenuesAround = false
     }
 }
 
@@ -259,6 +261,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     private let statePromise: Promise<LocationPickerState>
     private var geocodingDisposable = MetaDisposable()
     
+    private let searchVenuesPromise = Promise<CLLocationCoordinate2D?>()
+    
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
         
@@ -277,10 +281,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
-        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, interaction: interaction)
+        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, showPlacesInThisArea: interaction.showPlacesInThisArea)
         self.headerNode.mapNode.isRotateEnabled = false
         
-        self.optionsNode = LocationOptionsNode(presentationData: presentationData, interaction: interaction)
+        self.optionsNode = LocationOptionsNode(presentationData: presentationData, updateMapMode: interaction.updateMapMode)
         
         self.activityIndicator = ActivityIndicator(type: .custom(self.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
         
@@ -302,28 +306,6 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.shadeNode)
         
         let userLocation: Signal<CLLocation?, NoError> = self.headerNode.mapNode.userLocation
-        let filteredUserLocation: Signal<CLLocation?, NoError> = userLocation
-        |> reduceLeft(value: nil) { current, updated, emit -> CLLocation? in
-            if let current = current {
-                if let updated = updated {
-                    if updated.distance(from: current) > 250 || (updated.horizontalAccuracy < 50.0 && updated.horizontalAccuracy < current.horizontalAccuracy) {
-                        emit(updated)
-                        return updated
-                    } else {
-                        return current
-                    }
-                } else {
-                    return current
-                }
-            } else {
-                if let updated = updated, updated.horizontalAccuracy > 0.0 {
-                    emit(updated)
-                    return updated
-                } else {
-                    return nil
-                }
-            }
-        }
         
         let personalAddresses = self.context.account.postbox.peerView(id: self.context.account.peerId)
         |> mapToSignal { view -> Signal<(DeviceContactAddressData?, DeviceContactAddressData?)?, NoError> in
@@ -407,7 +389,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         
         let venues: Signal<[TelegramMediaMap]?, NoError> = .single(nil)
         |> then(
-            filteredUserLocation
+            throttledUserLocation(userLocation)
             |> mapToSignal { location -> Signal<[TelegramMediaMap]?, NoError> in
                 if let location = location, location.horizontalAccuracy > 0 {
                     return combineLatest(nearbyVenues(account: context.account, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
@@ -430,14 +412,35 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
             }
         )
         
+        let foundVenues: Signal<([TelegramMediaMap], CLLocation)?, NoError> = .single(nil)
+        |> then(
+            self.searchVenuesPromise.get()
+            |> distinctUntilChanged
+            |> mapToSignal { coordinate -> Signal<([TelegramMediaMap], CLLocation)?, NoError> in
+                if let coordinate = coordinate {
+                    return (.single(nil)
+                    |> then(
+                        nearbyVenues(account: context.account, latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        |> map { venues -> ([TelegramMediaMap], CLLocation)? in
+                            return (venues, CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
+                        }
+                    ))
+                } else {
+                    return .single(nil)
+                }
+            }
+        )
+        
         let previousState = Atomic<LocationPickerState>(value: self.state)
         let previousUserLocation = Atomic<CLLocation?>(value: nil)
         let previousAnnotations = Atomic<[LocationPinAnnotation]>(value: [])
         let previousEntries = Atomic<[LocationPickerEntry]?>(value: nil)
         
-        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), userLocation, venues)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues in
+        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), userLocation, venues, foundVenues)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues, foundVenuesAndLocation in
             if let strongSelf = self {
+                let (foundVenues, foundVenuesLocation) = foundVenuesAndLocation ?? (nil, nil)
+                
                 var entries: [LocationPickerEntry] = []
                 switch state.selectedLocation {
                     case let .location(coordinate, address):
@@ -484,7 +487,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
                 
-                if let venues = venues {
+                var displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
+                if let venues = displayedVenues {
                     var index: Int = 0
                     for venue in venues {
                         entries.append(.venue(presentationData.theme, venue, index))
@@ -502,11 +506,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                     crossFade = true
                 }
                 
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: venues == nil, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: displayedVenues == nil, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
-                
-                strongSelf.headerNode.updateState(state)
-                
+                      
+                var displayingPlacesButton = false
                 let previousUserLocation = previousUserLocation.swap(userLocation)
                 switch state.selectedLocation {
                     case .none:
@@ -516,7 +519,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
                     case .selecting:
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
-                    case let .location(coordinate, _):
+                    case let .location(coordinate, address):
                         var updateMap = false
                         switch previousState.selectedLocation {
                             case .none, .venue:
@@ -529,16 +532,29 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                                 break
                         }
                         if updateMap {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, animated: true)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, isUserLocation: false, hidePicker: false, animated: true)
                             strongSelf.headerNode.mapNode.switchToPicking(animated: false)
                         }
+                    
+                        if address != nil {
+                            if foundVenues == nil && !state.searchingVenuesAround {
+                                displayingPlacesButton = true
+                            } else if let previousLocation = foundVenuesLocation {
+                                let currentLocation =  CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                                if currentLocation.distance(from: previousLocation) > 300 {
+                                    displayingPlacesButton = true
+                                }
+                            }
+                        }
                     case let .venue(venue):
-                        strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, animated: true)
+                        strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, hidePicker: true, animated: true)
                 }
                 
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: displayingPlacesButton, animated: true)
+                
                 let annotations: [LocationPinAnnotation]
-                if let venues = venues {
-                    annotations = venues.compactMap { LocationPinAnnotation(account: context.account, theme: presentationData.theme, location: $0) }
+                if let venues = displayedVenues {
+                    annotations = venues.compactMap { LocationPinAnnotation(context: context, theme: presentationData.theme, location: $0) }
                 } else {
                     annotations = []
                 }
@@ -554,6 +570,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                     if previousState.displayingMapModeOptions != state.displayingMapModeOptions {
                         updateLayout = true
                     } else if previousState.selectedLocation.isCustom != state.selectedLocation.isCustom {
+                        updateLayout = true
+                    } else if previousState.searchingVenuesAround != state.searchingVenuesAround {
                         updateLayout = true
                     }
                     
@@ -584,7 +602,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         })
         
         if case let .share(_, selfPeer, _) = self.mode, let peer = selfPeer {
-            self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(account: context.account, theme: self.presentationData.theme, peer: peer)
+            self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(context: context, theme: self.presentationData.theme, peer: peer)
             self.headerNode.mapNode.hasPickerAnnotation = true
         }
         
@@ -619,6 +637,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .selecting
+                state.searchingVenuesAround = false
                 return state
             }
         }
@@ -631,6 +650,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 var state = state
                 if case .selecting = state.selectedLocation {
                     state.selectedLocation = .location(coordinate, nil)
+                    state.searchingVenuesAround = false
                 }
                 return state
             }
@@ -644,19 +664,16 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = annotation?.location.flatMap { .venue($0) } ?? .none
+                if annotation == nil {
+                    state.searchingVenuesAround = false
+                }
                 return state
             }
         }
         
         self.headerNode.mapNode.userLocationAnnotationSelected = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.updateState { state in
-                var state = state
-                state.displayingMapModeOptions = false
-                state.selectedLocation = .none
-                return state
+            if let strongSelf = self {
+                strongSelf.goToUserLocation()
             }
         }
     }
@@ -768,7 +785,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = (layout, navigationHeight)
         
-        let isPickingLocation = self.state.selectedLocation.isCustom || self.state.forceSelection
+        let isPickingLocation = (self.state.selectedLocation.isCustom || self.state.forceSelection) && !self.state.searchingVenuesAround
         let optionsHeight: CGFloat = 38.0
         var actionHeight: CGFloat?
         self.listNode.forEachItemNode { itemNode in
@@ -840,5 +857,28 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     func updateSendActionHighlight(_ highlighted: Bool) {
         self.headerNode.updateHighlight(highlighted)
         self.shadeNode.backgroundColor = highlighted ? self.presentationData.theme.list.itemHighlightedBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
+    }
+    
+    func goToUserLocation() {
+        self.searchVenuesPromise.set(.single(nil))
+        self.updateState { state in
+            var state = state
+            state.displayingMapModeOptions = false
+            state.selectedLocation = .none
+            state.searchingVenuesAround = false
+            return state
+        }
+    }
+    
+    func requestPlacesAtSelectedLocation() {
+        if case let .location(coordinate, _) = self.state.selectedLocation {
+            self.headerNode.mapNode.setMapCenter(coordinate: coordinate, animated: true)
+            self.searchVenuesPromise.set(.single(coordinate))
+            self.updateState { state in
+                 var state = state
+                 state.searchingVenuesAround = true
+                 return state
+             }
+        }
     }
 }

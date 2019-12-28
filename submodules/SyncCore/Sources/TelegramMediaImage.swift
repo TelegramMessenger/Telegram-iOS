@@ -39,6 +39,16 @@ public enum TelegramMediaImageReference: PostboxCoding, Equatable {
     }
 }
 
+public struct TelegramMediaImageFlags: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let hasStickers = TelegramMediaImageFlags(rawValue: 1 << 0)
+}
+
 public final class TelegramMediaImage: Media, Equatable {
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
@@ -46,17 +56,19 @@ public final class TelegramMediaImage: Media, Equatable {
     public let reference: TelegramMediaImageReference?
     public let partialReference: PartialMediaReference?
     public let peerIds: [PeerId] = []
+    public let flags: TelegramMediaImageFlags
     
     public var id: MediaId? {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
         self.imageId = imageId
         self.representations = representations
         self.immediateThumbnailData = immediateThumbnailData
         self.reference = reference
         self.partialReference = partialReference
+        self.flags = flags
     }
     
     public init(decoder: PostboxDecoder) {
@@ -65,6 +77,7 @@ public final class TelegramMediaImage: Media, Equatable {
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
+        self.flags = TelegramMediaImageFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -87,6 +100,7 @@ public final class TelegramMediaImage: Media, Equatable {
         } else {
             encoder.encodeNil(forKey: "prf")
         }
+        encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
     }
     
     public func representationForDisplayAtSize(_ size: PixelDimensions) -> TelegramMediaImageRepresentation? {
@@ -130,6 +144,9 @@ public final class TelegramMediaImage: Media, Equatable {
             if self.partialReference != other.partialReference {
                 return false
             }
+            if self.flags != other.flags {
+                return false
+            }
             return true
         }
         return false
@@ -152,6 +169,9 @@ public final class TelegramMediaImage: Media, Equatable {
             if self.partialReference != other.partialReference {
                 return false
             }
+            if self.flags != other.flags {
+                return false
+            }
             return true
         }
         return false
@@ -162,7 +182,7 @@ public final class TelegramMediaImage: Media, Equatable {
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
-        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference)
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags)
     }
 }
 

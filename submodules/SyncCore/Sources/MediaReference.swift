@@ -142,6 +142,39 @@ public enum WebpageReferenceContent: PostboxCoding, Hashable, Equatable {
     }
 }
 
+public enum ThemeReference: PostboxCoding, Hashable, Equatable {
+    case slug(String)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+            case 0:
+                self = .slug(decoder.decodeStringForKey("s", orElse: ""))
+            default:
+                self = .slug("")
+                assertionFailure()
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case let .slug(slug):
+                encoder.encodeInt32(0, forKey: "r")
+                encoder.encodeString(slug, forKey: "s")
+        }
+    }
+    
+    public static func ==(lhs: ThemeReference, rhs: ThemeReference) -> Bool {
+        switch lhs {
+            case let .slug(slug):
+                if case .slug(slug) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 public enum AnyMediaReference: Equatable {
     case standalone(media: Media)
     case message(message: MessageReference, media: Media)
@@ -430,6 +463,7 @@ public enum MediaResourceReference: Equatable {
     case messageAuthorAvatar(message: MessageReference, resource: MediaResource)
     case wallpaper(resource: MediaResource)
     case stickerPackThumbnail(stickerPack: StickerPackReference, resource: MediaResource)
+    case theme(theme: ThemeReference, resource: MediaResource)
     
     public var resource: MediaResource {
         switch self {
@@ -444,6 +478,8 @@ public enum MediaResourceReference: Equatable {
             case let .wallpaper(resource):
                 return resource
             case let .stickerPackThumbnail(_, resource):
+                return resource
+            case let .theme(_, resource):
                 return resource
         }
     }
@@ -482,6 +518,12 @@ public enum MediaResourceReference: Equatable {
             }
         case let .stickerPackThumbnail(lhsStickerPack, lhsResource):
             if case let .stickerPackThumbnail(rhsStickerPack, rhsResource) = rhs, lhsStickerPack == rhsStickerPack, lhsResource.isEqual(to: rhsResource) {
+                return true
+            } else {
+                return false
+            }
+        case let .theme(lhsTheme, lhsResource):
+            if case let .theme(rhsTheme, rhsResource) = rhs, lhsTheme == rhsTheme, lhsResource.isEqual(to: rhsResource) {
                 return true
             } else {
                 return false

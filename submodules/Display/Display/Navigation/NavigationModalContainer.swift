@@ -87,6 +87,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.clipsToBounds = false
         self.scrollNode.view.delegate = self
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), canBegin: { [weak self] in
@@ -299,12 +300,17 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.ignoreScrolling = true
         self.scrollNode.view.isScrollEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0) && self.isInteractiveDimissEnabled
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: self.horizontalDismissOffset ?? 0.0, y: 0.0), size: layout.size))
+        let previousBounds = self.scrollNode.bounds
+        let scrollNodeFrame = CGRect(origin: CGPoint(x: self.horizontalDismissOffset ?? 0.0, y: 0.0), size: layout.size)
+        self.scrollNode.frame = scrollNodeFrame
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: layout.size.height * 2.0)
         if !self.scrollNode.view.isDecelerating && !self.scrollNode.view.isDragging {
             let defaultBounds = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
             if self.scrollNode.bounds != defaultBounds {
                 self.scrollNode.bounds = defaultBounds
+            }
+            if previousBounds.minY != defaultBounds.minY {
+                transition.animateOffsetAdditive(node: self.scrollNode, offset: previousBounds.minY - defaultBounds.minY)
             }
         }
         self.ignoreScrolling = false

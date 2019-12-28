@@ -10,6 +10,7 @@ import CoreImage
 import AlertUI
 import TelegramPresentationData
 import TelegramCore
+import UndoUI
 
 private func parseAuthTransferUrl(_ url: URL) -> Data? {
     var tokenString: String?
@@ -72,14 +73,18 @@ private func generateFrameImage() -> UIImage? {
 
 public final class AuthTransferScanScreen: ViewController {
     private let context: AccountContext
-    private let activeSessionsContext: ActiveSessionsContext?
+    private let activeSessionsContext: ActiveSessionsContext
     private var presentationData: PresentationData
     
     private var codeDisposable: Disposable?
     private var inForegroundDisposable: Disposable?
     private let approveDisposable = MetaDisposable()
     
-    public init(context: AccountContext, activeSessionsContext: ActiveSessionsContext?) {
+    private var controllerNode: AuthTransferScanScreenNode {
+        return self.displayNode as! AuthTransferScanScreenNode
+    }
+    
+    public init(context: AccountContext, activeSessionsContext: ActiveSessionsContext) {
         self.context = context
         self.activeSessionsContext = activeSessionsContext
         
@@ -95,7 +100,7 @@ public final class AuthTransferScanScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.inForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> deliverOnMainQueue).start(next: { [weak self] inForeground in
@@ -104,6 +109,10 @@ public final class AuthTransferScanScreen: ViewController {
             }
             (strongSelf.displayNode as! AuthTransferScanScreenNode).updateInForeground(inForeground)
         })
+        
+        #if DEBUG
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Test", style: .plain, target: self, action: #selector(self.testPressed))
+        #endif
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -116,8 +125,38 @@ public final class AuthTransferScanScreen: ViewController {
         self.approveDisposable.dispose()
     }
     
-    @objc private func backPressed() {
-        self.dismiss()
+    @objc private func testPressed() {
+        self.dismissWithSuccess(session: nil)
+    }
+    
+    private func dismissWithSuccess(session: RecentAccountSession?) {
+        if let navigationController = navigationController as? NavigationController {
+            let activeSessionsContext = self.activeSessionsContext
+            
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: self.presentationData.strings.AuthSessions_AddedDeviceTitle, text: session?.appName ?? "Telegram for macOS", cancel: self.presentationData.strings.AuthSessions_AddedDeviceTerminate), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                if value == .undo, let session = session {
+                    let _ = activeSessionsContext.remove(hash: session.hash).start()
+                    return true
+                } else {
+                    return false
+                }
+            }), in: .window(.root))
+            
+            var viewControllers = navigationController.viewControllers
+            viewControllers = viewControllers.filter { controller in
+                if controller is RecentSessionsController {
+                    return false
+                }
+                if controller === self {
+                    return false
+                }
+                return true
+            }
+            viewControllers.append(self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext))
+            navigationController.setViewControllers(viewControllers, animated: true)
+        } else {
+            self.dismiss()
+        }
     }
     
     override public func loadDisplayNode() {
@@ -134,42 +173,31 @@ public final class AuthTransferScanScreen: ViewController {
             return .single(code)
             |> delay(0.5, queue: Queue.mainQueue())
         }).start(next: { [weak self] code in
-            guard let strongSelf = self, let code = code else {
+            guard let strongSelf = self else {
+                return
+            }
+            guard let code = code else {
                 return
             }
             if let url = URL(string: code), let parsedToken = parseAuthTransferUrl(url) {
-                let _ = (getAuthTransferTokenInfo(network: strongSelf.context.account.network, token: parsedToken)
-                |> deliverOnMainQueue).start(next: { tokenInfo in
+                strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken, activeSessionsContext: strongSelf.activeSessionsContext)
+                |> deliverOnMainQueue).start(next: { session in
                     guard let strongSelf = self else {
                         return
                     }
-                    (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: AuthTransferConfirmationNode(context: strongSelf.context, presentationData: strongSelf.presentationData, tokenInfo: tokenInfo, accept: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.approveDisposable.set((approveAuthTransferToken(account: strongSelf.context.account, token: parsedToken)
-                        |> deliverOnMainQueue).start(error: { _ in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: nil)
-                        }, completed: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let activeSessionsContext = strongSelf.activeSessionsContext
-                            Queue.mainQueue().after(1.5, {
-                                activeSessionsContext?.loadMore()
-                            })
-                            strongSelf.dismiss()
-                        }))
-                    }, cancel: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        (strongSelf.displayNode as! AuthTransferScanScreenNode).updateTokenPreview(confirmationNode: nil)
-                    }))
-                })
+                    strongSelf.controllerNode.codeWithError = nil
+                    let activeSessionsContext = strongSelf.activeSessionsContext
+                    Queue.mainQueue().after(1.5, {
+                        activeSessionsContext.loadMore()
+                    })
+                    strongSelf.dismissWithSuccess(session: session)
+                }, error: { _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.controllerNode.codeWithError = code
+                    strongSelf.controllerNode.updateFocusedRect(nil)
+                }))
             }
         })
     }
@@ -195,7 +223,7 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
     private let torchButtonNode: GlassButtonNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
-    private let descriptionNode: ImmediateTextNode
+    private let errorTextNode: ImmediateTextNode
     
     private let camera: Camera
     private let codeDisposable = MetaDisposable()
@@ -203,9 +231,19 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
     fileprivate let focusedCode = ValuePromise<CameraCode?>(ignoreRepeated: true)
     private var focusedRect: CGRect?
     
-    private(set) var confirmationNode: AuthTransferConfirmationNode?
-    
     private var validLayout: (ContainerViewLayout, CGFloat)?
+    
+    var codeWithError: String? {
+        didSet {
+            if self.codeWithError != oldValue {
+                if self.codeWithError != nil {
+                    self.errorTextNode.isHidden = false
+                } else {
+                    self.errorTextNode.isHidden = true
+                }
+            }
+        }
+    }
     
     init(presentationData: PresentationData) {
         self.presentationData = presentationData
@@ -254,11 +292,12 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
         
-        self.descriptionNode = ImmediateTextNode()
-        self.descriptionNode.displaysAsynchronously = false
-        self.descriptionNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_ScanApps, font: Font.regular(14.0), textColor: .white)
-        self.descriptionNode.maximumNumberOfLines = 0
-        self.descriptionNode.textAlignment = .center
+        self.errorTextNode = ImmediateTextNode()
+        self.errorTextNode.displaysAsynchronously = false
+        self.errorTextNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_InvalidQRCode, font: Font.medium(16.0), textColor: .white)
+        self.errorTextNode.maximumNumberOfLines = 0
+        self.errorTextNode.textAlignment = .center
+        self.errorTextNode.isHidden = true
         
         self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false))
         
@@ -274,10 +313,10 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.addSubnode(self.rightDimNode)
         self.addSubnode(self.centerDimNode)
         self.addSubnode(self.frameNode)
-        //self.addSubnode(self.torchButtonNode)
+        self.addSubnode(self.torchButtonNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
-        self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.errorTextNode)
       
         self.torchButtonNode.addTarget(self, action: #selector(self.torchPressed), forControlEvents: .touchUpInside)
     }
@@ -313,41 +352,28 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
             }
             let filteredCodes = codes.filter { $0.message.hasPrefix("tg://") }
             if let code = filteredCodes.first, CGRect(x: 0.3, y: 0.3, width: 0.4, height: 0.4).contains(code.boundingBox.center) {
-                strongSelf.focusedCode.set(code)
-                strongSelf.updateFocusedRect(code.boundingBox)
+                if strongSelf.codeWithError != code.message {
+                    strongSelf.codeWithError = nil
+                }
+                if strongSelf.codeWithError == code.message {
+                    strongSelf.focusedCode.set(nil)
+                    strongSelf.updateFocusedRect(nil)
+                } else {
+                    strongSelf.focusedCode.set(code)
+                    strongSelf.updateFocusedRect(code.boundingBox)
+                }
             } else {
+                strongSelf.codeWithError = nil
                 strongSelf.focusedCode.set(nil)
                 strongSelf.updateFocusedRect(nil)
             }
         }))
     }
     
-    private func updateFocusedRect(_ rect: CGRect?) {
+    func updateFocusedRect(_ rect: CGRect?) {
         self.focusedRect = rect
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
-        }
-    }
-    
-    func updateTokenPreview(confirmationNode: AuthTransferConfirmationNode?) {
-        if let confirmationNode = self.confirmationNode {
-            confirmationNode.animateOut { [weak confirmationNode] in
-                confirmationNode?.removeFromSupernode()
-            }
-            self.confirmationNode = nil
-        }
-        self.confirmationNode = confirmationNode
-        if let confirmationNode = self.confirmationNode {
-            self.addSubnode(confirmationNode)
-            if let (layout, navigationHeight) = self.validLayout {
-                confirmationNode.updateLayout(layout: layout, transition: .immediate)
-                confirmationNode.animateIn()
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-            }
-        } else {
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-            }
         }
     }
     
@@ -379,19 +405,7 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         let controlsAlpha: CGFloat
         var centerDimAlpha: CGFloat = 0.0
         var frameAlpha: CGFloat = 1.0
-        if self.confirmationNode != nil {
-            controlsAlpha = 0.0
-            dimAlpha = 0.625
-            centerDimAlpha = 0.625
-            frameAlpha = 0.0
-            if let focusedRect = self.focusedRect {
-                let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
-                let center = CGPoint(x: (1.0 - focusedRect.center.y) * bounds.width, y: focusedRect.center.x * bounds.height)
-                dimRect = CGRect(x: center.x - side / 2.0, y: center.y - side / 2.0, width: side, height: side)
-            } else {
-                dimRect = CGRect(x: dimInset, y: dimHeight, width: layout.size.width - dimInset * 2.0, height: layout.size.height - dimHeight * 2.0)
-            }
-        } else if let focusedRect = self.focusedRect {
+        if let focusedRect = self.focusedRect {
             controlsAlpha = 0.0
             dimAlpha = 1.0
             let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
@@ -418,26 +432,31 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateFrame(node: self.centerDimNode, frame: dimRect)
         
         let buttonSize = CGSize(width: 72.0, height: 72.0)
-        transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 50.0), size: buttonSize))
+        var torchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 98.0), size: buttonSize)
+        let updatedTorchY = min(torchFrame.minY, layout.size.height - torchFrame.height - 10.0)
+        let additionalTorchOffset: CGFloat = updatedTorchY - torchFrame.minY
+        torchFrame.origin.y = updatedTorchY
+        transition.updateFrame(node: self.torchButtonNode, frame: torchFrame)
         
-        transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
-        transition.updateAlpha(node: self.descriptionNode, alpha: controlsAlpha)
+        transition.updateAlpha(node: self.errorTextNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
+        let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: dimHeight - textSize.height - titleSpacing), size: textSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
-        let descriptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - descriptionSize.width) / 2.0), y: layout.size.height - dimHeight + titleSpacing), size: descriptionSize)
+        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
+        if titleFrame.minY < navigationHeight {
+            transition.updateAlpha(node: self.titleNode, alpha: 0.0)
+        } else {
+            transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
+        }
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
-        transition.updateFrameAdditive(node: self.descriptionNode, frame: descriptionFrame)
-        
-        if let confirmationNode = self.confirmationNode {
-            confirmationNode.updateLayout(layout: layout, transition: transition)
-        }
+        transition.updateFrameAdditive(node: self.errorTextNode, frame: errorTextFrame)
     }
     
     @objc private func torchPressed() {

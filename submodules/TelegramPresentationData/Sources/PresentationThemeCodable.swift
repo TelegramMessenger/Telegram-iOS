@@ -39,8 +39,10 @@ extension TelegramWallpaper: Codable {
                 case "builtin":
                     self = .builtin(WallpaperSettings())
                 default:
-                    if [6,7].contains(value.count), let color = UIColor(hexString: value) {
-                        self = .color(Int32(bitPattern: color.rgb))
+                    let optionKeys = ["motion", "blur"]
+                    
+                    if [6, 8].contains(value.count), let color = UIColor(hexString: value) {
+                        self = .color(color.argb)
                     } else {
                         let components = value.components(separatedBy: " ")
                         var blur = false
@@ -52,28 +54,55 @@ extension TelegramWallpaper: Codable {
                             blur = true
                         }
                         
-                        if components.count >= 2 && components.count <= 4 && [6,7].contains(components[0].count) && !["motion", "blur"].contains(components[0]) && [6,7].contains(components[1].count) && !["motion", "blur"].contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
-                            self = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings(blur: blur, motion: motion))
+                        if components.count >= 2 && components.count <= 5 && components[0].count == 6 && !optionKeys.contains(components[0]) && components[1].count == 6 && !optionKeys.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
+                            
+                            var rotation: Int32?
+                            if components.count > 2, components[2].count <= 3, let value = Int32(components[2]) {
+                                if value >= 0 && value < 360 {
+                                    rotation = value
+                                }
+                            }
+                            
+                            self = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
                         } else {
                             var slug: String?
-                            var color: Int32?
+                            var color: UInt32?
+                            var bottomColor: UInt32?
                             var intensity: Int32?
+                            var rotation: Int32?
 
                             if !components.isEmpty {
                                 slug = components[0]
                             }
-                            if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
-                                color = Int32(bitPattern: value.rgb)
-                            }
-                            if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
-                                if value >= 0 && value <= 100 {
-                                    intensity = value
-                                } else {
-                                    intensity = 50
+                            if components.count > 1 {
+                                for i in 1 ..< components.count {
+                                    let component = components[i]
+                                    if optionKeys.contains(component) {
+                                        continue
+                                    }
+                                    if [6, 8].contains(component.count), let value = UIColor(hexString: component) {
+                                        if color == nil {
+                                            color = value.argb
+                                        } else if bottomColor == nil {
+                                            bottomColor = value.argb
+                                        }
+                                    } else if component.count <= 3, let value = Int32(component) {
+                                        if intensity == nil {
+                                            if value >= 0 && value <= 100 {
+                                                intensity = value
+                                            } else {
+                                                intensity = 50
+                                            }
+                                        } else if rotation == nil {
+                                            if value >= 0 && value < 360 {
+                                                rotation = value
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, bottomColor: bottomColor, intensity: intensity, rotation: rotation))
                             } else {
                                 throw PresentationThemeDecodingError.generic
                             }
@@ -96,6 +125,9 @@ extension TelegramWallpaper: Codable {
                 var components: [String] = []
                 components.append(String(format: "%06x", topColor))
                 components.append(String(format: "%06x", bottomColor))
+                if let rotation = settings.rotation {
+                    components.append("\(rotation)")
+                }
                 if settings.motion {
                     components.append("motion")
                 }
@@ -106,12 +138,18 @@ extension TelegramWallpaper: Codable {
             case let .file(file):
                 var components: [String] = []
                 components.append(file.slug)
-                if file.isPattern {
+                if self.isPattern {
                     if let color = file.settings.color {
                         components.append(String(format: "%06x", color))
                     }
                     if let intensity = file.settings.intensity {
                         components.append("\(intensity)")
+                    }
+                    if let bottomColor = file.settings.bottomColor {
+                        components.append(String(format: "%06x", bottomColor))
+                    }
+                    if let rotation = file.settings.rotation, rotation != 0 {
+                        components.append("\(rotation)")
                     }
                 }
                 if file.settings.motion {
@@ -1280,6 +1318,7 @@ extension PresentationThemeChatInputPanelMediaRecordingControl: Codable {
 extension PresentationThemeChatInputPanel: Codable {
     enum CodingKeys: String, CodingKey {
         case panelBg
+        case panelBgNoWallpaper
         case panelSeparator
         case panelControlAccent
         case panelControl
@@ -1300,7 +1339,9 @@ extension PresentationThemeChatInputPanel: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(panelBackgroundColor: try decodeColor(values, .panelBg),
+                  panelBackgroundColorNoWallpaper: try decodeColor(values, .panelBg, decoder: decoder, fallbackKey: codingPath + ".panelBgNoWallpaper"),
                   panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelControlAccentColor: try decodeColor(values, .panelControlAccent),
                   panelControlColor: try decodeColor(values, .panelControl),
@@ -1685,12 +1726,17 @@ extension PresentationTheme: Codable {
             referenceTheme = .dayClassic
         }
         
+        let index: Int64
         if let decoder = decoder as? PresentationThemeDecoding {
             let serviceBackgroundColor = decoder.serviceBackgroundColor ?? defaultServiceBackgroundColor
             decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, serviceBackgroundColor: serviceBackgroundColor)
+            index = decoder.reference?.index ?? arc4random64()
+        } else {
+            index = arc4random64()
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),
+                  index: index,
                   referenceTheme: referenceTheme,
                   overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
                   intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),

@@ -527,7 +527,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         }),
         SettingsSearchableItem(id: .privacy(7), title: passcodeTitle, alternate: passcodeAlternate, icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             let _ = passcodeOptionsAccessController(context: context, pushController: { c in 
-                
+                present(.push, c)
             }, completion: { animated in
                 let controller = passcodeOptionsController(context: context)
                 if animated {
@@ -537,7 +537,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
                 }
             }).start(next: { controller in
                 if let controller = controller {
-                    present(.modal, controller)
+                    present(.push, controller)
                 }
             })
         }),
@@ -545,7 +545,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             present(.push, twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: true, data: nil)))
         }),
         SettingsSearchableItem(id: .privacy(9), title: strings.PrivacySettings_AuthSessions, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, recentSessionsController(context: context, activeSessionsContext: ActiveSessionsContext(account: context.account)))
+            present(.push, recentSessionsController(context: context, activeSessionsContext: ActiveSessionsContext(account: context.account), webSessionsContext: WebSessionsContext(account: context.account), websitesOnly: true))
         }),
         SettingsSearchableItem(id: .privacy(10), title: strings.PrivacySettings_DeleteAccountTitle, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_DeleteAccountIfAwayFor), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentPrivacySettings(context, present, .accountTimeout)
@@ -887,7 +887,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     present(.push, controller)
-                }, dismissInput: {})
+                }, dismissInput: {}, contentContext: nil)
             })
         })
         allItems.append(faq)

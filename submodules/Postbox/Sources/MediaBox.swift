@@ -85,6 +85,9 @@ public enum MediaResourceDataFetchError {
 }
 
 public enum CachedMediaResourceRepresentationResult {
+    case reset
+    case data(Data)
+    case done
     case temporaryPath(String)
     case tempFile(TempBoxFile)
 }
@@ -107,9 +110,19 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
     }
 }
 
+private final class CachedMediaResourceRepresentationSubscriber {
+    let update: (MediaResourceData) -> Void
+    let onlyComplete: Bool
+    
+    init(update: @escaping (MediaResourceData) -> Void, onlyComplete: Bool) {
+        self.update = update
+        self.onlyComplete = onlyComplete
+    }
+}
+
 private final class CachedMediaResourceRepresentationContext {
     var currentData: MediaResourceData?
-    let dataSubscribers = Bag<(MediaResourceData) -> Void>()
+    let dataSubscribers = Bag<CachedMediaResourceRepresentationSubscriber>()
     let disposable = MetaDisposable()
     var initialized = false
 }
@@ -191,7 +204,7 @@ public final class MediaBox {
         return ResourceStorePaths(partial: "\(self.basePath)/\(fileNameForId(id))_partial", complete: "\(self.basePath)/\(fileNameForId(id))")
     }
     
-    private func cachedRepresentationPathForId(_ id: MediaResourceId, representation: CachedMediaResourceRepresentation) -> String {
+    private func cachedRepresentationPathsForId(_ id: MediaResourceId, representation: CachedMediaResourceRepresentation) -> ResourceStorePaths {
         let cacheString: String
         switch representation.keepDuration {
             case .general:
@@ -199,7 +212,7 @@ public final class MediaBox {
             case .shortLived:
                 cacheString = "short-cache"
         }
-        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
+        return ResourceStorePaths(partial:  "\(self.basePath)/\(cacheString)/\(fileNameForId(id))_partial:\(representation.uniqueId)", complete: "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)")
     }
     
     public func storeResourceData(_ id: MediaResourceId, data: Data, synchronous: Bool = false) {
@@ -229,11 +242,16 @@ public final class MediaBox {
     }
     
     public func moveResourceData(from: MediaResourceId, to: MediaResourceId) {
+        if from.isEqual(to: to) {
+            return
+        }
         self.dataQueue.async {
             let pathsFrom = self.storePathsForId(from)
             let pathsTo = self.storePathsForId(to)
             link(pathsFrom.partial, pathsTo.partial)
             link(pathsFrom.complete, pathsTo.complete)
+            unlink(pathsFrom.partial)
+            unlink(pathsFrom.complete)
         }
     }
     
@@ -657,7 +675,7 @@ public final class MediaBox {
     
     public func storeCachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, data: Data) {
         self.dataQueue.async {
-            let path = self.cachedRepresentationPathForId(resource.id, representation: representation)
+            let path = self.cachedRepresentationPathsForId(resource.id, representation: representation).complete
             let _ = try? data.write(to: URL(fileURLWithPath: path))
         }
     }
@@ -667,26 +685,26 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             let begin: () -> Void = {
-                let path = self.cachedRepresentationPathForId(resource.id, representation: representation)
-                if let size = fileSize(path) {
+                let paths = self.cachedRepresentationPathsForId(resource.id, representation: representation)
+                if let size = fileSize(paths.complete) {
                     self.timeBasedCleanup.touch(paths: [
-                        path
+                        paths.complete
                     ])
                     
                     if let pathExtension = pathExtension {
-                        let symlinkPath = path + ".\(pathExtension)"
+                        let symlinkPath = paths.complete + ".\(pathExtension)"
                         if fileSize(symlinkPath) == nil {
-                            let _ = try? FileManager.default.linkItem(atPath: path, toPath: symlinkPath)
+                            let _ = try? FileManager.default.linkItem(atPath: paths.complete, toPath: symlinkPath)
                         }
                         subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: size, complete: true))
                         subscriber.putCompletion()
                     } else {
-                        subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
+                        subscriber.putNext(MediaResourceData(path: paths.complete, offset: 0, size: size, complete: true))
                         subscriber.putCompletion()
                     }
                 } else if fetch {
                     if attemptSynchronously && complete {
-                        subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
+                        subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                     }
                     self.dataQueue.async {
                         let key = CachedMediaResourceRepresentationKey(resourceId: resource.id, representation: representation)
@@ -698,7 +716,7 @@ public final class MediaBox {
                             self.cachedRepresentationContexts[key] = context
                         }
                         
-                        let index = context.dataSubscribers.add(({ data in
+                        let index = context.dataSubscribers.add(CachedMediaResourceRepresentationSubscriber(update: { data in
                             if !complete || data.complete {
                                 if let pathExtension = pathExtension, data.complete {
                                     let symlinkPath = data.path + ".\(pathExtension)"
@@ -713,7 +731,7 @@ public final class MediaBox {
                             if data.complete {
                                 subscriber.putCompletion()
                             }
-                        }))
+                        }, onlyComplete: complete))
                         if let currentData = context.currentData {
                             if !complete || currentData.complete {
                                 subscriber.putNext(currentData)
@@ -722,7 +740,7 @@ public final class MediaBox {
                                 subscriber.putCompletion()
                             }
                         } else if !complete {
-                            subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
+                            subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                         }
                         
                         disposable.set(ActionDisposable { [weak context] in
@@ -747,32 +765,65 @@ public final class MediaBox {
                             }
                             |> deliverOn(self.dataQueue)
                             context.disposable.set(signal.start(next: { [weak self, weak context] next in
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 if let next = next {
+                                    var isDone = false
                                     switch next {
-                                        case let .temporaryPath(temporaryPath):
-                                            rename(temporaryPath, path)
-                                        case let .tempFile(tempFile):
-                                            rename(tempFile.path, path)
-                                            TempBox.shared.dispose(tempFile)
+                                    case let .temporaryPath(temporaryPath):
+                                        rename(temporaryPath, paths.complete)
+                                        isDone = true
+                                    case let .tempFile(tempFile):
+                                        rename(tempFile.path, paths.complete)
+                                        TempBox.shared.dispose(tempFile)
+                                        isDone = true
+                                    case .reset:
+                                        let file = ManagedFile(queue: strongSelf.dataQueue, path: paths.partial, mode: .readwrite)
+                                        file?.truncate(count: 0)
+                                        unlink(paths.complete)
+                                    case let .data(dataPart):
+                                        let file = ManagedFile(queue: strongSelf.dataQueue, path: paths.partial, mode: .append)
+                                        let dataCount = dataPart.count
+                                        dataPart.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                                            file?.write(bytes, count: dataCount)
+                                        }
+                                    case .done:
+                                        link(paths.partial, paths.complete)
+                                        isDone = true
                                     }
                                     
                                     if let strongSelf = self, let currentContext = strongSelf.cachedRepresentationContexts[key], currentContext === context {
-                                        currentContext.disposable.dispose()
-                                        strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
-                                        if let size = fileSize(path) {
-                                            let data = MediaResourceData(path: path, offset: 0, size: size, complete: true)
+                                        if isDone {
+                                            currentContext.disposable.dispose()
+                                            strongSelf.cachedRepresentationContexts.removeValue(forKey: key)
+                                        }
+                                        if let size = fileSize(paths.complete) {
+                                            let data = MediaResourceData(path: paths.complete, offset: 0, size: size, complete: isDone)
                                             currentContext.currentData = data
                                             for subscriber in currentContext.dataSubscribers.copyItems() {
-                                                subscriber(data)
+                                                if !subscriber.onlyComplete || isDone {
+                                                    subscriber.update(data)
+                                                }
+                                            }
+                                        } else if let size = fileSize(paths.partial) {
+                                            let data = MediaResourceData(path: paths.partial, offset: 0, size: size, complete: isDone)
+                                            currentContext.currentData = data
+                                            for subscriber in currentContext.dataSubscribers.copyItems() {
+                                                if !subscriber.onlyComplete || isDone {
+                                                    subscriber.update(data)
+                                                }
                                             }
                                         }
                                     }
                                 } else {
                                     if let strongSelf = self, let context = strongSelf.cachedRepresentationContexts[key] {
-                                        let data = MediaResourceData(path: path, offset: 0, size: 0, complete: false)
+                                        let data = MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false)
                                         context.currentData = data
                                         for subscriber in context.dataSubscribers.copyItems() {
-                                            subscriber(data)
+                                            if !subscriber.onlyComplete {
+                                                subscriber.update(data)
+                                            }
                                         }
                                     }
                                 }
@@ -780,7 +831,7 @@ public final class MediaBox {
                         }
                     }
                 } else {
-                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
+                    subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                     subscriber.putCompletion()
                 }
             }
