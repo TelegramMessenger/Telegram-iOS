@@ -352,9 +352,12 @@
         NSUInteger index = [_requests indexOfObject:request];
         if (index != NSNotFound)
         {
-            for (NSInteger i = ((NSInteger)index) - 1; i >= 0; i--)
+            for (MTRequest *anotherRequest in _requests)
             {
-                MTRequest *anotherRequest = _requests[(NSUInteger)i];
+                if (request == anotherRequest) {
+                    continue;
+                }
+                
                 if (request.shouldDependOnRequest(anotherRequest))
                 {
                     if (anotherRequest.requestContext != nil)
