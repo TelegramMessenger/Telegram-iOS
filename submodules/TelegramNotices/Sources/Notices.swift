@@ -134,6 +134,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatMessageSearchResultsTip = 14
     case chatMessageOptionsTip = 15
     case chatTextSelectionTip = 16
+    case themeChangeTip = 17
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -242,6 +243,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatTextSelectionTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatTextSelectionTip.key)
+    }
+    
+    static func themeChangeTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.themeChangeTip.key)
     }
 }
 
@@ -499,7 +504,7 @@ public struct ApplicationSpecificNotice {
     public static func setVolumeButtonToUnmute(accountManager: AccountManager) {
         let _ = accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.volumeButtonToUnmuteTip(), ApplicationSpecificBoolNotice())
-            }.start()
+        }.start()
     }
     
     public static func getCallsTabTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
@@ -598,6 +603,22 @@ public struct ApplicationSpecificNotice {
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), ApplicationSpecificCounterNotice(value: currentValue))
         }
+    }
+    
+    public static func getThemeChangeTip(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.themeChangeTip()) as? ApplicationSpecificBoolNotice {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func markThemeChangeTipAsSeen(accountManager: AccountManager) {
+        let _ = accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.themeChangeTip(), ApplicationSpecificBoolNotice())
+        }.start()
     }
     
     public static func reset(accountManager: AccountManager) -> Signal<Void, NoError> {

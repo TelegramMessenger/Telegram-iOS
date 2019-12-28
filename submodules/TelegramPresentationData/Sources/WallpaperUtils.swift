@@ -9,13 +9,13 @@ public extension TelegramWallpaper {
         case .image:
             return false
         case let .file(file):
-            if self.isPattern, file.settings.color == 0xffffff {
+            if self.isPattern, file.settings.color == 0xffffff || file.settings.color == 0xffffffff {
                 return true
             } else {
                 return false
             }
         case let .color(color):
-            return color == 0xffffff
+            return color == 0xffffff || color == 0xffffffff
         default:
             return false
         }

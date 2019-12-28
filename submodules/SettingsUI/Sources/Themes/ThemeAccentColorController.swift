@@ -60,6 +60,8 @@ final class ThemeAccentColorController: ViewController {
 
     private let segmentedTitleView: ThemeColorSegmentedTitleView
     
+    private var applyDisposable = MetaDisposable()
+    
     var completion: (() -> Void)?
     
     init(context: AccountContext, mode: ThemeAccentColorControllerMode) {
@@ -128,6 +130,10 @@ final class ThemeAccentColorController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.applyDisposable.dispose()
+    }
+    
     override func loadDisplayNode() {
         super.loadDisplayNode()
         
@@ -165,7 +171,10 @@ final class ThemeAccentColorController: ViewController {
                     }
                 }
                 
-                let prepare: Signal<CreateThemeResult, CreateThemeError>
+                
+                let apply: Signal<Void, NoError>
+                
+                let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper, let backgroundColors = state.backgroundColors {
                     let resource = file.file.resource
                     let representation = CachedPatternWallpaperRepresentation(color: backgroundColors.0.argb, bottomColor: backgroundColors.1.flatMap { $0.argb }, intensity: state.patternIntensity, rotation: state.rotation)
@@ -179,7 +188,7 @@ final class ThemeAccentColorController: ViewController {
                     
                     if let data = data {
                         strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                        prepare = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                        prepareWallpaper = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
                         |> filter({ $0.complete })
                         |> take(1)
                         |> castError(CreateThemeError.self)
@@ -187,14 +196,14 @@ final class ThemeAccentColorController: ViewController {
                             return .complete()
                         })
                     } else {
-                        prepare = .complete()
+                        prepareWallpaper = .complete()
                     }
                 } else {
-                    prepare = .complete()
+                    prepareWallpaper = .complete()
                 }
                 
                 if case let .edit(theme, _, generalThemeReference, themeReference, _, completion) = strongSelf.mode {
-                    let _ = (prepare
+                    let _ = (prepareWallpaper
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         let updatedTheme: PresentationTheme
                         
@@ -247,15 +256,13 @@ final class ThemeAccentColorController: ViewController {
                     let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: wallpaper)
                     let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
                     
-                    let save: Signal<Void, NoError>
-                    
+                    let apply: Signal<Void, CreateThemeError>
                     if create {
-                        let title = generateThemeName(accentColor: state.accentColor)
-                        let _ = (prepare |> then(createTheme(account: context.account, title: title, resource: nil, thumbnailData: nil, settings: settings))
-                        |> deliverOnMainQueue).start(next: { next in
+                        apply = (prepareWallpaper |> then(createTheme(account: context.account, title: generateThemeName(accentColor: state.accentColor), resource: nil, thumbnailData: nil, settings: settings)))
+                        |> mapToSignal { next -> Signal<Void, CreateThemeError> in
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
-                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                                return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                                     //                                    if let resource = resultTheme.file?.resource, let data = themeData {
                                     //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                     //                                    }
@@ -277,24 +284,21 @@ final class ThemeAccentColorController: ViewController {
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
                                     return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                }) |> deliverOnMainQueue).start(completed: {
-                                    if let strongSelf = self {
-                                        strongSelf.completion?()
-                                        strongSelf.dismiss()
-                                    }
                                 })
+                                |> castError(CreateThemeError.self)
+                            } else {
+                                return .complete()
                             }
-                        }, error: { error in
-                        })
+                        }
                     } else if let theme = telegramTheme {
-                        let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: settings))
-                        |> deliverOnMainQueue).start(next: { next in
+                        apply = (prepareWallpaper |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: settings)))
+                        |> mapToSignal { next -> Signal<Void, CreateThemeError> in
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
-                                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-//                                    if let resource = resultTheme.file?.resource, let data = themeData {
-//                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-//                                    }
+                                return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                                    //                                    if let resource = resultTheme.file?.resource, let data = themeData {
+                                    //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                    //                                    }
                                     
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
                                     
@@ -313,16 +317,48 @@ final class ThemeAccentColorController: ViewController {
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
                                     return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                }) |> deliverOnMainQueue).start(completed: {
-                                    if let strongSelf = self {
-                                        strongSelf.completion?()
-                                        strongSelf.dismiss()
-                                    }
                                 })
+                                |> castError(CreateThemeError.self)
+                            } else {
+                                return .complete()
                             }
-                        }, error: { _ in
-                        })
+                        }
+                    } else {
+                        apply = .complete()
                     }
+                    
+                    let disposable = strongSelf.applyDisposable
+                    var cancelImpl: (() -> Void)?
+                    let progress = Signal<Never, NoError> { [weak self] subscriber in
+                        let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                            cancelImpl?()
+                        }))
+                        self?.present(controller, in: .window(.root))
+                        return ActionDisposable { [weak controller] in
+                            Queue.mainQueue().async() {
+                                controller?.dismiss()
+                            }
+                        }
+                    }
+                    |> runOn(Queue.mainQueue())
+                    |> delay(0.35, queue: Queue.mainQueue())
+                    
+                    let progressDisposable = progress.start()
+                    cancelImpl = {
+                        disposable.set(nil)
+                    }
+                    disposable.set((apply
+                    |> afterDisposed {
+                        Queue.mainQueue().async {
+                            progressDisposable.dispose()
+                        }
+                    }
+                    |> deliverOnMainQueue).start(completed: {
+                        if let strongSelf = self {
+                            strongSelf.completion?()
+                            strongSelf.dismiss()
+                        }
+                    }))
                 } else if case .background = strongSelf.mode {
                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager) { current in

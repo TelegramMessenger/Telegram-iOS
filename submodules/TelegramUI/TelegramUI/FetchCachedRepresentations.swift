@@ -524,7 +524,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                         c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
                         c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
                         
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: CGGradientDrawingOptions())
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                         c.restoreGState()
                     }
                     
@@ -551,7 +551,7 @@ private func fetchCachedPatternWallpaperRepresentation(resource: MediaResource, 
                         c.rotate(by: CGFloat(representation.rotation ?? 0) * CGFloat.pi / -180.0)
                         c.translateBy(x: -rect.width / 2.0, y: -rect.height / 2.0)
                         
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: CGGradientDrawingOptions())
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: rect.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                     }
                 }, scale: 1.0)
             }

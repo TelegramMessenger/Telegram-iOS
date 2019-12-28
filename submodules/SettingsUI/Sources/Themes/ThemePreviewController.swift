@@ -16,6 +16,7 @@ import OverlayStatusController
 import AppBundle
 import PresentationDataUtils
 import UndoUI
+import TelegramNotices
 
 public enum ThemePreviewSource {
     case settings(PresentationThemeReference, TelegramWallpaper?)
@@ -255,18 +256,29 @@ public final class ThemePreviewController: ViewController {
         var resolvedWallpaper: TelegramWallpaper?
         
         let setup = theme
-        |> mapToSignal { theme -> Signal<PresentationThemeReference, NoError> in
+        |> mapToSignal { theme -> Signal<(PresentationThemeReference, Bool), NoError> in
             guard let theme = theme else {
                 return .complete()
             }
             switch theme {
                 case let .cloud(info):
                     resolvedWallpaper = info.resolvedWallpaper
-                    return .single(theme)
+                    return telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
+                    |> take(1)
+                    |> map { themes -> Bool in
+                        if let _ = themes.first(where: { $0.id == info.theme.id }) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    |> map { exists in
+                        return (theme, exists)
+                    }
                 case let .local(info):
                     return wallpaperPromise.get()
                     |> take(1)
-                    |> mapToSignal { currentWallpaper -> Signal<PresentationThemeReference, NoError> in
+                    |> mapToSignal { currentWallpaper -> Signal<(PresentationThemeReference, Bool), NoError> in
                         if case let .file(file) = currentWallpaper, file.id != 0 {
                             resolvedWallpaper = currentWallpaper
                         }
@@ -286,7 +298,7 @@ public final class ThemePreviewController: ViewController {
                         
                         return telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
                         |> take(1)
-                        |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
+                        |> mapToSignal { themes -> Signal<(PresentationThemeReference, Bool), NoError> in
                             let similarTheme = themes.first(where: { $0.isCreator && $0.title == info.title })
                             if let similarTheme = similarTheme {
                                 return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData, settings: nil)
@@ -294,14 +306,14 @@ public final class ThemePreviewController: ViewController {
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
                                 }
-                                |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                |> mapToSignal { result -> Signal<(PresentationThemeReference, Bool), NoError> in
                                     guard let result = result else {
                                         let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
-                                        return .single(.local(updatedTheme))
+                                        return .single((.local(updatedTheme), true))
                                     }
                                     if case let .result(theme) = result, let file = theme.file {
                                         context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                        return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)))
+                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)), true))
                                     } else {
                                         return .complete()
                                     }
@@ -313,14 +325,14 @@ public final class ThemePreviewController: ViewController {
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
                                 }
-                                |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                |> mapToSignal { result -> Signal<(PresentationThemeReference, Bool), NoError> in
                                     guard let result = result else {
                                         let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
-                                        return .single(.local(updatedTheme))
+                                        return .single((.local(updatedTheme), true))
                                     }
                                     if case let .result(updatedTheme) = result, let file = updatedTheme.file {
                                         context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                        return .single(.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)))
+                                        return .single((.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)), true))
                                     } else {
                                         return .complete()
                                     }
@@ -329,19 +341,19 @@ public final class ThemePreviewController: ViewController {
                         }
                     }
                 case .builtin:
-                    return .single(theme)
+                    return .single((theme, true))
             }
         }
-        |> mapToSignal { updatedTheme -> Signal<(PresentationThemeReference, Bool)?, NoError> in
+        |> mapToSignal { updatedTheme, existing -> Signal<(PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?, NoError> in
             if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
+
             let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-            var switchingFromDefaultTheme = false
             
-            return context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference, Bool)? in
-                var previousDefaultTheme: (PresentationThemeReference, Bool)?
+            return context.sharedContext.accountManager.transaction { transaction -> (PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)? in
+                var previousDefaultTheme: (PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let currentSettings: PresentationThemeSettings
                     if let entry = entry as? PresentationThemeSettings {
@@ -353,7 +365,7 @@ public final class ThemePreviewController: ViewController {
                     var updatedSettings: PresentationThemeSettings
                     if autoNightModeTriggered {
                         if case .builtin = currentSettings.automaticThemeSwitchSetting.theme {
-                            previousDefaultTheme = (currentSettings.automaticThemeSwitchSetting.theme, true)
+                            previousDefaultTheme = (currentSettings.automaticThemeSwitchSetting.theme, currentSettings.themeSpecificAccentColors[currentSettings.automaticThemeSwitchSetting.theme.index], true, updatedTheme, existing)
                         }
                         
                         var automaticThemeSwitchSetting = currentSettings.automaticThemeSwitchSetting
@@ -361,7 +373,7 @@ public final class ThemePreviewController: ViewController {
                         updatedSettings = currentSettings.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
                     } else {
                         if case .builtin = currentSettings.theme {
-                            previousDefaultTheme = (currentSettings.theme, false)
+                            previousDefaultTheme = (currentSettings.theme, currentSettings.themeSpecificAccentColors[currentSettings.theme.index], false, updatedTheme, existing)
                         }
                          
                         updatedSettings = currentSettings.withUpdatedTheme(updatedTheme)
@@ -375,7 +387,7 @@ public final class ThemePreviewController: ViewController {
                     
                     var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
                     themeSpecificChatWallpapers[updatedTheme.index] = nil
-                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
+                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers).withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors)
                 })
                 return previousDefaultTheme
             }
@@ -407,32 +419,53 @@ public final class ThemePreviewController: ViewController {
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] previousDefaultTheme in
-            if let strongSelf = self, let layout = strongSelf.validLayout, layout.size.width >= 375.0  {
+            if let strongSelf = self, let layout = strongSelf.validLayout {
                 Queue.mainQueue().after(0.3) {
-                    let navigationController = strongSelf.navigationController as? NavigationController
-                    if let (previousDefaultTheme, autoNightMode) = previousDefaultTheme {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: true, animateInAsReplacement: false, action: { value in
-                            if value == .undo {
-                                let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
-                                    var updated: PresentationThemeSettings
-                                    if autoNightMode {
-                                        var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                                        automaticThemeSwitchSetting.theme = previousDefaultTheme
-                                        updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
-                                    } else {
-                                        updated = current.withUpdatedTheme(previousDefaultTheme)
+                    if layout.size.width >= 375.0 {
+                        let navigationController = strongSelf.navigationController as? NavigationController
+                        if let (previousDefaultTheme, previousAccentColor, autoNightMode, theme, existing) = previousDefaultTheme {
+                            let _ = (ApplicationSpecificNotice.getThemeChangeTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                            |> deliverOnMainQueue).start(next: { [weak self] displayed in
+                                guard let strongSelf = self, !displayed else {
+                                    return
+                                }
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: true, animateInAsReplacement: false, action: { value in
+                                    if value == .undo {
+                                        Queue.mainQueue().after(0.2) {
+                                            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in
+                                                var updated: PresentationThemeSettings
+                                                if autoNightMode {
+                                                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                                    automaticThemeSwitchSetting.theme = previousDefaultTheme
+                                                    updated = current.withUpdatedAutomaticThemeSwitchSetting(automaticThemeSwitchSetting)
+                                                } else {
+                                                    updated = current.withUpdatedTheme(previousDefaultTheme)
+                                                }
+                                                
+                                                var themeSpecificAccentColors = current.themeSpecificAccentColors
+                                                themeSpecificAccentColors[previousDefaultTheme.index] = previousAccentColor
+                                                updated = updated.withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors)
+                                                
+                                                return updated
+                                            }).start()
+                                        }
+                                        
+                                        if case let .cloud(info) = theme {
+                                            let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
+                                        }
+                                        return true
+                                    } else if value == .info {
+                                        let controller = themeSettingsController(context: context)
+                                        controller.navigationPresentation = .modal
+                                        navigationController?.pushViewController(controller, animated: true)
+                                        return true
                                     }
-                                    return updated
-                                }).start()
-                                return true
-                            } else if value == .info {
-                                let controller = themeSettingsController(context: context)
-                                controller.navigationPresentation = .modal
-                                navigationController?.pushViewController(controller, animated: true)
-                                return true
-                            }
-                            return false
-                        }), in: .window(.root))
+                                    return false
+                                }), in: .window(.root))
+                                
+                                ApplicationSpecificNotice.markThemeChangeTipAsSeen(accountManager: strongSelf.context.sharedContext.accountManager)
+                            })
+                        }
                     }
                     strongSelf.dismiss()
                 }

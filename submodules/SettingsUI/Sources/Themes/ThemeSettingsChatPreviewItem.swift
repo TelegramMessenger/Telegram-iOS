@@ -103,6 +103,8 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     
     private var item: ThemeSettingsChatPreviewItem?
     
+    private let disposable = MetaDisposable()
+    
     init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -128,16 +130,20 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         self.addSubnode(self.containerNode)
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     func asyncLayout() -> (_ item: ThemeSettingsChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         let currentNodes = self.messageNodes
         
         return { item, params, neighbors in
-            var updatedBackgroundImage: UIImage?
+            var updatedBackgroundSignal: Signal<UIImage?, NoError>?
             var backgroundImageContentMode = UIView.ContentMode.scaleAspectFill
             if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundImage = chatControllerBackgroundImage(theme: item.theme, wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, knockoutMode: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+                updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox)
                 
                 if case .gradient = item.wallpaper {
                     backgroundImageContentMode = .scaleToFill
@@ -221,9 +227,14 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         topOffset += node.frame.size.height
                     }
                     
-                    if let updatedBackgroundImage = updatedBackgroundImage {
-                        strongSelf.backgroundNode.image = updatedBackgroundImage
-                        strongSelf.backgroundNode.contentMode = backgroundImageContentMode
+                    if let updatedBackgroundSignal = updatedBackgroundSignal {
+                        strongSelf.disposable.set((updatedBackgroundSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] image in
+                            if let strongSelf = self, let image = image {
+                                strongSelf.backgroundNode.image = image
+                                strongSelf.backgroundNode.contentMode = backgroundImageContentMode
+                            }
+                        }))
                     }
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor

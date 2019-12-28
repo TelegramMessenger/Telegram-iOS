@@ -516,7 +516,10 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
         
         let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
-        let currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+        var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+        if let colors = currentColors, colors.baseColor == .theme {
+            currentColors = nil
+        }
         let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
         
         let currentWallpaper: TelegramWallpaper
