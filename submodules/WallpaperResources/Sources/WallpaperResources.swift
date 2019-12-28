@@ -787,11 +787,17 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
         c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
     }
-    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
     
-    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    if case let .color(color) = theme.chat.defaultWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColorNoWallpaper.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+    } else {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+        
+        c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    }
     
     c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
     c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
