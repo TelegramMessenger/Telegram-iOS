@@ -79,6 +79,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     
     private var context: AccountContext?
     private var message: Message?
+    private var attributes: ChatMessageEntryAttributes?
     private var media: Media?
     private var themeAndStrings: (PresentationTheme, PresentationStrings, String)?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
@@ -168,7 +169,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     }
     
     private func progressPressed(canActivate: Bool) {
-        if let fetchStatus = self.fetchStatus {
+        if let _ = self.attributes?.updatingMedia {
+            if let message = self.message {
+                self.context?.account.pendingUpdateMessageManager.cancel(messageId: message.id)
+            }
+        } else if let fetchStatus = self.fetchStatus {
             var activateContent = false
             if let state = self.statusNode?.state, case .play = state {
                 activateContent = true
@@ -214,7 +219,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.imageNode.view)
-            if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
+            if let _ = self.attributes?.updatingMedia {
+                if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                    self.progressPressed(canActivate: true)
+                }
+            } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 var videoContentMatch = true
                 if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
                     videoContentMatch = self.message?.stableId == stableId && self.media?.id == mediaId
@@ -232,7 +241,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -245,7 +254,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         let currentAutomaticDownload = self.automaticDownload
         let currentAutomaticPlayback = self.automaticPlayback
         
-        return { [weak self] context, theme, strings, dateTimeFormat, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
+        return { [weak self] context, theme, strings, dateTimeFormat, message, attributes, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var nativeSize: CGSize
             
             let isSecretMedia = message.containsSecretMedia
@@ -674,6 +683,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         if let strongSelf = self {
                             strongSelf.context = context
                             strongSelf.message = message
+                            strongSelf.attributes = attributes
                             strongSelf.media = media
                             strongSelf.wideLayout = wideLayout
                             strongSelf.themeAndStrings = (theme, strings, dateTimeFormat.decimalSeparator)
@@ -904,7 +914,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     }
     
     private func updateStatus(animated: Bool) {
-        guard let (theme, strings, decimalSeparator) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
+        guard let (theme, strings, decimalSeparator) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, let attributes = self.attributes, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
             return
         }
         
@@ -944,7 +954,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
         
         var progressRequired = false
-        if secretBeginTimeAndTimeout?.0 != nil {
+        if attributes.updatingMedia != nil {
+            progressRequired = true
+        } else if secretBeginTimeAndTimeout?.0 != nil {
             progressRequired = true
         } else if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
@@ -1017,7 +1029,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string)
         }
         var animated: Bool = animated
-        if var fetchStatus = self.fetchStatus {
+        if let updatingMedia = attributes.updatingMedia {
+            state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(updatingMedia.progress), cancelEnabled: true)
+        } else if var fetchStatus = self.fetchStatus {
             var playerPosition: Int32?
             var playerDuration: Int32 = 0
             var active = false
@@ -1274,12 +1288,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, theme, strings, dateTimeFormat, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
+        return { context, theme, strings, dateTimeFormat, message, attributes, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -1289,7 +1303,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, theme, strings, dateTimeFormat, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, theme, strings, dateTimeFormat, message, attributes, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode)
             
             return (unboundSize, initialWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize, automaticPlayback, wideLayout, corners)

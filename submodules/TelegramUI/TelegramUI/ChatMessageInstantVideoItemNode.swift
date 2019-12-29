@@ -210,7 +210,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             

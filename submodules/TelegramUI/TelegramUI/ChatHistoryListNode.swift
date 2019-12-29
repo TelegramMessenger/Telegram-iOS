@@ -496,7 +496,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, updatingMedia: Signal<[MessageId: ChatUpdatingMessageMedia], NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
         self.subject = subject
@@ -624,6 +624,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let nextTransitionVersion = Atomic<Int>(value: 0)
         
+        let updatingMedia = context.account.pendingUpdateMessageManager.updatingMessageMedia
+        |> map { value -> [MessageId: ChatUpdatingMessageMedia] in
+            var result = value
+            for id in value.keys {
+                if case let .peer(peerId) = chatLocation {
+                    if id.peerId != peerId {
+                        result.removeValue(forKey: id)
+                    }
+                } else {
+                    result.removeValue(forKey: id)
+                }
+            }
+            return result
+        }
+        |> distinctUntilChanged
+        
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
@@ -710,7 +726,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, isScheduledMessages: isScheduledMessages)
                 
-                let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, associatedData: associatedData), associatedData: associatedData, id: id)
+                let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, associatedData: associatedData, updatingMedia: updatingMedia), associatedData: associatedData, id: id)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2
@@ -1235,7 +1251,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public func isMessageVisibleOnScreen(_ id: MessageId) -> Bool {
         var result = false
         self.forEachItemNode({ itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.content.contains(where: { $0.id == id }) {
+            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.content.contains(where: { $0.0.id == id }) {
                 if self.itemNodeVisibleInsideInsets(itemNode) {
                     result = true
                 }
@@ -1612,7 +1628,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageItem: ChatMessageItem?
             self.forEachItemNode({ itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
-                    for message in item.content {
+                    for (message, _) in item.content {
                         if message.id == id {
                             messageItem = item
                             break

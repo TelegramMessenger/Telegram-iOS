@@ -26,7 +26,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
             guard let item = itemNode.item else {
                 return
             }
-            if item.content.contains(where: { $0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode() {
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode() {
                 result = ContextControllerTakeViewInfo(contentContainingNode: contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }
@@ -46,7 +46,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
             guard let item = itemNode.item else {
                 return
             }
-            if item.content.contains(where: { $0.stableId == self.message.stableId }) {
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }) {
                 result = ContextControllerPutBackViewInfo(contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }

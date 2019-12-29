@@ -142,6 +142,9 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var edited = false
+                if item.attributes.updatingMedia != nil {
+                    edited = true
+                }
                 var viewCount: Int?
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
@@ -174,7 +177,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             if item.message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
-                            } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
+                            } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                                 statusType = .BubbleOutgoing(.Sending)
                             } else {
                                 statusType = .BubbleOutgoing(.Sent(read: item.read))

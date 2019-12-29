@@ -36,4 +36,8 @@ public final class ChatUpdatingMessageMedia: Equatable {
         }
         return true
     }
+    
+    func withProgress(_ progress: Float) -> ChatUpdatingMessageMedia {
+        return ChatUpdatingMessageMedia(text: self.text, entities: self.entities, disableUrlPreview: self.disableUrlPreview, media: self.media, progress: progress)
+    }
 }

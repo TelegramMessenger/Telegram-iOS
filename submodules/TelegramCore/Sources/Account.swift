@@ -834,6 +834,7 @@ public class Account {
     public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
+    public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
@@ -918,6 +919,7 @@ public class Account {
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
+        self.pendingUpdateMessageManager = PendingUpdateMessageManager(postbox: postbox, network: network, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
             Logger.shared.log("Account", "network logged out")
@@ -1246,4 +1248,5 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
+    account.pendingUpdateMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
 }

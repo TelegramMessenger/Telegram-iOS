@@ -26,6 +26,7 @@ static_library(
         "//submodules/MimeTypes:MimeTypes",
         "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

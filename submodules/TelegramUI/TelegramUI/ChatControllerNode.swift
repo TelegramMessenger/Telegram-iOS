@@ -217,7 +217,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), updatingMedia: .single([:]))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)

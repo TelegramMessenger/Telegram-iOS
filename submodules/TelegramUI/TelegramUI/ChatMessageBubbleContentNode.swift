@@ -90,14 +90,16 @@ final class ChatMessageBubbleContentItem {
     let read: Bool
     let presentationData: ChatPresentationData
     let associatedData: ChatMessageItemAssociatedData
+    let attributes: ChatMessageEntryAttributes
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData, attributes: ChatMessageEntryAttributes) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.message = message
         self.read = read
         self.presentationData = presentationData
         self.associatedData = associatedData
+        self.attributes = attributes
     }
 }
 

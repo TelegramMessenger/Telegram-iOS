@@ -219,7 +219,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?
                 asFile = true
             }
             
-            let url: String? = (dict["url"] as? String) ?? (dict["url"] as? URL)?.absoluteString
+            let url: String? = (dict["url"] as? String) ?? (dict["url"] as? URL)?.path
             
             if let url = url, let previewImage = dict["previewImage"] as? UIImage {
                 let dimensions = previewImage.pixelSize()
