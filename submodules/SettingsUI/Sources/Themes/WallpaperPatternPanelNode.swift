@@ -40,9 +40,10 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: (UIColor, UIColor?)? = nil {
+    var backgroundColors: (UIColor, UIColor?, Int32?)? = nil {
         didSet {
-            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb {
+            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb
+            || oldValue?.2 != self.backgroundColors?.2 {
                 self.updateWallpapers()
             }
         }
@@ -136,7 +137,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil)
+        let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil, nil)
         
         var selectedFileId: Int64?
         if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
@@ -150,7 +151,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100)
+                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100, rotation: backgroundColors.2)
                 updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             

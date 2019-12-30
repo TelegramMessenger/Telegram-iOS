@@ -193,7 +193,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var currentBackgroundColors: (UIColor, UIColor?)?
+    private var currentBackgroundColors: (UIColor, UIColor?, Int32?)?
     private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
     
     private var patternWallpaper: TelegramWallpaper?
@@ -569,8 +569,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.patternArguments = patternArguments
             
             if !preview {
-                strongSelf.currentBackgroundColors = backgroundColors
-                strongSelf.patternPanelNode.backgroundColors = backgroundColors
+                if let backgroundColors = backgroundColors {
+                    strongSelf.currentBackgroundColors = (backgroundColors.0, backgroundColors.1, strongSelf.state.rotation)
+                } else {
+                    strongSelf.currentBackgroundColors = nil
+                }
+                strongSelf.patternPanelNode.backgroundColors = strongSelf.currentBackgroundColors
             }
             
             if let _ = theme, let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
@@ -1089,7 +1093,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
                     updated.patternWallpaper = wallpaper
                     if updated.backgroundColors == nil {
-                        updated.backgroundColors = backgroundColors
+                        if let backgroundColors = backgroundColors {
+                            updated.backgroundColors = (backgroundColors.0, backgroundColors.1)
+                        } else {
+                            updated.backgroundColors = nil
+                        }
                     }
                     appeared = true
                 }

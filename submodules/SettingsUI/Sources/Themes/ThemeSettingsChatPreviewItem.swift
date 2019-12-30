@@ -238,6 +238,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                                     })
                                 }
                                 strongSelf.backgroundNode.image = image
+                                strongSelf.finalImage = final
                             }
                         }))
                     }

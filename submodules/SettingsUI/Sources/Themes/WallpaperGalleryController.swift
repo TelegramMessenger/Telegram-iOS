@@ -282,7 +282,7 @@ public class WallpaperGalleryController: ViewController {
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.patternPanelNode?.updateTheme(self.presentationData.theme)
-        self.patternPanelNode?.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil) : nil
+        self.patternPanelNode?.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil, nil) : nil
     }
     
     func dismiss(forceAway: Bool) {
@@ -636,7 +636,7 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
                 }
             }
-            patternPanelNode.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil) : nil
+            patternPanelNode.backgroundColors = self.presentationData.theme.overallDarkAppearance ? (self.presentationData.theme.list.blocksBackgroundColor, nil, nil) : nil
             self.patternPanelNode = patternPanelNode
             currentPatternPanelNode = patternPanelNode
             self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)
