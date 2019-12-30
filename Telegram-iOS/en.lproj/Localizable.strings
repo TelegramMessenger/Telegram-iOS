@@ -5216,8 +5216,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "OldChannels.ChannelFormat" = "channel, ";
 "OldChannels.GroupEmptyFormat" = "group, ";
-"OldChannels.GroupFormat_1" = "%@ member";
-"OldChannels.GroupFormat_any" = "%@ members";
+"OldChannels.GroupFormat_1" = "%@ member ";
+"OldChannels.GroupFormat_any" = "%@ members ";
 
 "OldChannels.InactiveWeek_1" = "inactive %@ week";
 "OldChannels.InactiveWeek_any" = "inactive %@ weeks";
