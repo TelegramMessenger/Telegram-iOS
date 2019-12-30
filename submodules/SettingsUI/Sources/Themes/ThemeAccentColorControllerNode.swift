@@ -193,7 +193,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var currentBackgroundColors: (UIColor, UIColor?)?
+    private var currentBackgroundColors: (UIColor, UIColor?, Int32?)?
     private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
     
     private var patternWallpaper: TelegramWallpaper?
@@ -203,6 +203,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     
     var themeUpdated: ((PresentationTheme) -> Void)?
     var requestSectionUpdate: ((ThemeColorSection) -> Void)?
+    
+    var dismissed = false
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -404,7 +406,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
         
-        var dismissed = false
         self.toolbarNode.done = { [weak self] in
             if let strongSelf = self {
                 if strongSelf.state.displayPatternPanel {
@@ -414,8 +415,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         return updated
                     }, animated: true)
                 } else {
-                    if !dismissed {
-                        dismissed = true
+                    if !strongSelf.dismissed {
+                        strongSelf.dismissed = true
                         apply(strongSelf.state, strongSelf.serviceBackgroundColor)
                     }
                 }
@@ -452,9 +453,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                     for representation in file.file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(wallpaper: .slug(file.slug), resource: representation.resource)))
                     }
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                     
                     wallpaperSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                 } else if let bottomColor = backgroundColors.1 {
@@ -568,8 +569,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.patternArguments = patternArguments
             
             if !preview {
-                strongSelf.currentBackgroundColors = backgroundColors
-                strongSelf.patternPanelNode.backgroundColors = backgroundColors
+                if let backgroundColors = backgroundColors {
+                    strongSelf.currentBackgroundColors = (backgroundColors.0, backgroundColors.1, strongSelf.state.rotation)
+                } else {
+                    strongSelf.currentBackgroundColors = nil
+                }
+                strongSelf.patternPanelNode.backgroundColors = strongSelf.currentBackgroundColors
             }
             
             if let _ = theme, let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
@@ -1088,7 +1093,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 if current.patternWallpaper == nil, let wallpaper = wallpaper {
                     updated.patternWallpaper = wallpaper
                     if updated.backgroundColors == nil {
-                        updated.backgroundColors = backgroundColors
+                        if let backgroundColors = backgroundColors {
+                            updated.backgroundColors = (backgroundColors.0, backgroundColors.1)
+                        } else {
+                            updated.backgroundColors = nil
+                        }
                     }
                     appeared = true
                 }

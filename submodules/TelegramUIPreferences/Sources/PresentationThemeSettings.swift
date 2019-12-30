@@ -404,8 +404,8 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     
     public var index: Int32
     public var baseColor: PresentationThemeBaseColor
-    public var accentColor: Int32?
-    public var bubbleColors: (Int32, Int32?)?
+    public var accentColor: UInt32?
+    public var bubbleColors: (UInt32, UInt32?)?
     public var wallpaper: TelegramWallpaper?
     public var themeIndex: Int64?
     
@@ -421,7 +421,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         self.wallpaper = nil
     }
     
-    public init(index: Int32, baseColor: PresentationThemeBaseColor, accentColor: Int32? = nil, bubbleColors: (Int32, Int32?)? = nil, wallpaper: TelegramWallpaper? = nil) {
+    public init(index: Int32, baseColor: PresentationThemeBaseColor, accentColor: UInt32? = nil, bubbleColors: (UInt32, UInt32?)? = nil, wallpaper: TelegramWallpaper? = nil) {
         self.index = index
         self.baseColor = baseColor
         self.accentColor = accentColor
@@ -441,12 +441,12 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.index = decoder.decodeInt32ForKey("i", orElse: -1)
         self.baseColor = PresentationThemeBaseColor(rawValue: decoder.decodeInt32ForKey("b", orElse: 0)) ?? .blue
-        self.accentColor = decoder.decodeOptionalInt32ForKey("c")
+        self.accentColor = decoder.decodeOptionalInt32ForKey("c").flatMap { UInt32(bitPattern: $0) }
         if let bubbleTopColor = decoder.decodeOptionalInt32ForKey("bt") {
             if let bubbleBottomColor = decoder.decodeOptionalInt32ForKey("bb") {
-                self.bubbleColors = (bubbleTopColor, bubbleBottomColor)
+                self.bubbleColors = (UInt32(bitPattern: bubbleTopColor), UInt32(bitPattern: bubbleBottomColor))
             } else {
-                self.bubbleColors = (bubbleTopColor, nil)
+                self.bubbleColors = (UInt32(bitPattern: bubbleTopColor), nil)
             }
         } else {
             self.bubbleColors = nil
@@ -459,14 +459,14 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         encoder.encodeInt32(self.index, forKey: "i")
         encoder.encodeInt32(self.baseColor.rawValue, forKey: "b")
         if let value = self.accentColor {
-            encoder.encodeInt32(value, forKey: "c")
+            encoder.encodeInt32(Int32(bitPattern: value), forKey: "c")
         } else {
             encoder.encodeNil(forKey: "c")
         }
         if let bubbleColors = self.bubbleColors {
-            encoder.encodeInt32(bubbleColors.0, forKey: "bt")
+            encoder.encodeInt32(Int32(bitPattern: bubbleColors.0), forKey: "bt")
             if let bubbleBottomColor = bubbleColors.1 {
-                encoder.encodeInt32(bubbleBottomColor, forKey: "bb")
+                encoder.encodeInt32(Int32(bitPattern: bubbleBottomColor), forKey: "bb")
             } else {
                 encoder.encodeNil(forKey: "bb")
             }

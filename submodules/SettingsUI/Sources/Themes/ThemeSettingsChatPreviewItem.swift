@@ -102,6 +102,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     private var messageNodes: [ListViewItemNode]?
     
     private var item: ThemeSettingsChatPreviewItem?
+    private var finalImage = true
     
     private let disposable = MetaDisposable()
     
@@ -140,14 +141,9 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         let currentNodes = self.messageNodes
         
         return { item, params, neighbors in
-            var updatedBackgroundSignal: Signal<UIImage?, NoError>?
-            var backgroundImageContentMode = UIView.ContentMode.scaleAspectFill
+            var updatedBackgroundSignal: Signal<(UIImage?, Bool)?, NoError>?
             if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox)
-                
-                if case .gradient = item.wallpaper {
-                    backgroundImageContentMode = .scaleToFill
-                }
+                updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.account.postbox.mediaBox)
             }
             
             let insets: UIEdgeInsets
@@ -230,9 +226,19 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     if let updatedBackgroundSignal = updatedBackgroundSignal {
                         strongSelf.disposable.set((updatedBackgroundSignal
                         |> deliverOnMainQueue).start(next: { [weak self] image in
-                            if let strongSelf = self, let image = image {
+                            if let strongSelf = self, let (image, final) = image {
+                                if final && !strongSelf.finalImage {
+                                    let tempLayer = CALayer()
+                                    tempLayer.frame = strongSelf.backgroundNode.bounds
+                                    tempLayer.contentsGravity = strongSelf.backgroundNode.layer.contentsGravity
+                                    tempLayer.contents = strongSelf.contents
+                                    strongSelf.layer.addSublayer(tempLayer)
+                                    tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                                        tempLayer?.removeFromSuperlayer()
+                                    })
+                                }
                                 strongSelf.backgroundNode.image = image
-                                strongSelf.backgroundNode.contentMode = backgroundImageContentMode
+                                strongSelf.finalImage = final
                             }
                         }))
                     }

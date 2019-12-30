@@ -255,7 +255,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             var rotation: Int32?
             switch parameter {
                 case let .slug(slug, wallpaperOptions, firstColor, secondColor, intensityValue, rotationValue):
-                    signal = getWallpaper(account: context.account, slug: slug)
+                    signal = getWallpaper(network: context.account.network, slug: slug)
                     options = wallpaperOptions
                     topColor = firstColor
                     bottomColor = secondColor

@@ -6,7 +6,7 @@ import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -204,7 +204,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     )
     
     return PresentationTheme(
-        name: theme.name,
+        name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
