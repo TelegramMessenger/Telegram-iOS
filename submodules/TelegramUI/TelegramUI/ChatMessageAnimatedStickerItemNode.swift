@@ -254,16 +254,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
 
         let (emoji, fitz) = item.message.text.basicEmoji
-        if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
-            if self.emojiFile?.id != emojiFile.id {
+        if self.telegramFile == nil {
+            var emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file
+            if emojiFile == nil {
+                emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.file
+            }
+            
+            if self.emojiFile?.id != emojiFile?.id {
                 self.emojiFile = emojiFile
-                let dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
-                var fitzModifier: EmojiFitzModifier?
-                if let fitz = fitz {
-                    fitzModifier = EmojiFitzModifier(emoji: fitz)
+                if let emojiFile = emojiFile {
+                    let dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    var fitzModifier: EmojiFitzModifier?
+                    if let fitz = fitz {
+                        fitzModifier = EmojiFitzModifier(emoji: fitz)
+                    }
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 }
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false))
-                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 self.updateVisibility()
             }
         }
