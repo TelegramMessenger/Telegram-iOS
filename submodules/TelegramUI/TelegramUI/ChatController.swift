@@ -186,6 +186,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let messageActionCallbackDisposable = MetaDisposable()
     private let messageActionUrlAuthDisposable = MetaDisposable()
     private let editMessageDisposable = MetaDisposable()
+    private let editMessageErrorsDisposable = MetaDisposable()
     private let enqueueMediaMessageDisposable = MetaDisposable()
     private var resolvePeerByNameDisposable: MetaDisposable?
     private var shareStatusDisposable: MetaDisposable?
@@ -2349,6 +2350,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.messageActionCallbackDisposable.dispose()
         self.messageActionUrlAuthDisposable.dispose()
         self.editMessageDisposable.dispose()
+        self.editMessageErrorsDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
@@ -2873,10 +2875,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState, case let .media(options) = editMessageState.content else {
                         return
                     }
-                    strongSelf.presentAttachmentMenu(editMediaOptions: options)
+                    var originalMediaReference: AnyMediaReference?
+                    if let message = message {
+                        for media in message.media {
+                            if let image = media as? TelegramMediaImage {
+                                originalMediaReference = .message(message: MessageReference(message), media: image)
+                            } else if let file = media as? TelegramMediaFile {
+                                if file.isVideo || file.isAnimated {
+                                    originalMediaReference = .message(message: MessageReference(message), media: file)
+                                }
+                            }
+                        }
+                    }
+                    strongSelf.presentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
                 })
             } else {
-                strongSelf.presentAttachmentMenu(editMediaOptions: nil)
+                strongSelf.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil)
             }
         }
         self.chatDisplayNode.paste = { [weak self] data in
@@ -3004,7 +3018,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         state = state.updatedEditMessageState(nil)
                         return state
                     }, completion: completion)
-                    strongSelf.editMessageDisposable.set(nil)
                     
                     return
                 }
@@ -3217,41 +3230,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     media = .keep
                 }
                 
-                strongSelf.editMessageDisposable.set((requestEditMessage(account: strongSelf.context.account, messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, disableUrlPreview: disableUrlPreview) |> deliverOnMainQueue |> afterDisposed({
-                        editingMessage.set(nil)
-                    })).start(next: { result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    switch result {
-                        case let .progress(value):
-                            editingMessage.set(value)
-                        case .done:
-                            editingMessage.set(nil)
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                                var state = state
-                                state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
-                                state = state.updatedEditMessageState(nil)
-                                return state
-                            })
-                    }
-                }, error: { error in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    editingMessage.set(nil)
-                    
-                    let text: String
-                    switch error {
-                        case .generic:
-                            text = strongSelf.presentationData.strings.Channel_EditMessageErrorGeneric
-                        case .restricted:
-                            text = strongSelf.presentationData.strings.Group_ErrorSendRestrictedMedia
-                    }
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                    })]), in: .window(.root))
-                }))
+                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, disableUrlPreview: disableUrlPreview)
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    var state = state
+                    state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
+                    state = state.updatedEditMessageState(nil)
+                    return state
+                })
             }
         }, beginMessageSearch: { [weak self] domain, query in
             guard let strongSelf = self else {
@@ -4569,6 +4555,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
+            
+            self.editMessageErrorsDisposable.set((self.context.account.pendingUpdateMessageManager.errors
+            |> deliverOnMainQueue).start(next: { [weak self] (_, error) in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let text: String
+                switch error {
+                case .generic:
+                    text = strongSelf.presentationData.strings.Channel_EditMessageErrorGeneric
+                case .restricted:
+                    text = strongSelf.presentationData.strings.Group_ErrorSendRestrictedMedia
+                }
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                })]), in: .window(.root))
+            }))
         }
     }
     
@@ -5426,7 +5429,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?) {
+    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?) {
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
@@ -5508,9 +5511,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             let menuEditMediaOptions = editMediaOptions.flatMap { options -> LegacyAttachmentMenuMediaEditing in
-                var result: LegacyAttachmentMenuMediaEditing = []
+                var result: LegacyAttachmentMenuMediaEditing = .none
                 if options.contains(.imageOrVideo) {
-                    result.insert(.imageOrVideo)
+                    result = .imageOrVideo(editMediaReference)
                 }
                 return result
             }
@@ -5619,6 +5622,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     })
                 }
+            }, present: { [weak self] c, a in
+                self?.present(c, in: .window(.root), with: a)
             })
             controller.didDismiss = { [weak legacyController] _ in
                 legacyController?.dismiss()

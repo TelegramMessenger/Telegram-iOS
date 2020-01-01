@@ -65,6 +65,20 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         if lhsMessage?.id != rhsMessage?.id || lhsMessage?.flags != rhsMessage?.flags || lhsUnreadCount != rhsUnreadCount {
                             return false
                         }
+                        if let lhsMessage = lhsMessage, let rhsMessage = rhsMessage {
+                            if lhsMessage.associatedMessages.count != rhsMessage.associatedMessages.count {
+                                return false
+                            }
+                            for (id, message) in lhsMessage.associatedMessages {
+                                if let otherMessage = rhsMessage.associatedMessages[id] {
+                                    if message.stableVersion != otherMessage.stableVersion {
+                                        return false
+                                    }
+                                } else {
+                                    return false
+                                }
+                            }
+                        }
                         if let lhsNotificationSettings = lhsNotificationSettings, let rhsNotificationSettings = rhsNotificationSettings {
                             if !lhsNotificationSettings.isEqual(to: rhsNotificationSettings) {
                                 return false

@@ -48,6 +48,9 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
                 var edited = false
+                if item.attributes.updatingMedia != nil {
+                    edited = true
+                }
                 var viewCount: Int?
                 var rawText = ""
                 for attribute in item.message.attributes {

@@ -57,7 +57,8 @@ public final class AccountStateManager {
     private let shouldKeepOnlinePresence: Signal<Bool, NoError>
     
     private let peerInputActivityManager: PeerInputActivityManager
-    private let auxiliaryMethods: AccountAuxiliaryMethods
+    let auxiliaryMethods: AccountAuxiliaryMethods
+    var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     private var updateService: UpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()

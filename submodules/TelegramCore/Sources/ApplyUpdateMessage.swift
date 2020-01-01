@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 import SyncCore
 
-func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
+func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
         if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
@@ -23,7 +23,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
             postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
         }
-        if (fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
+        if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
         }
     }
@@ -152,7 +152,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
             }
             
             if forwardInfo == nil {
@@ -311,7 +311,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 }
                 
                 if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
                 }
                 
                 if storeForwardInfo == nil {

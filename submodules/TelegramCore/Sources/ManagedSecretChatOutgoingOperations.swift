@@ -1415,7 +1415,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                                     }
                                     
                                     if let toMedia = toMedia {
-                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                                        applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox, force: false)
                                     }
                                 }
                                 

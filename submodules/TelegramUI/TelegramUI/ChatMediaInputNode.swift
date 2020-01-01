@@ -163,10 +163,10 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
-    if hasUnreadTrending {
+    if let hasUnreadTrending = hasUnreadTrending, hasUnreadTrending {
         entries.append(.trending(true, theme))
     }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
@@ -211,7 +211,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
         entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     
-    if !hasUnreadTrending {
+    if let hasUnreadTrending = hasUnreadTrending, !hasUnreadTrending {
         entries.append(.trending(false, theme))
     }
     entries.append(.settings(theme))
@@ -783,11 +783,16 @@ final class ChatMediaInputNode: ChatInputNode {
                 installedPacks.insert(info.0)
             }
             
-            var hasUnreadTrending = false
+            var hasUnreadTrending: Bool?
             for pack in trendingPacks {
-                if pack.unread {
-                    hasUnreadTrending = true
-                    break
+                if !installedPacks.contains(pack.info.id) {
+                    if hasUnreadTrending == nil {
+                        hasUnreadTrending = false
+                    }
+                    if pack.unread {
+                        hasUnreadTrending = true
+                        break
+                    }
                 }
             }
             
