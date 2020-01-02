@@ -867,7 +867,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (NSString *)outgoingMessageDescription:(MTOutgoingMessage *)message messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
 {
-    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.messageId == 0 ? messageId : message.messageId, message.messageSeqNo == 0 ? message.messageSeqNo : messageSeqNo];
+    return [[NSString alloc] initWithFormat:@"%@%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.additionalDebugDescription != nil ? message.additionalDebugDescription : @"", message.messageId == 0 ? messageId : message.messageId, message.messageSeqNo == 0 ? message.messageSeqNo : messageSeqNo];
 }
 
 - (NSString *)outgoingShortMessageDescription:(MTOutgoingMessage *)message messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
@@ -956,7 +956,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         [msgsAckBuffer appendInt64:(int64_t)[nMessageId longLongValue]];
                     }
                     
-                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck" shortMetadata:@"msgsAck"];
+                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck" additionalDebugDescription:nil shortMetadata:@"msgsAck"];
                     outgoingMessage.requiresConfirmation = false;
                     
                     [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
@@ -993,17 +993,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 for (MTOutgoingMessage *outgoingMessage in messageTransaction.messagePayload)
                 {
-                    NSData *messageData = outgoingMessage.data;
-                    
-                    if (outgoingMessage.dynamicDecorator != nil)
-                    {
-                        id decoratedData = outgoingMessage.dynamicDecorator(messageData, messageInternalIdToPreparedMessage);
-                        if (decoratedData != nil)
-                            messageData = decoratedData;
-                    }
-                    
-                    NSData *data = messageData;
-                    
                     int64_t messageId = 0;
                     int32_t messageSeqNo = 0;
                     if (outgoingMessage.messageId == 0)
@@ -1017,18 +1006,19 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         messageSeqNo = outgoingMessage.messageSeqNo;
                     }
                     
+                    NSData *messageData = outgoingMessage.data;
+                    
+                    if (outgoingMessage.dynamicDecorator != nil)
+                    {
+                        id decoratedData = outgoingMessage.dynamicDecorator(messageId, messageData, messageInternalIdToPreparedMessage);
+                        if (decoratedData != nil)
+                            messageData = decoratedData;
+                    }
+                    
+                    NSData *data = messageData;
+                    
                     if (MTLogEnabled()) {
                         NSString *messageDescription = [self outgoingMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo];
-                        /*if ([messageDescription hasPrefix:@"updates.getDifference"]) {
-                            static dispatch_once_t onceToken;
-                            __block bool flag = false;
-                            dispatch_once(&onceToken, ^{
-                                flag = true;
-                            });
-                            if (flag) {
-                                debugResetTransport = true;
-                            }
-                        }*/
                         MTLog(@"[MTProto#%p@%p preparing %@]", self, _context, messageDescription);
                     }
                     NSString *shortMessageDescription = [self outgoingShortMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo];

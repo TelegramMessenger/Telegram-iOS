@@ -59,7 +59,7 @@
         [getFutureSaltsBuffer appendInt32:(int32_t)0xb921bd04];
         [getFutureSaltsBuffer appendInt32:_futureSalts.count != 0 ? 1 : 32];
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:getFutureSaltsBuffer.data metadata:@"getFutureSalts" shortMetadata:@"getFutureSalts"];
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:getFutureSaltsBuffer.data metadata:@"getFutureSalts" additionalDebugDescription:nil shortMetadata:@"getFutureSalts"];
         
         return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
         {

@@ -819,6 +819,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     accountsAndPeers.set(activeAccountsAndPeers(context: context))
     
     let privacySettings = Promise<AccountPrivacySettings?>(nil)
+    
+    let enableQRLogin = Promise<Bool>()
 
     let openFaq: (Promise<ResolvedUrl>, String?) -> Void = { resolvedUrl, customAnchor in
         let _ = (contextValue.get()
@@ -1105,10 +1107,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             gesture?.cancel()
         }
     }, openDevices: {
-        let _ = (activeSessionsContextAndCount.get()
-        |> deliverOnMainQueue
-        |> take(1)).start(next: { activeSessionsContext, count, webSessionsContext in
-            if count == 0 {
+        let _ = (combineLatest(queue: .mainQueue(),
+            activeSessionsContextAndCount.get(),
+            enableQRLogin.get()
+        )
+        |> take(1)).start(next: { activeSessionsContextAndCount, enableQRLogin in
+            let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
+            if count == 0 && enableQRLogin {
                 pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
             } else {
                 pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
@@ -1358,7 +1363,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let enableQRLogin = contextValue.get()
+    let enableQRLoginSignal = contextValue.get()
     |> mapToSignal { context -> Signal<Bool, NoError> in
         return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> Bool in
@@ -1372,8 +1377,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
         |> distinctUntilChanged
     }
+    enableQRLogin.set(enableQRLoginSignal)
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let otherSessionCount = activeSessionsContextAndCount.1
 
