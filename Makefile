@@ -3,7 +3,7 @@
 include Utils.makefile
 
 BUCK_OPTIONS=\
-	--config custom.appVersion="5.13" \
+	--config custom.appVersion="5.13.1" \
 	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
 	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
 	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
