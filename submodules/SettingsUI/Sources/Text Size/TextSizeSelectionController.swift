@@ -52,7 +52,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize) -> Void) {
+    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize, PresentationFontSize) -> Void) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -133,7 +133,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             }
             if !dismissed {
                 dismissed = true
-                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize)
+                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize, strongSelf.presentationThemeSettings.listsFontSize)
             }
         }
         self.toolbarNode.updateUseSystemFont = { [weak self] value in
@@ -542,19 +542,20 @@ final class TextSizeSelectionController: ViewController {
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
-        }, apply: { [weak self] useSystemFont, fontSize in
+        }, apply: { [weak self] useSystemFont, fontSize, listsFontSize in
             if let strongSelf = self {
-                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize)
+                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize)
             }
         })
         self.displayNodeDidLoad()
     }
     
-    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize) {
+    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize) {
         let _ = (updatePresentationThemeSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { current in
             var current = current
             current.useSystemFont = useSystemFont
             current.fontSize = fontSize
+            current.listsFontSize = listsFontSize
             return current
         })
         |> deliverOnMainQueue).start(completed: { [weak self] in
