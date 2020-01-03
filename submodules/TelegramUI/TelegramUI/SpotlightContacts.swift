@@ -112,7 +112,7 @@ private final class SpotlightIndexStorage {
             let previousItem = self.items[peerId]
             if previousItem != item {
                 var updatedAvatarSourcePath: String?
-                if let avatarSourcePath = item.avatarSourcePath, let _ = fileSize(self.appBasePath + " / " + avatarSourcePath) {
+                if let avatarSourcePath = item.avatarSourcePath, let _ = fileSize(self.appBasePath + "/" + avatarSourcePath) {
                     updatedAvatarSourcePath = avatarSourcePath
                 }
                 
