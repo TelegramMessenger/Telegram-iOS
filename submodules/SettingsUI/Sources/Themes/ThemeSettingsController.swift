@@ -429,7 +429,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     let strings = presentationData.strings
     let title = presentationData.autoNightModeTriggered ? strings.Appearance_ColorThemeNight.uppercased() : strings.Appearance_ColorTheme.uppercased()
     entries.append(.themeListHeader(presentationData.theme, title))
-    entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
+    entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
     let generalThemes: [PresentationThemeReference] = availableThemes.filter { reference in
         if case let .cloud(theme) = reference {
@@ -490,7 +490,11 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     if presentationThemeSettings.useSystemFont {
         textSizeValue = strings.Appearance_TextSize_Automatic
     } else {
-        textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt"
+        if presentationThemeSettings.fontSize.baseDisplaySize == presentationThemeSettings.listsFontSize.baseDisplaySize {
+            textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt"
+        } else {
+            textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt/\(Int(presentationThemeSettings.listsFontSize.baseDisplaySize))pt"
+        }
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
     
@@ -550,10 +554,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         selectThemeImpl?(theme)
-    }, selectFontSize: { fontSize in
-        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedFontSize(fontSize)
-        }).start()
+    }, selectFontSize: { _ in
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(context: context))
     }, selectAccentColor: { accentColor in
@@ -989,7 +990,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
-        let fontSize = presentationData.fontSize
         let dateTimeFormat = presentationData.dateTimeFormat
         let largeEmoji = presentationData.largeEmoji
         let disableAnimations = presentationData.disableAnimations
@@ -1271,7 +1271,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 //                    }
                 }
                 
-                return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
             }).start()
             
             presentCrossfadeControllerImpl?(true)

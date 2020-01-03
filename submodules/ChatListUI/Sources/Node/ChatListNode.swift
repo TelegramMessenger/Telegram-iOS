@@ -311,6 +311,12 @@ public final class ChatListNode: ListView {
         return _ready.get()
     }
     
+    private let _contentsReady = ValuePromise<Bool>()
+    private var didSetContentsReady = false
+    public var contentsReady: Signal<Bool, NoError> {
+        return _contentsReady.get()
+    }
+    
     public var peerSelected: ((PeerId, Bool, Bool) -> Void)?
     public var groupSelected: ((PeerGroupId) -> Void)?
     public var addContact: ((String) -> Void)?
@@ -1157,6 +1163,10 @@ public final class ChatListNode: ListView {
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
+                    }
+                    if !strongSelf.didSetContentsReady {
+                        strongSelf.didSetContentsReady = true
+                        strongSelf._contentsReady.set(true)
                     }
                     
                     var isEmpty = false

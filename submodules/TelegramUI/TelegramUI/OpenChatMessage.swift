@@ -339,12 +339,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
-                    if let fileName = file.fileName, fileName.hasSuffix(".svgbg") {
-                        let controller = WallpaperGalleryController(context: params.context, source: .wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: true, isDark: false, slug: "", file: file, settings: WallpaperSettings()), nil, nil, nil, nil, nil, nil))
-                        params.present(controller, nil)
-                    } else {
-                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
-                    }
+                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
                 }
                 return true
             case let .audio(file):

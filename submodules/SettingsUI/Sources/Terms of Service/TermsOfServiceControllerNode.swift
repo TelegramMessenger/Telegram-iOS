@@ -58,7 +58,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.contentTextNode.displaysAsynchronously = false
         self.contentTextNode.maximumNumberOfLines = 0
         
-        let fontSize = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+        let fontSize = floor(presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0)
         
         self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(fontSize), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize))
         
@@ -68,12 +68,12 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionTextNode = ImmediateTextNode()
         self.leftActionTextNode.displaysAsynchronously = false
         self.leftActionTextNode.isUserInteractionEnabled = false
-        self.leftActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Decline, font: Font.regular(presentationData.fontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
+        self.leftActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Decline, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
         self.rightActionNode = HighlightableButtonNode()
         self.rightActionTextNode = ImmediateTextNode()
         self.rightActionTextNode.displaysAsynchronously = false
         self.rightActionTextNode.isUserInteractionEnabled = false
-        self.rightActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Accept, font: Font.semibold(presentationData.fontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
+        self.rightActionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.PrivacyPolicy_Accept, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.list.itemAccentColor)
         
         super.init()
         
