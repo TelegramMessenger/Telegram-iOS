@@ -49,10 +49,10 @@ final class PaneSearchContainerNode: ASDisplayNode {
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
         switch mode {
-            case .gif:
-                self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
-            case .sticker:
-                self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
+        case .gif:
+            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
+        case .sticker, .trending:
+            self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
         }
         self.backgroundNode = ASDisplayNode()
         
@@ -92,10 +92,10 @@ final class PaneSearchContainerNode: ASDisplayNode {
         
         let placeholder: String
         switch mode {
-            case .gif:
-                placeholder = strings.Gif_Search
-            case .sticker:
-                placeholder = strings.Stickers_Search
+        case .gif:
+            placeholder = strings.Gif_Search
+        case .sticker, .trending:
+            placeholder = strings.Stickers_Search
         }
         self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
     }

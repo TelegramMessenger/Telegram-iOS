@@ -186,7 +186,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
-        })
+        }, isPane: false)
         
         self.gridNode = GridNode()
         
