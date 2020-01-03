@@ -865,6 +865,11 @@ public class Account {
     public var networkType: Signal<NetworkType, NoError> {
         return self.networkTypeValue.get()
     }
+    private let atomicCurrentNetworkType = Atomic<NetworkType>(value: .none)
+    public var immediateNetworkType: NetworkType {
+        return self.atomicCurrentNetworkType.with { $0 }
+    }
+    private var networkTypeDisposable: Disposable?
     
     private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var loggedOut: Signal<Bool, NoError> {
@@ -972,6 +977,10 @@ public class Account {
         |> distinctUntilChanged)
         
         self.networkTypeValue.set(currentNetworkType())
+        let atomicCurrentNetworkType = self.atomicCurrentNetworkType
+        self.networkTypeDisposable = self.networkTypeValue.get().start(next: { value in
+            let _ = atomicCurrentNetworkType.swap(value)
+        })
         
         let serviceTasksMasterBecomeMaster = self.shouldBeServiceTaskMaster.get()
         |> distinctUntilChanged
@@ -1127,6 +1136,7 @@ public class Account {
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
+        self.networkTypeDisposable?.dispose()
     }
     
     private func postSmallLogIfNeeded() {

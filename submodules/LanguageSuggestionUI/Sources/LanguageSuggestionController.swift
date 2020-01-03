@@ -221,11 +221,11 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
         let selectedLocalization = ValuePromise(suggestedLocalization.languageCode, ignoreRepeated: true)
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: strings.ChooseLanguage, font: Font.bold(presentationData.fontSize.baseDisplaySize), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: strings.ChooseLanguage, font: Font.bold(presentationData.listsFontSize.baseDisplaySize), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         self.titleNode.maximumNumberOfLines = 2
         
         self.subtitleNode = ASTextNode()
-        self.subtitleNode.attributedText = NSAttributedString(string: englishStrings.ChooseLanguage, font: Font.regular(floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)), textColor: presentationData.theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
+        self.subtitleNode.attributedText = NSAttributedString(string: englishStrings.ChooseLanguage, font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)), textColor: presentationData.theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
         self.subtitleNode.maximumNumberOfLines = 2
         
         self.titleSeparatorNode = ASDisplayNode()

@@ -5132,6 +5132,7 @@ Any member of this group will be able to see messages in the channel.";
 "IntentsSettings.SuggestedChatsPrivateChats" = "Private Chats";
 "IntentsSettings.SuggestedChatsGroups" = "Groups";
 "IntentsSettings.SuggestedChatsInfo" = "Archived chats will not be suggested.";
+"IntentsSettings.SuggestedAndSpotlightChatsInfo" = "Suggestions will appear in the Share Sheet and Spotlight search results. Archived chats will not be suggested.";
 "IntentsSettings.SuggestBy" = "Suggest By";
 "IntentsSettings.SuggestByAll" = "All Sent Messages";
 "IntentsSettings.SuggestByShare" = "Only Shared Messages";

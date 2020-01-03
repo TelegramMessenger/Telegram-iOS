@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import AccountContext
+import TelegramUIPreferences
 
 private final class InstantPageSlideshowItemNode: ASDisplayNode {
     private var _index: Int?
@@ -64,6 +65,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
 
 private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private let sourcePeerType: MediaAutoDownloadPeerType
     private let theme: InstantPageTheme
     private let webPage: TelegramMediaWebpage
     private let openMedia: (InstantPageMedia) -> Void
@@ -97,8 +99,9 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         }
     }
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
         self.context = context
+        self.sourcePeerType = sourcePeerType
         self.theme = theme
         self.webPage = webPage
         self.openMedia = openMedia
@@ -180,7 +183,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         let media = self.items[index]
         let contentNode: ASDisplayNode
         if let _ = media.media as? TelegramMediaImage {
-            contentNode = InstantPageImageNode(context: self.context, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia)
+            contentNode = InstantPageImageNode(context: self.context, sourcePeerType: self.sourcePeerType, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia)
         } else if let file = media.media as? TelegramMediaFile {
             contentNode = ASDisplayNode()
         } else {
@@ -379,10 +382,10 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
     private let pagerNode: InstantPageSlideshowPagerNode
     private let pageControlNode: PageControlNode
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
         self.medias = medias
         
-        self.pagerNode = InstantPageSlideshowPagerNode(context: context, theme: theme, webPage: webPage, openMedia: openMedia, longPressMedia: longPressMedia)
+        self.pagerNode = InstantPageSlideshowPagerNode(context: context, sourcePeerType: sourcePeerType, theme: theme, webPage: webPage, openMedia: openMedia, longPressMedia: longPressMedia)
         self.pagerNode.replaceItems(medias, centralItemIndex: nil)
         
         self.pageControlNode = PageControlNode(dotColor: .white, inactiveDotColor: UIColor(white: 1.0, alpha: 0.5))

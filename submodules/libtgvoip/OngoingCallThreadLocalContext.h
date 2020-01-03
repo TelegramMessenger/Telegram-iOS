@@ -18,7 +18,8 @@
 typedef NS_ENUM(int32_t, OngoingCallState) {
     OngoingCallStateInitializing,
     OngoingCallStateConnected,
-    OngoingCallStateFailed
+    OngoingCallStateFailed,
+    OngoingCallStateReconnecting
 };
 
 typedef NS_ENUM(int32_t, OngoingCallNetworkType) {

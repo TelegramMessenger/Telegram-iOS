@@ -265,9 +265,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.toMessageTextNode.attributedText = toAttributedText
             }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         
-            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         

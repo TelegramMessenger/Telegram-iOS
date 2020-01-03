@@ -13,6 +13,7 @@
 @property (nonatomic, copy) void (^cancel)(void);
 @property (nonatomic, copy) void (^deletePressed)(void);
 @property (nonatomic, copy) bool (^sendPressed)(void);
+@property (nonatomic, copy) bool (^sendLongPressed)(void);
 
 @property (nonatomic, copy) bool(^isAlreadyLocked)(void);
 

@@ -82,6 +82,7 @@ enum ChatMediaInputMode {
 enum ChatMediaInputSearchMode {
     case gif
     case sticker
+    case trending
 }
 
 enum ChatMediaInputExpanded: Equatable {

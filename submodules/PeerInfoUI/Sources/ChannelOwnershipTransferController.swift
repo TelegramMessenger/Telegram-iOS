@@ -557,7 +557,7 @@ func channelOwnershipTransferController(context: AccountContext, peer: Peer, mem
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
-    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.fontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
+    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
     
     var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
     var isGroup = true

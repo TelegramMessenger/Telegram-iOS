@@ -14,6 +14,7 @@ final class InstantPageContentNode : ASDisplayNode {
     private let context: AccountContext
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder
+    private let sourcePeerType: MediaAutoDownloadPeerType
     private let theme: InstantPageTheme
     
     private let openMedia: (InstantPageMedia) -> Void
@@ -40,10 +41,11 @@ final class InstantPageContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
+        self.sourcePeerType = sourcePeerType
         self.theme = theme
         
         self.openMedia = openMedia
@@ -187,7 +189,7 @@ final class InstantPageContentNode : ASDisplayNode {
                 if itemNode == nil {
                     let itemIndex = itemIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, openMedia: { [weak self] media in
+                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, sourcePeerType: self.sourcePeerType, openMedia: { [weak self] media in
                         self?.openMedia(media)
                         }, longPressMedia: { [weak self] media in
                             self?.longPressMedia(media)

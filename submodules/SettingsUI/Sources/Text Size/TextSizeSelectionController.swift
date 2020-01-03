@@ -52,7 +52,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize) -> Void) {
+    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize, PresentationFontSize) -> Void) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -133,7 +133,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             }
             if !dismissed {
                 dismissed = true
-                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize)
+                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize, strongSelf.presentationThemeSettings.listsFontSize)
             }
         }
         self.toolbarNode.updateUseSystemFont = { [weak self] value in
@@ -147,7 +147,12 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.presentationThemeSettings.fontSize = value
+            switch strongSelf.toolbarNode.customMode {
+            case .chat:
+                strongSelf.presentationThemeSettings.fontSize = value
+            case .list:
+                strongSelf.presentationThemeSettings.listsFontSize = value
+            }
             strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
         }
           
@@ -177,6 +182,15 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         let bounds = scrollView.bounds
         if !bounds.width.isZero {
             self.pageControlNode.setPage(scrollView.contentOffset.x / bounds.width)
+            let pageIndex = Int(round(scrollView.contentOffset.x / bounds.width))
+            let customMode: TextSelectionCustomMode = pageIndex >= 1 ? .list : .chat
+            if customMode != self.toolbarNode.customMode {
+                self.toolbarNode.setCustomMode(customMode)
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                    self.recursivelyEnsureDisplaySynchronously(true)
+                }
+            }
         }
     }
     
@@ -202,7 +216,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, activateChatPreview: { _, _, gesture in
             gesture?.cancel()
         })
-        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
         let peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
@@ -289,7 +303,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp:  self.referenceTimestamp, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
+        let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp:  self.referenceTimestamp, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
         
         var items: [ListViewItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
@@ -303,20 +317,20 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
         
         let message1 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message1, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
         
         let message2 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message2, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
         
         let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: MemoryBuffer(data: Data(base64Encoded: waveformBase64)!))]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: voiceAttributes)
         
         let message3 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message3, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local), tapMessage: nil, clickThroughMessage: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message3, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local), tapMessage: nil, clickThroughMessage: nil))
         
         let message4 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.presentationData.theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
         
         let width: CGFloat
         if case .regular = layout.metrics.widthClass {
@@ -384,13 +398,16 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     
     func updatePresentationThemeSettings(_ presentationThemeSettings: PresentationThemeSettings) {
         let fontSize: PresentationFontSize
+        let listsFontSize: PresentationFontSize
         if presentationThemeSettings.useSystemFont {
             let pointSize = UIFont.preferredFont(forTextStyle: .body).pointSize
             fontSize = PresentationFontSize(systemFontSize: pointSize)
+            listsFontSize = fontSize
         } else {
             fontSize = presentationThemeSettings.fontSize
+            listsFontSize = presentationThemeSettings.listsFontSize
         }
-        self.presentationData = self.presentationData.withFontSize(fontSize)
+        self.presentationData = self.presentationData.withFontSizes(chatFontSize: fontSize, listsFontSize: listsFontSize)
         self.toolbarNode.updatePresentationData(presentationData: self.presentationData)
         self.toolbarNode.updatePresentationThemeSettings(presentationThemeSettings: self.presentationThemeSettings)
         if let (layout, navigationBarHeight) = self.validLayout {
@@ -525,19 +542,20 @@ final class TextSizeSelectionController: ViewController {
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
-        }, apply: { [weak self] useSystemFont, fontSize in
+        }, apply: { [weak self] useSystemFont, fontSize, listsFontSize in
             if let strongSelf = self {
-                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize)
+                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize)
             }
         })
         self.displayNodeDidLoad()
     }
     
-    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize) {
+    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize) {
         let _ = (updatePresentationThemeSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { current in
             var current = current
             current.useSystemFont = useSystemFont
             current.fontSize = fontSize
+            current.listsFontSize = listsFontSize
             return current
         })
         |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -552,6 +570,11 @@ final class TextSizeSelectionController: ViewController {
     }
 }
 
+private enum TextSelectionCustomMode {
+    case list
+    case chat
+}
+
 private final class TextSelectionToolbarNode: ASDisplayNode {
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
@@ -563,6 +586,8 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     
     private var switchItemNode: ItemListSwitchItemNode
     private var fontSizeItemNode: ThemeSettingsFontSizeItemNode
+    
+    private(set) var customMode: TextSelectionCustomMode = .chat
     
     var cancel: (() -> Void)?
     var done: (() -> Void)?
@@ -621,6 +646,10 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         self.doneButton.isUserInteractionEnabled = enabled
     }
     
+    func setCustomMode(_ customMode: TextSelectionCustomMode) {
+        self.customMode = customMode
+    }
+    
     func updatePresentationData(presentationData: PresentationData) {
         self.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
@@ -640,7 +669,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateUseSystemFont?(value)
         })
-        let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.presentationThemeSettings.fontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, updated: { [weak self] value in
+        let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.customMode == .chat ? self.presentationThemeSettings.fontSize : self.presentationThemeSettings.listsFontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, force: true, sectionId: 0, updated: { [weak self] value in
             self?.updateCustomFontSize?(value)
         })
         

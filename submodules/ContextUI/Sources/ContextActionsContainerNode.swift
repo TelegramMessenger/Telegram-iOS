@@ -326,7 +326,7 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         let standardIconWidth: CGFloat = 32.0
         let iconSideInset: CGFloat = 12.0
         
-        let textFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
+        let textFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 16.0, height: 16.0)
         

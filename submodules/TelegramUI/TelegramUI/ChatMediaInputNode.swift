@@ -496,7 +496,7 @@ final class ChatMediaInputNode: ChatInputNode {
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
-        })
+        }, isPane: true)
         
         self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers, .trending], currentIndex: 1, indexTransition: 0.0)
         
@@ -754,6 +754,7 @@ final class ChatMediaInputNode: ChatInputNode {
             strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
+        }, openSearch: {
         })
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
@@ -803,7 +804,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 var index = 0
                 for item in trendingPacks {
                     if !installedPacks.contains(item.info.id) {
-                        gridEntries.append(.trending(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
+                        gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
                         index += 1
                     }
                 }
@@ -877,6 +878,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.stickerPane.inputNodeInteraction = self.inputNodeInteraction
         self.gifPane.inputNodeInteraction = self.inputNodeInteraction
+        self.trendingPane.inputNodeInteraction = self.inputNodeInteraction
         
         paneDidScrollImpl = { [weak self] pane, state, transition in
             self?.updatePaneDidScroll(pane: pane, state: state, transition: transition)
@@ -1387,14 +1389,20 @@ final class ChatMediaInputNode: ChatInputNode {
                     var placeholderNode: PaneSearchBarPlaceholderNode?
                     if let searchMode = searchMode {
                         switch searchMode {
-                            case .gif:
-                                placeholderNode = self.gifPane.searchPlaceholderNode
-                            case .sticker:
-                                self.stickerPane.gridNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
-                                        placeholderNode = itemNode
-                                    }
+                        case .gif:
+                            placeholderNode = self.gifPane.searchPlaceholderNode
+                        case .sticker:
+                            self.stickerPane.gridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                                    placeholderNode = itemNode
                                 }
+                            }
+                        case .trending:
+                            self.trendingPane.gridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                                    placeholderNode = itemNode
+                                }
+                            }
                         }
                     }
                     
@@ -1558,15 +1566,22 @@ final class ChatMediaInputNode: ChatInputNode {
             var placeholderNode: PaneSearchBarPlaceholderNode?
             if let searchMode = searchMode {
                 switch searchMode {
-                    case .gif:
-                        placeholderNode = self.gifPane.searchPlaceholderNode
-                        paneIsEmpty = self.gifPane.isEmpty
-                    case .sticker:
-                        self.stickerPane.gridNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
-                                placeholderNode = itemNode
-                            }
+                case .gif:
+                    placeholderNode = self.gifPane.searchPlaceholderNode
+                    paneIsEmpty = self.gifPane.isEmpty
+                case .sticker:
+                    self.stickerPane.gridNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                            placeholderNode = itemNode
                         }
+                    }
+                case .trending:
+                    self.trendingPane.gridNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                            placeholderNode = itemNode
+                        }
+                    }
+                    paneIsEmpty = true
                 }
             }
             if let placeholderNode = placeholderNode {
