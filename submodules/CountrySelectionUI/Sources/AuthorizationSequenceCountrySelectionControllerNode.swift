@@ -98,6 +98,11 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         self.searchTableView = UITableView(frame: CGRect(), style: .plain)
         self.searchTableView.isHidden = true
         
+        if #available(iOS 11.0, *) {
+            self.tableView.contentInsetAdjustmentBehavior = .never
+            self.searchTableView.contentInsetAdjustmentBehavior = .never
+        }
+        
         let countryNamesAndCodes = localizedContryNamesAndCodes(strings: strings)
         
         var sections: [(String, [((String, String), String, Int)])] = []
@@ -147,6 +152,8 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.tableView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
+        self.searchTableView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
         transition.updateFrame(view: self.tableView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight)))
         transition.updateFrame(view: self.searchTableView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight)))
     }
