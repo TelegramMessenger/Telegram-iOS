@@ -320,12 +320,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let result = super.hitTest(point, with: event)
         if self.controlsNode.bounds.contains(self.view.convert(point, to: self.controlsNode.view)) {
-            if result == nil {
+            let controlsHitTest = self.controlsNode.view.hitTest(self.view.convert(point, to: self.controlsNode.view), with: event)
+            if controlsHitTest == nil {
                 return self.historyNode.view
             }
         }
+        
+        let result = super.hitTest(point, with: event)
         
         if !self.bounds.contains(point) {
             return nil
