@@ -106,7 +106,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
 
 private var signalBackgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
-public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, mediaBox: MediaBox) -> Signal<(UIImage?, Bool)?, NoError> {
+public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, mediaBox: MediaBox, accountMediaBox: MediaBox) -> Signal<(UIImage?, Bool)?, NoError> {
     var backgroundImage: UIImage?
     if wallpaper == signalBackgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == signalBackgroundImageForWallpaper?.1, let image = signalBackgroundImageForWallpaper?.2 {
         return .single((image, true))
@@ -175,7 +175,16 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 }
             case let .file(file):
                 if wallpaper.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                    return mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: true)
+                    let representation = CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation)
+                    
+                    let effectiveMediaBox: MediaBox
+                    if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: representation)) {
+                        effectiveMediaBox = mediaBox
+                    } else {
+                        effectiveMediaBox = accountMediaBox
+                    }
+                    
+                    return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
                     |> take(1)
                     |> mapToSignal { data -> Signal<(UIImage?, Bool)?, NoError> in
                         if data.complete {
@@ -205,7 +214,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                                 }
                             })
 
-                            return .single((interrimImage, false)) |> then(mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
+                            return .single((interrimImage, false)) |> then(effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
                             |> map { data -> (UIImage?, Bool)? in
                                 return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
                             })
@@ -216,7 +225,16 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                     }
                 } else {
                     if file.settings.blur {
-                        return mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true)
+                        let representation = CachedBlurredWallpaperRepresentation()
+                        
+                        let effectiveMediaBox: MediaBox
+                        if FileManager.default.fileExists(atPath: mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: representation)) {
+                            effectiveMediaBox = mediaBox
+                        } else {
+                            effectiveMediaBox = accountMediaBox
+                        }
+                        
+                        return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
                         |> map { data -> (UIImage?, Bool)? in
                             if data.complete {
                                 return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
@@ -227,10 +245,18 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         |> afterNext { image in
                             cacheWallpaper(image?.0)
                         }
-                    } else if let path = mediaBox.completedResourcePath(file.file.resource) {
-                        return .single((UIImage(contentsOfFile: path)?.precomposed(), true))
-                        |> afterNext { image in
-                            cacheWallpaper(image?.0)
+                    } else {
+                        var path: String?
+                        if let maybePath = mediaBox.completedResourcePath(file.file.resource) {
+                            path = maybePath
+                        } else if let maybePath = accountMediaBox.completedResourcePath(file.file.resource) {
+                            path = maybePath
+                        }
+                        if let path = path {
+                            return .single((UIImage(contentsOfFile: path)?.precomposed(), true))
+                            |> afterNext { image in
+                                cacheWallpaper(image?.0)
+                            }
                         }
                     }
                 }

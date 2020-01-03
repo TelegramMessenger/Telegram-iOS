@@ -26,11 +26,11 @@ public final class CachedWallpaper: PostboxCoding {
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10000, highWaterItemCount: 20000)
 
-public func cachedWallpaper(account: Account, slug: String, settings: WallpaperSettings?) -> Signal<CachedWallpaper?, NoError> {
+public func cachedWallpaper(account: Account, slug: String, settings: WallpaperSettings?, update: Bool = false) -> Signal<CachedWallpaper?, NoError> {
     return account.postbox.transaction { transaction -> Signal<CachedWallpaper?, NoError> in
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)) as? CachedWallpaper {
+        if !update, let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)) as? CachedWallpaper {
             if let settings = settings {
                 return .single(CachedWallpaper(wallpaper: entry.wallpaper.withUpdatedSettings(settings)))
             } else {
