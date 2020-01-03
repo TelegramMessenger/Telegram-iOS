@@ -10,6 +10,17 @@ public enum MediaAutoDownloadNetworkType {
     case cellular
 }
 
+public extension MediaAutoDownloadNetworkType {
+    init(_ networkType: NetworkType) {
+        switch networkType {
+        case .none, .cellular:
+            self = .cellular
+        case .wifi:
+            self = .wifi
+        }
+    }
+}
+
 public enum MediaAutoDownloadPreset: Int32 {
     case low
     case medium
