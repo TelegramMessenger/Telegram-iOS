@@ -461,6 +461,15 @@ public final class PresentationCallImpl: PresentationCall {
                                 self.activeTimestamp = timestamp
                             }
                             presentationState = .active(timestamp, reception, keyVisualHash)
+                        case .reconnecting:
+                            let timestamp: Double
+                            if let activeTimestamp = self.activeTimestamp {
+                                timestamp = activeTimestamp
+                            } else {
+                                timestamp = CFAbsoluteTimeGetCurrent()
+                                self.activeTimestamp = timestamp
+                            }
+                            presentationState = .reconnecting(timestamp, reception, keyVisualHash)
                     }
                 } else {
                     presentationState = .connecting(keyVisualHash)
@@ -520,7 +529,7 @@ public final class PresentationCallImpl: PresentationCall {
         }
         if let presentationState = presentationState {
             self.statePromise.set(presentationState)
-            self.updateTone(presentationState, previous: previous)
+            self.updateTone(presentationState, callContextState: callContextState, previous: previous)
         }
         
         if !self.shouldPresentCallRating {
@@ -530,9 +539,11 @@ public final class PresentationCallImpl: PresentationCall {
         }
     }
     
-    private func updateTone(_ state: PresentationCallState, previous: CallSession?) {
+    private func updateTone(_ state: PresentationCallState, callContextState: OngoingCallContextState?, previous: CallSession?) {
         var tone: PresentationCallTone?
-        if let previous = previous {
+        if let callContextState = callContextState, case .reconnecting = callContextState {
+            tone = .connecting
+        } else if let previous = previous {
             switch previous.state {
                 case .accepting, .active, .dropping, .requesting:
                     switch state {

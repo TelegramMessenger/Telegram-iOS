@@ -591,7 +591,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
                 linkEnabled = false
         }
         entries.append(.forwardsPreviewHeader(presentationData.theme, presentationData.strings.Privacy_Forwards_Preview))
-        entries.append(.forwardsPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peerName, linkEnabled, tootipText))
+        entries.append(.forwardsPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peerName, linkEnabled, tootipText))
     }
     
     entries.append(.settingHeader(presentationData.theme, settingTitle))

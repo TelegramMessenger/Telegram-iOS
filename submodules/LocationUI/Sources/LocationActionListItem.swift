@@ -218,7 +218,6 @@ final class LocationActionListItemNode: ListViewItemNode {
         let iconLayout = self.venueIconNode.asyncLayout()
         
         return { [weak self] item, params, hasSeparator in
-            
             let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = params.rightInset
             let verticalInset: CGFloat = 8.0

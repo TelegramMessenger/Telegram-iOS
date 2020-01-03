@@ -232,10 +232,18 @@ final class CallControllerNode: ASDisplayNode {
                     text += "\n\(self.statusNode.subtitle)"
                 }
                 statusValue = .text(text)
-            case let .active(timestamp, reception, keyVisualHash):
+            case .active(let timestamp, let reception, let keyVisualHash), .reconnecting(let timestamp, let reception, let keyVisualHash):
                 let strings = self.presentationData.strings
+                var isReconnecting = false
+                if case .reconnecting = callState {
+                    isReconnecting = true
+                }
                 statusValue = .timer({ value in
-                    return strings.Call_StatusOngoing(value).0
+                    if isReconnecting {
+                        return strings.Call_StatusConnecting
+                    } else {
+                        return strings.Call_StatusOngoing(value).0
+                    }
                 }, timestamp)
                 if self.keyTextData?.0 != keyVisualHash {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!

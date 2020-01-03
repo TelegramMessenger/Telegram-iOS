@@ -598,7 +598,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 resolvedText = .inProgress(nil)
                             case .terminated:
                                 resolvedText = .none
-                            case let .active(timestamp, _, _):
+                            case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
                                 resolvedText = .inProgress(timestamp)
                         }
                     } else {
@@ -654,14 +654,28 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.updateNotificationTokensRegistration()
         
-        if applicationBindings.isMainApp && false {
+        if applicationBindings.isMainApp {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
             |> map { primary, _, _ in
                 return primary
             }, presentationData: self.presentationData)
-            self.spotlightDataContext = SpotlightDataContext(accounts: self.activeAccounts |> map { _, accounts, _ in
+            
+            let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
+            |> map { sharedData -> Bool in
+                let intentsSettings: IntentsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings ?? .defaultSettings
+                return intentsSettings.contacts
+            }
+            |> distinctUntilChanged
+            self.spotlightDataContext = SpotlightDataContext(appBasePath: applicationBindings.containerPath, accountManager: accountManager, accounts: combineLatest(enableSpotlight, self.activeAccounts
+            |> map { _, accounts, _ in
                 return accounts.map { _, account, _ in
                     return account
+                }
+            }) |> map { enableSpotlight, accounts in
+                if enableSpotlight {
+                    return accounts
+                } else {
+                    return []
                 }
             })
         }

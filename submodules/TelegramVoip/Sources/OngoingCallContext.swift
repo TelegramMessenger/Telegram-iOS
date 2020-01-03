@@ -74,6 +74,7 @@ private let setupLogs: Bool = {
 public enum OngoingCallContextState {
     case initializing
     case connected
+    case reconnecting
     case failed
 }
 
@@ -151,6 +152,8 @@ public final class OngoingCallContext {
                         return .connected
                     case .failed:
                         return .failed
+                    case .reconnecting:
+                        return .reconnecting
                     default:
                         return .failed
                 }

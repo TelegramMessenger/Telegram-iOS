@@ -147,7 +147,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.fontSize))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.listsFontSize))
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
@@ -228,7 +228,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         
         self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.fontSize)))
+                strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.listsFontSize)))
                 
                 strongSelf.emptyResultsTitleNode.attributedText = NSAttributedString(string: presentationData.strings.SharedMedia_SearchNoResults, font: Font.semibold(17.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
                 

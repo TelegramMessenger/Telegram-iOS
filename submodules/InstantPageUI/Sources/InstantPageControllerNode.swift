@@ -541,7 +541,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let itemIndex = itemIndex
                     let embedIndex = embedIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, openMedia: { [weak self] media in
+                    if let newNode = item.node(context: self.context, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, theme: theme, sourcePeerType: self.sourcePeerType, openMedia: { [weak self] media in
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
@@ -1051,7 +1051,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
+        let controller = InstantPageReferenceController(context: self.context, sourcePeerType: self.sourcePeerType, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openUrlIn: { [weak self] url in
             self?.openUrlIn(url)

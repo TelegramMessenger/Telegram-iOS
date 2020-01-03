@@ -1279,7 +1279,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 }
             }
             
-            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context sendButtonFrame:strongModel.interfaceView.doneButtonFrame canSendSilently:strongSelf->_hasSilentPosting canSchedule:effectiveHasSchedule reminder:strongSelf->_reminder];
+            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context isDark:true sendButtonFrame:strongModel.interfaceView.doneButtonFrame canSendSilently:strongSelf->_hasSilentPosting canSchedule:effectiveHasSchedule reminder:strongSelf->_reminder];
             controller.send = ^{
                 __strong TGCameraController *strongSelf = weakSelf;
                 __strong TGMediaPickerGalleryModel *strongModel = weakModel;

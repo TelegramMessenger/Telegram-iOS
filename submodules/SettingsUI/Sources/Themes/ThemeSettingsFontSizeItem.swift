@@ -16,16 +16,18 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let fontSize: PresentationFontSize
     let disableLeadingInset: Bool
+    let force: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
         self.disableLeadingInset = disableLeadingInset
+        self.force = force
         self.sectionId = sectionId
         self.updated = updated
         self.tag = tag
@@ -201,7 +203,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    let firstTime = strongSelf.item == nil
+                    let firstTime = strongSelf.item == nil || item.force
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
