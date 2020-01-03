@@ -111,8 +111,12 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         carouselItemView = carouselItem
         carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
         carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-        carouselItem.cameraPressed = { [weak controller] cameraView in
+        carouselItem.cameraPressed = { [weak controller, weak parentController] cameraView in
             if let controller = controller {
+                if let parentController = parentController, parentController.context.currentlyInSplitView() {
+                    return
+                }
+                
                 DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                     if value {
                         openCamera(cameraView, controller)

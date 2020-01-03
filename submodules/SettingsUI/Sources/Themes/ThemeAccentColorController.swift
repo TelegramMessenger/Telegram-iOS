@@ -260,10 +260,6 @@ final class ThemeAccentColorController: ViewController {
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                                    //                                    if let resource = resultTheme.file?.resource, let data = themeData {
-                                    //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                                    //                                    }
-                                    
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
                                     
                                     var updatedTheme = current.theme
@@ -293,10 +289,6 @@ final class ThemeAccentColorController: ViewController {
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                                    //                                    if let resource = resultTheme.file?.resource, let data = themeData {
-                                    //                                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
-                                    //                                    }
-                                    
                                     let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
                                     
                                     var updatedTheme = current.theme

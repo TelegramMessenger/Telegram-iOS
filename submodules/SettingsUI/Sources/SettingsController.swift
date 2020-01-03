@@ -875,6 +875,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)>()
     activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
     
+    let blockedPeers = Promise<BlockedPeersContext?>(nil)
+    let hasTwoStepAuthPromise = Promise<Bool?>(nil)
+    
     let arguments = SettingsItemArguments(sharedContext: context.sharedContext, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
@@ -932,12 +935,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let _ = (activeSessionsContextAndCount.get()
+            let _ = (combineLatest(activeSessionsContextAndCount.get(), blockedPeers.get(), hasTwoStepAuthPromise.get())
             |> deliverOnMainQueue
-            |> take(1)).start(next: { activeSessionsContext, _, webSessionsContext in
+            |> take(1)).start(next: { sessions, blockedPeersContext, hasTwoStepAuth in
+                let (activeSessionsContext, _, webSessionsContext) = sessions
                 pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
                     privacySettings.set(.single(settings))
-                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
+                }, updatedBlockedPeers: { blockedPeersContext in
+                    blockedPeers.set(.single(blockedPeersContext))
+                }, updatedHasTwoStepAuth: { hasTwoStepAuthValue in
+                    hasTwoStepAuthPromise.set(.single(hasTwoStepAuthValue))
+                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext))
             })
         })
     }, openDataAndStorage: {

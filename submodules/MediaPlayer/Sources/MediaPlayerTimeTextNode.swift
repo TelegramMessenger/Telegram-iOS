@@ -68,6 +68,9 @@ private final class MediaPlayerTimeTextNodeParameters: NSObject {
 public final class MediaPlayerTimeTextNode: ASDisplayNode {
     public var alignment: NSTextAlignment = .left
     public var mode: MediaPlayerTimeTextNodeMode = .normal
+    
+    public var keepPreviousValueOnEmptyState = false
+    
     public var textColor: UIColor {
         didSet {
             self.updateTimestamp()
@@ -151,6 +154,10 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
     }
     
     func updateTimestamp() {
+        if ((self.statusValue?.duration ?? 0.0) < 0.1) && self.state.seconds != nil && self.keepPreviousValueOnEmptyState {
+            return
+        }
+        
         if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
             let timestampSeconds: Double
             if !statusValue.generationTimestamp.isZero {

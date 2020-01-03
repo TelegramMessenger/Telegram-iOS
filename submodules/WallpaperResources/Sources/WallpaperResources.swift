@@ -1125,7 +1125,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         case .night:
             topBackgroundColor = UIColor(rgb: 0x000000)
             incomingColor = UIColor(rgb: 0x1f1f1f)
-            if accentColor == nil {
+            if accentColor == nil || accentColor?.rgb == 0xffffff {
                 accentColor = UIColor(rgb: 0x313131)
             }
             outgoingColor = bubbleColors ?? (accentColor!, accentColor!)

@@ -395,11 +395,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         
         let throttledSignal = self.globalMediaPlayerState
         |> mapToThrottled { next -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
-            return .single(next) |> then(.complete() |> delay(4.0, queue: Queue.concurrentDefaultQueue()))
+            return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
         }
         
         self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { accountStateAndType in
-            if let (account, stateOrLoading, type) = accountStateAndType, type == .music, case let .state(state) = stateOrLoading, state.status.duration > 60.0 * 20.0, case .playing = state.status.status {
+            if let (account, stateOrLoading, type) = accountStateAndType, type == .music, case let .state(state) = stateOrLoading, state.status.duration >= 60.0 * 20.0, case .playing = state.status.status {
                 if let item = state.item as? MessageMediaPlaylistItem {
                     var storedState: MediaPlaybackStoredState?
                     if state.status.timestamp > 5.0 && state.status.timestamp < state.status.duration - 5.0 {

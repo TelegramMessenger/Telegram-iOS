@@ -637,7 +637,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     @objc private func togglePattern() {
         let value = !self.patternButtonNode.isSelected
-        self.patternButtonNode.setSelected(value, animated: true)
+        self.patternButtonNode.setSelected(value, animated: false)
         
         self.requestPatternPanel?(value)
     }
