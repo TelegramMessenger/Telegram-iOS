@@ -493,7 +493,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
         if presentationThemeSettings.fontSize.baseDisplaySize == presentationThemeSettings.listsFontSize.baseDisplaySize {
             textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt"
         } else {
-            textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt/\(Int(presentationThemeSettings.listsFontSize.baseDisplaySize))pt"
+            textSizeValue = "\(Int(presentationThemeSettings.fontSize.baseDisplaySize))pt / \(Int(presentationThemeSettings.listsFontSize.baseDisplaySize))pt"
         }
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
