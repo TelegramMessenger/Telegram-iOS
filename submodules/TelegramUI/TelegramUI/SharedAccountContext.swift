@@ -598,7 +598,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 resolvedText = .inProgress(nil)
                             case .terminated:
                                 resolvedText = .none
-                            case let .active(timestamp, _, _):
+                            case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
                                 resolvedText = .inProgress(timestamp)
                         }
                     } else {
