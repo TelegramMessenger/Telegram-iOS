@@ -173,10 +173,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemAccentColor, bufferingColor: presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4)))
         self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor)
         self.leftDurationLabel.displaysAsynchronously = false
+        self.leftDurationLabel.keepPreviousValueOnEmptyState = true
         self.rightDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor)
         self.rightDurationLabel.displaysAsynchronously = false
         self.rightDurationLabel.mode = .reversed
         self.rightDurationLabel.alignment = .right
+        self.rightDurationLabel.keepPreviousValueOnEmptyState = true
         
         self.rateButton = HighlightableButtonNode()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)

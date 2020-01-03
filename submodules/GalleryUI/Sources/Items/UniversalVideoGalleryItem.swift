@@ -420,11 +420,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
-                        return .single(next) |> then(.complete() |> delay(4.0, queue: Queue.concurrentDefaultQueue()))
+                        return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
                     }
                     
                     self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
-                        if let status = status, status.duration > 60.0 * 20.0 {
+                        if let status = status, status.duration >= 60.0 * 20.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
                                 timestamp = status.timestamp

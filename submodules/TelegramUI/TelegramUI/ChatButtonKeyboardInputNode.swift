@@ -73,7 +73,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
-        if self.theme !== interfaceState.theme {
+        let updatedTheme = self.theme !== interfaceState.theme
+        if updatedTheme {
             self.theme = interfaceState.theme
             
             self.separatorNode.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelSeparatorColor
@@ -128,7 +129,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                         self.buttonNodes.append(buttonNode)
                     }
                     buttonIndex += 1
-                    if buttonNode.button != button {
+                    if buttonNode.button != button || updatedTheme {
                         buttonNode.button = button
                         buttonNode.setAttributedTitle(NSAttributedString(string: button.title, font: Font.regular(16.0), textColor: interfaceState.theme.chat.inputButtonPanel.buttonTextColor, paragraphAlignment: .center), for: [])
                     }

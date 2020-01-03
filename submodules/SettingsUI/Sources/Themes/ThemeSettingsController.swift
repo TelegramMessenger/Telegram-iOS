@@ -1208,8 +1208,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 
                     let _ = (context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: true)
                     |> filter({ $0.complete })).start(next: { data in
-                        if data.complete, let path = context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: maybeData, synchronous: true)
+                        if data.complete, let path = context.account.postbox.mediaBox.completedResourcePath(resource) {
+                            if let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: maybeData, synchronous: true)
+                            }
+                            if let maybeData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedRead) {
+                                context.sharedContext.accountManager.mediaBox.storeCachedResourceRepresentation(resource, representation: representation, data: maybeData)
+                            }
                         }
                     })
                     return .single(wallpaper)
@@ -1263,12 +1268,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     } else {
                         themeSpecificChatWallpapers[index] = presetWallpaper
                     }
-//                    if let wallpaper = current.themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)], wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
-//                        themeSpecificChatWallpapers[currentTheme.index] = nil
-//                        if let accentColor = accentColor {
-//                            themeSpecificChatWallpapers[coloredThemeIndex(reference: currentTheme, accentColor: accentColor)] = nil
-//                        }
-//                    }
                 }
                 
                 return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)

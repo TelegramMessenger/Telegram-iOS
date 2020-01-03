@@ -304,6 +304,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))
             
             let editingOffset: CGFloat
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
@@ -315,7 +316,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            var leftInset: CGFloat = 86.0 + params.leftInset
+            var leftInset: CGFloat = 46.0 + avatarDiameter + params.leftInset
             let rightInset: CGFloat = 13.0 + params.rightInset
             var infoIconRightInset: CGFloat = rightInset - 1.0
             
@@ -548,7 +549,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 })
                             }
                             
-                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0)))
+                            transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()
                             transition.updateFrameAdditive(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: verticalInset), size: titleLayout.size))

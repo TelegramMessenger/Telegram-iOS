@@ -12,6 +12,7 @@ import MergeLists
 import ChatListUI
 import AccountContext
 import ContextUI
+import ChatListSearchItemHeader
 
 private enum ChatListSearchEntryStableId: Hashable {
     case messageId(MessageId)
@@ -292,6 +293,12 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
         self.presentationDataPromise.set(.single(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)))
+        
+        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: presentationData.theme)
+            }
+        })
     }
     
     private func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {

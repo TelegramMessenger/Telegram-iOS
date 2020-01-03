@@ -1625,8 +1625,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time, completion: { [weak self] in
-                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
-                                strongSelf.openScheduledMessages()
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                })
+                                
+                                if !strongSelf.presentationInterfaceState.isScheduledMessages && time != scheduleWhenOnlineTimestamp {
+                                    strongSelf.openScheduledMessages()
+                                }
                             }
                         })
                     }

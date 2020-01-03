@@ -85,7 +85,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
        
         
-        self.chatListNode = ChatListNode(context: context, groupId: .root, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         

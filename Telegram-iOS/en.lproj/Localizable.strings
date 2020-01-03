@@ -5242,3 +5242,5 @@ Any member of this group will be able to see messages in the channel.";
 "StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";
 
 "Conversation.ContextMenuCancelEditing" = "Cancel Editing";
+
+"Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";

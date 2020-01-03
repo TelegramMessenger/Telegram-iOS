@@ -107,6 +107,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private let hideNetworkActivityStatus: Bool
     
     public let groupId: PeerGroupId
+    public let previewing: Bool
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
     
@@ -150,6 +151,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
         self.groupId = groupId
+        self.previewing = previewing
         
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
@@ -369,11 +371,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.searchContentNode?.updateExpansionProgress(0.0)
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        if !previewing {
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
+                self?.activateSearch()
+            })
+            self.searchContentNode?.updateExpansionProgress(0.0)
+            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        }
         
         if enableDebugActions {
             self.tabBarItemDebugTapAction = {
@@ -443,7 +447,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         

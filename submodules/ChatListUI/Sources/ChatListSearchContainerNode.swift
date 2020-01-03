@@ -1183,6 +1183,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.dimNode.backgroundColor = self.filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
+        
+        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: theme)
+            }
+        })
+        self.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: theme)
+            }
+        })
     }
     
     private func updateState(_ f: (ChatListSearchContainerNodeState) -> ChatListSearchContainerNodeState) {

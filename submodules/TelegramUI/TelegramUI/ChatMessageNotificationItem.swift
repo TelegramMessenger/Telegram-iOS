@@ -142,9 +142,8 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 } else {
                     isScheduled = true
                 }
-            } else {
-                self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: peer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
             }
+            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: peer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var titleIcon: UIImage?
@@ -308,9 +307,6 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         if isReminder {
             title = presentationData.strings.ScheduledMessages_ReminderNotification
-            if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-                self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: peer, overrideImage: .savedMessagesIcon, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
-            }
         } else if isScheduled, let currentTitle = title {
             title = "📅 \(currentTitle)"
         }

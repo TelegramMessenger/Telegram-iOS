@@ -2261,9 +2261,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             textInputPanelNode.text = ""
                             strongSelf.requestUpdateChatInterfaceState(false, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
-                            completion()
                         }
                     })
+                    completion()
                     
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
