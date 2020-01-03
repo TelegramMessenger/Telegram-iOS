@@ -11,6 +11,7 @@
     TGModernButton *_buttonView;
     UILabel *_buttonLabel;
     UIImageView *_buttonIcon;
+    UIView *_separatorView;
 }
 
 @property (nonatomic, readonly) UILabel *buttonLabel;
@@ -20,7 +21,7 @@
 
 @implementation TGMediaPickerSendActionSheetItemView
 
-- (instancetype)initWithTitle:(NSString *)title icon:(UIImage *)icon {
+- (instancetype)initWithTitle:(NSString *)title icon:(UIImage *)icon isDark:(bool)isDark isLast:(bool)isLast {
     self = [super init];
     if (self != nil) {
         _buttonView = [[TGModernButton alloc] init];
@@ -31,9 +32,17 @@
             __strong TGMediaPickerSendActionSheetItemView *strongSelf = weakSelf;
             if (strongSelf != nil) {
                 if (highlighted) {
-                    strongSelf->_buttonView.backgroundColor = UIColorRGB(0x363636);
+                    if (isDark) {
+                        strongSelf->_buttonView.backgroundColor = UIColorRGB(0x363636);
+                    } else {
+                        strongSelf->_buttonView.backgroundColor = UIColorRGBA(0x3c3c43, 0.2);
+                    }
                 } else {
-                    strongSelf->_buttonView.backgroundColor = [UIColor clearColor];
+                    if (isDark) {
+                        strongSelf->_buttonView.backgroundColor = [UIColor clearColor];
+                    } else {
+                        strongSelf->_buttonView.backgroundColor = [UIColor clearColor];
+                    }
                 }
             }
         };
@@ -43,15 +52,32 @@
         _buttonLabel = [[UILabel alloc] init];
         _buttonLabel.font = TGSystemFontOfSize(17.0f);
         _buttonLabel.text = title;
-        _buttonLabel.textColor = [UIColor whiteColor];
+        if (isDark) {
+            _buttonLabel.textColor = [UIColor whiteColor];
+        } else {
+            _buttonLabel.textColor = [UIColor blackColor];
+        }
         [_buttonLabel sizeToFit];
         _buttonLabel.userInteractionEnabled = false;
         [self addSubview:_buttonLabel];
         
         _buttonIcon = [[UIImageView alloc] init];
-        _buttonIcon.image = TGTintedImage(icon, [UIColor whiteColor]);
+        if (isDark) {
+            _buttonIcon.image = TGTintedImage(icon, [UIColor whiteColor]);
+        } else {
+            _buttonIcon.image = TGTintedImage(icon, [UIColor blackColor]);
+        }
         [_buttonIcon sizeToFit];
         [self addSubview:_buttonIcon];
+        
+        if (!isLast) {
+            _separatorView = [[UIView alloc] init];
+            if (isDark) {
+            } else {
+                _separatorView.backgroundColor = UIColorRGBA(0x3c3c43, 0.2);
+            }
+            [self addSubview:_separatorView];
+        }
     }
     return self;
 }
@@ -65,6 +91,7 @@
     _buttonLabel.frame = CGRectMake(16.0, 11.0, _buttonLabel.frame.size.width, _buttonLabel.frame.size.height);
     _buttonView.frame = self.bounds;
     _buttonIcon.frame = CGRectMake(self.bounds.size.width - _buttonIcon.frame.size.width - 12.0, 9.0, _buttonIcon.frame.size.width, _buttonIcon.frame.size.height);
+    _separatorView.frame = CGRectMake(0.0f, self.bounds.size.height, self.bounds.size.width, 1.0f / [UIScreen mainScreen].scale);
 }
 
 @end
@@ -73,6 +100,7 @@
 {
     id<LegacyComponentsContext> _context;
     
+    bool _isDark;
     CGRect _sendButtonFrame;
     bool _canSendSilently;
     bool _canSchedule;
@@ -92,10 +120,11 @@
 
 @implementation TGMediaPickerSendActionSheetController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context isDark:(bool)isDark sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder {
     self = [super initWithContext:context];
     if (self != nil) {
         _context = context;
+        _isDark = isDark;
         _sendButtonFrame = sendButtonFrame;
         _canSendSilently = canSendSilently;
         _canSchedule = canSchedule;
@@ -109,19 +138,41 @@
     
     _effectView = [[UIVisualEffectView alloc] initWithEffect:nil];
     if (iosMajorVersion() >= 9) {
-        _effectView.effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
+        if (_isDark) {
+            _effectView.effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
+        } else {
+            _effectView.effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleLight];
+        }
     }
     [self.view addSubview:_effectView];
     
+    /*
+     let contextMenu = PresentationThemeContextMenu(
+         dimColor: UIColor(rgb: 0x000a26, alpha: 0.2),
+         backgroundColor: UIColor(rgb: 0xf9f9f9, alpha: 0.78),
+         itemSeparatorColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
+         sectionSeparatorColor: UIColor(rgb: 0x8a8a8a, alpha: 0.2),
+         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
+         itemHighlightedBackgroundColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
+         primaryColor: UIColor(rgb: 0x000000, alpha: 1.0),
+         secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
+         destructiveColor: UIColor(rgb: 0xff3b30)
+     )
+     */
+    
     _containerView = [[UIView alloc] init];
-    _containerView.backgroundColor = UIColorRGB(0x1f1f1f);
+    if (_isDark) {
+        _containerView.backgroundColor = UIColorRGB(0x1f1f1f);
+    } else {
+        _containerView.backgroundColor = UIColorRGBA(0xf9f9f9, 0.78);
+    }
     _containerView.clipsToBounds = true;
     _containerView.layer.cornerRadius = 12.0;
     [self.view addSubview:_containerView];
     
     __weak TGMediaPickerSendActionSheetController *weakSelf = self;
     if (_canSendSilently) {
-        _sendSilentlyButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.SendSilently") icon:TGComponentsImageNamed(@"MediaMute")];
+        _sendSilentlyButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.SendSilently") icon:TGComponentsImageNamed(@"MediaMute") isDark:_isDark isLast:!_canSchedule];
         _sendSilentlyButton.pressed = ^{
             __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
             [strongSelf sendSilentlyPressed];
@@ -130,7 +181,7 @@
     }
     
     if (_canSchedule) {
-        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(_reminder ? @"Conversation.SendMessage.SetReminder" : @"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
+        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(_reminder ? @"Conversation.SendMessage.SetReminder" : @"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule") isDark:_isDark isLast:true];
         _scheduleButton.pressed = ^{
             __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
             [strongSelf schedulePressed];
