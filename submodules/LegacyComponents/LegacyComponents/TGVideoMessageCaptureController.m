@@ -136,6 +136,8 @@ typedef enum
     bool _canSendSilently;
     bool _canSchedule;
     bool _reminder;
+    
+    UIImpactFeedbackGenerator *_generator;
 }
 
 @property (nonatomic, copy) bool(^isAlreadyLocked)(void);
@@ -707,8 +709,10 @@ typedef enum
 
 - (void)sendLongPressed {
     if (iosMajorVersion() >= 10) {
-        UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-        [generator impactOccurred];
+        if (_generator == nil) {
+            _generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+        }
+        [_generator impactOccurred];
     }
     
     bool effectiveHasSchedule = true;
