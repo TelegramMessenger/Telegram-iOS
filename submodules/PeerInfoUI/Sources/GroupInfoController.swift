@@ -1340,6 +1340,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var replaceControllerImpl: ((ViewController?, ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
     var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var errorImpl: (() -> Void)?
@@ -1878,16 +1879,17 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
                 
                 inviteByLinkImpl = { [weak contactsController] in
-                    contactsController?.dismiss()
                     let mode: ChannelVisibilityControllerMode
                     if groupPeer.addressName != nil {
                         mode = .generic
                     } else {
                         mode = .privateLink
                     }
-                    presentControllerImpl?(channelVisibilityController(context: context, peerId: peerView.peerId, mode: mode, upgradedToSupergroup: { updatedPeerId, f in
+                    let controller = channelVisibilityController(context: context, peerId: peerView.peerId, mode: mode, upgradedToSupergroup: { updatedPeerId, f in
                         upgradedToSupergroupImpl?(updatedPeerId, f)
-                    }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                    })
+                    controller.navigationPresentation = .modal
+                    replaceControllerImpl?(contactsController, controller)
                 }
 
                 presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -2388,6 +2390,16 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.view.endEditing(true)
         controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
+    }
+    replaceControllerImpl = { [weak controller] previous, updated in
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            if let previous = previous {
+                controllers.removeAll(where: { $0 === previous })
+            }
+            controllers.append(updated)
+            navigationController.setViewControllers(controllers, animated: true)
+        }
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
