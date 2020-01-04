@@ -3390,17 +3390,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatDisplayNode.dismissInput()
                 
                 let controller = ChatDateSelectionSheet(presentationData: strongSelf.presentationData, completion: { timestamp in
-                    if let strongSelf = self {
-                        strongSelf.loadingMessage.set(true)
-                        strongSelf.messageIndexDisposable.set((searchMessageIdByTimestamp(account: strongSelf.context.account, peerId: peerId, timestamp: timestamp) |> deliverOnMainQueue).start(next: { messageId in
-                            if let strongSelf = self {
-                                strongSelf.loadingMessage.set(false)
-                                if let messageId = messageId {
-                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId))
-                                }
-                            }
-                        }))
+                    guard let strongSelf = self else {
+                        return
                     }
+                    strongSelf.loadingMessage.set(true)
+                    strongSelf.messageIndexDisposable.set((searchMessageIdByTimestamp(account: strongSelf.context.account, peerId: peerId, timestamp: timestamp) |> deliverOnMainQueue).start(next: { messageId in
+                        if let strongSelf = self {
+                            strongSelf.loadingMessage.set(false)
+                            if let messageId = messageId {
+                                strongSelf.navigateToMessage(from: nil, to: .id(messageId), forceInCurrentChat: true)
+                            }
+                        }
+                    }))
                 })
                 strongSelf.present(controller, in: .window(.root))
             }
