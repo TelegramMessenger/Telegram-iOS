@@ -12,20 +12,23 @@ import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
 import PresentationDataUtils
+import UndoUI
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void
     let openPack: (ItemCollectionInfo) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
+    let openSearch: () -> Void
     
-    init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, openSearch: @escaping () -> Void) {
         self.installPack = installPack
         self.openPack = openPack
         self.getItemIsPreviewed = getItemIsPreviewed
+        self.openSearch = openSearch
     }
 }
 
-final class TrendingPaneEntry: Identifiable, Comparable {
+final class TrendingPanePackEntry: Identifiable, Comparable {
     let index: Int
     let info: StickerPackCollectionInfo
     let theme: PresentationTheme
@@ -33,8 +36,9 @@ final class TrendingPaneEntry: Identifiable, Comparable {
     let topItems: [StickerPackItem]
     let installed: Bool
     let unread: Bool
+    let topSeparator: Bool
     
-    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool) {
+    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
         self.index = index
         self.info = info
         self.theme = theme
@@ -42,13 +46,14 @@ final class TrendingPaneEntry: Identifiable, Comparable {
         self.topItems = topItems
         self.installed = installed
         self.unread = unread
+        self.topSeparator = topSeparator
     }
     
     var stableId: ItemCollectionId {
         return self.info.id
     }
     
-    static func ==(lhs: TrendingPaneEntry, rhs: TrendingPaneEntry) -> Bool {
+    static func ==(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
@@ -70,22 +75,86 @@ final class TrendingPaneEntry: Identifiable, Comparable {
         if lhs.unread != rhs.unread {
             return false
         }
+        if lhs.topSeparator != rhs.topSeparator {
+            return false
+        }
         return true
     }
     
-    static func <(lhs: TrendingPaneEntry, rhs: TrendingPaneEntry) -> Bool {
+    static func <(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
     func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: grid, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: grid, topSeparator: self.topSeparator, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info)
         }, getItemIsPreviewed: { item in
             return interaction.getItemIsPreviewed(item)
         })
+    }
+}
+
+private enum TrendingPaneEntryId: Hashable {
+    case search
+    case pack(ItemCollectionId)
+}
+
+private enum TrendingPaneEntry: Identifiable, Comparable {
+    case search(theme: PresentationTheme, strings: PresentationStrings)
+    case pack(TrendingPanePackEntry)
+    
+    var stableId: TrendingPaneEntryId {
+        switch self {
+        case .search:
+            return .search
+        case let .pack(pack):
+            return .pack(pack.stableId)
+        }
+    }
+    
+    static func ==(lhs: TrendingPaneEntry, rhs: TrendingPaneEntry) -> Bool {
+        switch lhs {
+        case let .search(lhsTheme, lhsStrings):
+            if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                return true
+            } else {
+                return false
+            }
+        case let .pack(pack):
+            if case .pack(pack) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    static func <(lhs: TrendingPaneEntry, rhs: TrendingPaneEntry) -> Bool {
+        switch lhs {
+        case .search:
+            return false
+        case let .pack(lhsPack):
+            switch rhs {
+            case .search:
+                return false
+            case let .pack(rhsPack):
+                return lhsPack < rhsPack
+            }
+        }
+    }
+    
+    func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
+        switch self {
+        case let .search(theme, strings):
+            return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
+                interaction.openSearch()
+            })
+        case let .pack(pack):
+            return pack.item(account: account, interaction: interaction, grid: grid)
+        }
     }
 }
 
@@ -100,18 +169,21 @@ private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntr
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: true), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: true)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, grid: false), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, grid: false)) }
     
     return TrendingPaneTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
 
-func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings) -> [TrendingPaneEntry] {
+private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings, isPane: Bool) -> [TrendingPaneEntry] {
     var result: [TrendingPaneEntry] = []
     var index = 0
+    if isPane {
+        result.append(.search(theme: theme, strings: strings))
+    }
     for item in trendingEntries {
         if !installedPacks.contains(item.info.id) {
-            result.append(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
+            result.append(.pack(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: index != 0)))
             index += 1
         }
     }
@@ -122,6 +194,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
+    private let isPane: Bool
     
     let gridNode: GridNode
     
@@ -139,10 +212,13 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     var scrollingInitiated: (() -> Void)?
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    private let installDisposable = MetaDisposable()
+    
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.getItemIsPreviewed = getItemIsPreviewed
+        self.isPane = isPane
         
         self.gridNode = GridNode()
         
@@ -157,6 +233,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     deinit {
         self.disposable?.dispose()
+        self.installDisposable.dispose()
     }
     
     func activate() {
@@ -167,27 +244,83 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
-                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<Void, NoError> in
+                let account = strongSelf.context.account
+                var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                     switch result {
-                        case let .result(info, items, installed):
-                            if installed {
+                    case let .result(info, items, installed):
+                        if installed {
+                            return .complete()
+                        } else {
+                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                            |> filter { $0 }
+                            |> ignoreValues
+                            |> then(
+                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                                |> ignoreValues
+                            )
+                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
                                 return .complete()
-                            } else {
-                                return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
                             }
-                        case .fetching:
-                            break
-                        case .none:
-                            break
+                            |> then(.single((info, items)))
+                        }
+                    case .fetching:
+                        break
+                    case .none:
+                        break
                     }
                     return .complete()
-                } |> deliverOnMainQueue).start(completed: {
-                    if let strongSelf = self {
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                }
+                |> deliverOnMainQueue
+                
+                let context = strongSelf.context
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self?.controllerInteraction.presentController(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
                     }
-                })
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(1.0, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                installSignal = installSignal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = {
+                    self?.installDisposable.set(nil)
+                }
+                    
+                strongSelf.installDisposable.set(installSignal.start(next: { info, items in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    var animateInAsReplacement = false
+                    if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
+                            }
+                        }
+                    }
+                    
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        return true
+                    }))
+                }))
             }
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
@@ -202,8 +335,12 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 })
                 strongSelf.controllerInteraction.presentController(controller, nil)
             }
-        }, getItemIsPreviewed: self.getItemIsPreviewed)
+        }, getItemIsPreviewed: self.getItemIsPreviewed,
+        openSearch: { [weak self] in
+            self?.inputNodeInteraction?.toggleSearch(true, .trending)
+        })
         
+        let isPane = self.isPane
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
         let context = self.context
         self.disposable = (combineLatest(context.account.viewTracker.featuredStickerPacks(), context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.sharedContext.presentationData)
@@ -216,7 +353,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                 }
             }
-            let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings)
+            let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, isPane: isPane)
             let previous = previousEntries.swap(entries)
             
             return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)

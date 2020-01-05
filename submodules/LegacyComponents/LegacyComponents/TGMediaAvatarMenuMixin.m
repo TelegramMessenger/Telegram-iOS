@@ -257,6 +257,9 @@
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
         return;
+    
+    if ([_context currentlyInSplitView])
+        return;
         
     if ([TGCameraController useLegacyCamera])
     {

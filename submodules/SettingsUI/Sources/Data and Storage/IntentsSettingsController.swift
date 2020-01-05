@@ -251,7 +251,7 @@ private func intentsSettingsControllerEntries(context: AccountContext, presentat
     entries.append(.privateChats(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedChatsPrivateChats, settings.privateChats))
     entries.append(.groups(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedChatsGroups, settings.groups))
     
-    entries.append(.chatsInfo(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedChatsInfo))
+    entries.append(.chatsInfo(presentationData.theme, presentationData.strings.IntentsSettings_SuggestedAndSpotlightChatsInfo))
     
     entries.append(.suggestHeader(presentationData.theme, presentationData.strings.IntentsSettings_SuggestBy.uppercased()))
     entries.append(.suggestAll(presentationData.theme, presentationData.strings.IntentsSettings_SuggestByAll, !settings.onlyShared))

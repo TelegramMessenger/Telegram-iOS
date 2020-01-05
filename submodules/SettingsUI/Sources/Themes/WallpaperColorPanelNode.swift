@@ -336,6 +336,7 @@ struct WallpaperColorPanelNodeState {
     var rotateAvailable: Bool
     var rotation: Int32
     var preview: Bool
+    var simpleGradientGeneration: Bool
 }
 
 final class WallpaperColorPanelNode: ASDisplayNode {
@@ -357,6 +358,9 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     var colorsChanged: ((UIColor?, UIColor?, Bool) -> Void)?
     var colorSelected: (() -> Void)?
     var rotate: (() -> Void)?
+    
+    var colorAdded: (() -> Void)?
+    var colorRemoved: (() -> Void)?
     
     private var validLayout: CGSize?
 
@@ -386,7 +390,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.firstColorFieldNode = ColorInputFieldNode(theme: theme)
         self.secondColorFieldNode = ColorInputFieldNode(theme: theme)
         
-        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, rotation: 0, preview: false)
+        self.state = WallpaperColorPanelNodeState(selection: .first, firstColor: nil, secondColor: nil, secondColorAvailable: false, rotateAvailable: false, rotation: 0, preview: false, simpleGradientGeneration: false)
         
         super.init()
         
@@ -417,6 +421,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.firstColorFieldNode.colorRemoved = { [weak self] in
             if let strongSelf = self {
+                strongSelf.colorRemoved?()
                 strongSelf.updateState({ current in
                     var updated = current
                     updated.selection = .first
@@ -456,6 +461,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         self.secondColorFieldNode.colorRemoved = { [weak self] in
             if let strongSelf = self {
+                strongSelf.colorRemoved?()
                 strongSelf.updateState({ current in
                     var updated = current
                     if updated.selection != .none {
@@ -574,7 +580,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
         
-        if self.state.firstColor?.rgb != previousFirstColor?.rgb || self.state.secondColor?.rgb != previousSecondColor?.rgb || self.state.preview != previousPreview {
+        if self.state.firstColor?.argb != previousFirstColor?.argb || self.state.secondColor?.argb != previousSecondColor?.argb || self.state.preview != previousPreview {
             self.colorsChanged?(firstColorIsDefault ? nil : firstColor, secondColor, !self.state.preview)
         }
     }
@@ -752,6 +758,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     
     @objc private func addPressed() {
         self.colorSelected?()
+        self.colorAdded?()
         
         self.firstColorFieldNode.setSkipEndEditingIfNeeded()
         
@@ -762,7 +769,24 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             let firstColor = current.firstColor ?? current.defaultColor
             if let color = firstColor {
                 updated.firstColor = color
-                updated.secondColor = generateGradientColors(color: color).1
+                
+                let secondColor: UIColor
+                if updated.simpleGradientGeneration {
+                    var hsb = color.hsb
+                    if hsb.1 > 0.5 {
+                        hsb.1 -= 0.15
+                    } else {
+                        hsb.1 += 0.15
+                    }
+                    if hsb.0 > 0.5 {
+                        hsb.0 -= 0.05
+                    } else {
+                        hsb.0 += 0.05
+                    }
+                    updated.secondColor = UIColor(hue: hsb.0, saturation: hsb.1, brightness: hsb.2, alpha: 1.0)
+                } else {
+                    updated.secondColor = generateGradientColors(color: color).1
+                }
             }
 
             return updated

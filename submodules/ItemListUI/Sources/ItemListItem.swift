@@ -222,6 +222,6 @@ public extension PresentationFontSize {
 
 public extension ItemListPresentationData {
     convenience init(_ presentationData: PresentationData) {
-        self.init(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings)
+        self.init(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings)
     }
 }

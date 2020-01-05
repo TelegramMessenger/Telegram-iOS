@@ -107,6 +107,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private let hideNetworkActivityStatus: Bool
     
     public let groupId: PeerGroupId
+    public let previewing: Bool
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
     
@@ -150,6 +151,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
         self.groupId = groupId
+        self.previewing = previewing
         
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
@@ -306,7 +308,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         if case .root = groupId, checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
                                 strongSelf.didShowProxyUnavailableTooltipController = true
-                                let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Proxy_TooltipUnavailable), baseFontSize: strongSelf.presentationData.fontSize.baseDisplaySize, timeout: 60.0, dismissByTapOutside: true)
+                                let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Proxy_TooltipUnavailable), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 60.0, dismissByTapOutside: true)
                                 strongSelf.proxyUnavailableTooltipController = tooltipController
                                 tooltipController.dismissed = { [weak tooltipController] _ in
                                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
@@ -369,11 +371,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.searchContentNode?.updateExpansionProgress(0.0)
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        if !previewing {
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
+                self?.activateSearch()
+            })
+            self.searchContentNode?.updateExpansionProgress(0.0)
+            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        }
         
         if enableDebugActions {
             self.tabBarItemDebugTapAction = {
@@ -443,7 +447,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -785,7 +789,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             if hasPasscode {
                                 let _ = ApplicationSpecificNotice.setPasscodeLockTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                 
-                                let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.DialogList_PasscodeLockHelp), baseFontSize: strongSelf.presentationData.fontSize.baseDisplaySize, dismissByTapOutside: true)
+                                let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.DialogList_PasscodeLockHelp), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true)
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
                                     if let strongSelf = self {
                                         return (strongSelf.titleView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
@@ -955,7 +959,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func activateSearch() {
         if self.displayNavigationBar {
-            let _ = (self.chatListDisplayNode.chatListNode.ready
+            let _ = (self.chatListDisplayNode.chatListNode.contentsReady
             |> take(1)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let strongSelf = self else {

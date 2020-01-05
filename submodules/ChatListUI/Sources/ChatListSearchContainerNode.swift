@@ -637,7 +637,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
+        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
         
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
@@ -1142,7 +1142,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 strongSelf.presentationData = presentationData
-                strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
+                strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
                 
                 if previousTheme !== presentationData.theme {
                     strongSelf.updateTheme(theme: presentationData.theme)
@@ -1183,6 +1183,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.dimNode.backgroundColor = self.filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
+        
+        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: theme)
+            }
+        })
+        self.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: theme)
+            }
+        })
     }
     
     private func updateState(_ f: (ChatListSearchContainerNodeState) -> ChatListSearchContainerNodeState) {

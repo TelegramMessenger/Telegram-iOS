@@ -27,6 +27,9 @@
 #import "TGColor.h"
 #import "TGImageUtils.h"
 
+#import "TGMediaPickerSendActionSheetController.h"
+#import "TGOverlayControllerWindow.h"
+
 const NSTimeInterval TGVideoMessageMaximumDuration = 60.0;
 
 typedef enum
@@ -129,6 +132,12 @@ typedef enum
     UIView * (^_slowmodeView)(void);
     
 	TGVideoMessageCaptureControllerAssets *_assets;
+    
+    bool _canSendSilently;
+    bool _canSchedule;
+    bool _reminder;
+    
+    UIImpactFeedbackGenerator *_generator;
 }
 
 @property (nonatomic, copy) bool(^isAlreadyLocked)(void);
@@ -137,7 +146,7 @@ typedef enum
 
 @implementation TGVideoMessageCaptureController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -148,6 +157,9 @@ typedef enum
         _liveUploadInterface = liveUploadInterface;
         _assets = assets;
         _pallete = pallete;
+        _canSendSilently = canSendSilently;
+        _canSchedule = canSchedule;
+        _reminder = reminder;
         _slowmodeTimestamp = slowmodeTimestamp;
         _slowmodeView = [slowmodeView copy];
         
@@ -366,6 +378,13 @@ typedef enum
         } else {
             return false;
         }
+    };
+    _controlsView.sendLongPressed = ^bool{
+        __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+        if (strongSelf != nil) {
+            [strongSelf sendLongPressed];
+        }
+        return true;
     };
     [self.view addSubview:_controlsView];
     
@@ -681,11 +700,70 @@ typedef enum
         }
     }
     
-    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
+    [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage isSilent:false scheduleTimestamp:0];
     
     _automaticDismiss = true;
     [self dismiss:false];
     return true;
+}
+
+- (void)sendLongPressed {
+    if (iosMajorVersion() >= 10) {
+        if (_generator == nil) {
+            _generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+        }
+        [_generator impactOccurred];
+    }
+    
+    bool effectiveHasSchedule = true;
+    
+    TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSchedule:_canSchedule reminder:_reminder];
+    __weak TGVideoMessageCaptureController *weakSelf = self;
+    controller.send = ^{
+        __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        
+        [strongSelf finishWithURL:strongSelf->_url dimensions:CGSizeMake(240.0f, 240.0f) duration:strongSelf->_duration liveUploadData:strongSelf->_liveUploadData thumbnailImage:strongSelf->_thumbnailImage isSilent:false scheduleTimestamp:0];
+        
+        _automaticDismiss = true;
+        [strongSelf dismiss:false];
+    };
+    controller.sendSilently = ^{
+        __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        
+        [strongSelf finishWithURL:strongSelf->_url dimensions:CGSizeMake(240.0f, 240.0f) duration:strongSelf->_duration liveUploadData:strongSelf->_liveUploadData thumbnailImage:strongSelf->_thumbnailImage isSilent:true scheduleTimestamp:0];
+        
+        _automaticDismiss = true;
+        [strongSelf dismiss:false];
+    };
+    controller.schedule = ^{
+        __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        
+        if (strongSelf.presentScheduleController) {
+            strongSelf.presentScheduleController(^(int32_t time) {
+                __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+                if (strongSelf == nil) {
+                    return;
+                }
+                
+                [strongSelf finishWithURL:strongSelf->_url dimensions:CGSizeMake(240.0f, 240.0f) duration:strongSelf->_duration liveUploadData:strongSelf->_liveUploadData thumbnailImage:strongSelf->_thumbnailImage isSilent:false scheduleTimestamp:time];
+                
+                _automaticDismiss = true;
+                [strongSelf dismiss:false];
+            });
+        }
+    };
+    
+    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:[_context makeOverlayWindowManager] parentController:self contentController:controller];
+    controllerWindow.hidden = false;
 }
 
 - (void)unmutePressed
@@ -867,7 +945,7 @@ typedef enum
     [_buttonHandler ignoreEventsFor:1.0f andDisable:true];
 }
 
-- (void)finishWithURL:(NSURL *)url dimensions:(CGSize)dimensions duration:(NSTimeInterval)duration liveUploadData:(id )liveUploadData thumbnailImage:(UIImage *)thumbnailImage
+- (void)finishWithURL:(NSURL *)url dimensions:(CGSize)dimensions duration:(NSTimeInterval)duration liveUploadData:(id )liveUploadData thumbnailImage:(UIImage *)thumbnailImage isSilent:(bool)isSilent scheduleTimestamp:(int32_t)scheduleTimestamp
 {
     if (duration < 1.0)
         _dismissed = true;
@@ -923,7 +1001,7 @@ typedef enum
     }
     
     if (!_dismissed && self.finishedWithVideo != nil)
-        self.finishedWithVideo(url, image, fileSize, duration, dimensions, liveUploadData, adjustments);
+        self.finishedWithVideo(url, image, fileSize, duration, dimensions, liveUploadData, adjustments, isSilent, scheduleTimestamp);
     else
         [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
 }
@@ -1125,7 +1203,7 @@ typedef enum
     }
     else
     {
-        [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:duration liveUploadData:liveUploadData thumbnailImage:thumbnailImage];
+        [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:duration liveUploadData:liveUploadData thumbnailImage:thumbnailImage isSilent:false scheduleTimestamp:0];
     }
 }
 

@@ -181,7 +181,9 @@ class ContactListActionItemNode: ListViewItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: 12.0 * 2.0 + titleLayout.size.height)
+            let contentHeight: CGFloat = item.highlight == .alpha ? 50.0 : 12.0 * 2.0 + titleLayout.size.height
+            
+            let contentSize = CGSize(width: params.width, height: contentHeight)
             let insets = UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             let separatorHeight = UIScreenPixel
             

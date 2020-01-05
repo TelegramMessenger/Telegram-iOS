@@ -8,9 +8,165 @@ import SyncCore
 import TelegramPresentationData
 import LegacyComponents
 import AccountContext
+import MergeLists
 
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0
+
+
+private struct WallpaperPatternEntry: Comparable, Identifiable {
+    let index: Int
+    let wallpaper: TelegramWallpaper
+    let selected: Bool
+    
+    var stableId: Int64 {
+        if case let .file(file) = self.wallpaper {
+            return file.id
+        } else {
+            return Int64(self.index)
+        }
+    }
+    
+    static func ==(lhs: WallpaperPatternEntry, rhs: WallpaperPatternEntry) -> Bool {
+        if lhs.index != rhs.index {
+            return false
+        }
+        if lhs.wallpaper != rhs.wallpaper {
+            return false
+        }
+        return true
+    }
+    
+    static func <(lhs: WallpaperPatternEntry, rhs: WallpaperPatternEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(context: AccountContext, action: @escaping (TelegramWallpaper) -> Void) -> ListViewItem {
+        return WallpaperPatternItem(context: context, wallpaper: self.wallpaper, selected: self.selected, action: action)
+    }
+}
+
+private class WallpaperPatternItem: ListViewItem {
+    let context: AccountContext
+    let wallpaper: TelegramWallpaper
+    let selected: Bool
+    let action: (TelegramWallpaper) -> Void
+    
+    public init(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, action: @escaping (TelegramWallpaper) -> Void) {
+        self.context = context
+        self.wallpaper = wallpaper
+        self.selected = selected
+        self.action = action
+    }
+    
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+        async {
+            let node = WallpaperPatternItemNode()
+            let (nodeLayout, apply) = node.asyncLayout()(self, params)
+            node.insets = nodeLayout.insets
+            node.contentSize = nodeLayout.contentSize
+            
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { _ in
+                        apply(false)
+                    })
+                })
+            }
+        }
+    }
+    
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is WallpaperPatternItemNode)
+            if let nodeValue = node() as? WallpaperPatternItemNode {
+                let layout = nodeValue.asyncLayout()
+                async {
+                    let (nodeLayout, apply) = layout(self, params)
+                    Queue.mainQueue().async {
+                        completion(nodeLayout, { _ in
+                            apply(animation.isAnimated)
+                        })
+                    }
+                }
+            }
+        }
+    }
+    
+    public var selectable = true
+    public func selected(listView: ListView) {
+        self.action(self.wallpaper)
+    }
+}
+
+private final class WallpaperPatternItemNode : ListViewItemNode {
+    private let wallpaperNode: SettingsThemeWallpaperNode
+    
+    var item: WallpaperPatternItem?
+
+    init() {
+        self.wallpaperNode = SettingsThemeWallpaperNode()
+        
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+
+        self.addSubnode(self.wallpaperNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+    }
+    
+    func asyncLayout() -> (WallpaperPatternItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+        let currentItem = self.item
+
+        return { [weak self] item, params in
+            var updatedWallpaper = false
+            var updatedSelected = false
+            
+            if currentItem?.wallpaper != item.wallpaper {
+                updatedWallpaper = true
+            }
+            if currentItem?.selected != item.selected {
+                updatedSelected = true
+            }
+            
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 112.0, height: 112.0), insets: UIEdgeInsets())
+            return (itemLayout, { animated in
+                if let strongSelf = self {
+                    strongSelf.item = item
+                    strongSelf.wallpaperNode.frame = CGRect(x: 0.0, y: 12.0, width: itemSize.width, height: itemSize.height)
+                }
+            })
+        }
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+        
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        super.animateRemoved(currentTimestamp, duration: duration)
+        
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
+    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+        super.animateAdded(currentTimestamp, duration: duration)
+        
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+}
+
+
+
+
+
+
+
 
 final class WallpaperPatternPanelNode: ASDisplayNode {
     private let context: AccountContext
@@ -40,9 +196,10 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: (UIColor, UIColor?)? = nil {
+    var backgroundColors: (UIColor, UIColor?, Int32?)? = nil {
         didSet {
-            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb {
+            if oldValue?.0.rgb != self.backgroundColors?.0.rgb || oldValue?.1?.rgb != self.backgroundColors?.1?.rgb
+            || oldValue?.2 != self.backgroundColors?.2 {
                 self.updateWallpapers()
             }
         }
@@ -84,7 +241,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.disposable = ((telegramWallpapers(postbox: context.account.postbox, network: context.account.network)
         |> map { wallpapers in
             return wallpapers.filter { wallpaper in
-                if case let .file(file) = wallpaper, file.isPattern, file.file.mimeType != "image/webp" {
+                if case let .file(file) = wallpaper, wallpaper.isPattern, file.file.mimeType != "image/webp" {
                     return true
                 } else {
                     return false
@@ -136,22 +293,22 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil)
+        let backgroundColors = self.backgroundColors ?? (UIColor(rgb: 0xd6e2ee), nil, nil)
         
         var selectedFileId: Int64?
         if let currentWallpaper = self.currentWallpaper, case let .file(file) = currentWallpaper {
             selectedFileId = file.id
         }
         
-        for wallpaper in wallpapers {
+        for wallpaper in self.wallpapers {
             let node = SettingsThemeWallpaperNode(overlayBackgroundColor: self.serviceBackgroundColor.withAlphaComponent(0.4))
             node.clipsToBounds = true
             node.cornerRadius = 5.0
             
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
-                let settings = WallpaperSettings(color: Int32(bitPattern: backgroundColors.0.rgb), bottomColor: backgroundColors.1.flatMap { Int32(bitPattern: $0.rgb) }, intensity: 100)
-                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
+                let settings = WallpaperSettings(color: backgroundColors.0.rgb, bottomColor: backgroundColors.1.flatMap { $0.rgb }, intensity: 100, rotation: backgroundColors.2)
+                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
             }
             
             var selected = false
@@ -220,7 +377,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             }
             
             self.currentWallpaper = wallpaper
-            self.sliderView?.value = CGFloat(intensity ?? 40)
+            self.sliderView?.value = CGFloat(intensity ?? 50)
             
             self.scrollNode.view.contentOffset = CGPoint()
             
@@ -251,7 +408,16 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
         
         if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
-            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
+            
+            var origin = CGPoint()
+            if frame.minX < bounds.minX {
+                origin.x = max(0.0, frame.minX)
+            } else if frame.maxX > bounds.maxX {
+                origin.x = min(self.scrollNode.view.contentSize.width - bounds.width, frame.maxX - bounds.width)
+            }
+            
+            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: origin, size: self.scrollNode.frame.size))
         }
     }
     

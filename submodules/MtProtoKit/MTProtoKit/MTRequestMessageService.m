@@ -285,9 +285,11 @@
     }
 }
 
-- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
+- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
 {    
     NSData *currentData = request.payload;
+    
+    NSString *debugDescription = @"";
     
     if (initializeApi && _apiEnvironment != nil)
     {
@@ -345,6 +347,8 @@
 
         [buffer appendBytes:currentData.bytes length:currentData.length];
         currentData = buffer.data;
+        
+        debugDescription = [debugDescription stringByAppendingString:@", disableUpdates"];
     }
     
     if (request.shouldDependOnRequest != nil)
@@ -352,9 +356,12 @@
         NSUInteger index = [_requests indexOfObject:request];
         if (index != NSNotFound)
         {
-            for (NSInteger i = ((NSInteger)index) - 1; i >= 0; i--)
+            for (MTRequest *anotherRequest in _requests.reverseObjectEnumerator)
             {
-                MTRequest *anotherRequest = _requests[(NSUInteger)i];
+                if (request == anotherRequest) {
+                    continue;
+                }
+                
                 if (request.shouldDependOnRequest(anotherRequest))
                 {
                     if (anotherRequest.requestContext != nil)
@@ -367,14 +374,22 @@
                         [buffer appendBytes:currentData.bytes length:currentData.length];
                         
                         currentData = buffer.data;
+                        
+                        debugDescription = [debugDescription stringByAppendingFormat:@", invokeAfter(%lld)", anotherRequest.requestContext.messageId];
                     }
-                    else if (unresolvedDependencyOnRequestInternalId != nil)
+                    else if (unresolvedDependencyOnRequestInternalId != nil) {
                         *unresolvedDependencyOnRequestInternalId = anotherRequest.internalId;
+                        debugDescription = [debugDescription stringByAppendingString:@", unresolvedDependency"];
+                    }
                     
                     break;
                 }
             }
         }
+    }
+    
+    if (decoratedDebugDescription != nil) {
+        *decoratedDebugDescription = debugDescription;
     }
     
     return currentData;
@@ -410,6 +425,7 @@
                 requestInternalIdToMessageInternalId = [[NSMutableDictionary alloc] init];
             
             __autoreleasing id autoreleasingUnresolvedDependencyOnRequestInternalId = nil;
+            __autoreleasing NSString *decoratedDebugDescription = nil;
             
             int64_t messageId = 0;
             int32_t messageSeqNo = 0;
@@ -419,14 +435,16 @@
                 messageSeqNo = request.requestContext.messageSeqNo;
             }
             
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:[self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] metadata:request.metadata shortMetadata:request.shortMetadata messageId:messageId messageSeqNo:messageSeqNo];
+            NSData *decoratedRequestData = [self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId decoratedDebugDescription:&decoratedDebugDescription];
+            
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:decoratedRequestData metadata:request.metadata additionalDebugDescription:decoratedDebugDescription shortMetadata:request.shortMetadata messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
             outgoingMessage.hasHighPriority = request.hasHighPriority;
             
             id unresolvedDependencyOnRequestInternalId = autoreleasingUnresolvedDependencyOnRequestInternalId;
             if (unresolvedDependencyOnRequestInternalId != nil)
             {
-                outgoingMessage.dynamicDecorator = ^id (NSData *currentData, NSDictionary *messageInternalIdToPreparedMessage)
+                outgoingMessage.dynamicDecorator = ^id (int64_t currentMessageId, NSData *currentData, NSDictionary *messageInternalIdToPreparedMessage)
                 {
                     id messageInternalId = requestInternalIdToMessageInternalId[unresolvedDependencyOnRequestInternalId];
                     if (messageInternalId != nil)
@@ -438,6 +456,9 @@
                             [invokeAfterBuffer appendInt32:(int32_t)0xcb9f372d];
                             [invokeAfterBuffer appendInt64:preparedMessage.messageId];
                             [invokeAfterBuffer appendBytes:currentData.bytes length:currentData.length];
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTRequestMessageService] %lld dynamically added invokeAfter %lld", currentMessageId, preparedMessage.messageId);
+                            }
                             return invokeAfterBuffer.data;
                         }
                     }
@@ -464,7 +485,7 @@
         [dropAnswerBuffer appendInt64:dropContext.dropMessageId];
         
         NSString *messageDecription = [NSString stringWithFormat:@"dropAnswer for %" PRId64, dropContext.dropMessageId];
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:messageDecription shortMetadata:messageDecription messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:messageDecription additionalDebugDescription:nil shortMetadata:messageDecription messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
         outgoingMessage.requiresConfirmation = false;
         dropMessageIdToMessageInternalId[@(dropContext.dropMessageId)] = outgoingMessage.internalId;
         [messages addObject:outgoingMessage];

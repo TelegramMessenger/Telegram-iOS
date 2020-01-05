@@ -368,6 +368,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         case TgVoipState::Failed:
             callState = OngoingCallStateFailed;
             break;
+        case tgvoip::STATE_RECONNECTING:
+            callState = OngoingCallStateReconnecting;
+            break;
         default:
             break;
     }

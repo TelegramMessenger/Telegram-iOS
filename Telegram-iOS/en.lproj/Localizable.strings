@@ -5132,6 +5132,7 @@ Any member of this group will be able to see messages in the channel.";
 "IntentsSettings.SuggestedChatsPrivateChats" = "Private Chats";
 "IntentsSettings.SuggestedChatsGroups" = "Groups";
 "IntentsSettings.SuggestedChatsInfo" = "Archived chats will not be suggested.";
+"IntentsSettings.SuggestedAndSpotlightChatsInfo" = "Suggestions will appear in the Share Sheet and Spotlight search results. Archived chats will not be suggested.";
 "IntentsSettings.SuggestBy" = "Suggest By";
 "IntentsSettings.SuggestByAll" = "All Sent Messages";
 "IntentsSettings.SuggestByShare" = "Only Shared Messages";
@@ -5160,7 +5161,7 @@ Any member of this group will be able to see messages in the channel.";
 "AuthSessions.AddDeviceIntro.Text2" = "Run Telegram on your computer to get the QR code";
 "AuthSessions.AddDeviceIntro.Text3" = "Scan the QR code to connect your account";
 "AuthSessions.AddDeviceIntro.Action" = "Scan QR Code";
-"AuthSessions.AddedDeviceTitle" = "Loggin Successful";
+"AuthSessions.AddedDeviceTitle" = "Login Successful";
 "AuthSessions.AddedDeviceTerminate" = "Terminate";
 
 "Map.SendThisPlace" = "Send This Place";
@@ -5216,8 +5217,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "OldChannels.ChannelFormat" = "channel, ";
 "OldChannels.GroupEmptyFormat" = "group, ";
-"OldChannels.GroupFormat_1" = "%@ member";
-"OldChannels.GroupFormat_any" = "%@ members";
+"OldChannels.GroupFormat_1" = "%@ member ";
+"OldChannels.GroupFormat_any" = "%@ members ";
 
 "OldChannels.InactiveWeek_1" = "inactive %@ week";
 "OldChannels.InactiveWeek_any" = "inactive %@ weeks";
@@ -5238,4 +5239,9 @@ Any member of this group will be able to see messages in the channel.";
 "StickerPackActionInfo.AddedTitle" = "Stickers Added";
 "StickerPackActionInfo.AddedText" = "%@ has been added to your stickers.";
 "StickerPackActionInfo.RemovedTitle" = "Stickers Removed";
+"StickerPackActionInfo.ArchivedTitle" = "Stickers Archived";
 "StickerPackActionInfo.RemovedText" = "%@ is no longer in your stickers.";
+
+"Conversation.ContextMenuCancelEditing" = "Cancel Editing";
+
+"Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";

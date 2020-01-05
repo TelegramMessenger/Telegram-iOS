@@ -11,7 +11,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-private func availableColors() -> [Int32] {
+private func availableColors() -> [UInt32] {
     return [
         0xffffff,
         0xd4dfea,
@@ -49,7 +49,7 @@ private func availableColors() -> [Int32] {
     ]
 }
 
-private func randomColor() -> Int32 {
+private func randomColor() -> UInt32 {
     let colors = availableColors()
     return colors[1 ..< colors.count - 1].randomElement() ?? 0x000000
 }

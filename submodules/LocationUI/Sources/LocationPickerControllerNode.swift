@@ -22,6 +22,7 @@ private struct LocationPickerTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isLoading: Bool
+    let isEmpty: Bool
     let crossFade: Bool
 }
 
@@ -166,14 +167,14 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, crossFade: Bool, account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
+private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return LocationPickerTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, crossFade: crossFade)
+    return LocationPickerTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade)
 }
 
 enum LocationPickerLocation: Equatable {
@@ -246,6 +247,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     private let interaction: LocationPickerInteraction
     
     private let listNode: ListView
+    private let emptyResultsTextNode: ImmediateTextNode
     private let headerNode: LocationMapHeaderNode
     private let activityIndicator: ActivityIndicator
     private let shadeNode: ASDisplayNode
@@ -281,6 +283,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
+        self.emptyResultsTextNode = ImmediateTextNode()
+        self.emptyResultsTextNode.maximumNumberOfLines = 0
+        self.emptyResultsTextNode.textAlignment = .center
+        self.emptyResultsTextNode.isHidden = true
+        
         self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, showPlacesInThisArea: interaction.showPlacesInThisArea)
         self.headerNode.mapNode.isRotateEnabled = false
         
@@ -302,6 +309,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.headerNode)
         self.addSubnode(self.optionsNode)
         self.listNode.addSubnode(self.activityIndicator)
+        self.listNode.addSubnode(self.emptyResultsTextNode)
         self.shadeNode.addSubnode(self.innerShadeNode)
         self.addSubnode(self.shadeNode)
         
@@ -506,7 +514,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                     crossFade = true
                 }
                 
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: displayedVenues == nil, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: displayedVenues == nil, isEmpty: displayedVenues?.isEmpty ?? false, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                       
                 var displayingPlacesButton = false
@@ -725,6 +733,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.activityIndicator.isHidden = !transition.isLoading
+                strongSelf.emptyResultsTextNode.isHidden = transition.isLoading || !transition.isEmpty
+                
+                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_NoPlacesNearby, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                
+                strongSelf.layoutActivityIndicator(transition: .immediate)
             }
         })
     }
@@ -779,6 +792,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         let actionsInset: CGFloat = 148.0
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - indicatorSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: indicatorSize))
+        
+        let padding: CGFloat = 16.0
+        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: emptyTextSize))
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -1589,7 +1589,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String = presentationData.strings.UserInfo_TapToCall
                 
-                let tooltipController = TooltipController(content: .text(text), baseFontSize: presentationData.fontSize.baseDisplaySize, dismissByTapOutside: true)
+                let tooltipController = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true)
                 controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let resultItemNode = resultItemNode {
                         return (resultItemNode, callButtonFrame)

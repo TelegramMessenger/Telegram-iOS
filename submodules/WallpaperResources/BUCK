@@ -18,6 +18,7 @@ static_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/Svg:Svg",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

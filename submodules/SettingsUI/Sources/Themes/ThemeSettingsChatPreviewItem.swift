@@ -102,6 +102,9 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
     private var messageNodes: [ListViewItemNode]?
     
     private var item: ThemeSettingsChatPreviewItem?
+    private var finalImage = true
+    
+    private let disposable = MetaDisposable()
     
     init() {
         self.backgroundNode = ASImageNode()
@@ -128,20 +131,19 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         self.addSubnode(self.containerNode)
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     func asyncLayout() -> (_ item: ThemeSettingsChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         let currentNodes = self.messageNodes
         
         return { item, params, neighbors in
-            var updatedBackgroundImage: UIImage?
-            var backgroundImageContentMode = UIView.ContentMode.scaleAspectFill
+            var updatedBackgroundSignal: Signal<(UIImage?, Bool)?, NoError>?
             if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundImage = chatControllerBackgroundImage(theme: item.theme, wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, knockoutMode: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-                
-                if case .gradient = item.wallpaper {
-                    backgroundImageContentMode = .scaleToFill
-                }
+                updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, accountMediaBox: item.context.account.postbox.mediaBox)
             }
             
             let insets: UIEdgeInsets
@@ -161,7 +163,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: messageItem.outgoing ? otherPeerId : peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: messageItem.outgoing ? [] : [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: messageItem.outgoing ? TelegramUser(id: otherPeerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []) : nil, text: messageItem.text, attributes: messageItem.reply != nil ? [ReplyMessageAttribute(messageId: replyMessageId)] : [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, message: message, theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil))
+                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, message: message, theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil))
             }
             
             var nodes: [ListViewItemNode] = []
@@ -221,9 +223,24 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         topOffset += node.frame.size.height
                     }
                     
-                    if let updatedBackgroundImage = updatedBackgroundImage {
-                        strongSelf.backgroundNode.image = updatedBackgroundImage
-                        strongSelf.backgroundNode.contentMode = backgroundImageContentMode
+                    if let updatedBackgroundSignal = updatedBackgroundSignal {
+                        strongSelf.disposable.set((updatedBackgroundSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] image in
+                            if let strongSelf = self, let (image, final) = image {
+                                if final && !strongSelf.finalImage {
+                                    let tempLayer = CALayer()
+                                    tempLayer.frame = strongSelf.backgroundNode.bounds
+                                    tempLayer.contentsGravity = strongSelf.backgroundNode.layer.contentsGravity
+                                    tempLayer.contents = strongSelf.contents
+                                    strongSelf.layer.addSublayer(tempLayer)
+                                    tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                                        tempLayer?.removeFromSuperlayer()
+                                    })
+                                }
+                                strongSelf.backgroundNode.image = image
+                                strongSelf.finalImage = final
+                            }
+                        }))
                     }
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor

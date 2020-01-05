@@ -819,6 +819,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     accountsAndPeers.set(activeAccountsAndPeers(context: context))
     
     let privacySettings = Promise<AccountPrivacySettings?>(nil)
+    
+    let enableQRLogin = Promise<Bool>()
 
     let openFaq: (Promise<ResolvedUrl>, String?) -> Void = { resolvedUrl, customAnchor in
         let _ = (contextValue.get()
@@ -872,6 +874,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)>()
     activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
+    
+    let blockedPeers = Promise<BlockedPeersContext?>(nil)
+    let hasTwoStepAuthPromise = Promise<Bool?>(nil)
     
     let arguments = SettingsItemArguments(sharedContext: context.sharedContext, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -930,12 +935,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let _ = (activeSessionsContextAndCount.get()
+            let _ = (combineLatest(activeSessionsContextAndCount.get(), blockedPeers.get(), hasTwoStepAuthPromise.get())
             |> deliverOnMainQueue
-            |> take(1)).start(next: { activeSessionsContext, _, webSessionsContext in
+            |> take(1)).start(next: { sessions, blockedPeersContext, hasTwoStepAuth in
+                let (activeSessionsContext, _, webSessionsContext) = sessions
                 pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
                     privacySettings.set(.single(settings))
-                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
+                }, updatedBlockedPeers: { blockedPeersContext in
+                    blockedPeers.set(.single(blockedPeersContext))
+                }, updatedHasTwoStepAuth: { hasTwoStepAuthValue in
+                    hasTwoStepAuthPromise.set(.single(hasTwoStepAuthValue))
+                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext))
             })
         })
     }, openDataAndStorage: {
@@ -1105,10 +1115,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             gesture?.cancel()
         }
     }, openDevices: {
-        let _ = (activeSessionsContextAndCount.get()
-        |> deliverOnMainQueue
-        |> take(1)).start(next: { activeSessionsContext, count, webSessionsContext in
-            if count == 0 {
+        let _ = (combineLatest(queue: .mainQueue(),
+            activeSessionsContextAndCount.get(),
+            enableQRLogin.get()
+        )
+        |> take(1)).start(next: { activeSessionsContextAndCount, enableQRLogin in
+            let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
+            if count == 0 && enableQRLogin {
                 pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
             } else {
                 pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
@@ -1358,7 +1371,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let enableQRLogin = contextValue.get()
+    let enableQRLoginSignal = contextValue.get()
     |> mapToSignal { context -> Signal<Bool, NoError> in
         return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> Bool in
@@ -1372,8 +1385,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
         |> distinctUntilChanged
     }
+    enableQRLogin.set(enableQRLoginSignal)
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let otherSessionCount = activeSessionsContextAndCount.1
 
@@ -1411,7 +1425,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             presentControllerImpl?(c, a)
         }, pushController: { c in
             pushControllerImpl?(c)
-        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet)
+        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet, activeSessionsContext: activeSessionsContextAndCountSignal |> map { $0.0 } |> distinctUntilChanged(isEqual: { $0 === $1 }), webSessionsContext: activeSessionsContextAndCountSignal |> map { $0.2 } |> distinctUntilChanged(isEqual: { $0 === $1 }))
         
         let (hasWallet, hasPassport, hasWatchApp, enableQRLogin) = hasWalletPassportAndWatch
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))

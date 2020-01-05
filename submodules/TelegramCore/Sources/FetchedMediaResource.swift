@@ -140,7 +140,9 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case stickerPack(stickerPack: StickerPackReference)
     case savedGifs
     case peer(peer: PeerReference)
+    case wallpaper(wallpaper: WallpaperReference)
     case wallpapers
+    case themes
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -379,13 +381,24 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
-    func wallpapers(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
+    func wallpapers(postbox: Postbox, network: Network, background: Bool, wallpaper: WallpaperReference?) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
         return self.genericItem(key: .wallpapers, background: background, request: { next, error in
-            return (telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
-            |> last
-            |> mapError { _ -> RevalidateMediaReferenceError in
-                return .generic
-            }).start(next: { value in
+            let signal: Signal<[TelegramWallpaper]?, RevalidateMediaReferenceError>
+            if let wallpaper = wallpaper, case let .slug(slug) = wallpaper {
+                signal = getWallpaper(network: network, slug: slug)
+                |> mapError { _ -> RevalidateMediaReferenceError in
+                    return .generic
+                }
+                |> map { [$0] }
+            } else {
+                signal = telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
+                |> last
+                |> mapError { _ -> RevalidateMediaReferenceError in
+                    return .generic
+                }
+            }
+            return (signal
+            ).start(next: { value in
                 if let value = value {
                     next(value)
                 } else {
@@ -396,6 +409,26 @@ final class MediaReferenceRevalidationContext {
             })
         }) |> mapToSignal { next -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> in
             if let next = next as? [TelegramWallpaper] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
+    func themes(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramTheme], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .themes, background: background, request: { next, error in
+            return (telegramThemes(postbox: postbox, network: network, accountManager: nil, forceUpdate: true)
+            |> take(1)
+            |> mapError { _ -> RevalidateMediaReferenceError in
+                return .generic
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<[TelegramTheme], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramTheme] {
                 return .single(next)
             } else {
                 return .fail(.generic)
@@ -548,8 +581,8 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                 }
                 return .fail(.generic)
             }
-        case .wallpaper:
-            return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+        case let .wallpaper(wallpaper, _):
+            return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, wallpaper: wallpaper)
             |> mapToSignal { wallpapers -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for wallpaper in wallpapers {
                     switch wallpaper {
@@ -582,6 +615,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                                 return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                             }
                         }
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .theme(themeReference, resource):
+            return revalidationContext.themes(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+            |> mapToSignal { themes -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                for theme in themes {
+                    if let file = theme.file, file.resource.id.isEqual(to: resource.id)  {
+                        return .single(RevalidatedMediaResource(updatedResource: file.resource, updatedReference: nil))
                     }
                 }
                 return .fail(.generic)

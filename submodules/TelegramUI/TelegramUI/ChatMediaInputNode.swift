@@ -163,10 +163,10 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool?, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
-    if hasUnreadTrending {
+    if let hasUnreadTrending = hasUnreadTrending, hasUnreadTrending {
         entries.append(.trending(true, theme))
     }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
@@ -211,7 +211,7 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
         entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     
-    if !hasUnreadTrending {
+    if let hasUnreadTrending = hasUnreadTrending, !hasUnreadTrending {
         entries.append(.trending(false, theme))
     }
     entries.append(.settings(theme))
@@ -460,7 +460,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.collectionListPanel = ASDisplayNode()
         self.collectionListPanel.clipsToBounds = true
         
-        if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+        if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
             self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
         } else {
             self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
@@ -496,7 +496,7 @@ final class ChatMediaInputNode: ChatInputNode {
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
-        })
+        }, isPane: true)
         
         self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers, .trending], currentIndex: 1, indexTransition: 0.0)
         
@@ -754,6 +754,7 @@ final class ChatMediaInputNode: ChatInputNode {
             strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
+        }, openSearch: {
         })
         
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
@@ -783,11 +784,16 @@ final class ChatMediaInputNode: ChatInputNode {
                 installedPacks.insert(info.0)
             }
             
-            var hasUnreadTrending = false
+            var hasUnreadTrending: Bool?
             for pack in trendingPacks {
-                if pack.unread {
-                    hasUnreadTrending = true
-                    break
+                if !installedPacks.contains(pack.info.id) {
+                    if hasUnreadTrending == nil {
+                        hasUnreadTrending = false
+                    }
+                    if pack.unread {
+                        hasUnreadTrending = true
+                        break
+                    }
                 }
             }
             
@@ -798,7 +804,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 var index = 0
                 for item in trendingPacks {
                     if !installedPacks.contains(item.info.id) {
-                        gridEntries.append(.trending(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread)))
+                        gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: true)))
                         index += 1
                     }
                 }
@@ -872,6 +878,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.stickerPane.inputNodeInteraction = self.inputNodeInteraction
         self.gifPane.inputNodeInteraction = self.inputNodeInteraction
+        self.trendingPane.inputNodeInteraction = self.inputNodeInteraction
         
         paneDidScrollImpl = { [weak self] pane, state, transition in
             self?.updatePaneDidScroll(pane: pane, state: state, transition: transition)
@@ -923,7 +930,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self.theme = theme
             self.strings = strings
             
-            if chatWallpaper == theme.chat.defaultWallpaper, case .color = chatWallpaper {
+            if case let .color(color) = chatWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
                 self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColorNoWallpaper
             } else {
                 self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
@@ -1159,14 +1166,14 @@ final class ChatMediaInputNode: ChatInputNode {
         
         if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
-            let previousTrendingPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
+            //let previousTrendingPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
             let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
-            let updatedTrendingPanelIsActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
+            //let updatedTrendingPanelIsActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .trending
             
-            if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
                 transition = .immediate
-            }
+            }*/
             
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: transition, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
@@ -1187,7 +1194,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 case .trending:
                     self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
             }
-            if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
+            /*if updatedTrendingPanelIsActive != previousTrendingPanelWasActive {
                 self.controllerInteraction.updateInputMode { current in
                     switch current {
                     case let .media(mode, _):
@@ -1200,7 +1207,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         return current
                     }
                 }
-            }
+            }*/
         } else {
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
@@ -1382,14 +1389,20 @@ final class ChatMediaInputNode: ChatInputNode {
                     var placeholderNode: PaneSearchBarPlaceholderNode?
                     if let searchMode = searchMode {
                         switch searchMode {
-                            case .gif:
-                                placeholderNode = self.gifPane.searchPlaceholderNode
-                            case .sticker:
-                                self.stickerPane.gridNode.forEachItemNode { itemNode in
-                                    if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
-                                        placeholderNode = itemNode
-                                    }
+                        case .gif:
+                            placeholderNode = self.gifPane.searchPlaceholderNode
+                        case .sticker:
+                            self.stickerPane.gridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                                    placeholderNode = itemNode
                                 }
+                            }
+                        case .trending:
+                            self.trendingPane.gridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                                    placeholderNode = itemNode
+                                }
+                            }
                         }
                     }
                     
@@ -1553,15 +1566,22 @@ final class ChatMediaInputNode: ChatInputNode {
             var placeholderNode: PaneSearchBarPlaceholderNode?
             if let searchMode = searchMode {
                 switch searchMode {
-                    case .gif:
-                        placeholderNode = self.gifPane.searchPlaceholderNode
-                        paneIsEmpty = self.gifPane.isEmpty
-                    case .sticker:
-                        self.stickerPane.gridNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
-                                placeholderNode = itemNode
-                            }
+                case .gif:
+                    placeholderNode = self.gifPane.searchPlaceholderNode
+                    paneIsEmpty = self.gifPane.isEmpty
+                case .sticker:
+                    self.stickerPane.gridNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                            placeholderNode = itemNode
                         }
+                    }
+                case .trending:
+                    self.trendingPane.gridNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+                            placeholderNode = itemNode
+                        }
+                    }
+                    paneIsEmpty = true
                 }
             }
             if let placeholderNode = placeholderNode {

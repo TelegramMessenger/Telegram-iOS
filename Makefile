@@ -3,7 +3,7 @@
 include Utils.makefile
 
 BUCK_OPTIONS=\
-	--config custom.appVersion="5.13" \
+	--config custom.appVersion="5.13.1" \
 	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
 	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
 	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
@@ -356,7 +356,7 @@ build_verbose: check_env
 	//:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
 	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
-	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_CACHE_OPTIONS}
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 deps: check_env
 	$(BUCK) query "deps(//:AppPackage)" --dot  \

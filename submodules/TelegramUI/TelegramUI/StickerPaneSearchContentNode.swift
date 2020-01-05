@@ -7,20 +7,23 @@ import Postbox
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
+import PresentationDataUtils
 import LegacyComponents
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import Emoji
 import AppBundle
+import OverlayStatusController
+import UndoUI
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
-    let install: (StickerPackCollectionInfo) -> Void
+    let install: (StickerPackCollectionInfo, [ItemCollectionItem]) -> Void
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem]) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -35,13 +38,13 @@ private enum StickerSearchEntryId: Equatable, Hashable {
 
 private enum StickerSearchEntry: Identifiable, Comparable {
     case sticker(index: Int, code: String?, stickerItem: FoundStickerItem, theme: PresentationTheme)
-    case global(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool)
+    case global(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, topSeparator: Bool)
     
     var stableId: StickerSearchEntryId {
         switch self {
         case let .sticker(_, code, stickerItem, _):
             return .sticker(code, stickerItem.file.fileId.id)
-        case let .global(_, info, _, _):
+        case let .global(_, info, _, _, _):
             return .global(info.id)
         }
     }
@@ -66,8 +69,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             } else {
                 return false
             }
-        case let .global(index, info, topItems, installed):
-            if case .global(index, info, topItems, installed) = rhs {
+        case let .global(index, info, topItems, installed, topSeparator):
+            if case .global(index, info, topItems, installed, topSeparator) = rhs {
                 return true
             } else {
                 return false
@@ -84,11 +87,11 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             default:
                 return true
             }
-        case let .global(lhsIndex, _, _, _):
+        case let .global(lhsIndex, _, _, _, _):
             switch rhs {
             case .sticker:
                 return false
-            case let .global(rhsIndex, _, _, _):
+            case let .global(rhsIndex, _, _, _, _):
                 return lhsIndex < rhsIndex
             }
         }
@@ -100,11 +103,11 @@ private enum StickerSearchEntry: Identifiable, Comparable {
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
-        case let .global(_, info, topItems, installed):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, installed: installed, unread: false, open: {
+        case let .global(_, info, topItems, installed, topSeparator):
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
-                interaction.install(info)
+                interaction.install(info, topItems)
             }, getItemIsPreviewed: { item in
                 return interaction.getItemIsPreviewed(item)
             })
@@ -171,6 +174,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
     
+    private let installDisposable = MetaDisposable()
+    
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
         self.context = context
         self.controllerInteraction = controllerInteraction
@@ -181,7 +186,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
-        })
+        }, isPane: false)
         
         self.gridNode = GridNode()
         
@@ -227,25 +232,87 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 })
                 strongSelf.controllerInteraction.presentController(controller, nil)
             }
-        }, install: { [weak self] info in
-            if let strongSelf = self {
-                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    switch result {
-                    case let .result(info, items, installed):
-                        if installed {
-                            return .complete()
-                        } else {
-                            return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                        }
-                    case .fetching:
-                        break
-                    case .none:
-                        break
-                    }
-                    return .complete()
-                }).start()
+        }, install: { [weak self] info, items in
+            guard let strongSelf = self else {
+                return
             }
+            let account = strongSelf.context.account
+            var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+            |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                switch result {
+                case let .result(info, items, installed):
+                    if installed {
+                        return .complete()
+                    } else {
+                        return preloadedStickerPackThumbnail(account: account, info: info, items: items)
+                        |> filter { $0 }
+                        |> ignoreValues
+                        |> then(
+                            addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                            |> ignoreValues
+                        )
+                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                            return .complete()
+                        }
+                        |> then(.single((info, items)))
+                    }
+                case .fetching:
+                    break
+                case .none:
+                    break
+                }
+                return .complete()
+            }
+            |> deliverOnMainQueue
+            
+            let context = strongSelf.context
+            var cancelImpl: (() -> Void)?
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                self?.controllerInteraction.presentController(controller, nil)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.12, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            installSignal = installSignal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = {
+                self?.installDisposable.set(nil)
+            }
+                
+            strongSelf.installDisposable.set(installSignal.start(next: { info, items in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var animateInAsReplacement = false
+                if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                    for controller in navigationController.overlayControllers {
+                        if let controller = controller as? UndoOverlayController {
+                            controller.dismissWithCommitActionAndReplacementAnimation()
+                            animateInAsReplacement = true
+                        }
+                    }
+                }
+                
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                    return true
+                }))
+            }))
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self {
                 let _ = strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
@@ -262,6 +329,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     
     deinit {
         self.searchDisposable.dispose()
+        self.installDisposable.dispose()
     }
     
     func updateText(_ text: String, languageCode: String?) {
@@ -322,17 +390,57 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             let local = searchStickerSets(postbox: context.account.postbox, query: text)
             let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
             |> delay(0.2, queue: Queue.mainQueue())
-            let packs = local
+            let rawPacks = local
             |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
                 var localResult = result
                 if let currentRemote = self.currentRemotePacks.with ({ $0 }) {
                     localResult = localResult.merge(with: currentRemote)
                 }
                 return .single((localResult, false, nil))
-                |> then(remote |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
-                    return (result.merge(with: remote), true, remote)
-                })
+                |> then(
+                    remote
+                    |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                        return (result.merge(with: remote), true, remote)
+                    }
+                )
             }
+            
+            let installedPackIds = context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])])
+            |> map { view -> Set<ItemCollectionId> in
+                var installedPacks = Set<ItemCollectionId>()
+                if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
+                    if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
+                        for entry in packsEntries {
+                            installedPacks.insert(entry.id)
+                        }
+                    }
+                }
+                return installedPacks
+            }
+            |> distinctUntilChanged
+            let packs = combineLatest(rawPacks, installedPackIds)
+            |> map { packs, installedPackIds -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                var (localPacks, completed, remotePacks) = packs
+                
+                for i in 0 ..< localPacks.infos.count {
+                    let installed = installedPackIds.contains(localPacks.infos[i].0)
+                    if installed != localPacks.infos[i].3 {
+                        localPacks.infos[i].3 = installed
+                    }
+                }
+                
+                if remotePacks != nil {
+                    for i in 0 ..< remotePacks!.infos.count {
+                        let installed = installedPackIds.contains(remotePacks!.infos[i].0)
+                        if installed != remotePacks!.infos[i].3 {
+                            remotePacks!.infos[i].3 = installed
+                        }
+                    }
+                }
+                
+                return (localPacks, completed, remotePacks)
+            }
+            
             signal = combineLatest(stickers, packs)
             |> map { stickers, packs -> ([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
                 return (stickers, packs.0, packs.1, packs.2)
@@ -374,6 +482,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                             existingStickerIds.insert(id)
                         }
                     }
+                    var isFirstGlobal = true
                     for (collectionId, info, _, installed) in packs.infos {
                         if let info = info as? StickerPackCollectionInfo {
                             var topItems: [StickerPackItem] = []
@@ -384,7 +493,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                                     }
                                 }
                             }
-                            entries.append(.global(index: index, info: info, topItems: topItems, installed: installed))
+                            entries.append(.global(index: index, info: info, topItems: topItems, installed: installed, topSeparator: !isFirstGlobal))
+                            isFirstGlobal = false
                             index += 1
                         }
                     }

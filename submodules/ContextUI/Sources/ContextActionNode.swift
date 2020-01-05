@@ -26,7 +26,7 @@ final class ContextActionNode: ASDisplayNode {
         self.getController = getController
         self.actionSelected = actionSelected
         
-        let textFont = Font.regular(presentationData.fontSize.baseDisplaySize)
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isAccessibilityElement = false
@@ -161,7 +161,7 @@ final class ContextActionNode: ASDisplayNode {
             textColor = presentationData.theme.contextMenu.destructiveColor
         }
         
-        let textFont = Font.regular(presentationData.fontSize.baseDisplaySize)
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         
         self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
         

@@ -46,12 +46,12 @@
 
 @implementation MTOutgoingMessage
 
-- (instancetype)initWithData:(NSData *)data metadata:(id)metadata shortMetadata:(id)shortMetadata
+- (instancetype)initWithData:(NSData *)data metadata:(id)metadata additionalDebugDescription:(NSString *)additionalDebugDescription shortMetadata:(id)shortMetadata
 {
-    return [self initWithData:data metadata:metadata shortMetadata:shortMetadata messageId:0 messageSeqNo:0];
+    return [self initWithData:data metadata:metadata additionalDebugDescription:additionalDebugDescription shortMetadata:shortMetadata messageId:0 messageSeqNo:0];
 }
 
-- (instancetype)initWithData:(NSData *)data metadata:(id)metadata shortMetadata:(id)shortMetadata messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
+- (instancetype)initWithData:(NSData *)data metadata:(id)metadata additionalDebugDescription:(NSString *)additionalDebugDescription shortMetadata:(id)shortMetadata messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
 {
     self = [super init];
     if (self != nil)
@@ -59,6 +59,7 @@
         _internalId = [[MTOutgoingMessageInternalId alloc] init];
         _data = data;
         _metadata = metadata;
+        _additionalDebugDescription = additionalDebugDescription;
         _shortMetadata = shortMetadata;
         _messageId = messageId;
         _messageSeqNo = messageSeqNo;

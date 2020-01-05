@@ -88,7 +88,7 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
     case search(theme: PresentationTheme, strings: PresentationStrings)
     case peerSpecificSetup(theme: PresentationTheme, strings: PresentationStrings, dismissed: Bool)
     case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, theme: PresentationTheme)
-    case trending(TrendingPaneEntry)
+    case trending(TrendingPanePackEntry)
     
     var index: ChatMediaInputGridEntryIndex {
         switch self {

@@ -311,6 +311,12 @@ public final class ChatListNode: ListView {
         return _ready.get()
     }
     
+    private let _contentsReady = ValuePromise<Bool>()
+    private var didSetContentsReady = false
+    public var contentsReady: Signal<Bool, NoError> {
+        return _contentsReady.get()
+    }
+    
     public var peerSelected: ((PeerId, Bool, Bool) -> Void)?
     public var groupSelected: ((PeerGroupId) -> Void)?
     public var addContact: ((String) -> Void)?
@@ -379,7 +385,7 @@ public final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -708,7 +714,7 @@ public final class ChatListNode: ListView {
                 searchMode = true
             }
             
-            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
+            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
             |> map({ mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
@@ -1158,6 +1164,10 @@ public final class ChatListNode: ListView {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
                     }
+                    if !strongSelf.didSetContentsReady {
+                        strongSelf.didSetContentsReady = true
+                        strongSelf._contentsReady.set(true)
+                    }
                     
                     var isEmpty = false
                     if transition.chatListView.filteredEntries.isEmpty {
@@ -1262,8 +1272,7 @@ public final class ChatListNode: ListView {
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                    , scrollPosition: .top(0.0), animated: true)
+                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound, scrollPosition: .top(0.0), animated: true)
                 self.setChatListLocation(location)
             }
         } else {

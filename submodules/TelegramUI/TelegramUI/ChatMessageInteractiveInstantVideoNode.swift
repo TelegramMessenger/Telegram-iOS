@@ -239,7 +239,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case .bubble:
                         if item.message.flags.contains(.Failed) {
                             statusType = .BubbleOutgoing(.Failed)
-                        } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
+                        } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                             statusType = .BubbleOutgoing(.Sending)
                         } else {
                             statusType = .BubbleOutgoing(.Sent(read: item.read))
@@ -248,6 +248,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             var edited = false
+            if item.attributes.updatingMedia != nil {
+                edited = true
+            }
             let sentViaBot = false
             var viewCount: Int? = nil
             for attribute in item.message.attributes {

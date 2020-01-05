@@ -22,39 +22,198 @@ private let roundCorners = { () -> UIImage in
     return image
 }()
 
-private struct SpotlightAccountContact: Equatable, Codable {
-    var id: Int64
-    var title: String
-    var avatarPath: String?
+private struct SpotlightIndexStorageItem: Codable, Equatable {
+    var firstName: String
+    var lastName: String
+    var avatarSourcePath: String?
 }
 
-private func manageableSpotlightContacts(accounts: Signal<[Account], NoError>) -> Signal<[Int64: SpotlightAccountContact], NoError> {
-    let queue = Queue()
-    return accounts
-    |> mapToSignal { accounts -> Signal<[[SpotlightAccountContact]], NoError> in
-        return combineLatest(queue: queue, accounts.map { account -> Signal<[SpotlightAccountContact], NoError> in
-            return account.postbox.contactPeersView(accountPeerId: account.peerId, includePresences: false)
-            |> map { view -> [SpotlightAccountContact] in
-                var result: [SpotlightAccountContact] = []
-                for peer in view.peers {
-                    if let user = peer as? TelegramUser {
-                        result.append(SpotlightAccountContact(id: user.id.toInt64(), title: user.debugDisplayTitle, avatarPath: smallestImageRepresentation(user.photo).flatMap { representation in
-                            return account.postbox.mediaBox.resourcePath(representation.resource)
-                        }))
+private final class SpotlightIndexStorage {
+    private let appBasePath: String
+    private let basePath: String
+    private var items: [PeerId: SpotlightIndexStorageItem] = [:]
+    
+    init(appBasePath: String, basePath: String) {
+        self.appBasePath = appBasePath
+        self.basePath = basePath
+        
+        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+        
+        self.reload()
+        
+        if self.items.isEmpty {
+            CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: ["telegram-contacts"], completionHandler: { _ in })
+        }
+    }
+    
+    private func path(peerId: PeerId) -> String {
+        return self.basePath + "/p:\(UInt64(bitPattern: peerId.toInt64()))"
+    }
+    
+    private func reload() {
+        self.items.removeAll()
+        
+        guard let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsSubdirectoryDescendants], errorHandler: nil) else {
+            return
+        }
+        
+        while let item = enumerator.nextObject() {
+            guard let url = item as? NSURL else {
+                continue
+            }
+            guard let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey]) else {
+                continue
+            }
+            if let value = resourceValues[.isDirectoryKey] as? Bool, !value {
+                continue
+            }
+            if let path = url.path, let directoryName = url.lastPathComponent, directoryName.hasPrefix("p:") {
+                let peerIdString = directoryName[directoryName.index(directoryName.startIndex, offsetBy: 2)...]
+                if let peerIdValue = UInt64(peerIdString) {
+                    let peerId = PeerId(Int64(bitPattern: peerIdValue))
+                    
+                    let item: SpotlightIndexStorageItem
+                    if let itemData = try? Data(contentsOf: URL(fileURLWithPath: path + "/data.json")), let decodedItem = try? JSONDecoder().decode(SpotlightIndexStorageItem.self, from: itemData) {
+                        item = decodedItem
+                    } else {
+                        let _ = try? FileManager.default.removeItem(atPath: path + "/data.json")
+                        let _ = try? FileManager.default.removeItem(atPath: path + "/avatar.png")
+                        item = SpotlightIndexStorageItem(firstName: "", lastName: "", avatarSourcePath: nil)
+                    }
+                    
+                    self.items[peerId] = item
+                }
+            }
+        }
+    }
+    
+    func update(items: [PeerId: SpotlightIndexStorageItem]) {
+        let validPeerIds = Set(items.keys)
+        var removePeerIds: [PeerId] = []
+        for (peerId, item) in self.items {
+            if !validPeerIds.contains(peerId) {
+                removePeerIds.append(peerId)
+            }
+        }
+        if !removePeerIds.isEmpty {
+            for peerId in removePeerIds {
+                let _ = try? FileManager.default.removeItem(atPath: self.path(peerId: peerId))
+                self.items.removeValue(forKey: peerId)
+            }
+            
+            CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: removePeerIds.map { peerId in
+                return "contact-\(peerId.toInt64())"
+            })
+        }
+        
+        var addToIndexItems: [CSSearchableItem] = []
+        
+        for (peerId, item) in items {
+            let previousItem = self.items[peerId]
+            if previousItem != item {
+                var updatedAvatarSourcePath: String?
+                if let avatarSourcePath = item.avatarSourcePath, let _ = fileSize(self.appBasePath + "/" + avatarSourcePath) {
+                    updatedAvatarSourcePath = avatarSourcePath
+                }
+                
+                var encodeItem = item
+                encodeItem.avatarSourcePath = updatedAvatarSourcePath
+                
+                if encodeItem == previousItem {
+                    continue
+                }
+                
+                print("Spotlight: updating \(item.firstName) \(item.lastName)")
+                let path = self.path(peerId: peerId)
+                let _ = try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                
+                var resolvedAvatarPath: String?
+                if previousItem?.avatarSourcePath != updatedAvatarSourcePath {
+                    let avatarPath = path + "/avatar.png"
+                    let _ = try? FileManager.default.removeItem(atPath: avatarPath)
+                    
+                    if let updatedAvatarSourcePathValue = updatedAvatarSourcePath, let avatarData = try? Data(contentsOf: URL(fileURLWithPath: self.appBasePath + "/" + updatedAvatarSourcePathValue)), let image = UIImage(data: avatarData) {
+                        let size = CGSize(width: 120.0, height: 120.0)
+                        let context = DrawingContext(size: size, scale: 1.0, clear: true)
+                        context.withFlippedContext { c in
+                            c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                            c.setBlendMode(.destinationOut)
+                            c.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                        }
+                        if let resultImage = context.generateImage(), let resultData = resultImage.pngData(), let _ = try? resultData.write(to: URL(fileURLWithPath: avatarPath)) {
+                            resolvedAvatarPath = avatarPath
+                        } else {
+                            updatedAvatarSourcePath = nil
+                        }
                     }
                 }
-                result.sort(by: { $0.id < $1.id })
+                
+                let itemDataPath = path + "/data.json"
+                
+                let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
+                attributeSet.version = "\(UInt64.random(in: 0 ..< UInt64.max))"
+                if !item.firstName.isEmpty && !item.lastName.isEmpty {
+                    attributeSet.title = "\(item.firstName) \(item.lastName)"
+                } else if !item.firstName.isEmpty {
+                    attributeSet.title = item.firstName
+                } else {
+                    attributeSet.title = item.lastName
+                }
+                attributeSet.thumbnailURL = resolvedAvatarPath.flatMap(URL.init(fileURLWithPath:))
+                let indexItem = CSSearchableItem(uniqueIdentifier: "contact-\(peerId.toInt64())", domainIdentifier: "telegram-contacts", attributeSet: attributeSet)
+                addToIndexItems.append(indexItem)
+                
+                encodeItem.avatarSourcePath = updatedAvatarSourcePath
+                if let data = try? JSONEncoder().encode(encodeItem) {
+                    let _ = try? data.write(to: URL(fileURLWithPath: itemDataPath), options: [.atomic])
+                }
+                
+                self.items[peerId] = item
+            }
+        }
+        
+        if !addToIndexItems.isEmpty {
+            CSSearchableIndex.default().indexSearchableItems(addToIndexItems, completionHandler: { error in
+                if let error = error {
+                    Logger.shared.log("CSSearchableIndex", "indexSearchableItems error: \(error)")
+                }
+            })
+        }
+    }
+}
+
+private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[Account], NoError>) -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> {
+    let queue = Queue()
+    return accounts
+    |> mapToSignal { accounts -> Signal<[[PeerId: SpotlightIndexStorageItem]], NoError> in
+        return combineLatest(queue: queue, accounts.map { account -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> in
+            return account.postbox.contactPeersView(accountPeerId: account.peerId, includePresences: false)
+            |> map { view -> [PeerId: SpotlightIndexStorageItem] in
+                var result: [PeerId: SpotlightIndexStorageItem] = [:]
+                for peer in view.peers {
+                    if let user = peer as? TelegramUser {
+                        let avatarSourcePath = smallestImageRepresentation(user.photo).flatMap { representation -> String? in
+                            let resourcePath = account.postbox.mediaBox.resourcePath(representation.resource)
+                            if resourcePath.hasPrefix(appBasePath + "/") {
+                                return String(resourcePath[resourcePath.index(resourcePath.startIndex, offsetBy: appBasePath.count + 1)...])
+                            } else {
+                                return resourcePath
+                            }
+                        }
+                        result[user.id] = SpotlightIndexStorageItem(firstName: user.firstName ?? "", lastName: user.lastName ?? "", avatarSourcePath: avatarSourcePath)
+                    }
+                }
                 return result
             }
             |> distinctUntilChanged
         })
     }
-    |> map { accountContacts -> [Int64: SpotlightAccountContact] in
-        var result: [Int64: SpotlightAccountContact] = [:]
+    |> map { accountContacts -> [PeerId: SpotlightIndexStorageItem] in
+        var result: [PeerId: SpotlightIndexStorageItem] = [:]
         for singleAccountContacts in accountContacts {
-            for contact in singleAccountContacts {
-                if result[contact.id] == nil {
-                    result[contact.id] = contact
+            for (peerId, contact) in singleAccountContacts {
+                if result[peerId] == nil {
+                    result[peerId] = contact
                 }
             }
         }
@@ -62,76 +221,21 @@ private func manageableSpotlightContacts(accounts: Signal<[Account], NoError>) -
     }
 }
 
-private final class SpotlightContactContext {
-    private let indexQueue: Queue
-    private let disposable = MetaDisposable()
-    private var contact: SpotlightAccountContact?
-    
-    init(indexQueue: Queue) {
-        self.indexQueue = indexQueue
-    }
-    
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    func update(contact: SpotlightAccountContact) {
-        if self.contact == contact {
-            return
-        }
-        let photoUpdated = self.contact?.avatarPath != contact.avatarPath
-        self.contact = contact
-        
-        let indexQueue = self.indexQueue
-        let indexSignal: Signal<Never, NoError> = Signal { subscriber in
-            indexQueue.async {
-                let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
-                attributeSet.title = contact.title
-                if let avatarPath = contact.avatarPath, let avatarData = try? Data(contentsOf: URL(fileURLWithPath: avatarPath)), let image = UIImage(data: avatarData) {
-                    let size = CGSize(width: 120.0, height: 120.0)
-                    let context = DrawingContext(size: size, scale: 1.0, clear: true)
-                    context.withFlippedContext { c in
-                        c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                        c.setBlendMode(.destinationOut)
-                        c.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                    }
-                    if let resultImage = context.generateImage(), let resultData = resultImage.pngData() {
-                        attributeSet.thumbnailData = resultData
-                    }
-                }
-                let item = CSSearchableItem(uniqueIdentifier: "contact-\(contact.id)", domainIdentifier: "telegram-contacts", attributeSet: attributeSet)
-                Logger.shared.log("SpotlightDataContext", "index \(contact.id) title: \(contact.title)")
-                CSSearchableIndex.default().indexSearchableItems([item], completionHandler: { error in
-                    if let error = error {
-                        Logger.shared.log("CSSearchableIndex", "error: \(error)")
-                    }
-                    subscriber.putCompletion()
-                })
-            }
-            
-            return EmptyDisposable
-        }
-        
-        self.disposable.set(indexSignal.start())
-    }
-}
-
 private final class SpotlightDataContextImpl {
     private let queue: Queue
-    private let indexQueue: Queue = Queue()
-    private var contactContexts: [Int64: SpotlightContactContext] = [:]
+    private let appBasePath: String
+    private let accountManager: AccountManager
+    private let indexStorage: SpotlightIndexStorage
     
     private var listDisposable: Disposable?
     
-    init(queue: Queue, accounts: Signal<[Account], NoError>) {
+    init(queue: Queue, appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
         self.queue = queue
+        self.appBasePath = appBasePath
+        self.accountManager = accountManager
+        self.indexStorage = SpotlightIndexStorage(appBasePath: appBasePath, basePath: accountManager.basePath + "/spotlight")
         
-        self.indexQueue.async {
-            Logger.shared.log("SpotlightDataContext", "deleteSearchableItems")
-            CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: ["telegram-contacts"], completionHandler: { _ in })
-        }
-        
-        self.listDisposable = (manageableSpotlightContacts(accounts: accounts
+        self.listDisposable = (manageableSpotlightContacts(appBasePath: appBasePath, accounts: accounts
         |> map { accounts in
             return accounts.sorted(by: { $0.id < $1.id })
         }
@@ -146,48 +250,26 @@ private final class SpotlightDataContextImpl {
             }
             return true
         }))
-        |> deliverOn(self.queue)).start(next: { [weak self] contacts in
+        |> deliverOn(self.queue)).start(next: { [weak self] items in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateContacts(contacts: contacts)
+            strongSelf.updateContacts(items: items)
         })
     }
     
-    private func updateContacts(contacts: [Int64: SpotlightAccountContact]) {
-        var validIds = Set<Int64>()
-        for (_, contact) in contacts {
-            validIds.insert(contact.id)
-            
-            let context: SpotlightContactContext
-            if let current = self.contactContexts[contact.id] {
-                context = current
-            } else {
-                context = SpotlightContactContext(indexQueue: self.indexQueue)
-                self.contactContexts[contact.id] = context
-            }
-            context.update(contact: contact)
-        }
-        
-        var removeIds: [Int64] = []
-        for id in self.contactContexts.keys {
-            if !validIds.contains(id) {
-                removeIds.append(id)
-            }
-        }
-        for id in removeIds {
-            self.contactContexts.removeValue(forKey: id)
-        }
+    private func updateContacts(items: [PeerId: SpotlightIndexStorageItem]) {
+        self.indexStorage.update(items: items)
     }
 }
 
 public final class SpotlightDataContext {
     private let impl: QueueLocalObject<SpotlightDataContextImpl>
     
-    public init(accounts: Signal<[Account], NoError>) {
+    public init(appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
         let queue = Queue()
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return SpotlightDataContextImpl(queue: queue, accounts: accounts)
+            return SpotlightDataContextImpl(queue: queue, appBasePath: appBasePath, accountManager: accountManager, accounts: accounts)
         })
     }
 }

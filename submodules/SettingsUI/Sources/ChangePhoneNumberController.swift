@@ -84,7 +84,7 @@ final class ChangePhoneNumberController: ViewController {
                     }
                 }
                 strongSelf.controllerNode.view.endEditing(true)
-                strongSelf.present(controller, in: .window(.root))
+                strongSelf.push(controller)
             }
         }
     }

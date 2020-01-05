@@ -834,6 +834,7 @@ public class Account {
     public private(set) var callSessionManager: CallSessionManager!
     public private(set) var viewTracker: AccountViewTracker!
     public private(set) var pendingMessageManager: PendingMessageManager!
+    public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     public private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
@@ -864,6 +865,11 @@ public class Account {
     public var networkType: Signal<NetworkType, NoError> {
         return self.networkTypeValue.get()
     }
+    private let atomicCurrentNetworkType = Atomic<NetworkType>(value: .none)
+    public var immediateNetworkType: NetworkType {
+        return self.atomicCurrentNetworkType.with { $0 }
+    }
+    private var networkTypeDisposable: Disposable?
     
     private let _loggedOut = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var loggedOut: Signal<Bool, NoError> {
@@ -918,6 +924,7 @@ public class Account {
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
+        self.pendingUpdateMessageManager = PendingUpdateMessageManager(postbox: postbox, network: network, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
             Logger.shared.log("Account", "network logged out")
@@ -970,6 +977,10 @@ public class Account {
         |> distinctUntilChanged)
         
         self.networkTypeValue.set(currentNetworkType())
+        let atomicCurrentNetworkType = self.atomicCurrentNetworkType
+        self.networkTypeDisposable = self.networkTypeValue.get().start(next: { value in
+            let _ = atomicCurrentNetworkType.swap(value)
+        })
         
         let serviceTasksMasterBecomeMaster = self.shouldBeServiceTaskMaster.get()
         |> distinctUntilChanged
@@ -1037,6 +1048,7 @@ public class Account {
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
+            self.pendingUpdateMessageManager.updatingMessageMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
@@ -1124,6 +1136,7 @@ public class Account {
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
+        self.networkTypeDisposable?.dispose()
     }
     
     private func postSmallLogIfNeeded() {
@@ -1246,4 +1259,5 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
+    account.pendingUpdateMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
 }

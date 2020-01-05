@@ -91,7 +91,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     apply()
                 case let .color(color):
                     let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
-                    let uiColor = UIColor(rgb: UInt32(bitPattern: color))
+                    let uiColor = UIColor(rgb: color)
                     if uiColor.distance(to: theme.list.itemBlocksBackgroundColor) < 200 {
                         self.imageNode.isHidden = false
                         self.backgroundNode.isHidden = true
@@ -101,19 +101,19 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     } else {
                         self.imageNode.isHidden = true
                         self.backgroundNode.isHidden = false
-                        self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        self.backgroundNode.backgroundColor = UIColor(rgb: color)
                     }
                 case let .gradient(topColor, bottomColor, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(gradientImage([UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))]))
+                    self.imageNode.setSignal(gradientImage([UIColor(rgb: topColor), UIColor(rgb: bottomColor)]))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .image(representations, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
                     
-                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
+                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: nil, resource: $0.resource)) })
                     self.imageNode.setSignal(wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.cgSize.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
@@ -122,11 +122,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.isHidden = false
                     
                     let convertedRepresentations : [ImageRepresentationWithReference] = file.file.previewRepresentations.map {
-                        ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource))
+                        ImageRepresentationWithReference(representation: $0, reference: .wallpaper(wallpaper: .slug(file.slug), resource: $0.resource))
                     }
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-                    if file.isPattern {
+                    if wallpaper.isPattern {
                         self.backgroundNode.isHidden = false
                         
                         var patternColors: [UIColor] = []
@@ -136,11 +136,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                             if let intensity = file.settings.intensity {
                                 patternIntensity = CGFloat(intensity) / 100.0
                             }
-                            patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                            patternColor = UIColor(rgb: color, alpha: patternIntensity)
                             patternColors.append(patternColor)
                             
                             if let bottomColor = file.settings.bottomColor {
-                                patternColors.append(UIColor(rgb: UInt32(bitPattern: bottomColor), alpha: patternIntensity))
+                                patternColors.append(UIColor(rgb: bottomColor, alpha: patternIntensity))
                             }
                         }
                         

@@ -13,6 +13,7 @@ import LocalMediaResources
 import TelegramPresentationData
 import TelegramUIPreferences
 import AppBundle
+import Svg
 
 public func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
@@ -526,7 +527,7 @@ public func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool
         } else {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))
         }
-        let alpha = (prominent ? 0.5 : 0.4) * intensity
+        let alpha = (prominent ? 0.6 : 0.55) * intensity
         return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }
     return .black
@@ -699,8 +700,8 @@ public func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryM
     }
 }
 
-public func telegramThemeData(account: Account, accountManager: AccountManager, resource: MediaResource, synchronousLoad: Bool = false) -> Signal<Data?, NoError> {
-    let maybeFetched = accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+public func telegramThemeData(account: Account, accountManager: AccountManager, reference: MediaResourceReference, synchronousLoad: Bool = false) -> Signal<Data?, NoError> {
+    let maybeFetched = accountManager.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
     return maybeFetched
     |> take(1)
     |> mapToSignal { maybeData in
@@ -708,15 +709,15 @@ public func telegramThemeData(account: Account, accountManager: AccountManager, 
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             return .single(loadedData)
         } else {
-            let data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+            let data = account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
             return Signal { subscriber in
-                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: resource)).start()
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
                 let disposable = (data
                 |> map { data -> Data? in
                     return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
                 }).start(next: { next in
                     if let data = next {
-                        accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                        accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
                     }
                     subscriber.putNext(next)
                 }, error: { error in
@@ -754,10 +755,10 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
             }
         case let .color(color):
-            c.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+            c.setFillColor(UIColor(rgb: color).cgColor)
             c.fill(drawingRect)
         case let .gradient(topColor, bottomColor, _):
-            let gradientColors = [UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor))].map { $0.cgColor } as CFArray
+            let gradientColors = [UIColor(rgb: topColor), UIColor(rgb: bottomColor)].map { $0.cgColor } as CFArray
             var locations: [CGFloat] = [0.0, 1.0]
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
@@ -786,11 +787,17 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
         c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
     }
-    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
     
-    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    if case let .color(color) = theme.chat.defaultWallpaper, UIColor(rgb: color).isEqual(theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColorNoWallpaper.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+    } else {
+        c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+        
+        c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
+        c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    }
     
     c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
     c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
@@ -863,90 +870,104 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     c.restoreGState()
 }
 
-public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let isSupportedTheme = fileReference.media.mimeType == "application/x-tgtheme-ios"
-    let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
-    let data = maybeFetched
-    |> take(1)
-    |> mapToSignal { maybeData -> Signal<(Data?, Data?), NoError> in
-        if maybeData.complete && isSupportedTheme {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            return .single((loadedData, nil))
-        } else {
-            let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
-            
-            let previewRepresentation = fileReference.media.previewRepresentations.first
-            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-            if let previewRepresentation = previewRepresentation {
-                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
-            } else {
-                fetchedThumbnail = .complete()
-            }
-            
-            let thumbnailData: Signal<Data?, NoError>
-            if let previewRepresentation = previewRepresentation {
-                thumbnailData = Signal<Data?, NoError> { subscriber in
-                    let fetchedDisposable = fetchedThumbnail.start()
-                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(previewRepresentation.resource).start(next: { next in
-                        let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
-                        if let data = data, data.count > 0 {
-                            subscriber.putNext(data)
-                        } else {
-                            subscriber.putNext(decodedThumbnailData)
-                        }
-                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+public enum ThemeImageSource {
+    case file(FileMediaReference)
+    case settings(TelegramThemeSettings)
+}
+
+public func themeImage(account: Account, accountManager: AccountManager, source: ThemeImageSource, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let theme: Signal<(PresentationTheme?, Data?), NoError>
+    
+    switch source {
+        case let .file(fileReference):
+            let isSupportedTheme = fileReference.media.mimeType == "application/x-tgtheme-ios"
+            let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+            theme = maybeFetched
+            |> take(1)
+            |> mapToSignal { maybeData -> Signal<(PresentationTheme?, Data?), NoError> in
+                if maybeData.complete && isSupportedTheme {
+                    let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                    return .single((loadedData.flatMap { makePresentationTheme(data: $0) }, nil))
+                } else {
+                    let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
                     
-                    return ActionDisposable {
-                        fetchedDisposable.dispose()
-                        thumbnailDisposable.dispose()
+                    let previewRepresentation = fileReference.media.previewRepresentations.first
+                    let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
+                    if let previewRepresentation = previewRepresentation {
+                        fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
+                    } else {
+                        fetchedThumbnail = .complete()
                     }
-                }
-            } else {
-                thumbnailData = .single(decodedThumbnailData)
-            }
-            
-            let reference = fileReference.resourceReference(fileReference.media.resource)
-            let fullSizeData: Signal<Data?, NoError>
-            if isSupportedTheme {
-                fullSizeData = Signal { subscriber in
-                    let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
-                    let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
-                        |> map { data -> Data? in
-                            return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
-                        }).start(next: { next in
-                            if let data = next {
-                                accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                    
+                    let thumbnailData: Signal<Data?, NoError>
+                    if let previewRepresentation = previewRepresentation {
+                        thumbnailData = Signal<Data?, NoError> { subscriber in
+                            let fetchedDisposable = fetchedThumbnail.start()
+                            let thumbnailDisposable = account.postbox.mediaBox.resourceData(previewRepresentation.resource).start(next: { next in
+                                let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                                if let data = data, data.count > 0 {
+                                    subscriber.putNext(data)
+                                } else {
+                                    subscriber.putNext(decodedThumbnailData)
+                                }
+                            }, error: subscriber.putError, completed: subscriber.putCompletion)
+                            
+                            return ActionDisposable {
+                                fetchedDisposable.dispose()
+                                thumbnailDisposable.dispose()
                             }
-                            subscriber.putNext(next)
-                        }, error: { error in
-                            subscriber.putError(error)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
-                    return ActionDisposable {
-                        fetch.dispose()
-                        disposable.dispose()
+                        }
+                    } else {
+                        thumbnailData = .single(decodedThumbnailData)
+                    }
+                    
+                    let reference = fileReference.resourceReference(fileReference.media.resource)
+                    let fullSizeData: Signal<Data?, NoError>
+                    if isSupportedTheme {
+                        fullSizeData = Signal { subscriber in
+                            let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                            let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                                |> map { data -> Data? in
+                                    return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
+                                }).start(next: { next in
+                                    if let data = next {
+                                        accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                                    }
+                                    subscriber.putNext(next)
+                                }, error: { error in
+                                    subscriber.putError(error)
+                                }, completed: {
+                                    subscriber.putCompletion()
+                                })
+                            return ActionDisposable {
+                                fetch.dispose()
+                                disposable.dispose()
+                            }
+                        }
+                    } else {
+                         fullSizeData = .single(nil)
+                    }
+                    
+                    return thumbnailData |> mapToSignal { thumbnailData in
+                        return fullSizeData |> map { fullSizeData in
+                            return (fullSizeData.flatMap { makePresentationTheme(data: $0) }, thumbnailData)
+                        }
                     }
                 }
-            } else {
-                 fullSizeData = .single(nil)
             }
-            
-            return thumbnailData |> mapToSignal { thumbnailData in
-                return fullSizeData |> map { fullSizeData in
-                    return (fullSizeData, thumbnailData)
-                }
-            }
-        }
+        case let .settings(settings):
+            theme = .single((makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false), nil))
     }
-    |> mapToSignal { (fullSizeData, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
-        if let fullSizeData = fullSizeData, let theme = makePresentationTheme(data: fullSizeData) {
-            if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+    
+    let data = theme
+    |> mapToSignal { (theme, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
+        if let theme = theme {
+            if case let .file(file) = theme.chat.defaultWallpaper {
                 return cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                         return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                             guard complete, let fullSizeData = fullSizeData else {
@@ -955,7 +976,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                             accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                             let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                             
-                            if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                            if wallpaper.wallpaper.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                                 return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
                                 |> mapToSignal { data in
                                     if data.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: data) {
@@ -1071,6 +1092,16 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         case .dayClassic:
             incomingColor = UIColor(rgb: 0xffffff)
             if let accentColor = accentColor {
+                if let wallpaper = wallpaper, case let .file(file) = wallpaper {
+                    topBackgroundColor = file.settings.color.flatMap { UIColor(rgb: $0) } ?? UIColor(rgb: 0xd6e2ee)
+                    bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
+                } else {
+                    if let bubbleColors = bubbleColors {
+                        topBackgroundColor = UIColor(rgb: 0xd6e2ee)
+                    } else {
+                        topBackgroundColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                    }
+                }
                 if let bubbleColors = bubbleColors {
                     topBackgroundColor = UIColor(rgb: 0xd6e2ee)
                     outgoingColor = bubbleColors
@@ -1094,7 +1125,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         case .night:
             topBackgroundColor = UIColor(rgb: 0x000000)
             incomingColor = UIColor(rgb: 0x1f1f1f)
-            if accentColor == nil {
+            if accentColor == nil || accentColor?.rgb == 0xffffff {
                 accentColor = UIColor(rgb: 0x313131)
             }
             outgoingColor = bubbleColors ?? (accentColor!, accentColor!)
@@ -1110,15 +1141,15 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         if let wallpaper = wallpaper {
             switch wallpaper {
                 case let .color(color):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    topBackgroundColor = UIColor(rgb: color)
                 case let .gradient(topColor, bottomColor, settings):
-                    topBackgroundColor = UIColor(rgb: UInt32(bitPattern: topColor))
-                    bottomBackgroundColor = UIColor(rgb: UInt32(bitPattern: bottomColor))
+                    topBackgroundColor = UIColor(rgb: topColor)
+                    bottomBackgroundColor = UIColor(rgb: bottomColor)
                     rotation = settings.rotation
                 case let .file(file):
                     if let color = file.settings.color {
-                        topBackgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) }
+                        topBackgroundColor = UIColor(rgb: color)
+                        bottomBackgroundColor = file.settings.bottomColor.flatMap { UIColor(rgb: $0) }
                     }
                     rotation = file.settings.rotation
                 default:
@@ -1129,83 +1160,113 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
         colorsSignal = .single(((topBackgroundColor, bottomBackgroundColor), (incomingColor, incomingColor), outgoingColor, nil, rotation))
     } else {
         var resource: MediaResource?
+        var reference: MediaResourceReference?
+        var defaultWallpaper: TelegramWallpaper?
         if case let .local(theme) = theme {
-            resource = theme.resource
-        } else if case let .cloud(theme) = theme {
-            resource = theme.theme.file?.resource
+            reference = .standalone(resource: theme.resource)
+        } else if case let .cloud(theme) = theme, let resource = theme.theme.file?.resource {
+            reference = .theme(theme: .slug(theme.theme.slug), resource: resource)
         }
-        if let resource = resource {
-            colorsSignal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
-            |> mapToSignal { data -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
+        
+        let themeSignal: Signal<PresentationTheme?, NoError>
+        if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+            themeSignal = Signal { subscriber in
+                let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: nil, bubbleColors: settings.messageColors.flatMap { (UIColor(argb: $0.top), UIColor(argb: $0.bottom)) }, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+                subscriber.putNext(theme)
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            }
+        } else if let reference = reference {
+            themeSignal = telegramThemeData(account: account, accountManager: accountManager, reference: reference, synchronousLoad: false)
+            |> map { data -> PresentationTheme? in
                 if let data = data, let theme = makePresentationTheme(data: data) {
-                    var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> = .complete()
-                    var rotation: Int32?
-                    let backgroundColor: (UIColor, UIColor?)
-                    let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
-                    let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
-                    switch theme.chat.defaultWallpaper {
-                        case .builtin:
-                            backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
-                        case let .color(color):
-                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), nil)
-                        case let .gradient(topColor, bottomColor, settings):
-                            backgroundColor = (UIColor(rgb: UInt32(bitPattern: topColor)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
-                            rotation = settings.rotation
-                        case .image:
-                            backgroundColor = (.black, nil)
-                        case let .file(file):
-                            rotation = file.settings.rotation
-                            if file.isPattern, let color = file.settings.color {
-                                backgroundColor = (UIColor(rgb: UInt32(bitPattern: color)), file.settings.bottomColor.flatMap { UIColor(rgb: UInt32(bitPattern: $0)) })
-                            } else {
-                                backgroundColor = (theme.chatList.backgroundColor, nil)
-                            }
-                            wallpaperSignal = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
-                            |> mapToSignal { wallpaper in
-                                if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
-                                    var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
-                                    return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                                    |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
-                                        guard complete, let fullSizeData = fullSizeData else {
-                                            return .complete()
-                                        }
-                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
-                                        let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
-                                        
-                                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
-                                            |> mapToSignal { _ in
-                                                return .complete()
-                                            }
-                                        } else if file.settings.blur {
-                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
-                                            |> mapToSignal { _ in
-                                                if let image = UIImage(data: fullSizeData) {
-                                                    return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
-                                                } else {
-                                                    return .complete()
-                                                }
-                                            }
-                                        } else if let image = UIImage(data: fullSizeData) {
-                                            return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
-                                        } else {
-                                            return .complete()
-                                        }
-                                    }
-                                } else {
-                                    return .complete()
-                                }
-                            }
-                    }
-                    return .single((backgroundColor, incomingColor, outgoingColor, nil, rotation))
-                    |> then(wallpaperSignal)
+                    return theme
                 } else {
-                    return .complete()
+                    return nil
                 }
             }
         } else {
-            colorsSignal = .never()
+            themeSignal = .never()
+        }
+            
+        colorsSignal = themeSignal
+        |> mapToSignal { theme -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
+            if let theme = theme {
+                var wallpaperSignal: Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> = .complete()
+                var rotation: Int32?
+                var backgroundColor: (UIColor, UIColor?)
+                let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
+                let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
+                switch theme.chat.defaultWallpaper {
+                    case .builtin:
+                        backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
+                    case let .color(color):
+                        backgroundColor = (UIColor(rgb: color), nil)
+                    case let .gradient(topColor, bottomColor, settings):
+                        backgroundColor = (UIColor(rgb: topColor), UIColor(rgb: bottomColor))
+                        rotation = settings.rotation
+                    case .image:
+                        backgroundColor = (.black, nil)
+                    case let .file(file):
+                        rotation = file.settings.rotation
+                        if let color = file.settings.color {
+                            backgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
+                        } else {
+                            backgroundColor = (theme.chatList.backgroundColor, nil)
+                        }
+                        wallpaperSignal = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
+                        |> mapToSignal { wallpaper in
+                            if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
+                                var effectiveBackgroundColor = backgroundColor
+                                if let color = file.settings.color {
+                                    effectiveBackgroundColor = (UIColor(rgb: color), file.settings.bottomColor.flatMap { UIColor(rgb: $0) })
+                                }
+                                
+                                var convertedRepresentations: [ImageRepresentationWithReference] = []
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                                return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                |> mapToSignal { _, fullSizeData, complete -> Signal<((UIColor, UIColor?), (UIColor, UIColor), (UIColor, UIColor), UIImage?, Int32?), NoError> in
+                                    guard complete, let fullSizeData = fullSizeData else {
+                                        return .complete()
+                                    }
+                                    accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                                    let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                    
+                                    if wallpaper.wallpaper.isPattern {
+                                        if let color = file.settings.color, let intensity = file.settings.intensity {
+                                            return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true)
+                                            |> mapToSignal { _ in
+                                                return .single((effectiveBackgroundColor, incomingColor, outgoingColor, nil, rotation))
+                                            }
+                                        } else {
+                                            return .complete()
+                                        }
+                                    } else if file.settings.blur {
+                                        return accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true)
+                                        |> mapToSignal { _ in
+                                            if let image = UIImage(data: fullSizeData) {
+                                                return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
+                                            } else {
+                                                return .complete()
+                                            }
+                                        }
+                                    } else if let image = UIImage(data: fullSizeData) {
+                                        return .single((backgroundColor, incomingColor, outgoingColor, image, rotation))
+                                    } else {
+                                        return .complete()
+                                    }
+                                }
+                            } else {
+                                return .complete()
+                            }
+                        }
+                }
+                return .single((backgroundColor, incomingColor, outgoingColor, nil, rotation))
+                |> then(wallpaperSignal)
+            } else {
+                return .complete()
+            }
         }
     }
     return colorsSignal

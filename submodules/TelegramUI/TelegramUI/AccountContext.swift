@@ -165,7 +165,7 @@ public final class AccountContextImpl: AccountContext {
         |> distinctUntilChanged
     }
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings) {
+    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, temp: Bool = false) {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.tonContext = tonContext
@@ -178,7 +178,7 @@ public final class AccountContextImpl: AccountContext {
             self.liveLocationManager = nil
         }
         self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
-        if sharedContext.applicationBindings.isMainApp {
+        if sharedContext.applicationBindings.isMainApp && !temp {
             self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)

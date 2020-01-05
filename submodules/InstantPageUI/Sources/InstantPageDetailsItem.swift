@@ -34,12 +34,12 @@ final class InstantPageDetailsItem: InstantPageItem {
         self.index = index
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourcePeerType: MediaAutoDownloadPeerType, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         var expanded: Bool?
         if let expandedDetails = currentExpandedDetails, let currentlyExpanded = expandedDetails[self.index] {
             expanded = currentlyExpanded
         }
-        return InstantPageDetailsNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
+        return InstantPageDetailsNode(context: context, sourcePeerType: sourcePeerType, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

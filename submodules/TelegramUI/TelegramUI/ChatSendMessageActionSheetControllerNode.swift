@@ -265,9 +265,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.toMessageTextNode.attributedText = toAttributedText
             }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         
-            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.fontSize.baseDisplaySize)])
+            self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         }
         self.messageBackgroundNode.contentMode = .scaleToFill
         
@@ -561,7 +561,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.validLayout = layout
         
         transition.updateFrame(node: self.textCoverNode, frame: self.textFieldFrame)
-        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 0.0))
+        transition.updateFrame(node: self.buttonCoverNode, frame: self.sendButtonFrame.offsetBy(dx: 1.0, dy: 1.0))
         
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))

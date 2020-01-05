@@ -8,7 +8,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -41,7 +41,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 
                 let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
                 let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
-                suggestedWallpaper = .gradient(Int32(bitPattern: topColor.rgb), Int32(bitPattern: bottomColor.rgb), WallpaperSettings())
+                suggestedWallpaper = .gradient(topColor.argb, bottomColor.argb, WallpaperSettings())
             } else {
                 bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
                 suggestedWallpaper = .builtin(WallpaperSettings())
@@ -152,16 +152,18 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                 outgoingSelectionBaseColor = outgoingControlColor
                 outgoingCheckColor = outgoingAccent
             } else {
-                outgoingAccentTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.302 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.655)
+                let outgoingBubbleMixedColor = lightnessColor
+                
+                outgoingAccentTextColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.302 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.655)
                 outgoingLinkTextColor = UIColor(rgb: 0x004bad)
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
-                outgoingControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
-                outgoingInactiveControlColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
-                outgoingFileTitleColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.285 * hueFactor, saturation: 2.946, brightness: 0.667)
-                outgoingPollsProgressColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
-                outgoingSelectionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.013 * hueFactor, saturation: 1.292, brightness: 0.871)
+                outgoingControlColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
+                outgoingInactiveControlColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
+                outgoingFileTitleColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.285 * hueFactor, saturation: 2.946, brightness: 0.667)
+                outgoingPollsProgressColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.283 * hueFactor, saturation: 3.176, brightness: 0.765)
+                outgoingSelectionColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.013 * hueFactor, saturation: 1.292, brightness: 0.871)
                 outgoingSelectionBaseColor = outgoingControlColor
-                outgoingCheckColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
+                outgoingCheckColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
             }
             outgoingPendingActivityColor = outgoingCheckColor
             
@@ -201,9 +203,9 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
         defaultWallpaper = forcedWallpaper
     } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
+            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+            defaultWallpaper = .color(backgroundColors.0.argb)
         }
     } else if let forcedWallpaper = suggestedWallpaper {
         defaultWallpaper = forcedWallpaper
@@ -232,6 +234,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
                     bar: accentColor
                 ),
                 actionButtonsFillColor: serviceBackgroundColor.flatMap { chat.message.incoming.actionButtonsFillColor.withUpdated(withWallpaper: $0) },
+                actionButtonsStrokeColor: day ? chat.message.incoming.actionButtonsStrokeColor.withUpdated(withoutWallpaper: accentColor) : nil,
                 actionButtonsTextColor: day ? chat.message.incoming.actionButtonsTextColor.withUpdated(withoutWallpaper: accentColor) : nil,
                 textSelectionColor: accentColor?.withAlphaComponent(0.2),
                 textSelectionKnobColor: accentColor
@@ -294,7 +297,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     )
     
     return PresentationTheme(
-        name: theme.name,
+        name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
@@ -311,7 +314,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ac
     )
 }
 
-public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, day: Bool, preview: Bool) -> PresentationTheme {
+public func makeDefaultDayPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, serviceBackgroundColor: UIColor?, day: Bool, preview: Bool) -> PresentationTheme {
     var serviceBackgroundColor = serviceBackgroundColor ?? defaultServiceBackgroundColor
     
     let intro = PresentationThemeIntro(
@@ -740,8 +743,8 @@ public func makeDefaultDayPresentationTheme(serviceBackgroundColor: UIColor?, da
     )
     
     return PresentationTheme(
-        name: .builtin(day ? .day : .dayClassic),
-        index: PresentationThemeReference.builtin(day ? .day : .dayClassic).index,
+        name: extendingThemeReference?.name ?? .builtin(day ? .day : .dayClassic),
+        index: extendingThemeReference?.index ?? PresentationThemeReference.builtin(day ? .day : .dayClassic).index,
         referenceTheme: day ? .day : .dayClassic,
         overallDarkAppearance: false,
         intro: intro,

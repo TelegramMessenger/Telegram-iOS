@@ -253,8 +253,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         return .single([])
     }
     
-    let dataSignal: Signal<MessageContextMenuData, NoError>
-    
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?
     var isAction = false
@@ -346,20 +344,27 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
     }
     
-    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })))
-    |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia]), NoError> = combineLatest(
+        loadLimits,
+        loadStickerSaveStatusSignal,
+        loadResourceStatusSignal,
+        context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
+        context.account.pendingUpdateMessageManager.updatingMessageMedia
+        |> take(1)
+    )
+    |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia]) in
         var canEdit = false
         if !isAction {
             let message = messages[0]
             canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
         
-        return MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data -> [ContextMenuItem] in
+    |> map { data, updatingMessageMedia -> [ContextMenuItem] in
         var actions: [ContextMenuItem] = []
         
         if let starStatus = data.starStatus {
@@ -688,11 +693,28 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             clearCacheAsDelete = true
         }
         if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
-            let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+            let title: String
+            var isSending = false
+            var isEditing = false
+            if updatingMessageMedia[message.id] != nil {
+                isSending = true
+                isEditing = true
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelEditing
+            } else if message.flags.isSending {
+                isSending = true
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending
+            } else {
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+            }
             actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: message.flags.isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                return generateTintedImage(image: UIImage(bundleImageName: isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
-                interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
+                if isEditing {
+                    context.account.pendingUpdateMessageManager.cancel(messageId: message.id)
+                    f(.default)
+                } else {
+                    interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
+                }
             })))
         }
         

@@ -70,36 +70,41 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             var automaticPlayback: Bool = false
             var contentMode: InteractiveMediaNodeContentMode = .aspectFit
             
-            for media in item.message.media {
-                if let telegramImage = media as? TelegramMediaImage {
-                    selectedMedia = telegramImage
-                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
-                        automaticDownload = .full
-                    }
-                } else if let telegramFile = media as? TelegramMediaFile {
-                    selectedMedia = telegramFile
-                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramFile) {
-                        automaticDownload = .full
-                    } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
-                        automaticDownload = .prefetch
-                    }
-                    
-                    if !item.message.containsSecretMedia {
-                        if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
-                            if case .full = automaticDownload {
-                                automaticPlayback = true
-                            } else {
-                                automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
-                            }
-                        } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                            if case .full = automaticDownload {
-                                automaticPlayback = true
-                            } else {
-                                automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+            if let updatingMedia = item.attributes.updatingMedia, case let .update(mediaReference) = updatingMedia.media {
+                selectedMedia = mediaReference.media
+            }
+            if selectedMedia == nil {
+                for media in item.message.media {
+                    if let telegramImage = media as? TelegramMediaImage {
+                        selectedMedia = telegramImage
+                        if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
+                            automaticDownload = .full
+                        }
+                    } else if let telegramFile = media as? TelegramMediaFile {
+                        selectedMedia = telegramFile
+                        if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramFile) {
+                            automaticDownload = .full
+                        } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
+                            automaticDownload = .prefetch
+                        }
+                        
+                        if !item.message.containsSecretMedia {
+                            if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
+                                if case .full = automaticDownload {
+                                    automaticPlayback = true
+                                } else {
+                                    automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                                }
+                            } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                                if case .full = automaticDownload {
+                                    automaticPlayback = true
+                                } else {
+                                    automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                                }
                             }
                         }
+                        contentMode = .aspectFill
                     }
-                    contentMode = .aspectFill
                 }
             }
             
@@ -138,7 +143,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.presentationData.dateTimeFormat, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.presentationData.dateTimeFormat, item.message, item.attributes, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
@@ -165,6 +170,9 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     let (imageSize, imageApply) = finishLayout(boundingWidth - bubbleInsets.left - bubbleInsets.right)
                     
                     var edited = false
+                    if item.attributes.updatingMedia != nil {
+                        edited = true
+                    }
                     var viewCount: Int?
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
@@ -200,7 +208,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 if item.message.flags.contains(.Failed) {
                                     statusType = .ImageOutgoing(.Failed)
-                                } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
+                                } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                                     statusType = .ImageOutgoing(.Sending)
                                 } else {
                                     statusType = .ImageOutgoing(.Sent(read: item.read))

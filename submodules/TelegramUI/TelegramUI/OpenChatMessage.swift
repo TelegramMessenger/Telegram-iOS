@@ -514,9 +514,9 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                         case let .slug(slug, options, firstColor, secondColor, intensity, rotation):
                             source = .slug(slug, content.file, options, firstColor, secondColor, intensity, rotation, message)
                         case let .color(color):
-                            source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil, nil, nil, message)
+                            source = .wallpaper(.color(color.argb), nil, nil, nil, nil, nil, message)
                         case let .gradient(topColor, bottomColor, rotation):
-                            source = .wallpaper(.gradient(Int32(topColor.rgb), Int32(bottomColor.rgb), WallpaperSettings(rotation: rotation)), nil, nil, nil, nil, rotation, message)
+                            source = .wallpaper(.gradient(topColor.argb, bottomColor.argb, WallpaperSettings(rotation: rotation)), nil, nil, nil, nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)
@@ -533,20 +533,39 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
             let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 var file: TelegramMediaFile?
-                let mimeType = "application/x-tgtheme-ios"
-                if let contentFiles = content.files, let filteredFile = contentFiles.filter({ $0.mimeType == mimeType }).first {
-                    file = filteredFile
-                } else if let contentFile = content.file, contentFile.mimeType == mimeType {
+                var settings: TelegramThemeSettings?
+                let themeMimeType = "application/x-tgtheme-ios"
+                
+                for attribute in content.attributes {
+                    if case let .theme(attribute) = attribute {
+                        if let attributeSettings = attribute.settings {
+                            settings = attributeSettings
+                        } else if let filteredFile = attribute.files.filter({ $0.mimeType == themeMimeType }).first {
+                            file = filteredFile
+                        }
+                    }
+                }
+                
+                if file == nil && settings == nil, let contentFile = content.file, contentFile.mimeType == themeMimeType {
                     file = contentFile
                 }
                 let displayUnsupportedAlert: () -> Void = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     present(textAlertController(context: context, title: nil, text: presentationData.strings.Theme_Unsupported, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
-                if case let .theme(slug) = resolvedUrl, let file = file {
-                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
-                        if let theme = makePresentationTheme(data: data) {
-                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                if case let .theme(slug) = resolvedUrl {
+                    if let file = file {
+                        if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            if let theme = makePresentationTheme(data: data) {
+                                let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                                pushController(controller)
+                            } else {
+                                displayUnsupportedAlert()
+                            }
+                        }
+                    } else if let settings = settings {
+                        if let theme = makePresentationTheme(settings: settings, title: content.title) {
+                            let controller = ThemePreviewController(context: context, previewTheme: theme, source: .themeSettings(slug, settings))
                             pushController(controller)
                         } else {
                             displayUnsupportedAlert()

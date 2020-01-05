@@ -6,7 +6,7 @@ import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -83,9 +83,9 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         defaultWallpaper = forcedWallpaper
     } else if let backgroundColors = backgroundColors {
         if let secondColor = backgroundColors.1 {
-            defaultWallpaper = .gradient(Int32(bitPattern: backgroundColors.0.rgb), Int32(bitPattern: secondColor.rgb), WallpaperSettings())
+            defaultWallpaper = .gradient(backgroundColors.0.argb, secondColor.argb, WallpaperSettings())
         } else {
-            defaultWallpaper = .color(Int32(bitPattern: backgroundColors.0.rgb))
+            defaultWallpaper = .color(backgroundColors.0.argb)
         }
     }
     
@@ -129,7 +129,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
             outgoingSecondaryTextColor = UIColor(rgb: 0xffffff, alpha: 0.5)
             outgoingLinkTextColor = UIColor(rgb: 0xffffff)
             outgoingScamColor = UIColor(rgb: 0xffffff)
-            outgoingCheckColor = UIColor(rgb: 0xffffff, alpha: 0.5)
+            outgoingCheckColor = UIColor(rgb: 0xffffff)
         }
     }
     
@@ -204,7 +204,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     )
     
     return PresentationTheme(
-        name: theme.name,
+        name: title.flatMap { .custom($0) } ?? theme.name,
         index: theme.index,
         referenceTheme: theme.referenceTheme,
         overallDarkAppearance: theme.overallDarkAppearance,
@@ -221,7 +221,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     )
 }
 
-public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme {
+public func makeDefaultDarkPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: UIColor(rgb: 0x1c1c1d),
         separatorColor: UIColor(rgb: 0x3d3d40),
@@ -392,7 +392,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
         freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2a2a2a), stroke: UIColor(rgb: 0x1f1f1f)), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x1f1f1f), highlightedFill: UIColor(rgb: 0x2a2a2a), stroke: UIColor(rgb: 0x1f1f1f))),
         infoPrimaryTextColor: UIColor(rgb: 0xffffff),
         infoLinkTextColor: UIColor(rgb: 0xffffff),
-        outgoingCheckColor: UIColor(rgb: 0xffffff, alpha: 0.5),
+        outgoingCheckColor: UIColor(rgb: 0xffffff),
         mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
         mediaDateAndStatusTextColor: UIColor(rgb: 0xffffff),
         shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
@@ -442,7 +442,7 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
     let inputMediaPanel = PresentationThemeInputMediaPanel(
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelIconColor: UIColor(rgb: 0x808080),
-        panelHighlightedIconBackgroundColor: UIColor(rgb: 0x000000),
+        panelHighlightedIconBackgroundColor: UIColor(rgb: 0x262628),
         stickersBackgroundColor: UIColor(rgb: 0x000000),
         stickersSectionTextColor: UIColor(rgb: 0x7b7b7b),
         stickersSearchBackgroundColor: UIColor(rgb: 0x1c1c1d),
@@ -531,8 +531,8 @@ public func makeDefaultDarkPresentationTheme(preview: Bool) -> PresentationTheme
     )
 
     return PresentationTheme(
-        name: .builtin(.night),
-        index: PresentationThemeReference.builtin(.night).index,
+        name: extendingThemeReference?.name ?? .builtin(.night),
+        index: extendingThemeReference?.index ?? PresentationThemeReference.builtin(.night).index,
         referenceTheme: .night,
         overallDarkAppearance: true,
         intro: intro,

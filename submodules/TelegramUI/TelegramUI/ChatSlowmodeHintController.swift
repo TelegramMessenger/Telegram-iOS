@@ -24,7 +24,7 @@ final class ChatSlowmodeHintController: TooltipController {
     init(presentationData: PresentationData, slowmodeState: ChatSlowmodeState) {
         self.strings = presentationData.strings
         self.slowmodeState = slowmodeState
-        super.init(content: .text(timeoutValue(strings: presentationData.strings, slowmodeState: slowmodeState)), baseFontSize: presentationData.fontSize.baseDisplaySize, timeout: 2.0, dismissByTapOutside: false, dismissByTapOutsideSource: true)
+        super.init(content: .text(timeoutValue(strings: presentationData.strings, slowmodeState: slowmodeState)), baseFontSize: presentationData.listsFontSize.baseDisplaySize, timeout: 2.0, dismissByTapOutside: false, dismissByTapOutsideSource: true)
     }
     
     required init(coder aDecoder: NSCoder) {

@@ -360,7 +360,12 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
         let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
             subscriber.putNext(.reset)
             
-            let avAsset = AVURLAsset(url: URL(fileURLWithPath: resource.path))
+            var filteredPath = resource.path
+            if filteredPath.hasPrefix("file://") {
+                filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
+            }
+            
+            let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
             var adjustments: TGVideoEditAdjustments?
             if let videoAdjustments = resource.adjustments {
                 if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {

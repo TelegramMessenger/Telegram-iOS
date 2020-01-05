@@ -66,7 +66,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessageContextMenu: { _, _, _, _, _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in
-        }, clickThroughMessage: {
+        }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
@@ -147,7 +147,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: .message(initialMessageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), updatingMedia: .single([:]), mode: .list(search: false, reversed: currentIsReversed))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: .message(initialMessageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
         
         super.init()
         
@@ -320,12 +320,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let result = super.hitTest(point, with: event)
         if self.controlsNode.bounds.contains(self.view.convert(point, to: self.controlsNode.view)) {
-            if result == nil {
+            let controlsHitTest = self.controlsNode.view.hitTest(self.view.convert(point, to: self.controlsNode.view), with: event)
+            if controlsHitTest == nil {
                 return self.historyNode.view
             }
         }
+        
+        let result = super.hitTest(point, with: event)
         
         if !self.bounds.contains(point) {
             return nil
@@ -462,7 +464,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, subject: .message(messageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), updatingMedia: .single([:]), mode: .list(search: false, reversed: self.currentIsReversed))
+        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, subject: .message(messageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in

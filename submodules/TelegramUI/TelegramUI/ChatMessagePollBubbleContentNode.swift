@@ -583,6 +583,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
                 
                 var edited = false
+                if item.attributes.updatingMedia != nil {
+                    edited = true
+                }
                 var viewCount: Int?
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
@@ -615,7 +618,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             if message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
-                            } else if message.flags.isSending && !message.isSentOrAcknowledged {
+                            } else if (message.flags.isSending && !message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
                                 statusType = .BubbleOutgoing(.Sending)
                             } else {
                                 statusType = .BubbleOutgoing(.Sent(read: item.read))

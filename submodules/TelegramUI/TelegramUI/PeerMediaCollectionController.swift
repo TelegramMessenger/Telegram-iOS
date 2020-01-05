@@ -313,7 +313,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
                     }
                 }
-            }, clickThroughMessage: { [weak self] in
+            }, tapMessage: nil, clickThroughMessage: { [weak self] in
                 self?.view.endEditing(true)
             }, toggleMessagesSelection: { [weak self] ids, value in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
