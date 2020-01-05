@@ -291,13 +291,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _signalBars = -1;
         
         __weak OngoingCallThreadLocalContext *weakSelf = self;
-        _tgVoip->setStateUpdated([weakSelf](TgVoipState state) {
+        _tgVoip->setOnStateUpdated([weakSelf](TgVoipState state) {
             __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf controllerStateChanged:state];
             }
         });
-        _tgVoip->setSignalBarsUpdated([weakSelf](int signalBars) {
+        _tgVoip->setOnSignalBarsUpdated([weakSelf](int signalBars) {
             __strong OngoingCallThreadLocalContext *strongSelf = weakSelf;
             if (strongSelf) {
                 [strongSelf signalBarsChanged:signalBars];
@@ -368,7 +368,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         case TgVoipState::Failed:
             callState = OngoingCallStateFailed;
             break;
-        case tgvoip::STATE_RECONNECTING:
+        case TgVoipState::Reconnecting:
             callState = OngoingCallStateReconnecting;
             break;
         default:
