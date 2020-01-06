@@ -18,6 +18,8 @@ WALLET_BUCK_OPTIONS=\
 	--config custom.appStoreId="${APPSTORE_ID}" \
 	--config custom.appSpecificUrlScheme="${APP_SPECIFIC_URL_SCHEME}"
 
+BAZEL=$(shell which bazel)
+
 wallet_deps: check_env
 	$(BUCK) query "deps(//Wallet:AppPackage)" --output-attribute buck.type \
 	${WALLET_BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS}
@@ -48,3 +50,5 @@ wallet_package:
 
 wallet_app: build_wallet wallet_package
 
+tulsi_project:
+	${HOME}/Applications/Tulsi.app/Contents/MacOS/Tulsi -- --genconfig Wallet/Wallet.tulsiproj:Default --bazel "${BAZEL}"

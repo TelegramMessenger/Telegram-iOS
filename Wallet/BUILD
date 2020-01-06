@@ -46,6 +46,7 @@ swift_library(
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/openssl:openssl",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
 )
 

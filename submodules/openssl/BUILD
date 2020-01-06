@@ -1,3 +1,7 @@
+load(
+    "//Config/objc_module_provider.bzl",
+    "objc_module",
+)
 
 openssl_headers = [
     "aes.h",
@@ -106,9 +110,11 @@ openssl_headers = [
     "x509v3err.h",
 ]
 
-openssl_header_paths = ["openssl/" + header for header in openssl_headers]
+openssl_libs = [
+    "libcrypto.a",
+]
 
-archs = ["arm64"]#, "armv7", "x86_64"]
+archs = ["arm64", "armv7", "x86_64"]
 
 rules = [
     genrule(
@@ -119,36 +125,58 @@ rules = [
             "patch-conf.patch",
             "patch-include.patch",
         ],
-        cmd_bash = "cp $(SRCS) $(RULEDIR)/ && sh $(RULEDIR)/build-openssl.sh $(RULEDIR) $(RULEDIR) " + arch,
-        outs = openssl_headers,
+        cmd_bash =
+            "mkdir -p $(RULEDIR)/{} && cp $(SRCS) $(RULEDIR)/{}/ && sh $(RULEDIR)/{}/build-openssl.sh $(RULEDIR)/{} $(RULEDIR)/{} ".format(arch, arch, arch, arch, arch) + arch + "\n" +
+            ("\n".join(["cp \"$(RULEDIR)/{}/build/arm64/include/openssl/{}\" \"$(location :{})\"\n".format(arch, x, x) for x in openssl_headers]) if arch == "arm64" else "") +
+            "\n".join([
+                "cp \"$(RULEDIR)/{}/build/{}/lib/{}\" \"$(location :{})\"\n".format(arch, arch, x, arch + "_" + x) for x in openssl_libs
+            ]),
+        outs =
+            (openssl_headers if arch == "arm64" else []) +
+            [arch + "_" + x for x in openssl_libs],
         visibility = [
             "//visibility:public",
         ]
     ) for arch in archs
 ]
 
-'''
 genrule(
-    name = "openssl_build_merged",
-    srcs = [
-        "pack-openssl.sh",
-    ],
-    bash = "sh $SRCDIR/pack-openssl.sh $OUT $(location :openssl_build_arm64)/out/include " + " ".join(["$(location :openssl_build_" + arch + ")/out/lib/libcrypto.a" for arch in archs]),
-    out = "openssl",
+    name = "openssl_fat_libraries",
+    srcs = [":" + arch + "_" + openssl_libs[0] for arch in archs],
+    cmd_bash = "xcrun lipo {} -output {} -create".format(" ".join(["$(location :" + arch + "_" + openssl_libs[0] + ")" for arch in archs]), "$(location " + openssl_libs[0] + ")"),
+    outs = openssl_libs,
     visibility = [
-        "PUBLIC",
-    ]
+        "//visibility:public",
+    ],
 )
-'''
 
-#openssl_header_targets = gen_header_targets(openssl_header_paths, "openssl_header_", "", "openssl_build_arm64", "out/include")
+genrule(
+    name = "openssl_include",
+    srcs = [":" + x for x in openssl_headers],
+    outs = ["Public/openssl/" + x for x in openssl_headers],
+    cmd_bash = " && ".join(["cp $(location :{}) $(location Public/openssl/{})".format(x, x) for x in openssl_headers]),
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_library(
+    name = "openssl_lib",
+    srcs = [":" + x for x in openssl_libs],
+)
 
 objc_library(
     name = "openssl",
     module_name = "openssl",
     enable_modules = True,
-    hdrs = [":" + x for x in openssl_headers],
-    deps = [],
+    hdrs = ["Public/openssl/" + x for x in openssl_headers],
+    includes = [
+        "Public/openssl",
+    ],
+    deps = [
+        ":openssl_lib",
+    ],
+    ,
     visibility = [
         "//visibility:public",
     ]

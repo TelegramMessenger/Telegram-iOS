@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -x
+set -e
+
 OUT_DIR="$1"
 SRC_DIR="$2"
 ARCH="$3"
@@ -26,7 +29,9 @@ fi
 
 mkdir -p "$OUT_DIR"
 
-TMP_DIR="$OUT_DIR/build"
+TMP_DIR_NAME="build"
+TMP_DIR="$OUT_DIR/$TMP_DIR_NAME"
+ABS_TMP_DIR="$(pwd)/$TMP_DIR"
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
@@ -61,6 +66,7 @@ function build_for ()
   export CROSS_SDK="${!CROSS_SDK_ENV}"
 
   MINIMAL_FLAGS=(\
+    "no-shared" \
     "no-afalgeng" \
     "no-aria" \
     "no-asan" \
@@ -151,17 +157,17 @@ function build_for ()
   )
 
   DEFAULT_FLAGS=(\
+    "no-shared" \
     "no-asm" \
     "no-ssl3" \
     "no-comp" \
     "no-hw" \
     "no-engine" \
     "no-async" \
+    "no-tests" \
   )
 
-  ADDITIONAL_FLAGS=$DEFAULT_FLAGS
-
-  ./Configure $PLATFORM "-arch $ARCH" ${ADDITIONAL_FLAGS[@]} --prefix="$(pwd)/${TMP_DIR}/${ARCH}" || exit 1
+  ./Configure $PLATFORM "-arch $ARCH" ${DEFAULT_FLAGS[@]} --prefix="${ABS_TMP_DIR}/${ARCH}" || exit 1
   
   make && make install_sw || exit 2
   unset CROSS_TOP
@@ -184,7 +190,9 @@ else
 fi
 
 cp -r "${TMP_DIR}/$ARCH/include" "${TMP_DIR}/"
-patch -p3 "${TMP_DIR}/include/openssl/opensslconf.h" < "$SRC_DIR/patch-include.patch" || exit 1
+if [ "$ARCH" == "arm64" ]; then
+  patch -p3 "${TMP_DIR}/include/openssl/opensslconf.h" < "$SRC_DIR/patch-include.patch" || exit 1
+fi
 
 DFT_DIST_DIR="$OUT_DIR/out"
 rm -rf "$DFT_DIST_DIR"

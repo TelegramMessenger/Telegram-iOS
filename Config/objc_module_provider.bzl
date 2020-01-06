@@ -25,7 +25,7 @@ objc_module = rule(
     attrs = {
         "module_name": attr.string(mandatory = True),
         "headers": attr.label_list(
-            allow_files = [".h", ".hpp"],
+            allow_files = [".h"],
         ),
     },
 )
