@@ -41,7 +41,7 @@ end
 
 lane :build_for_appstore do |options|
   do_build_app(
-  	configuration: "ReleaseAppStoreLLC",
+    configuration: "ReleaseAppStoreLLC",
     scheme: "Telegram-iOS-AppStoreLLC",
     export_method: "app-store",
     build_number: options[:build_number],
