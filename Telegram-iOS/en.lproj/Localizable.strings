@@ -5245,3 +5245,20 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.ContextMenuCancelEditing" = "Cancel Editing";
 
 "Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";
+
+"CreatePoll.Anonymous" = "Anonymous Votes";
+"CreatePoll.MultipleChoice" = "Multiple Choice";
+"CreatePoll.Quiz" = "Quiz Mode";
+"CreatePoll.QuizInfo" = "Quiz has only one correct answer. Users can't revoke their votes.";
+"CreatePoll.QuizTip" = "Tap to select the correct option";
+
+"MessagePoll.LabelPoll" = "Poll";
+"MessagePoll.LabelAnonymousQuiz" = "Anonymous Quiz";
+"MessagePoll.LabelQuiz" = "Quiz";
+"MessagePoll.SubmitVote" = "Submit Vote";
+"MessagePoll.ViewResults" = "View Results";
+
+"PollResults.Title" = "Poll Results";
+"PollResults.Collapse" = "COLLAPSE";
+"PollResults.ShowMore_1" = "Show %@ More Voter";
+"PollResults.ShowMore_any" = "Show %@ More Voters";

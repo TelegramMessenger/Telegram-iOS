@@ -220,6 +220,68 @@ public struct messages {
         }
     
     }
+    public enum VotesList: TypeConstructorDescription {
+        case votesList(flags: Int32, count: Int32, votes: [Api.MessageUserVote], users: [Api.User], nextOffset: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                    if boxed {
+                        buffer.appendInt32(136574537)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(votes.count))
+                    for item in votes {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                return ("votesList", [("flags", flags), ("count", count), ("votes", votes), ("users", users), ("nextOffset", nextOffset)])
+    }
+    }
+    
+        public static func parse_votesList(_ reader: BufferReader) -> VotesList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.MessageUserVote]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserVote.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, users: _4!, nextOffset: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Stickers: TypeConstructorDescription {
         case stickersNotModified
         case stickers(hash: Int32, stickers: [Api.Document])
@@ -1962,13 +2024,13 @@ public extension Api {
     
     }
     public enum PollResults: TypeConstructorDescription {
-        case pollResults(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?)
+        case pollResults(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?, recentVoters: [Int32]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .pollResults(let flags, let results, let totalVoters):
+                case .pollResults(let flags, let results, let totalVoters, let recentVoters):
                     if boxed {
-                        buffer.appendInt32(1465219162)
+                        buffer.appendInt32(-932174686)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
@@ -1977,14 +2039,19 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(totalVoters!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentVoters!.count))
+                    for item in recentVoters! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .pollResults(let flags, let results, let totalVoters):
-                return ("pollResults", [("flags", flags), ("results", results), ("totalVoters", totalVoters)])
+                case .pollResults(let flags, let results, let totalVoters, let recentVoters):
+                return ("pollResults", [("flags", flags), ("results", results), ("totalVoters", totalVoters), ("recentVoters", recentVoters)])
     }
     }
     
@@ -1997,11 +2064,16 @@ public extension Api {
             } }
             var _3: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PollResults.pollResults(flags: _1!, results: _2, totalVoters: _3)
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PollResults.pollResults(flags: _1!, results: _2, totalVoters: _3, recentVoters: _4)
             }
             else {
                 return nil
@@ -3601,7 +3673,6 @@ public extension Api {
     }
     public enum AutoDownloadSettings: TypeConstructorDescription {
         case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, videoUploadMaxbitrate: Int32)
-        case autoDownloadSettingsLegacy(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3615,15 +3686,6 @@ public extension Api {
                     serializeInt32(fileSizeMax, buffer: buffer, boxed: false)
                     serializeInt32(videoUploadMaxbitrate, buffer: buffer, boxed: false)
                     break
-                case .autoDownloadSettingsLegacy(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
-                    if boxed {
-                        buffer.appendInt32(-767099577)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(photoSizeMax, buffer: buffer, boxed: false)
-                    serializeInt32(videoSizeMax, buffer: buffer, boxed: false)
-                    serializeInt32(fileSizeMax, buffer: buffer, boxed: false)
-                    break
     }
     }
     
@@ -3631,8 +3693,6 @@ public extension Api {
         switch self {
                 case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax, let videoUploadMaxbitrate):
                 return ("autoDownloadSettings", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax), ("videoUploadMaxbitrate", videoUploadMaxbitrate)])
-                case .autoDownloadSettingsLegacy(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
-                return ("autoDownloadSettingsLegacy", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax)])
     }
     }
     
@@ -3654,26 +3714,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.AutoDownloadSettings.autoDownloadSettings(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!, videoUploadMaxbitrate: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_autoDownloadSettingsLegacy(_ reader: BufferReader) -> AutoDownloadSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.AutoDownloadSettings.autoDownloadSettingsLegacy(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!)
             }
             else {
                 return nil
@@ -8149,6 +8189,44 @@ public extension Api {
         }
     
     }
+    public enum MessageUserVote: TypeConstructorDescription {
+        case messageUserVote(userId: Int32, option: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageUserVote(let userId, let option):
+                    if boxed {
+                        buffer.appendInt32(-233638547)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeBytes(option, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageUserVote(let userId, let option):
+                return ("messageUserVote", [("userId", userId), ("option", option)])
+    }
+    }
+    
+        public static func parse_messageUserVote(_ reader: BufferReader) -> MessageUserVote? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageUserVote.messageUserVote(userId: _1!, option: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputDialogPeer: TypeConstructorDescription {
         case inputDialogPeer(peer: Api.InputPeer)
         case inputDialogPeerFolder(folderId: Int32)
@@ -10159,8 +10237,8 @@ public extension Api {
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
-        case inputMediaPoll(poll: Api.Poll)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, period: Int32?)
+        case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10288,12 +10366,6 @@ public extension Api {
                     serializeString(lastName, buffer: buffer, boxed: false)
                     serializeString(vcard, buffer: buffer, boxed: false)
                     break
-                case .inputMediaPoll(let poll):
-                    if boxed {
-                        buffer.appendInt32(112424539)
-                    }
-                    poll.serialize(buffer, true)
-                    break
                 case .inputMediaGeoLive(let flags, let geoPoint, let period):
                     if boxed {
                         buffer.appendInt32(-833715459)
@@ -10301,6 +10373,18 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
+                    break
+                case .inputMediaPoll(let flags, let poll, let correctAnswers):
+                    if boxed {
+                        buffer.appendInt32(-1410741723)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    poll.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(correctAnswers!.count))
+                    for item in correctAnswers! {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }}
                     break
     }
     }
@@ -10333,10 +10417,10 @@ public extension Api {
                 return ("inputMediaDocumentExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaContact(let phoneNumber, let firstName, let lastName, let vcard):
                 return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard)])
-                case .inputMediaPoll(let poll):
-                return ("inputMediaPoll", [("poll", poll)])
                 case .inputMediaGeoLive(let flags, let geoPoint, let period):
                 return ("inputMediaGeoLive", [("flags", flags), ("geoPoint", geoPoint), ("period", period)])
+                case .inputMediaPoll(let flags, let poll, let correctAnswers):
+                return ("inputMediaPoll", [("flags", flags), ("poll", poll), ("correctAnswers", correctAnswers)])
     }
     }
     
@@ -10605,19 +10689,6 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_inputMediaPoll(_ reader: BufferReader) -> InputMedia? {
-            var _1: Api.Poll?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Poll
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMedia.inputMediaPoll(poll: _1!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_inputMediaGeoLive(_ reader: BufferReader) -> InputMedia? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -10632,6 +10703,27 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, period: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMediaPoll(_ reader: BufferReader) -> InputMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Poll?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Poll
+            }
+            var _3: [Buffer]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputMedia.inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3)
             }
             else {
                 return nil
@@ -20230,17 +20322,10 @@ public extension Api {
     
     }
     public enum Theme: TypeConstructorDescription {
-        case themeDocumentNotModified
         case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .themeDocumentNotModified:
-                    if boxed {
-                        buffer.appendInt32(1211967244)
-                    }
-                    
-                    break
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                     if boxed {
                         buffer.appendInt32(42930452)
@@ -20259,16 +20344,11 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .themeDocumentNotModified:
-                return ("themeDocumentNotModified", [])
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                 return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("settings", settings), ("installsCount", installsCount)])
     }
     }
     
-        public static func parse_themeDocumentNotModified(_ reader: BufferReader) -> Theme? {
-            return Api.Theme.themeDocumentNotModified
-        }
         public static func parse_theme(_ reader: BufferReader) -> Theme? {
             var _1: Int32?
             _1 = reader.readInt32()

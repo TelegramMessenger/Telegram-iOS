@@ -135,8 +135,9 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let hasTopGroupInset: Bool
     let noInsets: Bool
     public let tag: ItemListItemTag?
+    let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -164,12 +165,13 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.hasTopGroupInset = hasTopGroupInset
         self.noInsets = noInsets
         self.tag = tag
+        self.header = header
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPeerItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -180,6 +182,19 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
                 })
             }
         }
+    }
+    
+    private func getHeaderAtTop(top: ListViewItem?, bottom: ListViewItem?) -> Bool {
+        var headerAtTop = false
+        if let top = top as? ItemListPeerItem, top.header != nil {
+            if top.header?.id != self.header?.id {
+                headerAtTop = true
+            }
+        } else if self.header != nil {
+            headerAtTop = true
+        }
+        
+        return headerAtTop
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
@@ -193,7 +208,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(false, animated)
@@ -233,7 +248,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private var checkNode: ASImageNode?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
-    private var layoutParams: (ItemListPeerItem, ListViewItemLayoutParams, ItemListNeighbors)?
+    private var layoutParams: (ItemListPeerItem, ListViewItemLayoutParams, ItemListNeighbors, Bool)?
     
     private var editableControlNode: ItemListEditableControlNode?
     
@@ -303,7 +318,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
-                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2)
+                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2, layoutParams.3)
                 apply(false, true)
             }
         })
@@ -317,7 +332,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         }
     }
     
-    public func asyncLayout() -> (_ item: ItemListPeerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
+    public func asyncLayout() -> (_ item: ItemListPeerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors, _ headerAtTop: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
@@ -334,7 +349,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         let currentHasBadge = self.labelBadgeNode.image != nil
         
-        return { item, params, neighbors in
+        return { item, params, neighbors, headerAtTop in
             var updateArrowImage: UIImage?
             var updatedTheme: PresentationTheme?
             
@@ -579,8 +594,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 insets.top = 0.0
                 insets.bottom = 0.0
             }
+            if headerAtTop, let header = item.header {
+                insets.top += header.height + 18.0
+            }
             
-            let titleSpacing: CGFloat = 1.0
+            let titleSpacing: CGFloat = statusLayout.size.height == 0.0 ? 0.0 : 1.0
             
             let minHeight: CGFloat = titleLayout.size.height + verticalInset * 2.0
             let rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.size.height
@@ -602,7 +620,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, params, neighbors)
+                    strongSelf.layoutParams = (item, params, neighbors, headerAtTop)
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
@@ -940,13 +958,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     }
     
     override public func revealOptionsInteractivelyOpened() {
-        if let (item, _, _) = self.layoutParams {
+        if let (item, _, _, _) = self.layoutParams {
             item.setPeerIdWithRevealedOptions(item.peer.id, nil)
         }
     }
     
     override public func revealOptionsInteractivelyClosed() {
-        if let (item, _, _) = self.layoutParams {
+        if let (item, _, _, _) = self.layoutParams {
             item.setPeerIdWithRevealedOptions(nil, item.peer.id)
         }
     }
@@ -955,7 +973,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
         
-        if let (item, _, _) = self.layoutParams {
+        if let (item, _, _, _) = self.layoutParams {
             if let revealOptions = item.revealOptions {
                 if option.key >= 0 && option.key < Int32(revealOptions.options.count) {
                     revealOptions.options[Int(option.key)].action()
@@ -967,8 +985,156 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     }
     
     private func toggleUpdated(_ value: Bool) {
-        if let (item, _, _) = self.layoutParams {
+        if let (item, _, _, _) = self.layoutParams {
             item.toggleUpdated?(value)
         }
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        return self.layoutParams?.0.header
+    }
+}
+
+public final class ItemListPeerItemHeader: ListViewItemHeader {
+    public let id: Int64
+    public let text: String
+    public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let actionTitle: String?
+    public let action: (() -> Void)?
+    
+    public let height: CGFloat = 28.0
+    
+    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
+        self.text = text
+        self.id = id
+        self.theme = theme
+        self.strings = strings
+        self.actionTitle = actionTitle
+        self.action = action
+    }
+    
+    public func node() -> ListViewItemHeaderNode {
+        return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, actionTitle: self.actionTitle, action: self.action)
+    }
+    
+    public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        (node as? ItemListPeerItemHeaderNode)?.update(text: self.text, actionTitle: self.actionTitle, action: self.action)
+    }
+}
+
+public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
+    private var actionTitle: String?
+    private var action: (() -> Void)?
+    
+    private var validLayout: (size: CGSize, leftInset: CGFloat, rightInset: CGFloat)?
+    
+    private let backgroundNode: ASDisplayNode
+    private let separatorNode: ASDisplayNode
+    private let textNode: ImmediateTextNode
+    private let actionTextNode: ImmediateTextNode
+    private let actionButton: HighlightableButtonNode
+    
+    private var stickDistanceFactor: CGFloat = 0.0
+    
+    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, actionTitle: String?, action: (() -> Void)?) {
+        self.theme = theme
+        self.strings = strings
+        self.actionTitle = actionTitle
+        self.action = action
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
+        
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
+        
+        let titleFont = Font.regular(13.0)
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 1
+        self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        
+        self.actionTextNode = ImmediateTextNode()
+        self.actionTextNode.displaysAsynchronously = false
+        self.actionTextNode.maximumNumberOfLines = 1
+        self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
+        
+        self.actionButton = HighlightableButtonNode()
+        self.actionButton.isUserInteractionEnabled = self.action != nil
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.separatorNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.actionTextNode)
+        self.addSubnode(self.actionButton)
+        
+        self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
+        self.actionButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.actionTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.actionTextNode.alpha = 0.4
+                } else {
+                    strongSelf.actionTextNode.alpha = 1.0
+                    strongSelf.actionTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+    }
+    
+    @objc private func actionButtonPressed() {
+        self.action?()
+    }
+    
+    public func updateTheme(theme: PresentationTheme) {
+        self.theme = theme
+        
+        let titleFont = Font.regular(13.0)
+        
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.actionTextNode.attributedText = NSAttributedString(string: self.actionTextNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+    }
+    
+    public func update(text: String, actionTitle: String?, action: (() -> Void)?) {
+        self.actionTitle = actionTitle
+        self.action = action
+        let titleFont = Font.regular(13.0)
+        self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
+        self.actionButton.isUserInteractionEnabled = self.action != nil
+        if let (size, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+        }
+    }
+    
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.validLayout = (size, leftInset, rightInset)
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))
+        
+        let sideInset: CGFloat = 15.0 + leftInset
+        
+        let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - actionTextSize.width - 8.0, height: size.height))
+        
+        self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textSize)
+        self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
+        self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
+    }
+    
+    override public func animateRemoved(duration: Double) {
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: true)
+    }
+    
+    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+        //transition.updateAlpha(node: self.separatorNode, alpha: (1.0 - factor) * 0.0 + factor * 1.0)
     }
 }

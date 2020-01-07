@@ -511,7 +511,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     hasSelected = true
                 }
             }
-            if hasSelected {
+            if hasSelected, case .poll = activePoll.kind {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_UnvotePoll, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unvote"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
@@ -539,7 +539,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let _ = activePoll, messages[0].forwardInfo == nil {
+        if let activePoll = activePoll, messages[0].forwardInfo == nil {
             var canStopPoll = false
             if !messages[0].flags.contains(.Incoming) {
                 canStopPoll = true

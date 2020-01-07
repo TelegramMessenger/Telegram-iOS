@@ -4,6 +4,7 @@ import AsyncDisplayKit
 
 public enum ListViewItemHeaderStickDirection {
     case top
+    case topEdge
     case bottom
 }
 

@@ -32,15 +32,17 @@ final class EditableTokenListNodeTheme {
     let placeholderTextColor: UIColor
     let primaryTextColor: UIColor
     let selectedTextColor: UIColor
+    let selectedBackgroundColor: UIColor
     let accentColor: UIColor
     let keyboardColor: PresentationThemeKeyboardColor
     
-    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, selectedBackgroundColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.placeholderTextColor = placeholderTextColor
         self.primaryTextColor = primaryTextColor
         self.selectedTextColor = selectedTextColor
+        self.selectedBackgroundColor = selectedBackgroundColor
         self.accentColor = accentColor
         self.keyboardColor = keyboardColor
     }
@@ -50,10 +52,12 @@ private final class TokenNode: ASDisplayNode {
     let theme: EditableTokenListNodeTheme
     let token: EditableTokenListToken
     let titleNode: ASTextNode
+    let selectedBackgroundNode: ASImageNode
     var isSelected: Bool {
         didSet {
             if self.isSelected != oldValue {
                 self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
+                self.selectedBackgroundNode.isHidden = !self.isSelected
             }
         }
     }
@@ -64,10 +68,16 @@ private final class TokenNode: ASDisplayNode {
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.maximumNumberOfLines = 1
+        self.selectedBackgroundNode = ASImageNode()
+        self.selectedBackgroundNode.displaysAsynchronously = false
+        self.selectedBackgroundNode.displayWithoutProcessing = true
+        self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: theme.selectedBackgroundColor)
+        self.selectedBackgroundNode.isHidden = !isSelected
         self.isSelected = isSelected
         
         super.init()
         
+        self.addSubnode(self.selectedBackgroundNode)
         self.titleNode.attributedText = NSAttributedString(string: token.title + ",", font: Font.regular(15.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)
         self.addSubnode(self.titleNode)
     }
@@ -82,6 +92,7 @@ private final class TokenNode: ASDisplayNode {
         if titleSize.width.isZero {
             return
         }
+        self.selectedBackgroundNode.frame = self.bounds.insetBy(dx: 2.0, dy: 2.0)
         self.titleNode.frame = CGRect(origin: CGPoint(x: 4.0, y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
     }
 }
@@ -102,6 +113,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let placeholderNode: ASTextNode
     private var tokenNodes: [TokenNode] = []
     private let separatorNode: ASDisplayNode
+    private let textFieldScrollNode: ASScrollNode
     private let textFieldNode: TextFieldNode
     private let caretIndicatorNode: CaretIndicatorNode
     private var selectedTokenId: AnyHashable?
@@ -119,6 +131,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
+        
+        self.textFieldScrollNode = ASScrollNode()
         
         self.textFieldNode = TextFieldNode()
         self.textFieldNode.textField.font = Font.regular(15.0)
@@ -144,7 +158,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundColor = theme.backgroundColor
         self.addSubnode(self.separatorNode)
         self.scrollNode.addSubnode(self.placeholderNode)
-        self.scrollNode.addSubnode(self.textFieldNode)
+        self.scrollNode.addSubnode(self.textFieldScrollNode)
+        self.textFieldScrollNode.addSubnode(self.textFieldNode)
         //self.scrollNode.addSubnode(self.caretIndicatorNode)
         self.clipsToBounds = true
         
@@ -268,12 +283,15 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - sideInset - 8.0, height: 28.0))
         let caretNodeFrame = CGRect(origin: CGPoint(x: textNodeFrame.minX, y: textNodeFrame.minY + 4.0 - UIScreenPixel), size: CGSize(width: 2.0, height: 19.0 + UIScreenPixel))
         if case .immediate = transition {
-            transition.updateFrame(node: self.textFieldNode, frame: textNodeFrame)
+            transition.updateFrame(node: self.textFieldScrollNode, frame: textNodeFrame)
+            transition.updateFrame(node: self.textFieldNode, frame: CGRect(origin: CGPoint(), size: textNodeFrame.size))
             transition.updateFrame(node: self.caretIndicatorNode, frame: caretNodeFrame)
         } else {
-            let previousFrame = self.textFieldNode.frame
-            self.textFieldNode.frame = textNodeFrame
-            self.textFieldNode.layer.animateFrame(from: previousFrame, to: textNodeFrame, duration: 0.2 + animationDelay, timingFunction: kCAMediaTimingFunctionSpring)
+            let previousFrame = self.textFieldScrollNode.frame
+            self.textFieldScrollNode.frame = textNodeFrame
+            self.textFieldScrollNode.layer.animateFrame(from: previousFrame, to: textNodeFrame, duration: 0.2 + animationDelay, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            transition.updateFrame(node: self.textFieldNode, frame: CGRect(origin: CGPoint(), size: textNodeFrame.size))
             
             let previousCaretFrame = self.caretIndicatorNode.frame
             self.caretIndicatorNode.frame = caretNodeFrame
@@ -305,9 +323,13 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     @objc func textFieldChanged(_ textField: UITextField) {
-        self.placeholderNode.isHidden = textField.text != nil && !textField.text!.isEmpty
+        let text = textField.text ?? ""
+        self.placeholderNode.isHidden = !text.isEmpty
         self.updateSelectedTokenId(nil)
-        self.textUpdated?(textField.text ?? "")
+        self.textUpdated?(text)
+        if !text.isEmpty {
+            self.scrollNode.view.scrollRectToVisible(textFieldScrollNode.frame.offsetBy(dx: 0.0, dy: 7.0), animated: true)
+        }
     }
     
     func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -332,7 +354,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         for tokenNode in self.tokenNodes {
             tokenNode.isSelected = id == tokenNode.token.id
         }
-        if id != nil {
+        if id != nil && !self.textFieldNode.textField.isFirstResponder {
             self.textFieldNode.textField.becomeFirstResponder()
         }
     }
@@ -341,7 +363,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
             for tokenNode in self.tokenNodes {
-                if tokenNode.frame.contains(point) {
+                if tokenNode.bounds.contains(self.view.convert(point, to: tokenNode.view)) {
                     self.updateSelectedTokenId(tokenNode.token.id)
                     break
                 }

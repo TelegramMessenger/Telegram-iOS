@@ -484,6 +484,22 @@ public final class PostboxEncoder {
         }
     }
     
+    public func encodeDataArray(_ value: [Data], forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.BytesArray.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            var length: Int32 = Int32(object.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            object.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                self.buffer.write(bytes, offset: 0, length: Int(length))
+            }
+        }
+    }
+    
     public func encodeObjectDictionary<K, V: PostboxCoding>(_ value: [K : V], forKey key: StaticString) where K: PostboxCoding {
         self.encodeKey(key)
         var t: Int8 = ValueType.ObjectDictionary.rawValue
@@ -1170,6 +1186,31 @@ public final class PostboxDecoder {
             return array
         } else {
             return []
+        }
+    }
+    
+    public func decodeOptionalDataArrayForKey(_ key: StaticString) -> [Data]? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .BytesArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [Data] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var length: Int32 = 0
+                memcpy(&length, self.buffer.memory + self.offset, 4)
+                array.append(Data(bytes: self.buffer.memory.advanced(by: self.offset + 4), count: Int(length)))
+                self.offset += 4 + Int(length)
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return nil
         }
     }
     
