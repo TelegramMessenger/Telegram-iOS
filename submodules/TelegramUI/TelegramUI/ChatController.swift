@@ -5422,6 +5422,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return state
             })
+            self.interfaceInteraction?.editMessage()
         }
     }
     
