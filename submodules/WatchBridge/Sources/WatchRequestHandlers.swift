@@ -400,7 +400,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                             }
                         } |> mapToSignal({ peer -> Signal<UIImage?, NoError> in
                             if let peer = peer, let representation = peer.smallProfileImage {
-                                let imageData = peerAvatarImageData(account: context.account, peer: peer, authorOfMessage: nil, representation: representation, synchronousLoad: false)
+                                let imageData = peerAvatarImageData(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, synchronousLoad: false)
                                 if let imageData = imageData {
                                     return imageData
                                     |> map { data -> UIImage? in

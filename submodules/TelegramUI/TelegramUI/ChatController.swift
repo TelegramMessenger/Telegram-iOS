@@ -1534,7 +1534,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(controller, in: .window(.root))
             }
-        }, requestSelectMessagePollOption: { [weak self] id, opaqueIdentifier in
+        }, requestSelectMessagePollOptions: { [weak self] id, opaqueIdentifiers in
             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                 return
             }
@@ -1543,7 +1543,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
-                controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifier
+                controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
                 let disposables: DisposableDict<MessageId>
                 if let current = strongSelf.selectMessagePollOptionDisposables {
@@ -1552,7 +1552,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     disposables = DisposableDict()
                     strongSelf.selectMessagePollOptionDisposables = disposables
                 }
-                let signal = requestMessageSelectPollOption(account: strongSelf.context.account, messageId: id, opaqueIdentifier: opaqueIdentifier)
+                let signal = requestMessageSelectPollOption(account: strongSelf.context.account, messageId: id, opaqueIdentifiers: opaqueIdentifiers)
                 disposables.set((signal
                 |> deliverOnMainQueue).start(error: { _ in
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
@@ -1574,6 +1574,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.selectPollOptionFeedback?.success()
                 }), forKey: id)
             }
+        }, requestOpenMessagePollResults: { [weak self] messageId, pollId in
+            guard let strongSelf = self, pollId.namespace == Namespaces.Media.CloudPoll else {
+                return
+            }
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                return transaction.getMessage(messageId)
+            }
+            |> deliverOnMainQueue).start(next: { message in
+                guard let message = message else {
+                    return
+                }
+                for media in message.media {
+                    if let poll = media as? TelegramMediaPoll, poll.pollId == pollId {
+                        strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll))
+                        break
+                    }
+                }
+            })
         }, openAppStorePage: { [weak self] in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
@@ -3957,7 +3975,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
             strongSelf.present(controller, in: .window(.root))
-            let signal = requestMessageSelectPollOption(account: strongSelf.context.account, messageId: id, opaqueIdentifier: nil)
+            let signal = requestMessageSelectPollOption(account: strongSelf.context.account, messageId: id, opaqueIdentifiers: [])
             |> afterDisposed { [weak controller] in
                 Queue.mainQueue().async {
                     controller?.dismiss()

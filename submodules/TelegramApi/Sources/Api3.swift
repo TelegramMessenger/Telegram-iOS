@@ -3195,6 +3195,25 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getPollVotes(flags: Int32, peer: Api.InputPeer, id: Int32, option: Buffer?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.VotesList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1200736242)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(option!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(offset!, buffer: buffer, boxed: false)}
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getPollVotes", parameters: [("flags", flags), ("peer", peer), ("id", id), ("option", option), ("offset", offset), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.VotesList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.VotesList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.VotesList
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -4792,6 +4811,40 @@ public extension Api {
                         var result: Api.help.AppUpdate?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.help.AppUpdate
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editUserInfo(userId: Api.InputUser, message: String, entities: [Api.MessageEntity]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1723407216)
+                    userId.serialize(buffer, true)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "help.editUserInfo", parameters: [("userId", userId), ("message", message), ("entities", entities)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.UserInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.UserInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.UserInfo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getUserInfo(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(59377875)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "help.getUserInfo", parameters: [("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.UserInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.UserInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.UserInfo
                         }
                         return result
                     })

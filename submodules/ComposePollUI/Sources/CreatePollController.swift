@@ -27,31 +27,51 @@ private final class CreatePollControllerArguments {
     let updatePollText: (String) -> Void
     let updateOptionText: (Int, String) -> Void
     let moveToNextOption: (Int) -> Void
-    let addOption: () -> Void
+    let moveToPreviousOption: (Int) -> Void
     let removeOption: (Int, Bool) -> Void
     let optionFocused: (Int) -> Void
     let setItemIdWithRevealedOptions: (Int?, Int?) -> Void
+    let toggleOptionSelected: (Int) -> Void
+    let updateAnonymous: (Bool) -> Void
+    let updateMultipleChoice: (Bool) -> Void
+    let updateQuiz: (Bool) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String) -> Void, moveToNextOption: @escaping (Int) -> Void, addOption: @escaping () -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, updateQuiz: @escaping (Bool) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
-        self.addOption = addOption
+        self.moveToPreviousOption = moveToPreviousOption
         self.removeOption = removeOption
         self.optionFocused = optionFocused
         self.setItemIdWithRevealedOptions = setItemIdWithRevealedOptions
+        self.toggleOptionSelected = toggleOptionSelected
+        self.updateAnonymous = updateAnonymous
+        self.updateMultipleChoice = updateMultipleChoice
+        self.updateQuiz = updateQuiz
     }
 }
 
 private enum CreatePollSection: Int32 {
     case text
     case options
+    case settings
+}
+
+private enum CreatePollEntryId: Hashable {
+    case textHeader
+    case text
+    case optionsHeader
+    case option(Int)
+    case optionsInfo
+    case anonymousVotes
+    case multipleChoice
+    case quiz
+    case quizInfo
 }
 
 private enum CreatePollEntryTag: Equatable, ItemListItemTag {
     case text
     case option(Int)
-    case addOption(Int)
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreatePollEntryTag {
@@ -63,67 +83,82 @@ private enum CreatePollEntryTag: Equatable, ItemListItemTag {
 }
 
 private enum CreatePollEntry: ItemListNodeEntry {
-    case textHeader(PresentationTheme, String, ItemListSectionHeaderAccessoryText)
-    case text(PresentationTheme, String, String, Int)
-    case optionsHeader(PresentationTheme, String)
-    case option(PresentationTheme, PresentationStrings, Int, Int, String, String, Bool, Bool)
-    case addOption(PresentationTheme, String, Bool, Int)
-    case optionsInfo(PresentationTheme, String)
+    case textHeader(String, ItemListSectionHeaderAccessoryText)
+    case text(String, String, Int)
+    case optionsHeader(String)
+    case option(id: Int, index: Int, placeholder: String, text: String, revealed: Bool, hasNext: Bool, isLast: Bool, isSelected: Bool?)
+    case optionsInfo(String)
+    case anonymousVotes(String, Bool)
+    case multipleChoice(String, Bool, Bool)
+    case quiz(String, Bool)
+    case quizInfo(String)
     
     var section: ItemListSectionId {
         switch self {
-            case .textHeader, .text:
-                return CreatePollSection.text.rawValue
-            case .optionsHeader, .option, .addOption, .optionsInfo:
-                return CreatePollSection.options.rawValue
+        case .textHeader, .text:
+            return CreatePollSection.text.rawValue
+        case .optionsHeader, .option, .optionsInfo:
+            return CreatePollSection.options.rawValue
+        case .anonymousVotes, .multipleChoice, .quiz, .quizInfo:
+            return CreatePollSection.settings.rawValue
         }
     }
     
     var tag: ItemListItemTag? {
         switch self {
-            case .text:
-                return CreatePollEntryTag.text
-            case let .option(_, _, id, _, _, _, _, _):
-                return CreatePollEntryTag.option(id)
-            case let .addOption(_, _, _, id):
-                return CreatePollEntryTag.addOption(id)
-            default:
-                break
+        case .text:
+            return CreatePollEntryTag.text
+        case let .option(option):
+            return CreatePollEntryTag.option(option.id)
+        default:
+            break
         }
         return nil
     }
     
-    var stableId: Int {
+    var stableId: CreatePollEntryId {
         switch self {
-            case .textHeader:
-                return 0
-            case .text:
-                return 1
-            case .optionsHeader:
-                return 2
-            case let .option(_, _, id, _, _, _, _, _):
-                return 3 + id
-            case .addOption:
-                return 1000
-            case .optionsInfo:
-                return 1001
+        case .textHeader:
+            return .textHeader
+        case .text:
+            return .text
+        case .optionsHeader:
+            return .optionsHeader
+        case let .option(option):
+            return .option(option.id)
+        case .optionsInfo:
+            return .optionsInfo
+        case .anonymousVotes:
+            return .anonymousVotes
+        case .multipleChoice:
+            return .multipleChoice
+        case .quiz:
+            return .quiz
+        case .quizInfo:
+            return .quizInfo
         }
     }
     
     private var sortId: Int {
         switch self {
-            case .textHeader:
-                return 0
-            case .text:
-                return 1
-            case .optionsHeader:
-                return 2
-            case let .option(_, _, _, index, _, _, _, _):
-                return 3 + index
-            case .addOption:
-                return 1000
-            case .optionsInfo:
-                return 1001
+        case .textHeader:
+            return 0
+        case .text:
+            return 1
+        case .optionsHeader:
+            return 2
+        case let .option(option):
+            return 3 + option.index
+        case .optionsInfo:
+            return 1001
+        case .anonymousVotes:
+            return 1002
+        case .multipleChoice:
+            return 1003
+        case .quiz:
+            return 1004
+        case .quizInfo:
+            return 1005
         }
     }
     
@@ -134,32 +169,49 @@ private enum CreatePollEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CreatePollControllerArguments
         switch self {
-            case let .textHeader(theme, text, accessoryText):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: accessoryText, sectionId: self.section)
-            case let .text(theme, placeholder, text, maxLength):
-                return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: maxLength, display: false), sectionId: self.section, style: .blocks, textUpdated: { value in
-                    arguments.updatePollText(value)
-                }, tag: CreatePollEntryTag.text)
-            case let .optionsHeader(theme, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .option(theme, strings, id, _, placeholder, text, revealed, hasNext):
-                return CreatePollOptionItem(theme: theme, strings: strings, id: id, placeholder: placeholder, value: text, maxLength: maxOptionLength, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
-                    arguments.setItemIdWithRevealedOptions(id, fromId)
-                }, updated: { value in
-                    arguments.updateOptionText(id, value)
-                }, next: hasNext ? {
-                    arguments.moveToNextOption(id)
-                } : nil, delete: { focused in
+        case let .textHeader(text, accessoryText):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: accessoryText, sectionId: self.section)
+        case let .text(placeholder, text, maxLength):
+            return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: maxLength, display: false), sectionId: self.section, style: .blocks, textUpdated: { value in
+                arguments.updatePollText(value)
+            }, tag: CreatePollEntryTag.text)
+        case let .optionsHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .option(id, _, placeholder, text, revealed, hasNext, isLast, isSelected):
+            return CreatePollOptionItem(presentationData: presentationData, id: id, placeholder: placeholder, value: text, isSelected: isSelected, maxLength: maxOptionLength, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
+                arguments.setItemIdWithRevealedOptions(id, fromId)
+            }, updated: { value in
+                arguments.updateOptionText(id, value)
+            }, next: hasNext ? {
+                arguments.moveToNextOption(id)
+            } : nil, delete: { focused in
+                if !isLast {
                     arguments.removeOption(id, focused)
-                }, focused: {
-                    arguments.optionFocused(id)
-                }, tag: CreatePollEntryTag.option(id))
-            case let .addOption(theme, title, enabled, id):
-                return CreatePollOptionActionItem(theme: theme, title: title, enabled: enabled, tag: CreatePollEntryTag.addOption(id), sectionId: self.section, action: {
-                    arguments.addOption()
-                })
-            case let .optionsInfo(theme, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+                } else {
+                    arguments.moveToPreviousOption(id)
+                }
+            }, canDelete: !isLast,
+            focused: {
+                arguments.optionFocused(id)
+            }, toggleSelected: {
+                arguments.toggleOptionSelected(id)
+            }, tag: CreatePollEntryTag.option(id))
+        case let .optionsInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .anonymousVotes(text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateAnonymous(value)
+            })
+        case let .multipleChoice(text, value, enabled):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateMultipleChoice(value)
+            })
+        case let .quiz(text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateQuiz(value)
+            })
+        case let .quizInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -167,14 +219,18 @@ private enum CreatePollEntry: ItemListNodeEntry {
 private struct CreatePollControllerOption: Equatable {
     var text: String
     let id: Int
+    var isSelected: Bool
 }
 
 private struct CreatePollControllerState: Equatable {
     var text: String = ""
-    var options: [CreatePollControllerOption] = [CreatePollControllerOption(text: "", id: 0), CreatePollControllerOption(text: "", id: 1)]
+    var options: [CreatePollControllerOption] = [CreatePollControllerOption(text: "", id: 0, isSelected: false), CreatePollControllerOption(text: "", id: 1, isSelected: false)]
     var nextOptionId: Int = 2
     var focusOptionId: Int?
     var optionIdWithRevealControls: Int?
+    var isAnonymous: Bool = true
+    var isMultipleChoice: Bool = false
+    var isQuiz: Bool = false
 }
 
 private func createPollControllerEntries(presentationData: PresentationData, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration) -> [CreatePollEntry] {
@@ -185,18 +241,22 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
         let remainingCount = Int(maxTextLength) - state.text.count
         textLimitText = ItemListSectionHeaderAccessoryText(value: "\(remainingCount)", color: remainingCount < 0 ? .destructive : .generic)
     }
-    entries.append(.textHeader(presentationData.theme, presentationData.strings.CreatePoll_TextHeader, textLimitText))
-    entries.append(.text(presentationData.theme, presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
-    entries.append(.optionsHeader(presentationData.theme, presentationData.strings.CreatePoll_OptionsHeader))
+    entries.append(.textHeader(presentationData.strings.CreatePoll_TextHeader, textLimitText))
+    entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
+    entries.append(.optionsHeader(presentationData.strings.CreatePoll_OptionsHeader))
     for i in 0 ..< state.options.count {
-        entries.append(.option(presentationData.theme, presentationData.strings, state.options[i].id, i, presentationData.strings.CreatePoll_OptionPlaceholder, state.options[i].text, state.optionIdWithRevealControls == state.options[i].id, i != 9))
+        entries.append(.option(id: state.options[i].id, index: i, placeholder: presentationData.strings.CreatePoll_OptionPlaceholder, text: state.options[i].text, revealed: state.optionIdWithRevealControls == state.options[i].id, hasNext: i != 9, isLast: i == state.options.count - 1, isSelected: state.isQuiz ? state.options[i].isSelected : nil))
     }
     if state.options.count < 10 {
-        entries.append(.addOption(presentationData.theme, presentationData.strings.CreatePoll_AddOption, true, state.options.last?.id ?? -1))
-        entries.append(.optionsInfo(presentationData.theme, presentationData.strings.CreatePoll_AddMoreOptions(Int32(10 - state.options.count))))
+        entries.append(.optionsInfo(presentationData.strings.CreatePoll_AddMoreOptions(Int32(10 - state.options.count))))
     } else {
-        entries.append(.optionsInfo(presentationData.theme, presentationData.strings.CreatePoll_AllOptionsAdded))
+        entries.append(.optionsInfo(presentationData.strings.CreatePoll_AllOptionsAdded))
     }
+    
+    entries.append(.anonymousVotes(presentationData.strings.CreatePoll_Anonymous, state.isAnonymous))
+    entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
+    entries.append(.quiz(presentationData.strings.CreatePoll_Quiz, state.isQuiz))
+    entries.append(.quizInfo(presentationData.strings.CreatePoll_QuizInfo))
     
     return entries
 }
@@ -212,6 +272,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
     var dismissImpl: (() -> Void)?
     var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
+    var displayQuizTooltipImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -234,6 +295,18 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             for i in 0 ..< state.options.count {
                 if state.options[i].id == id {
                     state.options[i].text = value
+                    if !value.isEmpty && i == state.options.count - 1 {
+                        state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId, isSelected: false))
+                        state.nextOptionId += 1
+                    }
+                    break
+                }
+            }
+            if state.options.count > 2 {
+                for i in (1 ..< state.options.count - 1).reversed() {
+                    if state.options[i - 1].text.isEmpty && state.options[i].text.isEmpty {
+                        state.options.remove(at: i)
+                    }
                 }
             }
             return state
@@ -246,7 +319,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             for i in 0 ..< state.options.count {
                 if state.options[i].id == id {
                     if i == state.options.count - 1 {
-                        state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId))
+                        state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId, isSelected: false))
                         state.focusOptionId = state.nextOptionId
                         state.nextOptionId += 1
                     } else {
@@ -269,13 +342,31 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
                 return state
             }
         }
-    }, addOption: {
+    }, moveToPreviousOption: { id in
+        var resetFocusOptionId: Int?
         updateState { state in
             var state = state
-            state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId))
-            state.focusOptionId = state.nextOptionId
-            state.nextOptionId += 1
+            for i in 0 ..< state.options.count {
+                if state.options[i].id == id {
+                    if i != 0 {
+                        if state.focusOptionId == state.options[i - 1].id {
+                            resetFocusOptionId = state.options[i - 1].id
+                            state.focusOptionId = -1
+                        } else {
+                            state.focusOptionId = state.options[i - 1].id
+                        }
+                    }
+                    break
+                }
+            }
             return state
+        }
+        if let resetFocusOptionId = resetFocusOptionId {
+            updateState { state in
+                var state = state
+                state.focusOptionId = resetFocusOptionId
+                return state
+            }
         }
     }, removeOption: { id, focused in
         updateState { state in
@@ -287,6 +378,19 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
                         state.focusOptionId = state.options[i - 1].id
                     }
                     break
+                }
+            }
+            let focusOnFirst = state.options.isEmpty
+            if state.options.count < 2 {
+                for i in 0 ..< (2 - state.options.count) {
+                    if i == 0 && focusOnFirst {
+                        state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId, isSelected: false))
+                        state.focusOptionId = state.nextOptionId
+                        state.nextOptionId += 1
+                    } else {
+                        state.options.append(CreatePollControllerOption(text: "", id: state.nextOptionId, isSelected: false))
+                        state.nextOptionId += 1
+                    }
                 }
             }
             return state
@@ -302,6 +406,58 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             } else {
                 return state
             }
+        }
+    }, toggleOptionSelected: { id in
+        updateState { state in
+            var state = state
+            for i in 0 ..< state.options.count {
+                if state.options[i].id == id {
+                    state.options[i].isSelected = !state.options[i].isSelected
+                    if state.options[i].isSelected && state.isQuiz {
+                        for j in 0 ..< state.options.count {
+                            if i != j {
+                                state.options[j].isSelected = false
+                            }
+                        }
+                    }
+                    break
+                }
+            }
+            return state
+        }
+    }, updateAnonymous: { value in
+        updateState { state in
+            var state = state
+            state.isAnonymous = value
+            return state
+        }
+    }, updateMultipleChoice: { value in
+        updateState { state in
+            var state = state
+            state.isMultipleChoice = value
+            return state
+        }
+    }, updateQuiz: { value in
+        updateState { state in
+            var state = state
+            state.isQuiz = value
+            if value {
+                state.isMultipleChoice = false
+                var foundSelectedOption = false
+                for i in 0 ..< state.options.count {
+                    if state.options[i].isSelected {
+                        if !foundSelectedOption {
+                            foundSelectedOption = true
+                        } else {
+                            state.options[i].isSelected = false
+                        }
+                    }
+                }
+            }
+            return state
+        }
+        if value {
+            displayQuizTooltipImpl?()
         }
     })
     
@@ -320,11 +476,25 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             enabled = false
         }
         var nonEmptyOptionCount = 0
+        var hasSelectedOptions = false
         for option in state.options {
             if !option.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 nonEmptyOptionCount += 1
             }
             if option.text.count > maxOptionLength {
+                enabled = false
+            }
+            if option.isSelected {
+                hasSelectedOptions = true
+            }
+            if state.isQuiz {
+                if option.text.isEmpty && option.isSelected {
+                    enabled = false
+                }
+            }
+        }
+        if state.isQuiz {
+            if !hasSelectedOptions {
                 enabled = false
             }
         }
@@ -335,13 +505,30 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.CreatePoll_Create), style: .bold, enabled: enabled, action: {
             let state = stateValue.with { $0 }
             var options: [TelegramMediaPollOption] = []
+            var correctAnswers: [Data]?
             for i in 0 ..< state.options.count {
                 let optionText = state.options[i].text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !optionText.isEmpty {
-                    options.append(TelegramMediaPollOption(text: optionText, opaqueIdentifier: "\(i)".data(using: .utf8)!))
+                    let optionData = "\(i)".data(using: .utf8)!
+                    options.append(TelegramMediaPollOption(text: optionText, opaqueIdentifier: optionData))
+                    if state.isQuiz && state.options[i].isSelected {
+                        correctAnswers = [optionData]
+                    }
                 }
             }
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), text: processPollText(state.text), options: options, results: TelegramMediaPollResults(voters: nil, totalVoters: nil), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
+            let publicity: TelegramMediaPollPublicity
+            if state.isAnonymous {
+                publicity = .anonymous
+            } else {
+                publicity = .public
+            }
+            let kind: TelegramMediaPollKind
+            if state.isQuiz {
+                kind = .quiz
+            } else {
+                kind = .poll(multipleAnswers: state.isMultipleChoice)
+            }
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: []), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
             dismissImpl?()
         })
         
@@ -372,7 +559,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         if let focusOptionId = state.focusOptionId {
             focusItemTag = CreatePollEntryTag.option(focusOptionId)
             if focusOptionId == state.options.last?.id {
-                ensureVisibleItemTag = CreatePollEntryTag.addOption(focusOptionId)
+                ensureVisibleItemTag = nil
             } else {
                 ensureVisibleItemTag = focusItemTag
             }
@@ -382,7 +569,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CreatePoll_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, state: state, limitsConfiguration: limitsConfiguration), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil && previousIds != optionIds)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, state: state, limitsConfiguration: limitsConfiguration), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil)
         
         return (controllerState, (listState, arguments))
     }
@@ -429,15 +616,6 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             var resultItemNode: ListViewItemNode?
             let state = stateValue.with({ $0 })
             if state.options.last?.id == id {
-                let _ = controller.frameForItemNode({ itemNode in
-                    if let itemNode = itemNode as? ItemListItemNode {
-                        if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.addOption(id)) {
-                            resultItemNode = itemNode as? ListViewItemNode
-                            return true
-                        }
-                    }
-                    return false
-                })
             }
             if resultItemNode == nil {
                 let _ = controller.frameForItemNode({ itemNode in
@@ -456,19 +634,42 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             }
         })
     }
-    
-    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Void in
-        let fromEntry = entries[fromIndex]
-        guard case let .option(_, _, id, _, _, _, _, _) = fromEntry else {
+    displayQuizTooltipImpl = { [weak controller] in
+        guard let controller = controller else {
             return
         }
+        var resultItemNode: CreatePollOptionItemNode?
+        let _ = controller.frameForItemNode({ itemNode in
+            if resultItemNode == nil, let itemNode = itemNode as? CreatePollOptionItemNode {
+                resultItemNode = itemNode
+                return true
+            }
+            return false
+        })
+        if let resultItemNode = resultItemNode {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let tooltipController = TooltipController(content: .text(presentationData.strings.CreatePoll_QuizTip), baseFontSize: presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true)
+            controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak resultItemNode] in
+                if let resultItemNode = resultItemNode {
+                    return (resultItemNode.view, CGRect(origin: CGPoint(x: 0.0, y: 4.0), size: CGSize(width: 54.0, height: resultItemNode.bounds.height - 8.0)))
+                }
+                return nil
+            }))
+        }
+    }
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Void in
+        let fromEntry = entries[fromIndex]
+        guard case let .option(option) = fromEntry else {
+            return
+        }
+        let id = option.id
         var referenceId: Int?
         var beforeAll = false
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-                case let .option(_, _, toId, _, _, _, _, _):
-                    referenceId = toId
+                case let .option(toOption):
+                    referenceId = toOption.id
                 default:
                     if entries[toIndex] < fromEntry {
                         beforeAll = true

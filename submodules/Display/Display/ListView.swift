@@ -2011,7 +2011,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 node.addHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
             }
             if node.animationForKey("apparentHeight") == nil || !(node is ListViewTempItemNode) {
-                node.addApparentHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                node.addApparentHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                    if let node = node {
+                        node.animateFrameTransition(progress, currentValue)
+                    }
+                })
             }
             node.animateRemoved(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
         } else if animated {
@@ -3007,21 +3011,25 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         let flashing = self.headerItemsAreFlashing()
         
-        let addHeader: (_ id: Int64, _ upperBound: CGFloat, _ lowerBound: CGFloat, _ item: ListViewItemHeader, _ hasValidNodes: Bool) -> Void = { id, upperBound, lowerBound, item, hasValidNodes in
+        func addHeader(id: Int64, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool) {
             let itemHeaderHeight: CGFloat = item.height
             
             let headerFrame: CGRect
             let stickLocationDistanceFactor: CGFloat
             let stickLocationDistance: CGFloat
             switch item.stickDirection {
-                case .top:
-                    headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
-                    stickLocationDistance = headerFrame.minY - upperBound
-                    stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
-                case .bottom:
-                    headerFrame = CGRect(origin: CGPoint(x: 0.0, y: max(upperBound, min(lowerBound, lowerDisplayBound) - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
-                    stickLocationDistance = lowerBound - headerFrame.maxY
-                    stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
+            case .top:
+                headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                stickLocationDistance = headerFrame.minY - upperBound
+                stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
+            case .topEdge:
+                headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBoundEdge - itemHeaderHeight), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                stickLocationDistance = headerFrame.minY - upperBoundEdge - itemHeaderHeight
+                stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
+            case .bottom:
+                headerFrame = CGRect(origin: CGPoint(x: 0.0, y: max(upperBound, min(lowerBound, lowerDisplayBound) - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
+                stickLocationDistance = lowerBound - headerFrame.maxY
+                stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             }
             visibleHeaderNodes.insert(id)
             if let headerNode = self.itemHeaderNodes[id] {
@@ -3092,31 +3100,32 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        var previousHeader: (Int64, CGFloat, CGFloat, ListViewItemHeader, Bool)?
+        var previousHeader: (id: Int64, upperBound: CGFloat, upperBoundEdge: CGFloat, lowerBound: CGFloat, item: ListViewItemHeader, hasValidNodes: Bool)?
         for itemNode in self.itemNodes {
             let itemFrame = itemNode.apparentFrame
+            let itemTopInset = itemNode.insets.top
             if let itemHeader = itemNode.header() {
-                if let (previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
+                if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
                     if previousHeaderId == itemHeader.id {
-                        previousHeader = (previousHeaderId, previousUpperBound, itemFrame.maxY, previousHeaderItem, hasValidNodes || itemNode.index != nil)
+                        previousHeader = (previousHeaderId, previousUpperBound, previousUpperBoundEdge, itemFrame.maxY, previousHeaderItem, hasValidNodes || itemNode.index != nil)
                     } else {
-                        addHeader(previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes)
+                        addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
                         
-                        previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.maxY, itemHeader, itemNode.index != nil)
+                        previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.minY + itemTopInset, itemFrame.maxY, itemHeader, itemNode.index != nil)
                     }
                 } else {
-                    previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.maxY, itemHeader, itemNode.index != nil)
+                    previousHeader = (itemHeader.id, itemFrame.minY, itemFrame.minY + itemTopInset, itemFrame.maxY, itemHeader, itemNode.index != nil)
                 }
             } else {
-                if let (previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
-                    addHeader(previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes)
+                if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
+                    addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
                 }
                 previousHeader = nil
             }
         }
         
-        if let (previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
-            addHeader(previousHeaderId, previousUpperBound, previousLowerBound, previousHeaderItem, hasValidNodes)
+        if let (previousHeaderId, previousUpperBound, previousUpperBoundEdge, previousLowerBound, previousHeaderItem, hasValidNodes) = previousHeader {
+            addHeader(id: previousHeaderId, upperBound: previousUpperBound, upperBoundEdge: previousUpperBoundEdge, lowerBound: previousLowerBound, item: previousHeaderItem, hasValidNodes: hasValidNodes)
         }
         
         let currentIds = Set(self.itemHeaderNodes.keys)

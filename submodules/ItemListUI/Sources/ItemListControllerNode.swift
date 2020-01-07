@@ -501,9 +501,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
             } else if transition.crossfade {
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateCrossfade)
             } else {
                 options.insert(.Synchronous)
+                options.insert(.PreferSynchronousResourceLoading)
                 options.insert(.PreferSynchronousDrawing)
             }
             if self.alwaysSynchronous {

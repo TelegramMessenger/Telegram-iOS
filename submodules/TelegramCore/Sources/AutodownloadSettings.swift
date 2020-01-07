@@ -24,8 +24,6 @@ extension AutodownloadPresetSettings {
         switch apiAutodownloadSettings {
         case let .autoDownloadSettings(flags, photoSizeMax, videoSizeMax, fileSizeMax, videoUploadMaxbitrate):
                 self.init(disabled: (flags & (1 << 0)) != 0, photoSizeMax: photoSizeMax, videoSizeMax: videoSizeMax, fileSizeMax: fileSizeMax, preloadLargeVideo: (flags & (1 << 1)) != 0, lessDataForPhoneCalls: (flags & (1 << 3)) != 0, videoUploadMaxbitrate: videoUploadMaxbitrate)
-        case let .autoDownloadSettingsLegacy(flags, photoSizeMax, videoSizeMax, fileSizeMax):
-            self.init(disabled: (flags & (1 << 0)) != 0, photoSizeMax: photoSizeMax, videoSizeMax: videoSizeMax, fileSizeMax: fileSizeMax, preloadLargeVideo: (flags & (1 << 1)) != 0, lessDataForPhoneCalls: (flags & (1 << 3)) != 0, videoUploadMaxbitrate: 0)
         }
     }
 }
