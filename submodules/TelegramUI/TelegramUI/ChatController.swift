@@ -8254,6 +8254,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return navigationController
         } else if case let .inline(navigationController) = self.presentationInterfaceState.mode {
             return navigationController
+        } else if case let .overlay(navigationController) = self.presentationInterfaceState.mode {
+            return navigationController
         } else {
             return nil
         }

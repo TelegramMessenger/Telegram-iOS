@@ -260,7 +260,7 @@ final class ThemeAccentColorController: ViewController {
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
+                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper, creatorAccountId: context.account.id))
                                     
                                     var updatedTheme = current.theme
                                     var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
@@ -289,7 +289,7 @@ final class ThemeAccentColorController: ViewController {
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                 return updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper))
+                                    let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: wallpaper, creatorAccountId: context.account.id))
                                     
                                     var updatedTheme = current.theme
                                     var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting

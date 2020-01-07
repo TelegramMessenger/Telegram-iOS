@@ -816,12 +816,12 @@ final class SharedApplicationContext {
                     return
                 }
                 var exists = false
-                strongSelf.mainWindow.forEachViewController { controller in
+                strongSelf.mainWindow.forEachViewController({ controller in
                     if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
                         exists = true
                     }
                     return true
-                }
+                })
                 
                 if !exists {
                     strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
@@ -1425,12 +1425,12 @@ final class SharedApplicationContext {
                 }
             }
         }
-        self.mainWindow.forEachViewController { controller in
+        self.mainWindow.forEachViewController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
             return true
-        }
+        })
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {

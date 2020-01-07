@@ -1,7 +1,7 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
 static_library(
-    name = "StickerPackPreviewUI",
+    name = "ArchivedStickerPacksNotice",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -15,16 +15,12 @@ static_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/ShareController:ShareController",
         "//submodules/StickerResources:StickerResources",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
-        "//submodules/TextFormat:TextFormat",
         "//submodules/MergeLists:MergeLists",
-        "//submodules/ActivityIndicator:ActivityIndicator",
-        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
-        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
-        "//submodules/ArchivedStickerPacksNotice:ArchivedStickerPacksNotice",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/ItemListStickerPackItem:ItemListStickerPackItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

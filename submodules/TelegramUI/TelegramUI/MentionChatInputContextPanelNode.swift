@@ -11,25 +11,27 @@ import MergeLists
 import TextFormat
 import AccountContext
 import LocalizedPeerData
+import ItemListUI
 
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
+    let revealed: Bool
     
     var stableId: Int64 {
         return self.peer.id.toInt64()
     }
     
     static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer)
+        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.revealed == rhs.revealed
     }
     
     static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, theme: PresentationTheme, fontSize: PresentationFontSize, inverted: Bool, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        return MentionChatInputPanelItem(context: context, theme: theme, fontSize: fontSize, inverted: inverted, peer: self.peer, peerSelected: peerSelected)
+    func item(context: AccountContext, presentationData: PresentationData, inverted: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (Peer) -> Void, removeRequested: @escaping (PeerId) -> Void) -> ListViewItem {
+        return MentionChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), inverted: inverted, peer: self.peer, revealed: self.revealed, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested)
     }
 }
 
@@ -39,12 +41,12 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, theme: PresentationTheme, fontSize: PresentationFontSize, inverted: Bool, forceUpdate: Bool, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData, inverted: Bool, forceUpdate: Bool, setPeerIdRevealed: @escaping (PeerId?) -> Void, peerSelected: @escaping (Peer) -> Void, removeRequested: @escaping (PeerId) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, theme: theme, fontSize: fontSize, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, theme: theme, fontSize: fontSize, inverted: inverted, peerSelected: peerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, inverted: inverted, setPeerIdRevealed: setPeerIdRevealed, peerSelected: peerSelected, removeRequested: removeRequested), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -59,6 +61,8 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private let listView: ListView
     private var currentEntries: [MentionChatInputContextPanelEntry]?
+    
+    private var revealedPeerId: PeerId?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -95,7 +99,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 continue
             }
             peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer))
+            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, revealed: revealedPeerId == peer.id))
             index += 1
         }
         self.updateToEntries(entries: entries, forceUpdate: false)
@@ -103,7 +107,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func updateToEntries(entries: [MentionChatInputContextPanelEntry], forceUpdate: Bool) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, theme: self.theme, fontSize: self.fontSize, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: presentationData, inverted: self.mode == .search, forceUpdate: forceUpdate, setPeerIdRevealed: { [weak self] peerId in
+            
+        }, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
                     case .input:
@@ -146,6 +153,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                     case .search:
                         interfaceInteraction.beginMessageSearch(.member(peer), "")
                 }
+            }
+        }, removeRequested: { [weak self] peerId in
+            if let strongSelf = self {
+                let _ = removeRecentlyUsedInlineBot(account: strongSelf.context.account, peerId: peerId).start()
             }
         })
         self.currentEntries = entries

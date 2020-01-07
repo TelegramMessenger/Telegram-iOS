@@ -551,7 +551,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                 context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             }
                                             
-                                            let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
+                                            let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: context.account.id))
                                                                                            
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             themeSpecificChatWallpapers[themeReference.index] = nil
@@ -585,7 +585,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                         }
                                         
-                                        let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
+                                        let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: context.account.id))
                                                                                        
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[themeReference.index] = nil
