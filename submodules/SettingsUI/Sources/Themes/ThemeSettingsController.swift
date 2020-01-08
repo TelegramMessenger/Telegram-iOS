@@ -729,7 +729,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                         let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
                                         let newTheme: PresentationThemeReference
                                         if let previousThemeIndex = previousThemeIndex {
-                                            newTheme = .cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil))
+                                            let theme = themes[themes.index(before: previousThemeIndex.base)]
+                                            newTheme = .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil))
                                         } else {
                                             newTheme = .builtin(.nightAccent)
                                         }
@@ -953,7 +954,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                                 let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
                                                 let newTheme: PresentationThemeReference
                                                 if let previousThemeIndex = previousThemeIndex {
-                                                    selectThemeImpl?(.cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil)))
+                                                    let theme = themes[themes.index(before: previousThemeIndex.base)]
+                                                    selectThemeImpl?(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil)))
                                                 } else {
                                                     if settings.baseTheme == .night {
                                                         selectAccentColorImpl?(PresentationThemeAccentColor(baseColor: .blue))
@@ -1014,7 +1016,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         }
         defaultThemes.append(contentsOf: [.builtin(.night), .builtin(.nightAccent)])
         
-        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }.filter { !removedThemeIndexes.contains($0.index) }
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }.filter { !removedThemeIndexes.contains($0.index) }
         
         var availableThemes = defaultThemes
         if defaultThemes.first(where: { $0.index == themeReference.index }) == nil && cloudThemes.first(where: { $0.index == themeReference.index }) == nil {
@@ -1158,7 +1160,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             var baseThemeIndex: Int64?
             var updatedThemeBaseIndex: Int64?
             if case let .cloud(info) = theme {
-                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: info.theme.isCreator ? context.account.id : nil))
                 if let settings = info.theme.settings {
                     baseThemeIndex = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)).index
                     updatedThemeBaseIndex = baseThemeIndex

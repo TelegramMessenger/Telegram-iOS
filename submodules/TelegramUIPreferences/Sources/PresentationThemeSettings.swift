@@ -97,15 +97,18 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
 public struct PresentationCloudTheme: PostboxCoding, Equatable {
     public let theme: TelegramTheme
     public let resolvedWallpaper: TelegramWallpaper?
+    public let creatorAccountId: AccountRecordId?
     
-    public init(theme: TelegramTheme, resolvedWallpaper: TelegramWallpaper?) {
+    public init(theme: TelegramTheme, resolvedWallpaper: TelegramWallpaper?, creatorAccountId: AccountRecordId?) {
         self.theme = theme
         self.resolvedWallpaper = resolvedWallpaper
+        self.creatorAccountId = creatorAccountId
     }
     
     public init(decoder: PostboxDecoder) {
         self.theme = decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
         self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.creatorAccountId = decoder.decodeOptionalInt64ForKey("account").flatMap { AccountRecordId(rawValue: $0) }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -114,6 +117,11 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
             encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
         } else {
             encoder.encodeNil(forKey: "wallpaper")
+        }
+        if let accountId = self.creatorAccountId {
+            encoder.encodeInt64(accountId.int64, forKey: "account")
+        } else {
+            encoder.encodeNil(forKey: "account")
         }
     }
     

@@ -1222,10 +1222,12 @@ public class Window1 {
         return hidden
     }
     
-    public func forEachViewController(_ f: (ContainableController) -> Bool) {
+    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false) {
         if let navigationController = self._rootController as? NavigationController {
-            for case let controller as ContainableController in navigationController.viewControllers {
-                !f(controller)
+            if !excludeNavigationSubControllers {
+                for case let controller as ContainableController in navigationController.viewControllers {
+                    !f(controller)
+                }
             }
             if let controller = navigationController.topOverlayController {
                 !f(controller)

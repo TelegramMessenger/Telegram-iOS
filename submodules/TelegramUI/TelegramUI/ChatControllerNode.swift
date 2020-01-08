@@ -496,7 +496,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
-                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, close: { [weak self] in
+                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, tapped: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.dismissAsOverlay()
+                        if case let .peer(id) = strongSelf.chatPresentationInterfaceState.chatLocation {
+                            strongSelf.interfaceInteraction?.navigateToChat(id)
+                        }
+                    }
+                }, close: { [weak self] in
                     self?.dismissAsOverlay()
                 })
                 overlayNavigationBar.peerView = self.peerView

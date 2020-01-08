@@ -48,6 +48,13 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
     }
     
     public func checkPhotoAuthorizationStatus(for intent: TGPhotoAccessIntent, alertDismissCompletion: (() -> Void)!) -> Bool {
+        if let context = self.context {
+            DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+                if !value {
+                    alertDismissCompletion?()
+                }
+            })
+        }
         return true
     }
     

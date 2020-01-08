@@ -548,7 +548,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                             if foundVenues == nil && !state.searchingVenuesAround {
                                 displayingPlacesButton = true
                             } else if let previousLocation = foundVenuesLocation {
-                                let currentLocation =  CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                                let currentLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                                 if currentLocation.distance(from: previousLocation) > 300 {
                                     displayingPlacesButton = true
                                 }
