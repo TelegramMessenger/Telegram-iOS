@@ -5272,5 +5272,5 @@ Any member of this group will be able to see messages in the channel.";
 "PollResults.ShowMore_any" = "Show %@ More People";
 
 "Conversation.StopQuiz" = "Stop Quiz";
-"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.;
+"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.";
 "Conversation.StopQuizConfirmation" = "Stop Quiz";
