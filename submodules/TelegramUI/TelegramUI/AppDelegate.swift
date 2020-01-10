@@ -1380,8 +1380,7 @@ final class SharedApplicationContext {
             UIApplication.shared.setStatusBarHidden(false, with: .none)
         }
         
-        #if canImport(BackgroundTasks)
-        if #available(iOS 13.0, *) {
+        /*if #available(iOS 13.0, *) {
             BGTaskScheduler.shared.register(forTaskWithIdentifier: baseAppBundleId + ".refresh", using: nil, launchHandler: { task in
                 let _ = (self.sharedContextPromise.get()
                 |> take(1)
@@ -1400,8 +1399,7 @@ final class SharedApplicationContext {
                     })
                 })
             })
-        }
-        #endif
+        }*/
         
         return true
     }
