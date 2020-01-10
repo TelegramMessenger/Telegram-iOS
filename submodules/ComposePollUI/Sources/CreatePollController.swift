@@ -371,7 +371,7 @@ private struct CreatePollControllerState: Equatable {
     var isQuiz: Bool = false
 }
 
-private func createPollControllerEntries(presentationData: PresentationData, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration) -> [CreatePollEntry] {
+private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
     var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
@@ -394,7 +394,14 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
         entries.append(.optionsInfo(presentationData.strings.CreatePoll_AllOptionsAdded))
     }
     
-    entries.append(.anonymousVotes(presentationData.strings.CreatePoll_Anonymous, state.isAnonymous))
+    var canBePublic = true
+    if let channel = peer as? TelegramChannel, case .broadcast = channel.info, let username = channel.username, !username.isEmpty {
+        canBePublic = false
+    }
+    
+    if canBePublic {
+        entries.append(.anonymousVotes(presentationData.strings.CreatePoll_Anonymous, state.isAnonymous))
+    }
     entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
     entries.append(.quiz(presentationData.strings.CreatePoll_Quiz, state.isQuiz))
     entries.append(.quizInfo(presentationData.strings.CreatePoll_QuizInfo))
@@ -402,7 +409,7 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-public func createPollController(context: AccountContext, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public func createPollController(context: AccountContext, peer: Peer, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     let statePromise = ValuePromise(CreatePollControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePollControllerState())
     let updateState: ((CreatePollControllerState) -> CreatePollControllerState) -> Void = { f in
@@ -743,7 +750,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CreatePoll_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, state: state, limitsConfiguration: limitsConfiguration), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, peer: peer, state: state, limitsConfiguration: limitsConfiguration), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil)
         
         return (controllerState, (listState, arguments))
     }

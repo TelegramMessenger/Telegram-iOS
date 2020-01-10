@@ -6081,8 +6081,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentPollCreation() {
-        if case let .peer(peerId) = self.chatLocation {
-            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peerId: peerId, completion: { [weak self] message in
+        if case .peer = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.peer {
+            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }
