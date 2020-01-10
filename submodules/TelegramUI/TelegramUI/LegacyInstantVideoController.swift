@@ -135,10 +135,15 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     done?(time)
                 }
             }
-            controller.finishedWithVideo = { videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments, isSilent, scheduleTimestamp in
+            controller.finishedWithVideo = { [weak controller] videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments, isSilent, scheduleTimestamp in
                 guard let videoUrl = videoUrl else {
                     return
                 }
+                
+                let strongController = controller
+                Queue.mainQueue().after(4.0, {
+                    strongController?.resignFirstResponder()
+                })
                 
                 var finalDimensions: CGSize = dimensions
                 var finalDuration: Double = duration

@@ -1538,11 +1538,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                 return
             }
+            
             guard !strongSelf.presentationInterfaceState.isScheduledMessages else {
                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 return
             }
             if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
+                #if DEBUG
+                if false {
+                    var found = false
+                    strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                        if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
+                            found = true
+                            itemNode.animateQuizInvalidOptionSelected()
+                        }
+                    }
+                    return;
+                }
+                if false {
+                    strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+                    return;
+                }
+                #endif
+                
                 controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
                 let disposables: DisposableDict<MessageId>
@@ -1554,7 +1572,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let signal = requestMessageSelectPollOption(account: strongSelf.context.account, messageId: id, opaqueIdentifiers: opaqueIdentifiers)
                 disposables.set((signal
-                |> deliverOnMainQueue).start(error: { _ in
+                |> deliverOnMainQueue).start(next: { resultPoll in
+                    guard let strongSelf = self, let resultPoll = resultPoll else {
+                        return
+                    }
+                    guard let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
+                        return
+                    }
+                    
+                    switch resultPoll.kind {
+                    case .poll:
+                        break
+                    case .quiz:
+                        if let voters = resultPoll.results.voters {
+                            for voter in voters {
+                                if voter.selected {
+                                    if voter.isCorrect {
+                                        strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                    } else {
+                                        var found = false
+                                        strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                                            if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
+                                                found = true
+                                                itemNode.animateQuizInvalidOptionSelected()
+                                            }
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }, error: { _ in
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                         return
                     }
@@ -3993,14 +4042,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.selectPollOptionFeedback?.success()
             }), forKey: id)
         }, requestStopPollInMessage: { [weak self] id in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {
                 return
+            }
+            
+            var maybePoll: TelegramMediaPoll?
+            for media in message.media {
+                if let poll = media as? TelegramMediaPoll {
+                    maybePoll = poll
+                    break
+                }
+            }
+            
+            guard let poll = maybePoll else {
+                return
+            }
+            
+            let actionTitle: String
+            let actionButtonText: String
+            switch poll.kind {
+            case .poll:
+                actionTitle = strongSelf.presentationData.strings.Conversation_StopPollConfirmationTitle
+                actionButtonText = strongSelf.presentationData.strings.Conversation_StopPollConfirmation
+            case .quiz:
+                actionTitle = strongSelf.presentationData.strings.Conversation_StopQuizConfirmationTitle
+                actionButtonText = strongSelf.presentationData.strings.Conversation_StopQuizConfirmation
             }
             
             let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: strongSelf.presentationData.strings.Conversation_StopPollConfirmationTitle),
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_StopPollConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
+                ActionSheetTextItem(title: actionTitle),
+                ActionSheetButtonItem(title: actionButtonText, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     guard let strongSelf = self else {
                         return

@@ -10,7 +10,7 @@ public enum RequestMessageSelectPollOptionError {
     case generic
 }
 
-public func requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<Never, RequestMessageSelectPollOptionError> {
+public func requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> castError(RequestMessageSelectPollOptionError.self)
@@ -20,12 +20,46 @@ public func requestMessageSelectPollOption(account: Account, messageId: MessageI
             |> mapError { _ -> RequestMessageSelectPollOptionError in
                 return .generic
             }
-            |> mapToSignal { result -> Signal<Never, RequestMessageSelectPollOptionError> in
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> in
+                var resultPoll: TelegramMediaPoll?
+                switch result {
+                case let .updates(updates, _, _, _, _):
+                    for update in updates {
+                        switch update {
+                        case let .updateMessagePoll(_, pollId, poll, results):
+                            if let poll = poll {
+                                switch poll {
+                                case let .poll(id, flags, question, answers):
+                                    let publicity: TelegramMediaPollPublicity
+                                    if (flags & (1 << 1)) != 0 {
+                                        publicity = .public
+                                    } else {
+                                        publicity = .anonymous
+                                    }
+                                    let kind: TelegramMediaPollKind
+                                    if (flags & (1 << 3)) != 0 {
+                                        kind = .quiz
+                                    } else {
+                                        kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
+                                    }
+                                    resultPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
+                                default:
+                                    break
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    break
+                default:
+                    break
+                }
                 account.stateManager.addUpdates(result)
-                return .complete()
+                return .single(resultPoll)
             }
         } else {
-            return .complete()
+            return .single(nil)
         }
     }
 }
@@ -131,7 +165,7 @@ private final class PollResultsOptionContext {
         }
         |> mapToSignal { inputPeer -> Signal<([RenderedPeer], Int, String?), NoError> in
             if let inputPeer = inputPeer {
-                return account.network.request(Api.functions.messages.getPollVotes(flags: 1 << 0, peer: inputPeer, id: messageId.id, option: Buffer(data: opaqueIdentifier), offset: nextOffset, limit: nextOffset == nil ? 15 : 50))
+                let signal = account.network.request(Api.functions.messages.getPollVotes(flags: 1 << 0, peer: inputPeer, id: messageId.id, option: Buffer(data: opaqueIdentifier), offset: nextOffset, limit: nextOffset == nil ? 1 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.VotesList?, NoError> in
                     return .single(nil)
@@ -163,6 +197,10 @@ private final class PollResultsOptionContext {
                         }
                     }
                 }
+                #if DEBUG
+                return signal |> delay(4.0, queue: .concurrentDefaultQueue())
+                #endif
+                return signal
             } else {
                 return .single(([], 0, nil))
             }

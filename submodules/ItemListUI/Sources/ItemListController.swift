@@ -517,6 +517,10 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         self.didDisappear?(animated)
     }
     
+    public var listInsets: UIEdgeInsets {
+        return (self.displayNode as! ItemListControllerNode).listNode.insets
+    }
+    
     public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
         (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in

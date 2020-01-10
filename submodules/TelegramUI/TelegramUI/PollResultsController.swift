@@ -10,7 +10,7 @@ import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
 
-private let collapsedResultCount: Int = 10
+private let collapsedResultCount: Int = 1
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
@@ -48,8 +48,8 @@ private enum PollResultsEntryId: Hashable {
 
 private enum PollResultsEntry: ItemListNodeEntry {
     case text(String)
-    case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionPercentage: Int, optionExpanded: Bool, opaqueIdentifier: Data)
-    case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String)
+    case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionPercentage: Int, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?)
+    case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -124,19 +124,19 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case let .text(text):
             return ItemListTextItem(presentationData: presentationData, text: .large(text), sectionId: self.section)
-        case let .optionPeer(optionId, _, peer, optionText, optionPercentage, optionExpanded, opaqueIdentifier):
+        case let .optionPeer(optionId, _, peer, optionText, optionPercentage, optionExpanded, opaqueIdentifier, shimmeringAlternation):
             let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : "\(optionPercentage)%", id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
-            }, noInsets: true, header: header)
-        case let .optionExpand(_, opaqueIdentifier, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
+            }, noInsets: true, header: header, shimmering: shimmeringAlternation.flatMap { ItemListPeerItemShimmering(alternationIndex: $0) })
+        case let .optionExpand(_, opaqueIdentifier, text, enabled):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: enabled ? {
                 arguments.expandOption(opaqueIdentifier)
-            })
+            } : nil)
         }
     }
 }
@@ -158,10 +158,6 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     
     entries.append(.text(poll.text))
     
-    if isEmpty {
-        return entries
-    }
-    
     var optionVoterCount: [Int: Int32] = [:]
     let totalVoterCount = poll.results.totalVoters ?? 0
     var optionPercentage: [Int] = []
@@ -182,34 +178,48 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     }
     
     for i in 0 ..< poll.options.count {
+        let percentage = optionPercentage.count > i ? optionPercentage[i] : 0
         let option = poll.options[i]
-        if let optionState = resultsState.options[option.opaqueIdentifier], !optionState.peers.isEmpty {
-            let percentage = optionPercentage.count > i ? optionPercentage[i] : 0
-            var peerIndex = 0
-            var hasMore = false
-            let optionExpanded = state.expandedOptions.contains(option.opaqueIdentifier)
-            
-            var peers = optionState.peers
-            var count = optionState.count
-            /*#if DEBUG
-            for _ in 0 ..< 10 {
-                peers += peers
-            }
-            count = max(count, peers.count)
-            #endif*/
-            
-            inner: for peer in peers {
-                if !optionExpanded && peerIndex >= collapsedResultCount {
-                    hasMore = true
-                    break inner
+        if isEmpty {
+            if let voterCount = optionVoterCount[i], voterCount != 0 {
+                let displayCount = min(collapsedResultCount, Int(voterCount))
+                for peerIndex in 0 ..< displayCount {
+                    let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                    let peer = RenderedPeer(peer: fakeUser)
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: option.text, optionPercentage: percentage, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2))
                 }
-                entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: option.text, optionPercentage: percentage, optionExpanded: optionExpanded, opaqueIdentifier: option.opaqueIdentifier))
-                peerIndex += 1
+                if displayCount < Int(voterCount) {
+                    let remainingCount = Int(voterCount) - displayCount
+                    entries.append(.optionExpand(optionId: i, opaqueIdentifier: option.opaqueIdentifier, text: presentationData.strings.PollResults_ShowMore(Int32(remainingCount)), enabled: false))
+                }
             }
-            
-            if hasMore {
+        } else {
+            if let optionState = resultsState.options[option.opaqueIdentifier], !optionState.peers.isEmpty {
+                var peerIndex = 0
+                var hasMore = false
+                let optionExpanded = state.expandedOptions.contains(option.opaqueIdentifier)
+                
+                var peers = optionState.peers
+                var count = optionState.count
+                /*#if DEBUG
+                for _ in 0 ..< 10 {
+                    peers += peers
+                }
+                count = max(count, peers.count)
+                #endif*/
+                
+                inner: for peer in peers {
+                    if !optionExpanded && peerIndex >= collapsedResultCount {
+                        break inner
+                    }
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: option.text, optionPercentage: percentage, optionExpanded: optionExpanded, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil))
+                    peerIndex += 1
+                }
+                
                 let remainingCount = count - peerIndex
-                entries.append(.optionExpand(optionId: i, opaqueIdentifier: option.opaqueIdentifier, text: presentationData.strings.PollResults_ShowMore(Int32(remainingCount))))
+                if remainingCount > 0 {
+                    entries.append(.optionExpand(optionId: i, opaqueIdentifier: option.opaqueIdentifier, text: presentationData.strings.PollResults_ShowMore(Int32(remainingCount)), enabled: true))
+                }
             }
         }
     }
@@ -281,15 +291,10 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
             }
         }
         
-        var emptyStateItem: ItemListControllerEmptyStateItem?
-        if isEmpty {
-            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-        }
-        
         let previousWasEmptyValue = previousWasEmpty.swap(isEmpty)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PollResults_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState), style: .blocks, focusItemTag: nil, ensureVisibleItemTag: nil, emptyStateItem: emptyStateItem, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState), style: .blocks, focusItemTag: nil, ensureVisibleItemTag: nil, emptyStateItem: nil, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

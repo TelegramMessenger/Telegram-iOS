@@ -324,7 +324,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let separatorHeight = UIScreenPixel
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
             
             var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
@@ -485,7 +485,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false)
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.alpha = 0.0

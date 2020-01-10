@@ -20,9 +20,9 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let editing: Bool
     let height: ItemListPeerActionItemHeight
     public let sectionId: ItemListSectionId
-    let action: () -> Void
+    let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, editing: Bool, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, editing: Bool, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
@@ -79,11 +79,13 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
         }
     }
     
-    public var selectable: Bool = true
+    public var selectable: Bool {
+        return self.action != nil
+    }
     
     public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action()
+        self.action?()
     }
 }
 

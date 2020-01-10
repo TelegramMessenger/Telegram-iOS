@@ -565,7 +565,14 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
             
             if canStopPoll {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_StopPoll, icon: { theme in
+                let stopPollAction: String
+                switch activePoll.kind {
+                case .poll:
+                    stopPollAction = chatPresentationInterfaceState.strings.Conversation_StopPoll
+                case .quiz:
+                    stopPollAction = chatPresentationInterfaceState.strings.Conversation_StopQuiz
+                }
+                actions.append(.action(ContextMenuActionItem(text: stopPollAction, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/StopPoll"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     interfaceInteraction.requestStopPollInMessage(messages[0].id)

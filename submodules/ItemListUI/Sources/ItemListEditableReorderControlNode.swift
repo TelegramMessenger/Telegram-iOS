@@ -19,7 +19,7 @@ public final class ItemListEditableReorderControlNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    public static func asyncLayout(_ node: ItemListEditableReorderControlNode?) -> (_ theme: PresentationTheme) -> (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode) {
+    public static func asyncLayout(_ node: ItemListEditableReorderControlNode?) -> (_ theme: PresentationTheme) -> (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode) {
         return { theme in
             let image = PresentationResourcesItemList.itemListReorderIndicatorIcon(theme)
             
@@ -31,9 +31,9 @@ public final class ItemListEditableReorderControlNode: ASDisplayNode {
             }
             resultNode.iconNode.image = image
             
-            return (40.0, { height, offsetForLabel in
+            return (40.0, { height, offsetForLabel, transition in
                 if let image = image {
-                    resultNode.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: floor((height - image.size.height) / 2.0) - (offsetForLabel ? 6.0 : 0.0)), size: image.size)
+                    transition.updateFrame(node: resultNode.iconNode, frame: CGRect(origin: CGPoint(x: 7.0, y: floor((height - image.size.height) / 2.0) - (offsetForLabel ? 6.0 : 0.0)), size: image.size))
                 }
                 return resultNode
             })

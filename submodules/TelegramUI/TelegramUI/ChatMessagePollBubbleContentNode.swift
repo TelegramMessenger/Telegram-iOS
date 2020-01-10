@@ -518,6 +518,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.option = option
                     let previousResult = node.currentResult
                     node.currentResult = optionResult
+                    node.currentSelection = selection
                     
                     node.highlightedBackgroundNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.highlight : presentationData.theme.theme.chat.message.outgoing.polls.highlight
                     
@@ -745,6 +746,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        
+        self.avatarsNode.pressed = { [weak self] in
+            self?.buttonPressed()
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -921,11 +926,20 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let votersString: String
-                if let totalVoters = poll?.results.totalVoters {
-                    if totalVoters == 0 {
-                        votersString = item.presentationData.strings.MessagePoll_NoVotes
-                    } else {
-                        votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
+                if let poll = poll, let totalVoters = poll.results.totalVoters {
+                    switch poll.kind {
+                    case .poll:
+                        if totalVoters == 0 {
+                            votersString = item.presentationData.strings.MessagePoll_NoVotes
+                        } else {
+                            votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
+                        }
+                    case .quiz:
+                        if totalVoters == 0 {
+                            votersString = item.presentationData.strings.MessagePoll_QuizNoUsers
+                        } else {
+                            votersString = item.presentationData.strings.MessagePoll_QuizCount(totalVoters)
+                        }
                     }
                 } else {
                     votersString = " "
@@ -1058,7 +1072,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let optionsVotersSpacing: CGFloat = 11.0
-                    let optionsButtonSpacing: CGFloat = 8.0
+                    let optionsButtonSpacing: CGFloat = 9.0
                     let votersBottomSpacing: CGFloat = 11.0
                     resultSize.height += optionsVotersSpacing + votersLayout.size.height + votersBottomSpacing
                     
@@ -1165,8 +1179,17 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             let typeFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + titleTypeSpacing), size: typeLayout.size)
                             strongSelf.typeNode.frame = typeFrame
-                            strongSelf.avatarsNode.frame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - mergedImageSize) / 2.0)), size: CGSize(width: mergedImageSpacing * 3.0, height: mergedImageSize))
+                            let avatarsFrame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - mergedImageSize) / 2.0)), size: CGSize(width: mergedImageSize + mergedImageSpacing * 2.0, height: mergedImageSize))
+                            strongSelf.avatarsNode.frame = avatarsFrame
+                            strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
                             strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad)
+                            let alphaTransition: ContainedViewLayoutTransition
+                            if animation.isAnimated {
+                                alphaTransition = .animated(duration: 0.25, curve: .easeInOut)
+                                alphaTransition.updateAlpha(node: strongSelf.avatarsNode, alpha: avatarPeers.isEmpty ? 0.0 : 1.0)
+                            } else {
+                                alphaTransition = .immediate
+                            }
                             
                             let _ = votersApply()
                             strongSelf.votersNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - votersLayout.size.width) / 2.0), y: verticalOffset + optionsVotersSpacing), size: votersLayout.size)
@@ -1211,6 +1234,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
+        var hasResults = false
+        if let totalVoters = poll.results.totalVoters, totalVoters != 0 {
+            if let _ = poll.results.voters {
+                hasResults = true
+            }
+        }
+        
         if hasSelection && poll.pollId.namespace == Namespaces.Media.CloudPoll {
             self.votersNode.isHidden = true
             self.buttonViewResultsTextNode.isHidden = true
@@ -1218,7 +1248,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             self.buttonSubmitActiveTextNode.isHidden = !hasSelectedOptions
             self.buttonNode.isHidden = !hasSelectedOptions
         } else {
-            if case .public = poll.publicity {
+            if case .public = poll.publicity, hasResults {
                 self.votersNode.isHidden = true
                 self.buttonViewResultsTextNode.isHidden = false
                 self.buttonNode.isHidden = false
@@ -1230,6 +1260,8 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             self.buttonSubmitInactiveTextNode.isHidden = true
             self.buttonSubmitActiveTextNode.isHidden = true
         }
+        
+        self.avatarsNode.isUserInteractionEnabled = !self.buttonViewResultsTextNode.isHidden
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
@@ -1272,18 +1304,30 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if optionNode.frame.contains(point) {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item {
+                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll {
                         let string: String
-                        if result.count == 0 {
-                            string = item.presentationData.strings.MessagePoll_NoVotes
-                        } else {
-                            string = item.presentationData.strings.MessagePoll_VotedCount(result.count)
+                        switch poll.kind {
+                        case .poll:
+                            if result.count == 0 {
+                                string = item.presentationData.strings.MessagePoll_NoVotes
+                            } else {
+                                string = item.presentationData.strings.MessagePoll_VotedCount(result.count)
+                            }
+                        case .quiz:
+                            if result.count == 0 {
+                                string = item.presentationData.strings.MessagePoll_QuizNoUsers
+                            } else {
+                                string = item.presentationData.strings.MessagePoll_QuizCount(result.count)
+                            }
                         }
                         return .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0))
                     }
                 }
             }
             if self.buttonNode.isUserInteractionEnabled, !self.buttonNode.isHidden, self.buttonNode.frame.contains(point) {
+                return .ignore
+            }
+            if self.avatarsNode.isUserInteractionEnabled, !self.avatarsNode.isHidden, self.avatarsNode.frame.contains(point) {
                 return .ignore
             }
             return .none
@@ -1341,18 +1385,33 @@ private final class MergedAvatarsNode: ASDisplayNode {
     private var peers: [PeerAvatarReference] = []
     private var images: [PeerId: UIImage] = [:]
     private var disposables: [PeerId: Disposable] = [:]
+    private let buttonNode: HighlightTrackingButtonNode
+    
+    var pressed: (() -> Void)?
     
     override init() {
+        self.buttonNode = HighlightTrackingButtonNode()
+        
         super.init()
         
         self.isOpaque = false
         self.displaysAsynchronously = true
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.addSubnode(self.buttonNode)
     }
     
     deinit {
         for (_, disposable) in self.disposables {
             disposable.dispose()
         }
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed?()
+    }
+    
+    func updateLayout(size: CGSize) {
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool) {
@@ -1443,20 +1502,23 @@ private final class MergedAvatarsNode: ASDisplayNode {
             context.setFillColor(UIColor.clear.cgColor)
             context.fillEllipse(in: imageRect.insetBy(dx: -1.0, dy: -1.0))
             
+            context.saveGState()
             switch parameters.peers[i] {
             case let .letters(peerId, letters):
-                context.saveGState()
                 context.translateBy(x: currentX, y: 0.0)
                 drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId)
-                context.restoreGState()
             case let .image(reference):
                 if let image = parameters.images[parameters.peers[i].peerId] {
+                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
                     context.draw(image.cgImage!, in: imageRect)
                 } else {
                     context.setFillColor(UIColor.gray.cgColor)
                     context.fillEllipse(in: imageRect)
                 }
             }
+            context.restoreGState()
             currentX -= mergedImageSpacing
         }
     }

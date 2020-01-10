@@ -27,11 +27,11 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
     let next: (() -> Void)?
     let delete: (Bool) -> Void
     let canDelete: Bool
-    let focused: () -> Void
+    let focused: (Bool) -> Void
     let toggleSelected: () -> Void
     let tag: ItemListItemTag?
     
-    init(presentationData: ItemListPresentationData, id: Int, placeholder: String, value: String, isSelected: Bool?, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, next: (() -> Void)?, delete: @escaping (Bool) -> Void, canDelete: Bool, focused: @escaping () -> Void, toggleSelected: @escaping () -> Void, tag: ItemListItemTag?) {
+    init(presentationData: ItemListPresentationData, id: Int, placeholder: String, value: String, isSelected: Bool?, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, next: (() -> Void)?, delete: @escaping (Bool) -> Void, canDelete: Bool, focused: @escaping (Bool) -> Void, toggleSelected: @escaping () -> Void, tag: ItemListItemTag?) {
         self.presentationData = presentationData
         self.id = id
         self.placeholder = placeholder
@@ -115,6 +115,13 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         return self.containerNode
     }
     
+    var checkNodeFrame: CGRect? {
+        guard let _ = self.layoutParams, let checkNode = self.checkNode else {
+            return nil
+        }
+        return checkNode.frame
+    }
+    
     init() {
         self.containerNode = ASDisplayNode()
         self.containerNode.clipsToBounds = true
@@ -171,7 +178,11 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     }
     
     func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.item?.focused()
+        self.item?.focused(true)
+    }
+    
+    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.item?.focused(false)
     }
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -286,8 +297,6 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     
                     strongSelf.item = item
                     strongSelf.layoutParams = params
-                    
-                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
@@ -404,14 +413,18 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layout.contentSize.width, height: separatorHeight))
-                    transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.contentSize.width - bottomStripeInset, height: separatorHeight)))
+                    if strongSelf.animationForKey("apparentHeight") == nil {
+                        strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.contentSize.width - bottomStripeInset, height: separatorHeight))
+                    }
                     
-                    let _ = reorderSizeAndApply.1(layout.contentSize.height, displayTextLimit && layout.contentSize.height <= 44.0)
+                    let _ = reorderSizeAndApply.1(layout.contentSize.height, displayTextLimit, transition)
                     let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0, y: 0.0), size: CGSize(width: reorderSizeAndApply.0, height: layout.contentSize.height))
                     strongSelf.reorderControlNode.frame = reorderControlFrame
+                    strongSelf.reorderControlNode.isHidden = !item.canDelete
                     
                     let _ = textLimitApply()
                     strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: max(floor(reorderControlFrame.midY + 2.0), layout.contentSize.height - 15.0 - textLimitLayout.size.height)), size: textLimitLayout.size)
@@ -473,7 +486,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     }
     
     override func isReorderable(at point: CGPoint) -> Bool {
-        if self.reorderControlNode.frame.contains(point), !self.isDisplayingRevealedOptions {
+        if self.reorderControlNode.frame.contains(point), !self.reorderControlNode.isHidden, !self.isDisplayingRevealedOptions {
             return true
         }
         return false
@@ -487,5 +500,14 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         self.bottomStripeNode.frame = separatorFrame
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.containerNode.bounds.width, height: currentValue))
+        
+        let insets = self.insets
+        let separatorHeight = UIScreenPixel
+        guard let params = self.layoutParams else {
+            return
+        }
+        
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: self.containerNode.bounds.width, height: currentValue + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+        self.maskNode.frame = self.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
     }
 }

@@ -5248,6 +5248,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "CreatePoll.Anonymous" = "Anonymous Votes";
 "CreatePoll.MultipleChoice" = "Multiple Choice";
+"CreatePoll.MultipleChoiceQuizAlert" = "Quiz can have only one correct answer.";
 "CreatePoll.Quiz" = "Quiz Mode";
 "CreatePoll.QuizInfo" = "Quiz has only one correct answer. Users can't revoke their votes.";
 "CreatePoll.QuizTip" = "Tap to select the correct option";
@@ -5257,8 +5258,19 @@ Any member of this group will be able to see messages in the channel.";
 "MessagePoll.LabelQuiz" = "Quiz";
 "MessagePoll.SubmitVote" = "Submit Vote";
 "MessagePoll.ViewResults" = "View Results";
+"MessagePoll.QuizNoUsers" = "No one played";
+"MessagePoll.QuizCount_0" = "%@ played";
+"MessagePoll.QuizCount_1" = "1 played";
+"MessagePoll.QuizCount_2" = "2 played";
+"MessagePoll.QuizCount_3_10" = "%@ played";
+"MessagePoll.QuizCount_many" = "%@ played";
+"MessagePoll.QuizCount_any" = "%@ played";
 
 "PollResults.Title" = "Poll Results";
 "PollResults.Collapse" = "COLLAPSE";
 "PollResults.ShowMore_1" = "Show %@ More Voter";
 "PollResults.ShowMore_any" = "Show %@ More Voters";
+
+"Conversation.StopQuiz" = "Stop Quiz";
+"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to participate in it anymore. This action cannot be undone.";
+"Conversation.StopQuizConfirmation" = "Stop Quiz";

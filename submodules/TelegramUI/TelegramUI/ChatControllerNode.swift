@@ -2324,4 +2324,124 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateAlpha(node: self.inputPanelBackgroundSeparatorNode, alpha: resolvedValue, beginWithCurrentState: true)
         }
     }
+    
+    func animateQuizCorrectOptionSelected() {
+        class ConfettiView: UIView {
+            private let direction: Bool
+            private let confettiViewEmitterLayer = CAEmitterLayer()
+            private let confettiViewEmitterCell = CAEmitterCell()
+            
+            init(frame: CGRect, direction: Bool) {
+                self.direction = direction
+                
+                super.init(frame: frame)
+                
+                self.isUserInteractionEnabled = false
+                
+                self.setupConfettiEmitterLayer()
+                
+                self.confettiViewEmitterLayer.frame = self.bounds
+                self.confettiViewEmitterLayer.emitterCells = generateConfettiEmitterCells()
+                self.layer.addSublayer(self.confettiViewEmitterLayer)
+                
+                let animation = CAKeyframeAnimation(keyPath: #keyPath(CAEmitterLayer.birthRate))
+                animation.duration = 0.5
+                animation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                animation.fillMode = .forwards
+                animation.values = [1, 0, 0]
+                animation.keyTimes = [0, 0.5, 1]
+                animation.isRemovedOnCompletion = false
+
+                self.confettiViewEmitterLayer.beginTime = CACurrentMediaTime()
+                self.confettiViewEmitterLayer.birthRate = 1.0
+
+                CATransaction.begin()
+                CATransaction.setCompletionBlock { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 1.0, removeOnCompletion: false, completion: { _ in
+                        self?.removeFromSuperview()
+                    })
+                }
+                self.confettiViewEmitterLayer.add(animation, forKey: nil)
+                CATransaction.commit()
+            }
+            
+            required init?(coder: NSCoder) {
+                fatalError("init(coder:) has not been implemented")
+            }
+            
+            private func setupConfettiEmitterLayer() {
+                let emitterWidth: CGFloat = self.bounds.width / 4.0
+                self.confettiViewEmitterLayer.emitterSize = CGSize(width: emitterWidth, height: 2.0)
+                self.confettiViewEmitterLayer.emitterShape = .line
+                self.confettiViewEmitterLayer.emitterPosition = CGPoint(x: direction ? 0.0 : (self.bounds.width - emitterWidth * 0.0), y: self.bounds.height)
+            }
+            
+            private func generateConfettiEmitterCells() -> [CAEmitterCell] {
+                var cells = [CAEmitterCell]()
+                
+                let cellImageCircle = generateFilledCircleImage(diameter: 4.0, color: .white)!.cgImage!
+                let cellImageLine = generateImage(CGSize(width: 4.0, height: 10.0), opaque: false, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.width)))
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - size.width), size: CGSize(width: size.width, height: size.width)))
+                    context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.width / 2.0), size: CGSize(width: size.width, height: size.height - size.width)))
+                })!.cgImage!
+                
+                for index in 0 ..< 4 {
+                    let cell = CAEmitterCell()
+                    cell.color = self.nextColor(i: index).cgColor
+                    cell.contents = index % 2 == 0 ? cellImageCircle : cellImageLine
+                    cell.birthRate = 60.0
+                    cell.lifetime = 14.0
+                    cell.lifetimeRange = 0
+                    if index % 2 == 0 {
+                        cell.scale = 0.8
+                        cell.scaleRange = 0.4
+                    } else {
+                        cell.scale = 0.5
+                        cell.scaleRange = 0.1
+                    }
+                    cell.velocity = -self.randomVelocity
+                    cell.velocityRange = abs(cell.velocity) * 0.3
+                    cell.yAcceleration = 3000.0
+                    cell.emissionLongitude = (self.direction ? -1.0 : 1.0) * (CGFloat.pi * 0.95)
+                    cell.emissionRange = 0.2
+                    cell.spin = 5.5
+                    cell.spinRange = 1.0
+                    
+                    cells.append(cell)
+                }
+                
+                return cells
+            }
+            
+            var randomNumber: Int {
+                let dimension = 4
+                return Int(arc4random_uniform(UInt32(dimension)))
+            }
+            
+            var randomVelocity: CGFloat {
+                let velocities: [CGFloat] = [100.0, 120.0, 130.0, 140.0]
+                return velocities[self.randomNumber] * 12.0
+            }
+            
+            private let colors: [UIColor] = ([
+                0x56CE6B,
+                0xCD89D0,
+                0x1E9AFF,
+                0xFF8724
+            ] as [UInt32]).map(UIColor.init(rgb:))
+            
+            private func nextColor(i: Int) -> UIColor {
+                return self.colors[i % self.colors.count]
+            }
+        }
+        
+        self.view.insertSubview(ConfettiView(frame: self.view.bounds, direction: true), aboveSubview: self.historyNode.view)
+        self.view.insertSubview(ConfettiView(frame: self.view.bounds, direction: false), aboveSubview: self.historyNode.view)
+    }
 }

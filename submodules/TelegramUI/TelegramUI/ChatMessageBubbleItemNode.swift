@@ -2895,4 +2895,53 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let isPreview = self.item?.presentationData.isPreview ?? false
         return self.contextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
+    
+    func animateQuizInvalidOptionSelected() {
+        let duration: Double = 0.5
+        let minScale: CGFloat = -0.03
+        let scaleAnimation0 = self.layer.makeAnimation(from: 0.0 as NSNumber, to: minScale as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let scaleAnimation1 = strongSelf.layer.makeAnimation(from: minScale as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, additive: true)
+            strongSelf.layer.add(scaleAnimation1, forKey: "quizInvalidScale")
+        })
+        self.layer.add(scaleAnimation0, forKey: "quizInvalidScale")
+        
+        let k = Float(UIView.animationDurationFactor())
+        var speed: Float = 1.0
+        if k != 0 && k != 1 {
+            speed = Float(1.0) / k
+        }
+        
+        let count = 4
+                
+        let animation = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        var values: [CGFloat] = []
+        values.append(0.0)
+        let rotationAmplitude: CGFloat = CGFloat.pi / 180.0 * 3.0
+        for i in 0 ..< count {
+            let sign: CGFloat = (i % 2 == 0) ? 1.0 : -1.0
+            let amplitude: CGFloat = rotationAmplitude
+            values.append(amplitude * sign)
+        }
+        values.append(0.0)
+        animation.values = values.map { ($0 as NSNumber) as AnyObject }
+        var keyTimes: [NSNumber] = []
+        for i in 0 ..< values.count {
+            if i == 0 {
+                keyTimes.append(0.0)
+            } else if i == values.count - 1 {
+                keyTimes.append(1.0)
+            } else {
+                keyTimes.append((Double(i) / Double(values.count - 1)) as NSNumber)
+            }
+        }
+        animation.keyTimes = keyTimes
+        animation.speed = speed
+        animation.duration = duration
+        animation.isAdditive = true
+        
+        self.layer.add(animation, forKey: "quizInvalidRotation")
+    }
 }
