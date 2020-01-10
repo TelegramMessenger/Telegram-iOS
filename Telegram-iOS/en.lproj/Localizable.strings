@@ -5246,31 +5246,31 @@ Any member of this group will be able to see messages in the channel.";
 
 "Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";
 
-"CreatePoll.Anonymous" = "Anonymous Votes";
+"CreatePoll.Anonymous" = "Anonymous Voting";
 "CreatePoll.MultipleChoice" = "Multiple Choice";
-"CreatePoll.MultipleChoiceQuizAlert" = "Quiz can have only one correct answer.";
+"CreatePoll.MultipleChoiceQuizAlert" = "A quiz has one correct answer.";
 "CreatePoll.Quiz" = "Quiz Mode";
-"CreatePoll.QuizInfo" = "Quiz has only one correct answer. Users can't revoke their votes.";
-"CreatePoll.QuizTip" = "Tap to select the correct option";
+"CreatePoll.QuizInfo" = "A quiz has one correct answer. Users can't revoke their answers.";
+"CreatePoll.QuizTip" = "Tap to choose the correct answer";
 
-"MessagePoll.LabelPoll" = "Poll";
+"MessagePoll.LabelPoll" = "Public Poll";
 "MessagePoll.LabelAnonymousQuiz" = "Anonymous Quiz";
 "MessagePoll.LabelQuiz" = "Quiz";
 "MessagePoll.SubmitVote" = "Submit Vote";
 "MessagePoll.ViewResults" = "View Results";
-"MessagePoll.QuizNoUsers" = "No one played";
-"MessagePoll.QuizCount_0" = "%@ played";
-"MessagePoll.QuizCount_1" = "1 played";
-"MessagePoll.QuizCount_2" = "2 played";
-"MessagePoll.QuizCount_3_10" = "%@ played";
-"MessagePoll.QuizCount_many" = "%@ played";
-"MessagePoll.QuizCount_any" = "%@ played";
+"MessagePoll.QuizNoUsers" = "Nobody answered yet";
+"MessagePoll.QuizCount_0" = "%@ answered";
+"MessagePoll.QuizCount_1" = "1 answered";
+"MessagePoll.QuizCount_2" = "2 answered";
+"MessagePoll.QuizCount_3_10" = "%@ answered";
+"MessagePoll.QuizCount_many" = "%@ answered";
+"MessagePoll.QuizCount_any" = "%@ answered";
 
 "PollResults.Title" = "Poll Results";
 "PollResults.Collapse" = "COLLAPSE";
-"PollResults.ShowMore_1" = "Show %@ More Voter";
-"PollResults.ShowMore_any" = "Show %@ More Voters";
+"PollResults.ShowMore_1" = "Show %@ More Person";
+"PollResults.ShowMore_any" = "Show %@ More People";
 
 "Conversation.StopQuiz" = "Stop Quiz";
-"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to participate in it anymore. This action cannot be undone.";
+"Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.;
 "Conversation.StopQuizConfirmation" = "Stop Quiz";
