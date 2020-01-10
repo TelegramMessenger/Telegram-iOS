@@ -10,7 +10,7 @@ import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
 
-private let collapsedResultCount: Int = 1
+private let collapsedResultCount: Int = 10
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
