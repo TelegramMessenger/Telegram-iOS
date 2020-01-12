@@ -391,6 +391,8 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                         strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
+                    let bottomStripeWasHidden = strongSelf.bottomStripeNode.isHidden
+                    
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
                     var hasBottomCorners = false
@@ -405,6 +407,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     switch neighbors.bottom {
                     case .sameSection(false):
                         bottomStripeInset = leftInset
+                        strongSelf.bottomStripeNode.isHidden = false
                     default:
                         bottomStripeInset = 0.0
                         hasBottomCorners = true
@@ -418,7 +421,17 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                         strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.contentSize.width - bottomStripeInset, height: separatorHeight))
+                        let previousX = strongSelf.bottomStripeNode.frame.minX
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.contentSize.width, height: separatorHeight))
+                        if !bottomStripeWasHidden {
+                            transition.animatePositionAdditive(node: strongSelf.bottomStripeNode, offset: CGPoint(x: previousX - strongSelf.bottomStripeNode.frame.minX, y: 0.0))
+                        }
+                    } else {
+                        let previousX = strongSelf.bottomStripeNode.frame.minX
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: strongSelf.bottomStripeNode.frame.minY), size: CGSize(width: layout.contentSize.width, height: separatorHeight))
+                        if !bottomStripeWasHidden {
+                            transition.animatePositionAdditive(node: strongSelf.bottomStripeNode, offset: CGPoint(x: previousX - strongSelf.bottomStripeNode.frame.minX, y: 0.0))
+                        }
                     }
                     
                     let _ = reorderSizeAndApply.1(layout.contentSize.height, displayTextLimit, transition)

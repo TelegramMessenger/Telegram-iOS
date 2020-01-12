@@ -197,12 +197,12 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     
     public var willScrollToTop: (() -> Void)?
     
-    public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Void) {
+    public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Signal<Bool, NoError>) {
         self.reorderEntry = { a, b, list in
-            f(a, b, list.map { $0 as! T })
+            return f(a, b, list.map { $0 as! T })
         }
     }
-    private var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)? {
+    private var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode).reorderEntry = self.reorderEntry

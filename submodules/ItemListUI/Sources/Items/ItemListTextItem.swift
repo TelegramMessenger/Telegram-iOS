@@ -24,13 +24,15 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
     public let isAlwaysPlain: Bool = true
+    public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks) {
+    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
         self.style = style
+        self.tag = tag
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -70,11 +72,15 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListTextItemNode: ListViewItemNode {
+public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     private let titleNode: TextNode
     private let activateArea: AccessibilityAreaNode
     
     private var item: ItemListTextItem?
+    
+    public var tag: ItemListItemTag? {
+        return self.item?.tag
+    }
     
     public init() {
         self.titleNode = TextNode()
@@ -111,6 +117,7 @@ public class ItemListTextItemNode: ListViewItemNode {
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             let largeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseHeaderFontSize * 2.0))
+            let semiLargeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseHeaderFontSize * 1.2))
             let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
             let attributedText: NSAttributedString
@@ -118,7 +125,13 @@ public class ItemListTextItemNode: ListViewItemNode {
             case let .plain(text):
                 attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.list.freeTextColor)
             case let .large(text):
-                attributedText = NSAttributedString(string: text, font: largeTitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                let font: UIFont
+                if params.width >= 330.0 {
+                    font = largeTitleFont
+                } else {
+                    font = semiLargeTitleFont
+                }
+                attributedText = NSAttributedString(string: text, font: font, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
                 attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)

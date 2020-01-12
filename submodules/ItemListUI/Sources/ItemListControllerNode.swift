@@ -217,7 +217,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
-    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)?
+    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)?
     public var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
@@ -269,7 +269,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.listNode.reorderItem = { [weak self] fromIndex, toIndex, opaqueTransactionState in
             if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
                 if fromIndex >= 0 && fromIndex < mergedEntries.count && toIndex >= 0 && toIndex < mergedEntries.count {
-                    reorderEntry(fromIndex, toIndex, mergedEntries)
+                    return reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
             return .single(false)

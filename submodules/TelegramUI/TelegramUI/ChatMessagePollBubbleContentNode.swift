@@ -163,6 +163,7 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
             self.animatedColor = animatedColor
             updated = true
         }
+        let wasAnimating = self.isAnimating
         if isAnimating != self.isAnimating {
             let previous = self.shouldBeAnimating
             self.isAnimating = isAnimating
@@ -171,7 +172,7 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                 self.updateAnimating()
             }
         }
-        if isSelectable {
+        if isSelectable && !isAnimating {
             if self.checkNode == nil {
                 updated = true
                 let checkNode = CheckNode(strokeColor: staticColor, fillColor: animatedColor, foregroundColor: foregroundColor, style: .plain)
@@ -183,7 +184,13 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
         } else if let checkNode = self.checkNode {
             updated = true
             self.checkNode = nil
-            checkNode.removeFromSupernode()
+            if wasAnimating != self.isAnimating {
+                checkNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak checkNode] _ in
+                    checkNode?.removeFromSupernode()
+                })
+            } else {
+                checkNode.removeFromSupernode()
+            }
         }
         if updated {
             self.setNeedsDisplay()
@@ -487,6 +494,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                         
                         let strokeColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground
+                        if strokeColor.alpha.isZero {
+                            context.setBlendMode(.copy)
+                        }
                         context.setStrokeColor(strokeColor.cgColor)
                         context.setLineWidth(1.5)
                         context.setLineJoin(.round)
@@ -1065,7 +1075,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     var optionNodesSizesAndApply: [(CGSize, (Bool, Bool) -> ChatMessagePollOptionNode)] = []
                     for finalizeLayout in pollOptionsFinalizeLayouts {
-                        let result = finalizeLayout(boundingWidth -  layoutConstants.bubble.borderInset * 2.0)
+                        let result = finalizeLayout(boundingWidth - layoutConstants.bubble.borderInset * 2.0)
                         resultSize.width = max(resultSize.width, result.0.width + layoutConstants.bubble.borderInset * 2.0)
                         resultSize.height += result.0.height
                         optionNodesSizesAndApply.append(result)
@@ -1076,9 +1086,18 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     let votersBottomSpacing: CGFloat = 11.0
                     resultSize.height += optionsVotersSpacing + votersLayout.size.height + votersBottomSpacing
                     
+                    let buttonSubmitInactiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitInactiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitInactiveTextLayout.size)
+                    let buttonSubmitActiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitActiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitActiveTextLayout.size)
+                    let buttonViewResultsTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonViewResultsTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonViewResultsTextLayout.size)
+                    
                     var adjustedStatusFrame: CGRect?
                     if let statusFrame = statusFrame {
-                        adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: resultSize.height - statusFrame.size.height - 6.0), size: statusFrame.size)
+                        var localStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: resultSize.height - statusFrame.size.height - 6.0), size: statusFrame.size)
+                        if localStatusFrame.minX <= buttonViewResultsTextFrame.maxX || localStatusFrame.minX <= buttonSubmitActiveTextFrame.maxX {
+                            localStatusFrame.origin.y += 10.0
+                            resultSize.height += 10.0
+                        }
+                        adjustedStatusFrame = localStatusFrame
                     }
                     
                     return (resultSize, { [weak self] animation, synchronousLoad in
@@ -1200,13 +1219,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             let _ = buttonSubmitInactiveTextApply()
-                            strongSelf.buttonSubmitInactiveTextNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitInactiveTextLayout.size.width) / 2.0), y: verticalOffset + optionsButtonSpacing), size: buttonSubmitInactiveTextLayout.size)
+                            strongSelf.buttonSubmitInactiveTextNode.frame = buttonSubmitInactiveTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
                             
                             let _ = buttonSubmitActiveTextApply()
-                            strongSelf.buttonSubmitActiveTextNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitActiveTextLayout.size.width) / 2.0), y: verticalOffset + optionsButtonSpacing), size: buttonSubmitActiveTextLayout.size)
+                            strongSelf.buttonSubmitActiveTextNode.frame = buttonSubmitActiveTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
                             
                             let _ = buttonViewResultsTextApply()
-                            strongSelf.buttonViewResultsTextNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonViewResultsTextLayout.size.width) / 2.0), y: verticalOffset + optionsButtonSpacing), size: buttonViewResultsTextLayout.size)
+                            strongSelf.buttonViewResultsTextNode.frame = buttonViewResultsTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
                             
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: resultSize.width, height: 44.0))
                             
@@ -1224,10 +1243,16 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         var hasSelection = false
+        switch poll.kind {
+        case .poll(true):
+            hasSelection = true
+        default:
+            break
+        }
+        
         var hasSelectedOptions = false
         for optionNode in self.optionNodes {
             if let isChecked = optionNode.radioNode?.isChecked {
-                hasSelection = true
                 if isChecked {
                     hasSelectedOptions = true
                 }
@@ -1241,7 +1266,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        if hasSelection && poll.pollId.namespace == Namespaces.Media.CloudPoll {
+        if hasSelection && !hasResults && poll.pollId.namespace == Namespaces.Media.CloudPoll {
             self.votersNode.isHidden = true
             self.buttonViewResultsTextNode.isHidden = true
             self.buttonSubmitInactiveTextNode.isHidden = hasSelectedOptions

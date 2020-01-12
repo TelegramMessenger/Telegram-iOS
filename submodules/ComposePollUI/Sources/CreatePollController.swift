@@ -197,6 +197,7 @@ private enum CreatePollEntryId: Hashable {
 private enum CreatePollEntryTag: Equatable, ItemListItemTag {
     case text
     case option(Int)
+    case optionsInfo
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreatePollEntryTag {
@@ -333,7 +334,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
                 arguments.toggleOptionSelected(id)
             }, tag: CreatePollEntryTag.option(id))
         case let .optionsInfo(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, tag: CreatePollEntryTag.optionsInfo)
         case let .anonymousVotes(text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateAnonymous(value)
@@ -421,6 +422,7 @@ public func createPollController(context: AccountContext, peer: Peer, completion
     var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
     var displayQuizTooltipImpl: ((Bool) -> Void)?
+    var attemptNavigationImpl: (() -> Bool)?
     
     let actionsDisposable = DisposableSet()
     
@@ -714,20 +716,7 @@ public func createPollController(context: AccountContext, peer: Peer, completion
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-            let state = stateValue.with { $0 }
-            var hasNonEmptyOptions = false
-            for i in 0 ..< state.options.count {
-                let optionText = state.options[i].item.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !optionText.isEmpty {
-                    hasNonEmptyOptions = true
-                }
-            }
-            if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-                    dismissImpl?()
-                })]), nil)
-            } else {
+            if let attemptNavigationImpl = attemptNavigationImpl, attemptNavigationImpl() {
                 dismissImpl?()
             }
         })
@@ -797,14 +786,23 @@ public func createPollController(context: AccountContext, peer: Peer, completion
             
             var resultItemNode: ListViewItemNode?
             let state = stateValue.with({ $0 })
+            var isLast = false
             if state.options.last?.item.id == id {
+                isLast = true
             }
             if resultItemNode == nil {
                 let _ = controller.frameForItemNode({ itemNode in
-                    if let itemNode = itemNode as? ItemListItemNode {
-                        if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.option(id)) {
-                            resultItemNode = itemNode as? ListViewItemNode
-                            return true
+                    if let itemNode = itemNode as? ItemListItemNode, let tag = itemNode.tag {
+                        if isLast {
+                            if tag.isEqual(to: CreatePollEntryTag.optionsInfo) {
+                                resultItemNode = itemNode as? ListViewItemNode
+                                return true
+                            }
+                        } else {
+                            if tag.isEqual(to: CreatePollEntryTag.option(id)) {
+                                resultItemNode = itemNode as? ListViewItemNode
+                                return true
+                            }
                         }
                     }
                     return false
@@ -850,10 +848,10 @@ public func createPollController(context: AccountContext, peer: Peer, completion
             }
         }
     }
-    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Void in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
         guard case let .option(option) = fromEntry else {
-            return
+            return .single(false)
         }
         let id = option.id
         var referenceId: Int?
@@ -873,13 +871,18 @@ public func createPollController(context: AccountContext, peer: Peer, completion
         } else {
             afterAll = true
         }
+        
+        var didReorder = false
+        
         updateState { state in
             var state = state
             var options = state.options
             var reorderOption: OrderedLinkedListItem<CreatePollControllerOption>?
+            var previousIndex: Int?
             for i in 0 ..< options.count {
                 if options[i].item.id == id {
                     reorderOption = options[i]
+                    previousIndex = i
                     options.remove(at: i)
                     break
                 }
@@ -890,8 +893,10 @@ public func createPollController(context: AccountContext, peer: Peer, completion
                     for i in 0 ..< options.count - 1 {
                         if options[i].item.id == referenceId {
                             if fromIndex < toIndex {
+                                didReorder = previousIndex != i + 1
                                 options.insert(reorderOption.item, at: i + 1, id: reorderOption.ordering.id)
                             } else {
+                                didReorder = previousIndex != i
                                 options.insert(reorderOption.item, at: i, id: reorderOption.ordering.id)
                             }
                             inserted = true
@@ -900,17 +905,22 @@ public func createPollController(context: AccountContext, peer: Peer, completion
                     }
                     if !inserted {
                         if options.count >= 2 {
+                            didReorder = previousIndex != options.count - 1
                             options.insert(reorderOption.item, at: options.count - 1, id: reorderOption.ordering.id)
                         } else {
+                            didReorder = previousIndex != options.count
                             options.append(reorderOption.item, id: reorderOption.ordering.id)
                         }
                     }
                 } else if beforeAll {
+                    didReorder = previousIndex != 0
                     options.insert(reorderOption.item, at: 0, id: reorderOption.ordering.id)
                 } else if afterAll {
                     if options.count >= 2 {
+                        didReorder = previousIndex != options.count - 1
                         options.insert(reorderOption.item, at: options.count - 1, id: reorderOption.ordering.id)
                     } else {
+                        didReorder = previousIndex != options.count
                         options.append(reorderOption.item, id: reorderOption.ordering.id)
                     }
                 }
@@ -918,7 +928,34 @@ public func createPollController(context: AccountContext, peer: Peer, completion
             }
             return state
         }
+        
+        return .single(didReorder)
     })
+    attemptNavigationImpl = {
+        let state = stateValue.with { $0 }
+        var hasNonEmptyOptions = false
+        for i in 0 ..< state.options.count {
+            let optionText = state.options[i].item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !optionText.isEmpty {
+                hasNonEmptyOptions = true
+            }
+        }
+        if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                dismissImpl?()
+            })]), nil)
+            return false
+        } else {
+            return true
+        }
+    }
+    controller.attemptNavigation = { _ in
+        if let attemptNavigationImpl = attemptNavigationImpl, attemptNavigationImpl() {
+            return true
+        }
+        return false
+    }
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
     controller.experimentalSnapScrollToItem = true

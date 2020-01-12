@@ -435,6 +435,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func endReordering() {
+        self.itemReorderingTimer?.invalidate()
+        self.itemReorderingTimer = nil
+        self.lastReorderingOffset = nil
+        
         let f: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -467,11 +471,32 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func checkItemReordering() {
-        if let reorderNode = self.reorderNode, let reorderItemNode = reorderNode.itemNode, let reorderItemIndex = reorderItemNode.index, reorderItemNode.supernode == self {
-            guard let verticalTopOffset = reorderNode.currentOffset() else {
-                return
-            }
+    private var itemReorderingTimer: SwiftSignalKit.Timer?
+    private var lastReorderingOffset: CGFloat?
+    
+    private func checkItemReordering(force: Bool = false) {
+        guard let reorderNode = self.reorderNode, let verticalTopOffset = reorderNode.currentOffset() else {
+            return
+        }
+        
+        if let lastReorderingOffset = self.lastReorderingOffset, abs(lastReorderingOffset - verticalTopOffset) < 4.0 && !force {
+            return
+        }
+        
+        self.itemReorderingTimer?.invalidate()
+        self.itemReorderingTimer = nil
+        
+        self.lastReorderingOffset = verticalTopOffset
+        
+        if !force {
+            self.itemReorderingTimer = SwiftSignalKit.Timer(timeout: 0.025, repeat: false, completion: { [weak self] in
+                self?.checkItemReordering(force: true)
+            }, queue: Queue.mainQueue())
+            self.itemReorderingTimer?.start()
+            return
+        }
+        
+        if let reorderItemNode = reorderNode.itemNode, let reorderItemIndex = reorderItemNode.index, reorderItemNode.supernode == self {
             let verticalOffset = verticalTopOffset
             var closestIndex: (Int, CGFloat)?
             for i in 0 ..< self.itemNodes.count {
