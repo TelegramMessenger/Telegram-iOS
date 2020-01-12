@@ -116,8 +116,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             var bottomInset: CGFloat = 7.0
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            let largeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseHeaderFontSize * 2.0))
-            let semiLargeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseHeaderFontSize * 1.2))
+            let largeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize))
             let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
             let attributedText: NSAttributedString
@@ -125,13 +124,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             case let .plain(text):
                 attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.list.freeTextColor)
             case let .large(text):
-                let font: UIFont
-                if params.width >= 330.0 {
-                    font = largeTitleFont
-                } else {
-                    font = semiLargeTitleFont
-                }
-                attributedText = NSAttributedString(string: text, font: font, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                attributedText = NSAttributedString(string: text, font: largeTitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
                 attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)

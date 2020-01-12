@@ -124,9 +124,40 @@ public func requestClosePoll(postbox: Postbox, network: Network, stateManager: A
     }
 }
 
+private let cachedPollResultsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 20, highWaterItemCount: 40)
+
+final class CachedPollOptionResult: PostboxCoding {
+    let peerIds: [PeerId]
+    let count: Int32
+    
+    public static func key(pollId: MediaId, optionOpaqueIdentifier: Data) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8 + optionOpaqueIdentifier.count)
+        key.setInt32(0, value: pollId.namespace)
+        key.setInt64(4, value: pollId.id)
+        key.setData(4 + 8, value: optionOpaqueIdentifier)
+        return key
+    }
+    
+    public init(peerIds: [PeerId], count: Int32) {
+        self.peerIds = peerIds
+        self.count = count
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
+        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        encoder.encodeInt32(self.count, forKey: "count")
+    }
+}
+
 private final class PollResultsOptionContext {
     private let queue: Queue
     private let account: Account
+    private let pollId: MediaId
     private let messageId: MessageId
     private let opaqueIdentifier: Data
     private let disposable = MetaDisposable()
@@ -136,15 +167,46 @@ private final class PollResultsOptionContext {
     private var nextOffset: String?
     private var results: [RenderedPeer] = []
     private var count: Int
+    private var populateCache: Bool = true
     
     let state = Promise<PollResultsOptionState>()
     
-    init(queue: Queue, account: Account, messageId: MessageId, opaqueIdentifier: Data, count: Int) {
+    init(queue: Queue, account: Account, pollId: MediaId, messageId: MessageId, opaqueIdentifier: Data, count: Int) {
         self.queue = queue
         self.account = account
+        self.pollId = pollId
         self.messageId = messageId
         self.opaqueIdentifier = opaqueIdentifier
         self.count = count
+        
+        self.isLoadingMore = true
+        self.disposable.set((account.postbox.transaction { transaction -> [RenderedPeer]? in
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier))) as? CachedPollOptionResult
+            if let cachedResult = cachedResult, Int(cachedResult.count) == count {
+                var result: [RenderedPeer] = []
+                for peerId in cachedResult.peerIds {
+                    if let peer = transaction.getPeer(peerId) {
+                        result.append(RenderedPeer(peer: peer))
+                    } else {
+                        return nil
+                    }
+                }
+                return result
+            } else {
+                return nil
+            }
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeers in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isLoadingMore = false
+            if let cachedPeers = cachedPeers {
+                strongSelf.results = cachedPeers
+                strongSelf.hasLoadedOnce = true
+            }
+            strongSelf.loadMore()
+        }))
     }
     
     deinit {
@@ -156,10 +218,12 @@ private final class PollResultsOptionContext {
             return
         }
         self.isLoadingMore = true
+        let pollId = self.pollId
         let messageId = self.messageId
         let opaqueIdentifier = self.opaqueIdentifier
         let account = self.account
         let nextOffset = self.nextOffset
+        let populateCache = self.populateCache
         self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
             return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
         }
@@ -193,12 +257,15 @@ private final class PollResultsOptionContext {
                                     }
                                 }
                             }
+                            if populateCache {
+                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: CachedPollOptionResult(peerIds: resultPeers.map { $0.peerId }, count: count), collectionSpec: cachedPollResultsCollectionSpec)
+                            }
                             return (resultPeers, Int(count), nextOffset)
                         }
                     }
                 }
                 #if DEBUG
-                return signal |> delay(4.0, queue: .concurrentDefaultQueue())
+                //return signal |> delay(4.0, queue: .concurrentDefaultQueue())
                 #endif
                 return signal
             } else {
@@ -208,6 +275,10 @@ private final class PollResultsOptionContext {
         |> deliverOn(self.queue)).start(next: { [weak self] peers, updatedCount, nextOffset in
             guard let strongSelf = self else {
                 return
+            }
+            if strongSelf.populateCache {
+                strongSelf.populateCache = false
+                strongSelf.results.removeAll()
             }
             var existingIds = Set(strongSelf.results.map { $0.peerId })
             for peer in peers {
@@ -266,7 +337,7 @@ private final class PollResultsContextImpl {
                     }
                 }
             }
-            self.optionContexts[option.opaqueIdentifier] = PollResultsOptionContext(queue: self.queue, account: account, messageId: messageId, opaqueIdentifier: option.opaqueIdentifier, count: count)
+            self.optionContexts[option.opaqueIdentifier] = PollResultsOptionContext(queue: self.queue, account: account, pollId: poll.pollId, messageId: messageId, opaqueIdentifier: option.opaqueIdentifier, count: count)
         }
         
         self.state.set(combineLatest(queue: self.queue, self.optionContexts.map { (opaqueIdentifier, context) -> Signal<(Data, PollResultsOptionState), NoError> in

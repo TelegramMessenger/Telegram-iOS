@@ -396,7 +396,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     }
     
     var canBePublic = true
-    if let channel = peer as? TelegramChannel, case .broadcast = channel.info, let username = channel.username, !username.isEmpty {
+    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         canBePublic = false
     }
     

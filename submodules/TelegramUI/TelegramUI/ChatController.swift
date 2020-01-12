@@ -1550,12 +1550,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
                         if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
                             found = true
+                            if strongSelf.selectPollOptionFeedback == nil {
+                                strongSelf.selectPollOptionFeedback = HapticFeedback()
+                            }
+                            strongSelf.selectPollOptionFeedback?.error()
                             itemNode.animateQuizInvalidOptionSelected()
                         }
                     }
                     return;
                 }
                 if false {
+                    if strongSelf.selectPollOptionFeedback == nil {
+                        strongSelf.selectPollOptionFeedback = HapticFeedback()
+                    }
+                    strongSelf.selectPollOptionFeedback?.success()
                     strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
                     return;
                 }
@@ -1582,18 +1590,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     switch resultPoll.kind {
                     case .poll:
-                        break
+                        if strongSelf.selectPollOptionFeedback == nil {
+                            strongSelf.selectPollOptionFeedback = HapticFeedback()
+                        }
+                        strongSelf.selectPollOptionFeedback?.success()
                     case .quiz:
                         if let voters = resultPoll.results.voters {
                             for voter in voters {
                                 if voter.selected {
                                     if voter.isCorrect {
+                                        if strongSelf.selectPollOptionFeedback == nil {
+                                            strongSelf.selectPollOptionFeedback = HapticFeedback()
+                                        }
+                                        strongSelf.selectPollOptionFeedback?.success()
+                                        
                                         strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
                                     } else {
                                         var found = false
                                         strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
                                             if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
                                                 found = true
+                                                if strongSelf.selectPollOptionFeedback == nil {
+                                                    strongSelf.selectPollOptionFeedback = HapticFeedback()
+                                                }
+                                                strongSelf.selectPollOptionFeedback?.error()
+                                                
                                                 itemNode.animateQuizInvalidOptionSelected()
                                             }
                                         }
@@ -1617,10 +1638,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if controllerInteraction.pollActionState.pollMessageIdsInProgress.removeValue(forKey: id) != nil {
                         strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
                     }
-                    if strongSelf.selectPollOptionFeedback == nil {
-                        strongSelf.selectPollOptionFeedback = HapticFeedback()
-                    }
-                    strongSelf.selectPollOptionFeedback?.success()
                 }), forKey: id)
             }
         }, requestOpenMessagePollResults: { [weak self] messageId, pollId in

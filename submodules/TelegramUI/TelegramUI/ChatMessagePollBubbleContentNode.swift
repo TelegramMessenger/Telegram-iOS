@@ -1260,9 +1260,18 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         var hasResults = false
-        if let totalVoters = poll.results.totalVoters, totalVoters != 0 {
-            if let _ = poll.results.voters {
-                hasResults = true
+        if poll.isClosed {
+            hasResults = true
+        } else {
+            if let totalVoters = poll.results.totalVoters, totalVoters != 0 {
+                if let voters = poll.results.voters {
+                    for voter in voters {
+                        if voter.selected {
+                            hasResults = true
+                            break
+                        }
+                    }
+                }
             }
         }
         

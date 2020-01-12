@@ -66,7 +66,7 @@ private final class ShimmerEffectNode: ASDisplayNode {
         self.currentBackgroundColor = backgroundColor
         self.currentForegroundColor = foregroundColor
         
-        self.imageNode.image = generateImage(CGSize(width: 8.0, height: 100.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
+        self.imageNode.image = generateImage(CGSize(width: 4.0, height: 320.0), opaque: true, scale: 1.0, rotatedContext: { size, context in
             context.setFillColor(backgroundColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
             
@@ -1288,7 +1288,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
     private let actionTextNode: ImmediateTextNode
     private let actionButton: HighlightableButtonNode
     
-    private var stickDistanceFactor: CGFloat = 0.0
+    private var stickDistanceFactor: CGFloat?
     
     public init(theme: PresentationTheme, strings: PresentationStrings, text: String, actionTitle: String?, action: (() -> Void)?) {
         self.theme = theme
@@ -1305,6 +1305,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
+        self.separatorNode.alpha = 0.0
         
         let titleFont = Font.regular(13.0)
         
@@ -1391,6 +1392,20 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
     }
     
     override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.snappedBackgroundNode, alpha: (1.0 - factor) * 0.0 + factor * 1.0)
+        if self.stickDistanceFactor == factor {
+            return
+        }
+        self.stickDistanceFactor = factor
+        if let (size, leftInset, _) = self.validLayout {
+            if leftInset.isZero {
+                transition.updateAlpha(node: self.separatorNode, alpha: 1.0)
+                transition.updateAlpha(node: self.snappedBackgroundNode, alpha: (1.0 - factor) * 0.0 + factor * 1.0)
+            } else {
+                let distance = factor * size.height
+                let alpha = abs(distance) / 16.0
+                transition.updateAlpha(node: self.separatorNode, alpha: max(0.0, min(1.0, alpha)))
+                transition.updateAlpha(node: self.snappedBackgroundNode, alpha: 0.0)
+            }
+        }
     }
 }
