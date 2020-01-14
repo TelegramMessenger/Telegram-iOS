@@ -1559,7 +1559,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return;
                 }
-                if false {
+                if true {
                     if strongSelf.selectPollOptionFeedback == nil {
                         strongSelf.selectPollOptionFeedback = HapticFeedback()
                     }

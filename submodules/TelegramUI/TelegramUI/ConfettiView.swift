@@ -80,7 +80,7 @@ final class ConfettiView: UIView {
         
         let originXRange = 0 ..< Int(frame.width)
         let originYRange = Int(-frame.height) ..< Int(0)
-        let topMassRange: Range<Float> = 20.0 ..< 30.0
+        let topMassRange: Range<Float> = 40.0 ..< 50.0
         let velocityYRange = Float(3.0) ..< Float(5.0)
         let angularVelocityRange = Float(1.0) ..< Float(6.0)
         let sizeVariation = Float(0.8) ..< Float(1.6)
@@ -93,15 +93,15 @@ final class ConfettiView: UIView {
             self.layer.addSublayer(particle)
         }
         
-        let sideMassRange: Range<Float> = 80.0 ..< 90.0
+        let sideMassRange: Range<Float> = 100.0 ..< 110.0
         let sideOriginYBase: Float = Float(frame.size.height * 8.5 / 10.0)
         let sideOriginYVariation: Float = Float(frame.size.height / 12.0)
         let sideOriginYRange = Float(sideOriginYBase - sideOriginYVariation) ..< Float(sideOriginYBase + sideOriginYVariation)
         let sideOriginXRange = Float(0.0) ..< Float(100.0)
         let sideOriginVelocityValueRange = Float(1.1) ..< Float(1.6)
-        let sideOriginVelocityValueScaling: Float = 900.0
-        let sideOriginVelocityBase: Float = Float.pi / 2.0 + atanf(Float(CGFloat(sideOriginYBase) / (frame.size.width * 0.5)))
-        let sideOriginVelocityVariation: Float = 0.25
+        let sideOriginVelocityValueScaling: Float = 1200.0
+        let sideOriginVelocityBase: Float = Float.pi / 2.0 + atanf(Float(CGFloat(sideOriginYBase) / (frame.size.width * 0.8)))
+        let sideOriginVelocityVariation: Float = 0.2
         let sideOriginVelocityAngleRange = Float(sideOriginVelocityBase - sideOriginVelocityVariation) ..< Float(sideOriginVelocityBase + sideOriginVelocityVariation)
         
         for sideIndex in 0 ..< 2 {
@@ -142,14 +142,14 @@ final class ConfettiView: UIView {
         let currentTime = self.localTime
         let dt: Float = 1.0 / 60.0
         let slowdownDt: Float
-        let slowdownStart: Float = 0.2
-        let slowdownDuration: Float = 1.0
+        let slowdownStart: Float = 0.27
+        let slowdownDuration: Float = 0.9
         let damping: Float
         if currentTime >= slowdownStart && currentTime <= slowdownStart + slowdownDuration {
             let slowdownTimestamp: Float = currentTime - slowdownStart
             
             let slowdownRampInDuration: Float = 0.15
-            let slowdownRampOutDuration: Float = 0.6
+            let slowdownRampOutDuration: Float = 0.5
             let slowdownTransition: Float
             if slowdownTimestamp < slowdownRampInDuration {
                 slowdownTransition = slowdownTimestamp / slowdownRampInDuration
@@ -162,7 +162,7 @@ final class ConfettiView: UIView {
             
             let slowdownFactor: Float = 0.3 * slowdownTransition + 1.0 * (1.0 - slowdownTransition)
             slowdownDt = dt * slowdownFactor
-            let dampingFactor: Float = 0.97 * slowdownTransition + 1.0 * (1.0 - slowdownTransition)
+            let dampingFactor: Float = 0.94 * slowdownTransition + 1.0 * (1.0 - slowdownTransition)
             damping = dampingFactor
         } else {
             slowdownDt = dt
