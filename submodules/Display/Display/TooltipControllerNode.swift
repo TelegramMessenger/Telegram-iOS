@@ -126,6 +126,10 @@ final class TooltipControllerNode: ASDisplayNode {
         })
     }
     
+    func hide() {
+        self.containerNode.alpha = 0.0
+    }
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
             var eventIsPresses = false

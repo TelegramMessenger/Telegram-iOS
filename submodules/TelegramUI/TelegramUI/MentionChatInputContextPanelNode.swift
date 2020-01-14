@@ -62,6 +62,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
     private var currentEntries: [MentionChatInputContextPanelEntry]?
     
+    private var currentResults: [Peer] = []
     private var revealedPeerId: PeerId?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
@@ -90,6 +91,8 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     func updateResults(_ results: [Peer]) {
+        self.currentResults = results
+        
         var entries: [MentionChatInputContextPanelEntry] = []
         var index = 0
         var peerIdSet = Set<Int64>()
@@ -99,7 +102,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 continue
             }
             peerIdSet.insert(peerId)
-            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, revealed: revealedPeerId == peer.id))
+            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer, revealed: self.revealedPeerId == peer.id))
             index += 1
         }
         self.updateToEntries(entries: entries, forceUpdate: false)
@@ -109,7 +112,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         let firstTime = self.currentEntries == nil
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: presentationData, inverted: self.mode == .search, forceUpdate: forceUpdate, setPeerIdRevealed: { [weak self] peerId in
-            
+            if let strongSelf = self {
+                strongSelf.revealedPeerId = peerId
+                strongSelf.updateResults(strongSelf.currentResults)
+            }
         }, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
@@ -157,6 +163,10 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         }, removeRequested: { [weak self] peerId in
             if let strongSelf = self {
                 let _ = removeRecentlyUsedInlineBot(account: strongSelf.context.account, peerId: peerId).start()
+                
+                strongSelf.revealedPeerId = nil
+                strongSelf.currentResults = strongSelf.currentResults.filter { $0.id != peerId }
+                strongSelf.updateResults(strongSelf.currentResults)
             }
         })
         self.currentEntries = entries
