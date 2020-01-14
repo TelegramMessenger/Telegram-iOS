@@ -55,7 +55,6 @@ extension TelegramWallpaper: Codable {
                         }
                         
                         if components.count >= 2 && components.count <= 5 && [6, 8].contains(components[0].count) && !optionKeys.contains(components[0]) && [6, 8].contains(components[1].count) && !optionKeys.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
-                            
                             var rotation: Int32?
                             if components.count > 2, components[2].count <= 3, let value = Int32(components[2]) {
                                 if value >= 0 && value < 360 {

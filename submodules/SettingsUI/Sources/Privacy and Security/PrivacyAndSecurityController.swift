@@ -482,12 +482,19 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let updateHasTwoStepAuth: () -> Void = {
         let signal = twoStepVerificationConfiguration(account: context.account)
         |> map { value -> TwoStepVerificationAccessConfiguration? in
-            return  TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
+            return TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
         }
         |> deliverOnMainQueue
         updateTwoStepAuthDisposable.set(
             signal.start(next: { value in
                 twoStepAuthDataValue.set(.single(value))
+                if let value = value {
+                    if case .set = value {
+                        updatedHasTwoStepAuth?(true)
+                    } else {
+                        updatedHasTwoStepAuth?(false)
+                    }
+                }
             })
         )
     }
