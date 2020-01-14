@@ -1852,6 +1852,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             })
+        }, openPollCreation: { [weak self] isQuiz in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentPollCreation(isQuiz: isQuiz)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -6115,9 +6120,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func presentPollCreation() {
+    private func presentPollCreation(isQuiz: Bool? = nil) {
         if case .peer = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, completion: { [weak self] message in
+            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, isQuiz: isQuiz, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }

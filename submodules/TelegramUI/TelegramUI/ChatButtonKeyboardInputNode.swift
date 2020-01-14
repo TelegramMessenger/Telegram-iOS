@@ -211,6 +211,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     if let message = self.message {
                         self.controllerInteraction.requestMessageActionUrlAuth(url, message.id, buttonId)
                     }
+                case let .setupPoll(isQuiz):
+                    self.controllerInteraction.openPollCreation(isQuiz)
             }
             if dismissIfOnce {
                 if let message = self.message {
