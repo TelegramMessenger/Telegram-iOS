@@ -5,6 +5,8 @@ public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
     
+    public var shouldBegin: ((CGPoint) -> Bool)?
+    
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
@@ -21,7 +23,13 @@ public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
         super.touchesBegan(touches, with: event)
         
         let touch = touches.first!
-        self.firstLocation = touch.location(in: self.view)
+        let point = touch.location(in: self.view)
+        if let shouldBegin = self.shouldBegin, !shouldBegin(point) {
+            self.state = .failed
+            return
+        }
+        
+        self.firstLocation = point
         
         if let target = self.view?.hitTest(self.firstLocation, with: event) {
             if target == self.view {

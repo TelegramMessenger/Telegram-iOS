@@ -322,13 +322,17 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         
         var initialScrollToItem: ListViewScrollToItem?
         if let focusOnOptionWithOpaqueIdentifier = focusOnOptionWithOpaqueIdentifier, previousWasEmptyValue == nil {
+            var isFirstOption = true
             loop: for i in 0 ..< entries.count {
                 switch entries[i] {
                 case let .optionPeer(optionPeer):
                     if optionPeer.opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
-                        initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                        if !isFirstOption {
+                            initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                        }
                         break loop
                     }
+                    isFirstOption = false
                 default:
                     break
                 }

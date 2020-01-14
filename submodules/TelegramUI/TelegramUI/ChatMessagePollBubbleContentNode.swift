@@ -1351,7 +1351,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item, let option = optionNode.option {
+                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll, case .public = poll.publicity, let option = optionNode.option {
                         if !isEstimating {
                             item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
                             return .ignore
@@ -1543,6 +1543,7 @@ private final class MergedAvatarsNode: ASDisplayNode {
             case let .letters(peerId, letters):
                 context.translateBy(x: currentX, y: 0.0)
                 drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId)
+                context.translateBy(x: -currentX, y: 0.0)
             case let .image(reference):
                 if let image = parameters.images[parameters.peers[i].peerId] {
                     context.translateBy(x: imageRect.midX, y: imageRect.midY)

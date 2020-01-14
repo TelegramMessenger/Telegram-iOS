@@ -416,7 +416,7 @@ public final class AvatarNode: ASDisplayNode {
                     if peerId.namespace == -1 {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(clamping: accountPeerId.id &+ peerId.id))
+                        colorIndex = abs(Int(clamping: peerId.id))
                     }
                 } else {
                     colorIndex = -1
@@ -582,6 +582,8 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     
     context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     
+    context.resetClip()
+    
     context.setBlendMode(.normal)
     
     let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
@@ -597,7 +599,9 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     context.scaleBy(x: 1.0, y: -1.0)
     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
     
+    let textPosition = context.textPosition
     context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
     CTLineDraw(line, context)
     context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    context.textPosition = textPosition
 }

@@ -5268,13 +5268,13 @@ Any member of this group will be able to see messages in the channel.";
 
 "PollResults.Title" = "Poll Results";
 "PollResults.Collapse" = "COLLAPSE";
-"PollResults.ShowMore_1" = "Show %@ More Person";
-"PollResults.ShowMore_any" = "Show %@ More People";
+"PollResults.ShowMore_1" = "Show %@ More";
+"PollResults.ShowMore_any" = "Show %@ More";
 
 "Conversation.StopQuiz" = "Stop Quiz";
 "Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.";
 "Conversation.StopQuizConfirmation" = "Stop Quiz";
 
 "Forward.ErrorDisabledForChat" = "Sorry, you can't forward messages to this chat.";
-"Forward.ErrorPublicPollDisabledInChannels" = "Sorry, you can't forward public poll to the channel.";
-"Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, you can't forward public quiz to the channel.";
+"Forward.ErrorPublicPollDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
+"Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
