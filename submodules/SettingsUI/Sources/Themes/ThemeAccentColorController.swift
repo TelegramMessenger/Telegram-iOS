@@ -443,8 +443,7 @@ final class ThemeAccentColorController: ViewController {
                         var defaultPatternWallpaper: TelegramWallpaper?
                         
                         for wallpaper in wallpapers {
-                            //JqSUrO0-mFIBAAAAWwTvLzoWGQI, 25
-                            if case let .file(file) = wallpaper, file.slug == "-Xc-np9y2VMCAAAARKr0yNNPYW0" {
+                            if case let .file(file) = wallpaper, file.slug == "JqSUrO0-mFIBAAAAWwTvLzoWGQI" {
                                 defaultPatternWallpaper = wallpaper
                                 break
                             }

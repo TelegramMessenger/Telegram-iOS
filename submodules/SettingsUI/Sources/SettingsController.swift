@@ -945,7 +945,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     blockedPeers.set(.single(blockedPeersContext))
                 }, updatedHasTwoStepAuth: { hasTwoStepAuthValue in
                     hasTwoStepAuthPromise.set(.single(hasTwoStepAuthValue))
-                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext))
+                }, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth))
             })
         })
     }, openDataAndStorage: {
