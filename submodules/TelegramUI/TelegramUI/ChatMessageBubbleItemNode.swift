@@ -271,14 +271,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             for node in subnodes {
                 if let contextNode = node as? ContextExtractedContentContainingNode {
                     if let contextSubnodes = contextNode.contentNode.subnodes {
-                        for contextSubnode in contextSubnodes {
+                        inner: for contextSubnode in contextSubnodes {
                             if contextSubnode !== self.accessoryItemNode {
-                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                if contextSubnode == self.backgroundNode {
+                                    if self.backgroundNode.hasImage && self.backgroundWallpaperNode.hasImage {
+                                        continue inner
+                                    }
+                                }
+                                contextSubnode.layer.allowsGroupOpacity = true
+                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak contextSubnode] _ in
+                                    contextSubnode?.layer.allowsGroupOpacity = false
+                                })
                             }
                         }
                     }
                 } else if node !== self.accessoryItemNode {
+                    node.layer.allowsGroupOpacity = true
                     node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak node] _ in
+                        node?.layer.allowsGroupOpacity = false
+                    })
                 }
             }
         }
@@ -334,7 +346,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     return .waitForSingleTap
                 }
                 for contentNode in strongSelf.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap, isEstimating: true)
                     switch tapAction {
                         case .none:
                             if let _ = strongSelf.item?.controllerInteraction.tapMessage {
@@ -2305,7 +2317,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
                 var foundTapAction = false
                 loop: for contentNode in self.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                     switch tapAction {
                         case .none, .ignore:
                             if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
@@ -2394,7 +2406,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             selectAll = false
                         }
                         tapMessage = contentNode.item?.message
-                        let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
+                        let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                         switch tapAction {
                             case .none, .ignore:
                                 break

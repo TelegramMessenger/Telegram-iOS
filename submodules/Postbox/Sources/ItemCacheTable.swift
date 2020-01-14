@@ -37,6 +37,17 @@ final class ItemCacheTable: Table {
         return key
     }
     
+    private func lowerBound(collectionId: ItemCacheCollectionId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 1)
+        key.setInt8(0, value: ItemCacheSection.items.rawValue)
+        key.setInt8(1, value: collectionId)
+        return key
+    }
+    
+    private func upperBound(collectionId: ItemCacheCollectionId) -> ValueBoxKey {
+        return self.lowerBound(collectionId: collectionId).successor
+    }
+    
     private func itemIdToAccessIndexKey(id: ItemCacheEntryId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 1 + 1 + id.key.length)
         key.setInt8(0, value: ItemCacheSection.accessIndexToItemId.rawValue)
@@ -70,6 +81,10 @@ final class ItemCacheTable: Table {
     
     func remove(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) {
         self.valueBox.remove(self.table, key: self.itemKey(id: id), secure: false)
+    }
+    
+    func removeAll(collectionId: ItemCacheCollectionId) {
+        self.valueBox.removeRange(self.table, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId))
     }
     
     override func clearMemoryCache() {

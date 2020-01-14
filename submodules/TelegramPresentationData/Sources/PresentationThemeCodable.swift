@@ -1064,7 +1064,7 @@ extension PresentationThemeChatBubblePolls: Codable {
             highlight: try decodeColor(values, .highlight),
             separator: try decodeColor(values, .separator),
             bar: bar,
-            barIconForeground: (try? decodeColor(values, .barIconForeground)) ?? .white,
+            barIconForeground: (try? decodeColor(values, .barIconForeground)) ?? .clear,
             barPositive: (try? decodeColor(values, .barPositive)) ?? bar,
             barNegative: (try? decodeColor(values, .barNegative)) ?? bar
         )

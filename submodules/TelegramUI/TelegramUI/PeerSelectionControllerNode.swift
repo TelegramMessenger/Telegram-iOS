@@ -47,6 +47,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeer: ((PeerId) -> Void)?
+    var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
@@ -100,6 +101,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.chatListNode.peerSelected = { [weak self] peerId, _, _ in
             self?.requestOpenPeer?(peerId)
+        }
+        
+        self.chatListNode.disabledPeerSelected = { [weak self] peer in
+            self?.requestOpenDisabledPeer?(peer)
         }
         
         self.chatListNode.contentOffsetChanged = { [weak self] offset in

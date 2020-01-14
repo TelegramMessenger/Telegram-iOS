@@ -1394,7 +1394,7 @@ static int32_t fixedTimeDifferenceValue = 0;
                         NSArray *currentListeners = [[NSArray alloc] initWithArray:strongSelf->_changeListeners];
                         for (id<MTContextChangeListener> listener in currentListeners) {
                             if ([listener respondsToSelector:@selector(contextLoggedOut:)])
-                                [listener contextLoggedOut:self];
+                                [listener contextLoggedOut:strongSelf];
                         }
                     }
                 }];

@@ -66,6 +66,10 @@ class ChatMessageBackground: ASDisplayNode {
     private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
     
+    var hasImage: Bool {
+        self.imageNode.image != nil
+    }
+    
     override init() {
         self.imageNode = ASImageNode()
         self.imageNode.displaysAsynchronously = false

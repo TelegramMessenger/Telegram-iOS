@@ -120,6 +120,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
+        }, openMessagePollResults: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
@@ -258,7 +259,18 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
-        //self.view.addGestureRecognizer(panRecognizer)
+        panRecognizer.shouldBegin = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            if strongSelf.controlsNode.bounds.contains(strongSelf.view.convert(point, to: strongSelf.controlsNode.view)) {
+                if strongSelf.controlsNode.frame.maxY <= strongSelf.historyNode.frame.minY {
+                    return true
+                }
+            }
+            return false
+        }
+        self.view.addGestureRecognizer(panRecognizer)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -324,7 +336,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         if self.controlsNode.bounds.contains(self.view.convert(point, to: self.controlsNode.view)) {
             let controlsHitTest = self.controlsNode.view.hitTest(self.view.convert(point, to: self.controlsNode.view), with: event)
             if controlsHitTest == nil {
-                return self.historyNode.view
+                if self.controlsNode.frame.maxY > self.historyNode.frame.minY {
+                    return self.historyNode.view
+                }
             }
         }
         

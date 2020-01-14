@@ -271,7 +271,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 fileDescriptionColor: outgoingFileDescriptionColor,
                 fileDurationColor: outgoingFileDurationColor,
                 mediaPlaceholderColor: day ? accentColor?.withMultipliedBrightnessBy(0.95) : outgoingMediaPlaceholderColor,
-                polls: chat.message.outgoing.polls.withUpdated(radioButton: outgoingPollsButtonColor, radioProgress: outgoingPollsProgressColor, highlight: outgoingPollsProgressColor?.withAlphaComponent(0.12), separator: outgoingPollsButtonColor, bar: outgoingPollsProgressColor, barPositive: outgoingPollsProgressColor, barNegative: outgoingPollsProgressColor),
+                polls: chat.message.outgoing.polls.withUpdated(radioButton: outgoingPollsButtonColor, radioProgress: outgoingPollsProgressColor, highlight: outgoingPollsProgressColor?.withAlphaComponent(0.12), separator: outgoingPollsButtonColor, bar: outgoingPollsProgressColor, barIconForeground: .clear, barPositive: outgoingPollsProgressColor, barNegative: outgoingPollsProgressColor),
                 actionButtonsFillColor: chat.message.outgoing.actionButtonsFillColor.withUpdated(withWallpaper: serviceBackgroundColor),
                 actionButtonsStrokeColor: day ? chat.message.outgoing.actionButtonsStrokeColor.withUpdated(withoutWallpaper: accentColor) : nil,
                 actionButtonsTextColor: day ? chat.message.outgoing.actionButtonsTextColor.withUpdated(withoutWallpaper: accentColor) : nil,
@@ -440,7 +440,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             primaryColor: UIColor(rgb: 0x000000),
             controlColor: UIColor(rgb: 0xbcbcc0)
         ),
-        mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4),
+        mediaPlaceholderColor: UIColor(rgb: 0xEFEFF4),
         scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3),
         pageIndicatorInactiveColor: UIColor(rgb: 0xe3e3e7),
         inputClearButtonColor: UIColor(rgb: 0xcccccc),

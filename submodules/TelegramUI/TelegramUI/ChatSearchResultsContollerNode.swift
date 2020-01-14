@@ -168,6 +168,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { _ in
+        }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {

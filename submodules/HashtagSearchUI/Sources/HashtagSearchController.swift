@@ -49,6 +49,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { peer in
+        }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {

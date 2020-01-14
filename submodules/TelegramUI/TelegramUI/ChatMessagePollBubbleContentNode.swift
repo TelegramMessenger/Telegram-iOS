@@ -318,13 +318,20 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
 }
 
 private let percentageFont = Font.bold(14.5)
+private let percentageSmallFont = Font.bold(12.5)
 
-private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: Int) -> UIImage {
+private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: Int, targetValue: Int) -> UIImage {
     return generateImage(CGSize(width: 42.0, height: 20.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
         context.clear(CGRect(origin: CGPoint(), size: size))
-        let string = NSAttributedString(string: "\(value)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor, paragraphAlignment: .right)
-        string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: size))
+        let font: UIFont
+        if targetValue == 100 {
+            font = percentageSmallFont
+        } else {
+            font = percentageFont
+        }
+        let string = NSAttributedString(string: "\(value)%", font: font, textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor, paragraphAlignment: .right)
+        string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: targetValue == 100 ? 3.0 : 2.0), size: size))
         UIGraphicsPopContext()
     })!
 }
@@ -335,7 +342,7 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
     var images: [UIImage] = []
     for i in 0 ..< numberOfFrames {
         let t = CGFloat(i) / CGFloat(numberOfFrames)
-        images.append(generatePercentageImage(presentationData: presentationData, incoming: incoming, value: Int((1.0 - t) * CGFloat(fromValue) + t * CGFloat(toValue))))
+        images.append(generatePercentageImage(presentationData: presentationData, incoming: incoming, value: Int((1.0 - t) * CGFloat(fromValue) + t * CGFloat(toValue)), targetValue: toValue))
     }
     return images
 }
@@ -444,7 +451,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             var updatedPercentageImage: UIImage?
             if currentResult != optionResult {
-                updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: optionResult?.percent ?? 0)
+                let value = optionResult?.percent ?? 0
+                updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: value, targetValue: value)
             }
             
             var resultIcon: UIImage?
@@ -1238,8 +1246,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private func updateSelection() {
-        guard let poll = self.poll else {
+        guard let item = self.item, let poll = self.poll else {
             return
+        }
+        
+        var disableAllActions = false
+        if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            disableAllActions = true
         }
         
         var hasSelection = false
@@ -1275,14 +1288,14 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        if hasSelection && !hasResults && poll.pollId.namespace == Namespaces.Media.CloudPoll {
+        if !disableAllActions && hasSelection && !hasResults && poll.pollId.namespace == Namespaces.Media.CloudPoll {
             self.votersNode.isHidden = true
             self.buttonViewResultsTextNode.isHidden = true
             self.buttonSubmitInactiveTextNode.isHidden = hasSelectedOptions
             self.buttonSubmitActiveTextNode.isHidden = !hasSelectedOptions
             self.buttonNode.isHidden = !hasSelectedOptions
         } else {
-            if case .public = poll.publicity, hasResults {
+            if case .public = poll.publicity, hasResults, !disableAllActions {
                 self.votersNode.isHidden = true
                 self.buttonViewResultsTextNode.isHidden = false
                 self.buttonNode.isHidden = false
@@ -1313,7 +1326,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -1335,26 +1348,15 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         } else {
             for optionNode in self.optionNodes {
-                if optionNode.frame.contains(point) {
+                if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll {
-                        let string: String
-                        switch poll.kind {
-                        case .poll:
-                            if result.count == 0 {
-                                string = item.presentationData.strings.MessagePoll_NoVotes
-                            } else {
-                                string = item.presentationData.strings.MessagePoll_VotedCount(result.count)
-                            }
-                        case .quiz:
-                            if result.count == 0 {
-                                string = item.presentationData.strings.MessagePoll_QuizNoUsers
-                            } else {
-                                string = item.presentationData.strings.MessagePoll_QuizCount(result.count)
-                            }
+                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll, case .public = poll.publicity, let option = optionNode.option {
+                        if !isEstimating {
+                            item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
+                            return .ignore
                         }
-                        return .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0))
+                        return .openMessage
                     }
                 }
             }
@@ -1541,6 +1543,7 @@ private final class MergedAvatarsNode: ASDisplayNode {
             case let .letters(peerId, letters):
                 context.translateBy(x: currentX, y: 0.0)
                 drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId)
+                context.translateBy(x: -currentX, y: 0.0)
             case let .image(reference):
                 if let image = parameters.images[parameters.peers[i].peerId] {
                     context.translateBy(x: imageRect.midX, y: imageRect.midY)

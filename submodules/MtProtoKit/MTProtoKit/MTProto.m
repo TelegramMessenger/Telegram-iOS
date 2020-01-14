@@ -235,7 +235,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if ((_mtState & MTProtoStateStopped) == 0)
         {
             [self setMtState:_mtState | MTProtoStateStopped];
-            
+            [_context removeChangeListener:self];
             if (_transport != nil)
             {
                 _transport.delegate = nil;
@@ -2098,6 +2098,9 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             int64_t dataMessageId = 0;
             bool parseError = false;
             NSArray *parsedMessages = [self _parseIncomingMessages:decryptedData dataMessageId:&dataMessageId parseError:&parseError];
+            
+
+            
             for (MTIncomingMessage *message in parsedMessages) {
                 if ([message.body isKindOfClass:[MTRpcResultMessage class]]) {
                     MTRpcResultMessage *rpcResultMessage = message.body;
@@ -2111,7 +2114,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                             MTShortLog(@"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
                             [self handleMissingKey:scheme.address];
                             [self requestSecureTransportReset];
-                            
+
                             return;
                         }
                     }

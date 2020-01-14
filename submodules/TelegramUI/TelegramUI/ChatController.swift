@@ -1834,6 +1834,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 })
             })
+        }, openMessagePollResults: { [weak self] messageId, optionOpaqueIdentifier in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                return transaction.getMessage(messageId)
+            }
+            |> deliverOnMainQueue).start(next: { message in
+                guard let message = message else {
+                    return
+                }
+                for media in message.media {
+                    if let poll = media as? TelegramMediaPoll, poll.pollId.namespace == Namespaces.Media.CloudPoll {
+                        strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll, focusOnOptionWithOpaqueIdentifier: optionOpaqueIdentifier))
+                        break
+                    }
+                }
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -6868,7 +6886,48 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
-        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages]))
+        let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
+            return messageIds.compactMap(transaction.getMessage)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] messages in
+            self?.forwardMessages(messages: messages, resetCurrent: resetCurrent)
+        })
+    }
+    
+    private func forwardMessages(messages: [Message], resetCurrent: Bool) {
+        var filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled]
+        var hasPublicPolls = false
+        var hasPublicQuiz = false
+        for message in messages {
+            for media in message.media {
+                if let poll = media as? TelegramMediaPoll, case .public = poll.publicity {
+                    hasPublicPolls = true
+                    if case .quiz = poll.kind {
+                        hasPublicQuiz = true
+                    }
+                    filter.insert(.excludeChannels)
+                    break
+                }
+            }
+        }
+        var attemptSelectionImpl: ((Peer) -> Void)?
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: filter, attemptSelection: { peer in
+            attemptSelectionImpl?(peer)
+        }))
+        let context = self.context
+        attemptSelectionImpl = { [weak controller] peer in
+            guard let controller = controller else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            if hasPublicPolls {
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    controller.present(textAlertController(context: context, title: nil, text: hasPublicQuiz ? presentationData.strings.Forward_ErrorPublicQuizDisabledInChannels : presentationData.strings.Forward_ErrorPublicPollDisabledInChannels, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    return
+                }
+            }
+            controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return
@@ -6879,11 +6938,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil {
-                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messageIds).withoutSelectionState() }) })
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messages.map { $0.id }).withoutSelectionState() }) })
                 strongController.dismiss()
             } else if peerId == strongSelf.context.account.peerId {
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                    return .forward(source: id, grouping: .auto, attributes: [])
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
+                    return .forward(source: message.id, grouping: .auto, attributes: [])
                 })
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
@@ -6919,9 +6978,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
                     transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                         if let currentState = currentState as? ChatInterfaceState {
-                            return currentState.withUpdatedForwardMessageIds(messageIds)
+                            return currentState.withUpdatedForwardMessageIds(messages.map { $0.id })
                         } else {
-                            return ChatInterfaceState().withUpdatedForwardMessageIds(messageIds)
+                            return ChatInterfaceState().withUpdatedForwardMessageIds(messages.map { $0.id })
                         }
                     })
                 }) |> deliverOnMainQueue).start(completed: {

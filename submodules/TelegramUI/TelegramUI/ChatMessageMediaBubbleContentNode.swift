@@ -355,7 +355,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return self.interactiveImageNode.playMediaWithSound()
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         return .none
     }
     

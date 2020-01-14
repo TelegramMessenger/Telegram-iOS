@@ -5860,6 +5860,7 @@ public extension Api {
         case updateTheme(theme: Api.Theme)
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
         case updateLoginToken
+        case updateMessagePollVote(pollId: Int64, userId: Int32, options: [Buffer])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6497,6 +6498,18 @@ public extension Api {
                     }
                     
                     break
+                case .updateMessagePollVote(let pollId, let userId, let options):
+                    if boxed {
+                        buffer.appendInt32(1123585836)
+                    }
+                    serializeInt64(pollId, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(options.count))
+                    for item in options {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }
+                    break
     }
     }
     
@@ -6654,6 +6667,8 @@ public extension Api {
                 return ("updateGeoLiveViewed", [("peer", peer), ("msgId", msgId)])
                 case .updateLoginToken:
                 return ("updateLoginToken", [])
+                case .updateMessagePollVote(let pollId, let userId, let options):
+                return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options)])
     }
     }
     
@@ -7931,6 +7946,25 @@ public extension Api {
         public static func parse_updateLoginToken(_ reader: BufferReader) -> Update? {
             return Api.Update.updateLoginToken
         }
+        public static func parse_updateMessagePollVote(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Buffer]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     public enum PopularContact: TypeConstructorDescription {
@@ -8190,24 +8224,50 @@ public extension Api {
     
     }
     public enum MessageUserVote: TypeConstructorDescription {
-        case messageUserVote(userId: Int32, option: Buffer)
+        case messageUserVote(userId: Int32, option: Buffer, date: Int32)
+        case messageUserVoteInputOption(userId: Int32, date: Int32)
+        case messageUserVoteMultiple(userId: Int32, options: [Buffer], date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageUserVote(let userId, let option):
+                case .messageUserVote(let userId, let option, let date):
                     if boxed {
-                        buffer.appendInt32(-233638547)
+                        buffer.appendInt32(-1567730343)
                     }
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeBytes(option, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .messageUserVoteInputOption(let userId, let date):
+                    if boxed {
+                        buffer.appendInt32(909603888)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .messageUserVoteMultiple(let userId, let options, let date):
+                    if boxed {
+                        buffer.appendInt32(244310238)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(options.count))
+                    for item in options {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageUserVote(let userId, let option):
-                return ("messageUserVote", [("userId", userId), ("option", option)])
+                case .messageUserVote(let userId, let option, let date):
+                return ("messageUserVote", [("userId", userId), ("option", option), ("date", date)])
+                case .messageUserVoteInputOption(let userId, let date):
+                return ("messageUserVoteInputOption", [("userId", userId), ("date", date)])
+                case .messageUserVoteMultiple(let userId, let options, let date):
+                return ("messageUserVoteMultiple", [("userId", userId), ("options", options), ("date", date)])
     }
     }
     
@@ -8216,10 +8276,46 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Buffer?
             _2 = parseBytes(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageUserVote.messageUserVote(userId: _1!, option: _2!, date: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageUserVoteInputOption(_ reader: BufferReader) -> MessageUserVote? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.MessageUserVote.messageUserVote(userId: _1!, option: _2!)
+                return Api.MessageUserVote.messageUserVoteInputOption(userId: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageUserVoteMultiple(_ reader: BufferReader) -> MessageUserVote? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Buffer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageUserVote.messageUserVoteMultiple(userId: _1!, options: _2!, date: _3!)
             }
             else {
                 return nil

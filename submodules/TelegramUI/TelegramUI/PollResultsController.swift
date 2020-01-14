@@ -11,6 +11,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private let collapsedResultCount: Int = 10
+private let collapsedInitialLimit: Int = 14
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
@@ -46,9 +47,21 @@ private enum PollResultsEntryId: Hashable {
     case optionExpand(Int)
 }
 
+private enum PollResultsItemTag: ItemListItemTag, Equatable {
+    case firstOptionPeer(opaqueIdentifier: Data)
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? PollResultsItemTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum PollResultsEntry: ItemListNodeEntry {
     case text(String)
-    case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionPercentage: Int, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?)
+    case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
     case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
     
     var section: ItemListSectionId {
@@ -124,15 +137,15 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case let .text(text):
             return ItemListTextItem(presentationData: presentationData, text: .large(text), sectionId: self.section)
-        case let .optionPeer(optionId, _, peer, optionText, optionPercentage, optionExpanded, opaqueIdentifier, shimmeringAlternation):
-            let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : "\(optionPercentage)%", id: Int64(optionId), action: optionExpanded ? {
+        case let .optionPeer(optionId, _, peer, optionText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
+            let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
             return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
-            }, noInsets: true, header: header, shimmering: shimmeringAlternation.flatMap { ItemListPeerItemShimmering(alternationIndex: $0) })
+            }, noInsets: true, tag: isFirstInOption ? PollResultsItemTag.firstOptionPeer(opaqueIdentifier: opaqueIdentifier) : nil, header: header, shimmering: shimmeringAlternation.flatMap { ItemListPeerItemShimmering(alternationIndex: $0) })
         case let .optionExpand(_, opaqueIdentifier, text, enabled):
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: enabled ? {
                 arguments.expandOption(opaqueIdentifier)
@@ -180,13 +193,19 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     for i in 0 ..< poll.options.count {
         let percentage = optionPercentage.count > i ? optionPercentage[i] : 0
         let option = poll.options[i]
+        let optionTextHeader = option.text.uppercased() + " — \(percentage)%"
         if isEmpty {
             if let voterCount = optionVoterCount[i], voterCount != 0 {
-                let displayCount = min(collapsedResultCount, Int(voterCount))
+                let displayCount: Int
+                if Int(voterCount) > collapsedInitialLimit {
+                    displayCount = collapsedResultCount
+                } else {
+                    displayCount = Int(voterCount)
+                }
                 for peerIndex in 0 ..< displayCount {
                     let fakeUser = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                     let peer = RenderedPeer(peer: fakeUser)
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: option.text, optionPercentage: percentage, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
                 if displayCount < Int(voterCount) {
                     let remainingCount = Int(voterCount) - displayCount
@@ -195,24 +214,25 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
             }
         } else {
             if let optionState = resultsState.options[option.opaqueIdentifier], !optionState.peers.isEmpty {
-                var peerIndex = 0
                 var hasMore = false
                 let optionExpanded = state.expandedOptions.contains(option.opaqueIdentifier)
                 
-                var peers = optionState.peers
-                var count = optionState.count
-                /*#if DEBUG
-                for _ in 0 ..< 10 {
-                    peers += peers
-                }
-                count = max(count, peers.count)
-                #endif*/
+                let peers = optionState.peers
+                let count = optionState.count
                 
+                let displayCount: Int
+                if peers.count > collapsedInitialLimit {
+                    displayCount = collapsedResultCount
+                } else {
+                    displayCount = peers.count
+                }
+                
+                var peerIndex = 0
                 inner: for peer in peers {
-                    if !optionExpanded && peerIndex >= collapsedResultCount {
+                    if !optionExpanded && peerIndex >= displayCount {
                         break inner
                     }
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: option.text, optionPercentage: percentage, optionExpanded: optionExpanded, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionCount: Int32(count), optionExpanded: optionExpanded, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
                     peerIndex += 1
                 }
                 
@@ -227,7 +247,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     return entries
 }
 
-public func pollResultsController(context: AccountContext, messageId: MessageId, poll: TelegramMediaPoll) -> ViewController {
+public func pollResultsController(context: AccountContext, messageId: MessageId, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
     let statePromise = ValuePromise(PollResultsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PollResultsControllerState())
     let updateState: ((PollResultsControllerState) -> PollResultsControllerState) -> Void = { f in
@@ -293,8 +313,34 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         
         let previousWasEmptyValue = previousWasEmpty.swap(isEmpty)
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PollResults_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState), style: .blocks, focusItemTag: nil, ensureVisibleItemTag: nil, emptyStateItem: nil, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
+        var totalVoters: Int32 = 0
+        if let totalVotersValue = poll.results.totalVoters {
+            totalVoters = totalVotersValue
+        }
+        
+        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState)
+        
+        var initialScrollToItem: ListViewScrollToItem?
+        if let focusOnOptionWithOpaqueIdentifier = focusOnOptionWithOpaqueIdentifier, previousWasEmptyValue == nil {
+            var isFirstOption = true
+            loop: for i in 0 ..< entries.count {
+                switch entries[i] {
+                case let .optionPeer(optionPeer):
+                    if optionPeer.opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
+                        if !isFirstOption {
+                            initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                        }
+                        break loop
+                    }
+                    isFirstOption = false
+                default:
+                    break
+                }
+            }
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: nil, emptyStateItem: nil, initialScrollToItem: initialScrollToItem, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

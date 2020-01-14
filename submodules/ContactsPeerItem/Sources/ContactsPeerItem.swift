@@ -122,6 +122,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let options: [ItemListPeerItemRevealOption]
     let actionIcon: ContactsPeerItemActionIcon
     let action: (ContactsPeerItemPeer) -> Void
+    let disabledAction: ((ContactsPeerItemPeer) -> Void)?
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
@@ -133,7 +134,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -150,11 +151,12 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.options = options
         self.actionIcon = actionIcon
         self.action = action
+        self.disabledAction = disabledAction
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.deletePeer = deletePeer
         self.header = header
         self.itemHighlighting = itemHighlighting
-        self.selectable = enabled
+        self.selectable = enabled || disabledAction != nil
         self.contextAction = contextAction
         
         if let index = index {
@@ -245,7 +247,12 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     }
     
     public func selected(listView: ListView) {
-        self.action(self.peer)
+        if self.enabled {
+            self.action(self.peer)
+        } else {
+            listView.clearHighlightAnimated(true)
+            self.disabledAction?(self.peer)
+        }
     }
     
     static func mergeType(item: ContactsPeerItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
