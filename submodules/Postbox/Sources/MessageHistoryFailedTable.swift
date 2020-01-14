@@ -42,7 +42,7 @@ final class MessageHistoryFailedTable: Table {
         self.updatedMessageIds.remove(id)
     }
     
-    func get(peerId:PeerId) -> [MessageId] {
+    func get(peerId: PeerId) -> [MessageId] {
         var ids:[MessageId] = []
         self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
             
@@ -72,4 +72,3 @@ final class MessageHistoryFailedTable: Table {
         self.updatedPeerIds.removeAll()
     }
 }
-
