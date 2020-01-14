@@ -83,7 +83,11 @@ final class MentionChatInputPanelItem: ListViewItem {
     }
     
     func selected(listView: ListView) {
-        self.peerSelected(self.peer)
+        if self.revealed {
+            self.setPeerIdRevealed(nil)
+        } else {
+            self.peerSelected(self.peer)
+        }
     }
 }
 

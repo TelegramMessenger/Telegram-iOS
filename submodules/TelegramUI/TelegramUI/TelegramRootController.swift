@@ -120,6 +120,19 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
+        
+//        let _ = (archivedStickerPacks(account: self.context.account, namespace: .stickers)
+//        |> deliverOnMainQueue).start(next: { [weak self] stickerPacks in
+//            var packs: [(StickerPackCollectionInfo, StickerPackItem?)] = []
+//            for pack in stickerPacks {
+//                packs.append((pack.info, pack.topItems.first))
+//            }
+//
+//            if let strongSelf = self {
+//                let controller = archivedStickersNoticeController(context: strongSelf.context, archivedStickerPacks: packs)
+//                strongSelf.chatListController?.present(controller, in: .window(.root))
+//            }
+//        })
     }
     
     public func updateRootControllers(showCallsTab: Bool) {

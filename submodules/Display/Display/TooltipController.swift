@@ -185,6 +185,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     
     open func dismissImmediately() {
         self.dismissed?(false)
+        self.controllerNode.hide()
         self.presentingViewController?.dismiss(animated: false)
     }
 }

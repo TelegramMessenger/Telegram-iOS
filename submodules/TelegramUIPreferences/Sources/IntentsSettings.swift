@@ -27,7 +27,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.initiallyReset = decoder.decodeBoolForKey("initiallyReset_v1", orElse: false)
+        self.initiallyReset = decoder.decodeBoolForKey("initiallyReset_v2", orElse: false)
         self.account = decoder.decodeOptionalInt64ForKey("account").flatMap { PeerId($0) }
         self.contacts = decoder.decodeBoolForKey("contacts", orElse: true)
         self.privateChats = decoder.decodeBoolForKey("privateChats", orElse: false)
@@ -37,7 +37,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeBool(self.initiallyReset, forKey: "initiallyReset_v1")
+        encoder.encodeBool(self.initiallyReset, forKey: "initiallyReset_v2")
         if let account = self.account {
             encoder.encodeInt64(account.toInt64(), forKey: "account")
         } else {

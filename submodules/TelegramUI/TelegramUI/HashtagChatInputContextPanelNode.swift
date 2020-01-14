@@ -109,6 +109,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, presentationData: presentationData, setHashtagRevealed: { [weak self] text in
             if let strongSelf = self {
                 strongSelf.revealedHashtag = text
+                strongSelf.updateResults(strongSelf.currentResults)
             }
         }, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
@@ -138,6 +139,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         }, removeRequested: { [weak self] text in
             if let strongSelf = self {
                 let _ = removeRecentlyUsedHashtag(postbox: strongSelf.context.account.postbox, string: text).start()
+                strongSelf.revealedHashtag = nil
             }
         })
         self.currentEntries = to
