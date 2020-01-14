@@ -334,14 +334,14 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         let resolvedValue: CGFloat?
         if let value = self.value {
             if let transition = self.transition {
-                transition.valueAt(timestamp: timestamp, actualValue: value)
+                resolvedValue = transition.valueAt(timestamp: timestamp, actualValue: value)
             } else {
                 resolvedValue = value
             }
         } else {
             resolvedValue = nil
         }
-        return DrawingState(transitionFraction: transitionFraction, value: self.value, displayCancel: self.displayCancel, timestamp: timestamp)
+        return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, timestamp: timestamp)
     }
     
     func updateValue(value: CGFloat?) {
@@ -351,7 +351,7 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
             let timestamp = CACurrentMediaTime()
             if let value = value, let previousValue = previousValue {
                 if let transition = self.transition {
-                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: value))
+                    self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: transition.valueAt(timestamp: timestamp, actualValue: previousValue))
                 } else {
                     self.transition = SemanticStatusNodeProgressTransition(beginTime: timestamp, initialValue: previousValue)
                 }
@@ -388,7 +388,7 @@ private extension SemanticStatusNodeState {
             }
         case let .progress(value, cancelEnabled):
             if let current = current as? SemanticStatusNodeProgressContext, current.displayCancel == cancelEnabled {
-                current.value = value
+                current.updateValue(value: value)
                 return current
             } else {
                 return SemanticStatusNodeProgressContext(value: value, displayCancel: cancelEnabled)
