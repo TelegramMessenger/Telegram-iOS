@@ -334,6 +334,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.present(controller, nil)
                 return true
             case let .document(file, immediateShare):
+                params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)

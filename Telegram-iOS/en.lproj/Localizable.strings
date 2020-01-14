@@ -5274,3 +5274,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.StopQuiz" = "Stop Quiz";
 "Conversation.StopQuizConfirmationTitle" = "If you stop this quiz now, nobody will be able to submit answers. This action cannot be undone.";
 "Conversation.StopQuizConfirmation" = "Stop Quiz";
+
+"Forward.ErrorDisabledForChat" = "Sorry, you can't forward messages to this chat.";
+"Forward.ErrorPublicPollDisabledInChannels" = "Sorry, you can't forward public poll to the channel.";
+"Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, you can't forward public quiz to the channel.";

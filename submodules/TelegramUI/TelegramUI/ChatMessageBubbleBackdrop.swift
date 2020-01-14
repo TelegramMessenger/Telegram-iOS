@@ -16,6 +16,10 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     private var maskView: UIImageView?
     
+    var hasImage: Bool {
+        return self.backgroundContent.contents != nil
+    }
+    
     override var frame: CGRect {
         didSet {
             if let maskView = self.maskView {

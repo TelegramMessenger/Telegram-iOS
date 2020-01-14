@@ -250,11 +250,17 @@ private final class PollResultsOptionContext {
                             })
                             var resultPeers: [RenderedPeer] = []
                             for vote in votes {
+                                let peerId: PeerId
                                 switch vote {
-                                case let .messageUserVote(userId, _):
-                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)) {
-                                        resultPeers.append(RenderedPeer(peer: peer))
-                                    }
+                                case let .messageUserVote(userId, _, _):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                case let .messageUserVoteInputOption(userId, _):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                case let .messageUserVoteMultiple(userId, _, _):
+                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                }
+                                if let peer = transaction.getPeer(peerId) {
+                                    resultPeers.append(RenderedPeer(peer: peer))
                                 }
                             }
                             if populateCache {

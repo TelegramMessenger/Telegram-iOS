@@ -419,6 +419,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
+        }, openMessagePollResults: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

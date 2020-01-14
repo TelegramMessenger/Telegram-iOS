@@ -154,7 +154,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
                 backgroundColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
                 strokeColor: mainSecondaryTextColor?.withAlphaComponent(0.5)
             ),
-            mediaPlaceholderColor: accentColor?.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23),
+            mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(mainBackgroundColor ?? list.itemBlocksBackgroundColor, alpha: 0.9),
             pageIndicatorInactiveColor: mainSecondaryTextColor?.withAlphaComponent(0.4),
             inputClearButtonColor: mainSecondaryColor,
             itemBarChart: list.itemBarChart.withUpdated(
@@ -597,7 +597,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
             primaryColor: .white,
             controlColor: UIColor(rgb: 0x4d4d4d)
         ),
-        mediaPlaceholderColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.585, brightness: 0.23),
+        mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(mainBackgroundColor, alpha: 0.9),
         scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         inputClearButtonColor: mainSecondaryColor,

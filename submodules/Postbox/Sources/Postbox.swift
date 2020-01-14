@@ -655,6 +655,11 @@ public final class Transaction {
         return self.postbox?.retrieveItemCacheEntry(id: id)
     }
     
+    public func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
+        assert(!self.disposed)
+        self.postbox?.clearItemCacheCollection(collectionId: collectionId)
+    }
+    
     public func operationLogGetNextEntryLocalIndex(peerId: PeerId, tag: PeerOperationLogTag) -> Int32 {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -2063,6 +2068,10 @@ public final class Postbox {
     
     func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
+    }
+    
+    func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
+        return self.itemCacheTable.removeAll(collectionId: collectionId)
     }
     
     fileprivate func removeItemCacheEntry(id: ItemCacheEntryId) {

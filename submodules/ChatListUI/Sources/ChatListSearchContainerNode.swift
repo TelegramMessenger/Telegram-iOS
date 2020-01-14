@@ -837,6 +837,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         }
                     }
                     
+                    if filter.contains(.excludeChannels) {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            return false
+                        }
+                    }
+                    
                     return true
                 }
                 
@@ -962,6 +968,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
+        }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             self?.view.endEditing(true)

@@ -2326,7 +2326,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func animateQuizCorrectOptionSelected() {
-        class ConfettiView: UIView {
+        self.view.insertSubview(ConfettiView(frame: self.view.bounds), aboveSubview: self.historyNode.view)
+        
+        /*class ConfettiView: UIView {
             private let direction: Bool
             private let confettiViewEmitterLayer = CAEmitterLayer()
             private let confettiViewEmitterCell = CAEmitterCell()
@@ -2442,6 +2444,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.view.insertSubview(ConfettiView(frame: self.view.bounds, direction: true), aboveSubview: self.historyNode.view)
-        self.view.insertSubview(ConfettiView(frame: self.view.bounds, direction: false), aboveSubview: self.historyNode.view)
+        self.view.insertSubview(ConfettiView(frame: self.view.bounds, direction: false), aboveSubview: self.historyNode.view)*/
     }
 }

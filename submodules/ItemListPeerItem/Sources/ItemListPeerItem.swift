@@ -75,8 +75,8 @@ private final class ShimmerEffectNode: ASDisplayNode {
             let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
             let peakColor = foregroundColor.cgColor
             
-            var locations: [CGFloat] = [0.0, 0.2, 0.5, 0.8, 1.0]
-            let colors: [CGColor] = [transparentColor, transparentColor, peakColor, transparentColor, transparentColor]
+            var locations: [CGFloat] = [0.0, 0.5, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
             
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
@@ -1312,6 +1312,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
+        self.textNode.truncationType = .middle
         self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         
         self.actionTextNode = ImmediateTextNode()
