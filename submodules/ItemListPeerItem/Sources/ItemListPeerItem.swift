@@ -1361,6 +1361,10 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
     public func updateTheme(theme: PresentationTheme) {
         self.theme = theme
         
+        self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
+        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
+        
         let titleFont = Font.regular(13.0)
         
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
