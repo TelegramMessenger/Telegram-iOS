@@ -2909,6 +2909,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     func animateQuizInvalidOptionSelected() {
+        if let supernode = self.supernode, let subnodes = supernode.subnodes {
+            for i in 0 ..< subnodes.count {
+                if subnodes[i] === self {
+                    break
+                }
+            }
+        }
+        
         let duration: Double = 0.5
         let minScale: CGFloat = -0.03
         let scaleAnimation0 = self.layer.makeAnimation(from: 0.0 as NSNumber, to: minScale as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in

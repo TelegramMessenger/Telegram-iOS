@@ -1361,7 +1361,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll, let option = optionNode.option {
+                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option {
                         switch poll.publicity {
                         case .anonymous:
                             let string: String
