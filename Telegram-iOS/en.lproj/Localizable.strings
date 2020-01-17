@@ -3793,6 +3793,7 @@ Unused sets are archived when you add more.";
 "MessagePoll.VotedCount_any" = "%@ votes";
 "AttachmentMenu.Poll" = "Poll";
 "Conversation.PinnedPoll" = "Pinned Poll";
+"Conversation.PinnedQuiz" = "Pinned Quiz";
 
 "CreatePoll.Title" = "New Poll";
 "CreatePoll.Create" = "Send";
