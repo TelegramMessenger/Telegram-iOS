@@ -5252,7 +5252,7 @@ Any member of this group will be able to see messages in the channel.";
 "CreatePoll.MultipleChoice" = "Multiple Choice";
 "CreatePoll.MultipleChoiceQuizAlert" = "A quiz has one correct answer.";
 "CreatePoll.Quiz" = "Quiz Mode";
-"CreatePoll.QuizInfo" = "A quiz has one correct answer. Users can't revoke their answers.";
+"CreatePoll.QuizInfo" = "Polls in Quiz Mode have one correct answer. Users can't revoke their answers.";
 "CreatePoll.QuizTip" = "Tap to choose the correct answer";
 
 "MessagePoll.LabelPoll" = "Public Poll";

@@ -383,7 +383,8 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                     let centerPoint = CGPoint(x: 9.28, y: 15.37)
                     let endPoint = CGPoint(x: 16.0, y: 8.0)
                     
-                    let pathT = alpha
+                    let pathStartT: CGFloat = 0.15
+                    let pathT = max(0.0, (alpha - pathStartT) / (1.0 - pathStartT))
                     let pathMiddleT: CGFloat = 0.4
                     
                     context.move(to: startPoint)
