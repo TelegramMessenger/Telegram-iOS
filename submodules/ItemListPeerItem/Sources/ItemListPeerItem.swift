@@ -1247,6 +1247,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 public final class ItemListPeerItemHeader: ListViewItemHeader {
     public let id: Int64
     public let text: String
+    public let additionalText: String
     public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -1255,8 +1256,9 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     
     public let height: CGFloat = 28.0
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
         self.text = text
+        self.additionalText = additionalText
         self.id = id
         self.theme = theme
         self.strings = strings
@@ -1265,11 +1267,11 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     }
     
     public func node() -> ListViewItemHeaderNode {
-        return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, actionTitle: self.actionTitle, action: self.action)
+        return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
     
     public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        (node as? ItemListPeerItemHeaderNode)?.update(text: self.text, actionTitle: self.actionTitle, action: self.action)
+        (node as? ItemListPeerItemHeaderNode)?.update(text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
 }
 
@@ -1285,12 +1287,13 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
     private let snappedBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let textNode: ImmediateTextNode
+    private let additionalTextNode: ImmediateTextNode
     private let actionTextNode: ImmediateTextNode
     private let actionButton: HighlightableButtonNode
     
     private var stickDistanceFactor: CGFloat?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, actionTitle: String?, action: (() -> Void)?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
@@ -1312,8 +1315,12 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.truncationType = .middle
         self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        
+        self.additionalTextNode = ImmediateTextNode()
+        self.additionalTextNode.displaysAsynchronously = false
+        self.additionalTextNode.maximumNumberOfLines = 1
+        self.additionalTextNode.attributedText = NSAttributedString(string: additionalText, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         
         self.actionTextNode = ImmediateTextNode()
         self.actionTextNode.displaysAsynchronously = false
@@ -1329,6 +1336,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.snappedBackgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.additionalTextNode)
         self.addSubnode(self.actionTextNode)
         self.addSubnode(self.actionButton)
         
@@ -1356,14 +1364,16 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         let titleFont = Font.regular(13.0)
         
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.additionalTextNode.attributedText = NSAttributedString(string: self.additionalTextNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         self.actionTextNode.attributedText = NSAttributedString(string: self.actionTextNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
     }
     
-    public func update(text: String, actionTitle: String?, action: (() -> Void)?) {
+    public func update(text: String, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
         self.actionTitle = actionTitle
         self.action = action
         let titleFont = Font.regular(13.0)
         self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.additionalTextNode.attributedText = NSAttributedString(string: additionalText, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
         self.actionButton.isUserInteractionEnabled = self.action != nil
         if let (size, leftInset, rightInset) = self.validLayout {
@@ -1380,9 +1390,12 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
         let sideInset: CGFloat = 15.0 + leftInset
         
         let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - actionTextSize.width - 8.0, height: size.height))
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - actionTextSize.width - 8.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: max(1.0, size.width - sideInset * 2.0 - actionTextSize.width - 8.0 - additionalTextSize.width), height: size.height))
         
-        self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textSize)
+        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textSize)
+        self.textNode.frame = textFrame
+        self.additionalTextNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX, y: 7.0), size: additionalTextSize)
         self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
         self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
     }

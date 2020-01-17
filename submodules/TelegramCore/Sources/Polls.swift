@@ -21,42 +21,58 @@ public func requestMessageSelectPollOption(account: Account, messageId: MessageI
                 return .generic
             }
             |> mapToSignal { result -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> in
-                var resultPoll: TelegramMediaPoll?
-                switch result {
-                case let .updates(updates, _, _, _, _):
-                    for update in updates {
-                        switch update {
-                        case let .updateMessagePoll(_, pollId, poll, results):
-                            if let poll = poll {
-                                switch poll {
-                                case let .poll(id, flags, question, answers):
-                                    let publicity: TelegramMediaPollPublicity
-                                    if (flags & (1 << 1)) != 0 {
-                                        publicity = .public
-                                    } else {
-                                        publicity = .anonymous
+                return account.postbox.transaction { transaction -> TelegramMediaPoll? in
+                    var resultPoll: TelegramMediaPoll?
+                    switch result {
+                    case let .updates(updates, _, _, _, _):
+                        for update in updates {
+                            switch update {
+                            case let .updateMessagePoll(_, id, poll, results):
+                                let pollId = MediaId(namespace: Namespaces.Media.CloudPoll, id: id)
+                                resultPoll = transaction.getMedia(pollId) as? TelegramMediaPoll
+                                if let poll = poll {
+                                    switch poll {
+                                    case let .poll(id, flags, question, answers):
+                                        let publicity: TelegramMediaPollPublicity
+                                        if (flags & (1 << 1)) != 0 {
+                                            publicity = .public
+                                        } else {
+                                            publicity = .anonymous
+                                        }
+                                        let kind: TelegramMediaPollKind
+                                        if (flags & (1 << 3)) != 0 {
+                                            kind = .quiz
+                                        } else {
+                                            kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
+                                        }
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
+                                    default:
+                                        break
                                     }
-                                    let kind: TelegramMediaPollKind
-                                    if (flags & (1 << 3)) != 0 {
-                                        kind = .quiz
-                                    } else {
-                                        kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
-                                    }
-                                    resultPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
-                                default:
-                                    break
                                 }
+                                
+                                let resultsMin: Bool
+                                switch results {
+                                case let .pollResults(pollResults):
+                                    resultsMin = (pollResults.flags & (1 << 0)) != 0
+                                }
+                                resultPoll = resultPoll?.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
+                                
+                                if let resultPoll = resultPoll {
+                                    updateMessageMedia(transaction: transaction, id: pollId, media: resultPoll)
+                                }
+                            default:
+                                break
                             }
-                        default:
-                            break
                         }
+                        break
+                    default:
+                        break
                     }
-                    break
-                default:
-                    break
+                    account.stateManager.addUpdates(result)
+                    return resultPoll
                 }
-                account.stateManager.addUpdates(result)
-                return .single(resultPoll)
+                |> castError(RequestMessageSelectPollOptionError.self)
             }
         } else {
             return .single(nil)

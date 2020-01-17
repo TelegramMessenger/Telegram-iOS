@@ -1636,7 +1636,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     if controllerInteraction.pollActionState.pollMessageIdsInProgress.removeValue(forKey: id) != nil {
-                        strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                        Queue.mainQueue().after(1.0, {
+                            
+                            strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                        })
                     }
                 }), forKey: id)
             }

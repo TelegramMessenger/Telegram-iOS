@@ -727,8 +727,8 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             } else {
                 kind = .poll(multipleAnswers: state.isMultipleChoice)
             }
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: []), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
             dismissImpl?()
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: []), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -777,7 +777,6 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
         controller?.present(c, in: .window(.root), with: a)
     }
     dismissImpl = { [weak controller] in
-        //controller?.view.endEditing(true)
         controller?.dismiss()
     }
     ensureTextVisibleImpl = { [weak controller] in

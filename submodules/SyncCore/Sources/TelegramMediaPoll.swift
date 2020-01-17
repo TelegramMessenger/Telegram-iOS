@@ -217,13 +217,17 @@ public final class TelegramMediaPoll: Media, Equatable {
         if min {
             if let currentVoters = self.results.voters, let updatedVoters = results.voters {
                 var selectedOpaqueIdentifiers = Set<Data>()
+                var correctOpaqueIdentifiers = Set<Data>()
                 for voters in currentVoters {
                     if voters.selected {
                         selectedOpaqueIdentifiers.insert(voters.opaqueIdentifier)
                     }
+                    if voters.isCorrect {
+                        correctOpaqueIdentifiers.insert(voters.opaqueIdentifier)
+                    }
                 }
                 updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
-                    return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: voters.isCorrect)
+                    return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: correctOpaqueIdentifiers.contains(voters.opaqueIdentifier))
                 }), totalVoters: results.totalVoters, recentVoters: results.recentVoters)
             } else {
                 updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters)
