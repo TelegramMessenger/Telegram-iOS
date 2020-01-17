@@ -8,6 +8,10 @@ import SyncCore
 import TelegramPresentationData
 import MergeLists
 
+public protocol ItemListHeaderItemNode: class {
+    func updateTheme(theme: PresentationTheme)
+}
+
 public typealias ItemListSectionId = Int32
 
 public protocol ItemListNodeAnyEntry {
@@ -467,6 +471,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
+                
+                self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ItemListHeaderItemNode {
+                        itemHeaderNode.updateTheme(theme: transition.theme)
+                    }
+                })
             }
             
             if let updateStyle = transition.updateStyle {

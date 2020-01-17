@@ -7,7 +7,6 @@ import SyncCore
 import Postbox
 import TextFormat
 import UrlEscaping
-import CheckNode
 import SwiftSignalKit
 import AccountContext
 import AvatarNode
@@ -89,40 +88,67 @@ func countNicePercent(votes: [Int], total: Int) -> [Int] {
 }
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
+    let timestamp: Double
     let staticColor: UIColor
     let animatedColor: UIColor
+    let fillColor: UIColor
+    let foregroundColor: UIColor
     let offset: Double?
+    let isChecked: Bool?
+    let checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?
     
-    init(staticColor: UIColor, animatedColor: UIColor, offset: Double?) {
+    init(timestamp: Double, staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, offset: Double?, isChecked: Bool?, checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?) {
+        self.timestamp = timestamp
         self.staticColor = staticColor
         self.animatedColor = animatedColor
+        self.fillColor = fillColor
+        self.foregroundColor = foregroundColor
         self.offset = offset
+        self.isChecked = isChecked
+        self.checkTransition = checkTransition
         
         super.init()
+    }
+}
+
+private final class ChatMessagePollOptionRadioNodeCheckTransition {
+    let startTime: Double
+    let duration: Double
+    let previousValue: Bool
+    let updatedValue: Bool
+    
+    init(startTime: Double, duration: Double, previousValue: Bool, updatedValue: Bool) {
+        self.startTime = startTime
+        self.duration = duration
+        self.previousValue = previousValue
+        self.updatedValue = updatedValue
     }
 }
 
 private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
     private(set) var staticColor: UIColor?
     private(set) var animatedColor: UIColor?
+    private(set) var fillColor: UIColor?
+    private(set) var foregroundColor: UIColor?
     private var isInHierarchyValue: Bool = false
     private(set) var isAnimating: Bool = false
     private var startTime: Double?
+    private var checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?
+    private(set) var isChecked: Bool?
     
-    private var checkNode: CheckNode?
-    
-    private var displayLink: CADisplayLink?
+    private var displayLink: ConstantDisplayLinkAnimator?
     
     private var shouldBeAnimating: Bool {
-        return self.isInHierarchyValue && self.isAnimating
-    }
-    
-    var isChecked: Bool? {
-        return self.checkNode?.isChecked
+        return self.isInHierarchyValue && (self.isAnimating || self.checkTransition != nil)
     }
     
     func updateIsChecked(_ value: Bool, animated: Bool) {
-        self.checkNode?.setIsChecked(value, animated: animated)
+        if let previousValue = self.isChecked, previousValue != value {
+            self.checkTransition = ChatMessagePollOptionRadioNodeCheckTransition(startTime: CACurrentMediaTime(), duration: 0.15, previousValue: previousValue, updatedValue: value)
+            self.isChecked = value
+            self.updateAnimating()
+            self.setNeedsDisplay()
+        }
     }
     
     override init() {
@@ -130,6 +156,10 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
         
         self.isUserInteractionEnabled = false
         self.isOpaque = false
+    }
+    
+    deinit {
+        self.displayLink?.isPaused = true
     }
     
     override func willEnterHierarchy() {
@@ -154,8 +184,10 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
         }
     }
     
-    func update(staticColor: UIColor, animatedColor: UIColor, foregroundColor: UIColor, isSelectable: Bool, isAnimating: Bool) {
+    func update(staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, isSelectable: Bool, isAnimating: Bool) {
         var updated = false
+        let shouldHaveBeenAnimating = self.shouldBeAnimating
+        let wasAnimating = self.isAnimating
         if !staticColor.isEqual(self.staticColor) {
             self.staticColor = staticColor
             updated = true
@@ -164,33 +196,28 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
             self.animatedColor = animatedColor
             updated = true
         }
-        let wasAnimating = self.isAnimating
+        if !fillColor.isEqual(self.fillColor) {
+            self.fillColor = fillColor
+            updated = true
+        }
+        if !foregroundColor.isEqual(self.foregroundColor) {
+            self.foregroundColor = foregroundColor
+            updated = true
+        }
+        if isSelectable != (self.isChecked != nil) {
+            if isSelectable {
+                self.isChecked = false
+            } else {
+                self.isChecked = nil
+                self.checkTransition = nil
+            }
+            updated = true
+        }
         if isAnimating != self.isAnimating {
-            let previous = self.shouldBeAnimating
             self.isAnimating = isAnimating
             let updated = self.shouldBeAnimating
-            if previous != updated {
+            if shouldHaveBeenAnimating != updated {
                 self.updateAnimating()
-            }
-        }
-        if isSelectable && !isAnimating {
-            if self.checkNode == nil {
-                updated = true
-                let checkNode = CheckNode(strokeColor: staticColor, fillColor: animatedColor, foregroundColor: foregroundColor, style: .plain)
-                self.checkNode = checkNode
-                self.addSubnode(checkNode)
-                checkNode.isUserInteractionEnabled = false
-                checkNode.frame = CGRect(origin: CGPoint(x: -5.0, y: -5.0), size: CGSize(width: 32.0, height: 32.0))
-            }
-        } else if let checkNode = self.checkNode {
-            updated = true
-            self.checkNode = nil
-            if wasAnimating != self.isAnimating {
-                checkNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak checkNode] _ in
-                    checkNode?.removeFromSupernode()
-                })
-            } else {
-                checkNode.removeFromSupernode()
             }
         }
         if updated {
@@ -199,26 +226,25 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
     }
     
     private func updateAnimating() {
-        if self.shouldBeAnimating {
-            self.startTime = CACurrentMediaTime()
-            if self.displayLink == nil {
-                class DisplayLinkProxy: NSObject {
-                    var f: () -> Void
-                    init(_ f: @escaping () -> Void) {
-                        self.f = f
-                    }
-                    
-                    @objc func displayLinkEvent() {
-                        self.f()
-                    }
-                }
-                let displayLink = CADisplayLink(target: DisplayLinkProxy({ [weak self] in
-                    self?.setNeedsDisplay()
-                }), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-                displayLink.add(to: .main, forMode: .common)
-                self.displayLink = displayLink
+        let timestamp = CACurrentMediaTime()
+        if let checkTransition = self.checkTransition {
+            if checkTransition.startTime + checkTransition.duration <= timestamp {
+                self.checkTransition = nil
             }
-            self.setNeedsDisplay()
+        }
+        
+        if self.shouldBeAnimating {
+            if self.isAnimating && self.startTime == nil {
+                self.startTime = timestamp
+            }
+            if self.displayLink == nil {
+                self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    self?.updateAnimating()
+                    self?.setNeedsDisplay()
+                })
+                self.displayLink?.isPaused = false
+                self.setNeedsDisplay()
+            }
         } else if let displayLink = self.displayLink {
             self.startTime = nil
             displayLink.invalidate()
@@ -228,12 +254,13 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        if let staticColor = self.staticColor, let animatedColor = self.animatedColor {
+        if let staticColor = self.staticColor, let animatedColor = self.animatedColor, let fillColor = self.fillColor, let foregroundColor = self.foregroundColor {
+            let timestamp = CACurrentMediaTime()
             var offset: Double?
             if let startTime = self.startTime {
                 offset = CACurrentMediaTime() - startTime
             }
-            return ChatMessagePollOptionRadioNodeParameters(staticColor: self.checkNode == nil ? staticColor : .clear, animatedColor: animatedColor, offset: offset)
+            return ChatMessagePollOptionRadioNodeParameters(timestamp: timestamp, staticColor: staticColor, animatedColor: animatedColor, fillColor: fillColor, foregroundColor: foregroundColor, offset: offset, isChecked: self.isChecked, checkTransition: self.checkTransition)
         } else {
             return nil
         }
@@ -312,8 +339,74 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                 }
             }
         } else {
-            context.setStrokeColor(parameters.staticColor.cgColor)
-            context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: bounds.width - 1.0, height: bounds.height - 1.0)))
+            if let isChecked = parameters.isChecked {
+                let checkedT: CGFloat
+                let fromValue: CGFloat
+                let toValue: CGFloat
+                let fromAlpha: CGFloat
+                let toAlpha: CGFloat
+                if let checkTransition = parameters.checkTransition {
+                    checkedT = CGFloat(max(0.0, min(1.0, (parameters.timestamp - checkTransition.startTime) / checkTransition.duration)))
+                    fromValue = checkTransition.previousValue ? bounds.width : 0.0
+                    fromAlpha = checkTransition.previousValue ? 1.0 : 0.0
+                    toValue = checkTransition.updatedValue ? bounds.width : 0.0
+                    toAlpha = checkTransition.updatedValue ? 1.0 : 0.0
+                } else {
+                    checkedT = 1.0
+                    fromValue = isChecked ? bounds.width : 0.0
+                    fromAlpha = isChecked ? 1.0 : 0.0
+                    toValue = isChecked ? bounds.width : 0.0
+                    toAlpha = isChecked ? 1.0 : 0.0
+                }
+                
+                let diameter = fromValue * (1.0 - checkedT) + toValue * checkedT
+                let alpha = fromAlpha * (1.0 - checkedT) + toAlpha * checkedT
+                
+                if abs(diameter - 1.0) > CGFloat.ulpOfOne {
+                    context.setStrokeColor(parameters.staticColor.cgColor)
+                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: bounds.width - 1.0, height: bounds.height - 1.0)))
+                }
+                
+                if !diameter.isZero {
+                    context.setFillColor(parameters.fillColor.withAlphaComponent(alpha).cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: (bounds.width - diameter) / 2.0, y: (bounds.width - diameter) / 2.0), size: CGSize(width: diameter, height: diameter)))
+                    
+                    context.setLineWidth(1.5)
+                    context.setLineJoin(.round)
+                    context.setLineCap(.round)
+                    
+                    context.setStrokeColor(parameters.foregroundColor.withAlphaComponent(alpha).cgColor)
+                    if parameters.foregroundColor.alpha.isZero {
+                        context.setBlendMode(.clear)
+                    }
+                    let startPoint = CGPoint(x: 6.0, y: 12.13)
+                    let centerPoint = CGPoint(x: 9.28, y: 15.37)
+                    let endPoint = CGPoint(x: 16.0, y: 8.0)
+                    
+                    let pathStartT: CGFloat = 0.15
+                    let pathT = max(0.0, (alpha - pathStartT) / (1.0 - pathStartT))
+                    let pathMiddleT: CGFloat = 0.4
+                    
+                    context.move(to: startPoint)
+                    if pathT >= pathMiddleT {
+                        context.addLine(to: centerPoint)
+                        
+                        let pathEndT = (pathT - pathMiddleT) / (1.0 - pathMiddleT)
+                        if pathEndT >= 1.0 {
+                            context.addLine(to: endPoint)
+                        } else {
+                            context.addLine(to: CGPoint(x: (1.0 - pathEndT) * centerPoint.x + pathEndT * endPoint.x, y: (1.0 - pathEndT) * centerPoint.y + pathEndT * endPoint.y))
+                        }
+                    } else {
+                        context.addLine(to: CGPoint(x: (1.0 - pathT) * startPoint.x + pathT * centerPoint.x, y: (1.0 - pathT) * startPoint.y + pathT * centerPoint.y))
+                    }
+                    context.strokePath()
+                    context.setBlendMode(.normal)
+                }
+            } else {
+                context.setStrokeColor(parameters.staticColor.cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: bounds.width - 1.0, height: bounds.height - 1.0)))
+            }
         }
     }
 }
@@ -574,7 +667,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
+                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
                     } else if let radioNode = node.radioNode {
                         node.radioNode = nil
                         if animated {

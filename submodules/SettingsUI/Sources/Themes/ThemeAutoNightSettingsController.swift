@@ -587,6 +587,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.alwaysSynchronous = true
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

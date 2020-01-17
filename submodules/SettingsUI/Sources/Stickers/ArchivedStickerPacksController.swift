@@ -453,7 +453,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     }
     presentStickerPackController = { [weak controller] info in
         let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-        presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
+        presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     
     return controller

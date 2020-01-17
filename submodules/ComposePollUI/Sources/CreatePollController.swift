@@ -22,17 +22,17 @@ private struct OrderedLinkedListItemOrdering: Comparable {
     var higherItemIds: Set<OrderedLinkedListItemOrderingId>
     
     static func <(lhs: OrderedLinkedListItemOrdering, rhs: OrderedLinkedListItemOrdering) -> Bool {
-        if lhs.lowerItemIds.contains(rhs.id) {
-            return false
-        }
         if rhs.lowerItemIds.contains(lhs.id) {
-            return true
-        }
-        if lhs.higherItemIds.contains(rhs.id) {
             return true
         }
         if rhs.higherItemIds.contains(lhs.id) {
             return false
+        }
+        if lhs.lowerItemIds.contains(rhs.id) {
+            return false
+        }
+        if lhs.higherItemIds.contains(rhs.id) {
+            return true
         }
         assertionFailure()
         return false

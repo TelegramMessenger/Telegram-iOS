@@ -838,7 +838,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
+                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = navigationControllerImpl?() {

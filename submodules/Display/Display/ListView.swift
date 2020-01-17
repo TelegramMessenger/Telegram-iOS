@@ -2064,8 +2064,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             } else {
                 if !nodeFrame.size.height.isEqual(to: node.apparentHeight) {
+                    let addAnimation = previousFrame?.height != nodeFrame.size.height
                     node.addApparentHeightAnimation(nodeFrame.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
-                        if let node = node {
+                        if let node = node, addAnimation {
                             node.animateFrameTransition(progress, currentValue)
                         }
                     })

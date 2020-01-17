@@ -181,7 +181,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
     return (removeIndices, insertItems, updatedIndices)
 }
 
-@inlinable
+//@inlinable
 public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess: (T, T) -> Bool, isEqual: (T, T) -> Bool, getId: (T) -> AnyHashable, allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
@@ -206,6 +206,25 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess
         }
     }
     #endif
+    
+    var leftStableIds: [AnyHashable] = []
+    var rightStableIds: [AnyHashable] = []
+    for item in leftList {
+        leftStableIds.append(getId(item))
+    }
+    for item in rightList {
+        rightStableIds.append(getId(item))
+    }
+    if Set(leftStableIds) == Set(rightStableIds) && leftStableIds != rightStableIds {
+        /*var i = 0
+        var j = 0
+        while true {
+            if getId(leftList[i]) != getId(rightList[i]) {
+                
+            }
+        }*/
+        print("order changed")
+    }
     
     var currentList = leftList
     
