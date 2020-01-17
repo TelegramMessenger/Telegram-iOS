@@ -148,7 +148,7 @@ private func processPollText(_ text: String) -> String {
 
 private final class CreatePollControllerArguments {
     let updatePollText: (String) -> Void
-    let updateOptionText: (Int, String) -> Void
+    let updateOptionText: (Int, String, Bool) -> Void
     let moveToNextOption: (Int) -> Void
     let moveToPreviousOption: (Int) -> Void
     let removeOption: (Int, Bool) -> Void
@@ -160,7 +160,7 @@ private final class CreatePollControllerArguments {
     let displayMultipleChoiceDisabled: () -> Void
     let updateQuiz: (Bool) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
@@ -317,8 +317,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
         case let .option(id, _, placeholder, text, revealed, hasNext, isLast, isSelected):
             return CreatePollOptionItem(presentationData: presentationData, id: id, placeholder: placeholder, value: text, isSelected: isSelected, maxLength: maxOptionLength, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
                 arguments.setItemIdWithRevealedOptions(id, fromId)
-            }, updated: { value in
-                arguments.updateOptionText(id, value)
+            }, updated: { value, isFocused in
+                arguments.updateOptionText(id, value, isFocused)
             }, next: hasNext ? {
                 arguments.moveToNextOption(id)
             } : nil, delete: { focused in
@@ -456,13 +456,15 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             return state
         }
         ensureTextVisibleImpl?()
-    }, updateOptionText: { id, value in
+    }, updateOptionText: { id, value, isFocused in
         var ensureVisibleId = id
         updateState { state in
             var state = state
             for i in 0 ..< state.options.count {
                 if state.options[i].item.id == id {
-                    state.focusOptionId = id
+                    if isFocused {
+                        state.focusOptionId = id
+                    }
                     state.options.update(at: i, { option in
                         option.text = value
                     })
@@ -478,7 +480,9 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             }
             return state
         }
-        ensureOptionVisibleImpl?(ensureVisibleId)
+        if isFocused {
+            ensureOptionVisibleImpl?(ensureVisibleId)
+        }
     }, moveToNextOption: { id in
         var resetFocusOptionId: Int?
         updateState { state in
