@@ -1275,7 +1275,7 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     }
 }
 
-public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode {
+public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListHeaderItemNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var actionTitle: String?

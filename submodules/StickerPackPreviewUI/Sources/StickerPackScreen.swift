@@ -847,8 +847,8 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) -> ViewController {
-    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: .default, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
+public func StickerPackScreen(context: AccountContext, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) -> ViewController {
+    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
     controller.sendSticker = sendSticker
     return controller
 }
