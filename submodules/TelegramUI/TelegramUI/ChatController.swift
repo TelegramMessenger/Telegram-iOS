@@ -1559,7 +1559,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return;
                 }
-                if true {
+                if false {
                     if strongSelf.selectPollOptionFeedback == nil {
                         strongSelf.selectPollOptionFeedback = HapticFeedback()
                     }
@@ -6708,7 +6708,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, forceInCurrentChat: Bool = false, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {
-        self.navigateToMessage(from: nil, to: messageLocation, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
+        let scrollPosition: ListViewScrollPosition
+        if case .upperBound = messageLocation {
+            scrollPosition = .top(0.0)
+        } else {
+            scrollPosition = .center(.bottom)
+        }
+        self.navigateToMessage(from: nil, to: messageLocation, scrollPosition: scrollPosition, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
     }
     
     private func navigateToMessage(from fromId: MessageId?, to messageLocation: NavigateToMessageLocation, scrollPosition: ListViewScrollPosition = .center(.bottom), rememberInStack: Bool = true, forceInCurrentChat: Bool = false, animated: Bool = true, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {

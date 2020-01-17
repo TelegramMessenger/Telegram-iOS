@@ -182,6 +182,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     }
     
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.editableTextNodeDidUpdateText(editableTextNode)
         self.item?.focused(false)
     }
     

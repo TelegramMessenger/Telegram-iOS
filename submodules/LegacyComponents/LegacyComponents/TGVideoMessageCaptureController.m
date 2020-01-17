@@ -201,6 +201,7 @@ typedef enum
 
 - (void)dealloc
 {
+    printf("Video controller dealloc\n");
     [_thumbnailsDisposable dispose];
     [[NSNotificationCenter defaultCenter] removeObserver:_didEnterBackgroundObserver];
     [_activityDisposable dispose];
@@ -649,9 +650,11 @@ typedef enum
         return;
     
     [_activityDisposable dispose];
-    [self stopRecording];
-    
-    [self dismiss:false];
+    [self stopRecording:^{
+        TGDispatchOnMainThread(^{
+            [self dismiss:false];
+        });
+    }];
 }
 
 - (void)buttonInteractionUpdate:(CGPoint)value
@@ -684,7 +687,7 @@ typedef enum
     _switchButton.userInteractionEnabled = false;
     
     [_activityDisposable dispose];
-    [self stopRecording];
+    [self stopRecording:^{}];
     return true;
 }
 
@@ -939,9 +942,9 @@ typedef enum
     [self startRecordingTimer];
 }
 
-- (void)stopRecording
+- (void)stopRecording:(void (^)())completed
 {
-    [_capturePipeline stopRecording];
+    [_capturePipeline stopRecording:completed];
     [_buttonHandler ignoreEventsFor:1.0f andDisable:true];
 }
 

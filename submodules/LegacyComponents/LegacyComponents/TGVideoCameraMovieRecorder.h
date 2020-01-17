@@ -18,7 +18,7 @@
 - (void)appendVideoPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime;
 - (void)appendAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
-- (void)finishRecording;
+- (void)finishRecording:(void(^)())completed;
 
 - (NSTimeInterval)videoDuration;
 

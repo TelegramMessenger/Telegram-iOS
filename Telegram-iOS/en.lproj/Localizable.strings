@@ -5246,6 +5246,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Map.NoPlacesNearby" = "There are no known places nearby.\nTry a different location.";
 
+"CreatePoll.QuizTitle" = "New Quiz";
+"CreatePoll.QuizOptionsHeader" = "QUIZ OPTIONS";
 "CreatePoll.Anonymous" = "Anonymous Voting";
 "CreatePoll.MultipleChoice" = "Multiple Choice";
 "CreatePoll.MultipleChoiceQuizAlert" = "A quiz has one correct answer.";

@@ -224,7 +224,11 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                 if peers.count > collapsedInitialLimit {
                     displayCount = collapsedResultCount
                 } else {
-                    displayCount = peers.count
+                    if optionState.isLoadingMore && peers.count <= collapsedInitialLimit + 1 {
+                        displayCount = collapsedResultCount
+                    } else {
+                        displayCount = peers.count
+                    }
                 }
                 
                 var peerIndex = 0
@@ -278,7 +282,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak resultsContext] state in
             if let optionState = state.options[optionId] {
-                if optionState.canLoadMore && optionState.peers.count <= collapsedResultCount {
+                if optionState.canLoadMore {
                     resultsContext?.loadMore(optionOpaqueIdentifier: optionId)
                 }
             }
