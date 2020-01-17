@@ -155,7 +155,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
 }
 
 private struct PollResultsControllerState: Equatable {
-    var expandedOptions = Set<Data>()
+    var expandedOptions: [Data: Int] = [:]
 }
 
 private func pollResultsControllerEntries(presentationData: PresentationData, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState) -> [PollResultsEntry] {
@@ -215,24 +215,40 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
         } else {
             if let optionState = resultsState.options[option.opaqueIdentifier], !optionState.peers.isEmpty {
                 var hasMore = false
-                let optionExpanded = state.expandedOptions.contains(option.opaqueIdentifier)
+                let optionExpandedAtCount = state.expandedOptions[option.opaqueIdentifier]
                 
                 let peers = optionState.peers
                 let count = optionState.count
                 
                 let displayCount: Int
-                if peers.count > collapsedInitialLimit {
-                    displayCount = collapsedResultCount
+                if peers.count > collapsedInitialLimit + 1 {
+                    if optionExpandedAtCount != nil {
+                        displayCount = peers.count
+                    } else {
+                        displayCount = collapsedResultCount
+                    }
                 } else {
-                    displayCount = peers.count
+                    if let optionExpandedAtCount = optionExpandedAtCount {
+                        if optionExpandedAtCount == collapsedInitialLimit + 1 && optionState.canLoadMore {
+                            displayCount = collapsedResultCount
+                        } else {
+                            displayCount = peers.count
+                        }
+                    } else {
+                        if !optionState.canLoadMore {
+                            displayCount = peers.count
+                        } else {
+                            displayCount = collapsedResultCount
+                        }
+                    }
                 }
                 
                 var peerIndex = 0
                 inner: for peer in peers {
-                    if !optionExpanded && peerIndex >= displayCount {
+                    if peerIndex >= displayCount {
                         break inner
                     }
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionCount: Int32(count), optionExpanded: optionExpanded, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
                     peerIndex += 1
                 }
                 
@@ -265,20 +281,21 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     collapseOption: { optionId in
         updateState { state in
             var state = state
-            state.expandedOptions.remove(optionId)
+            state.expandedOptions.removeValue(forKey: optionId)
             return state
         }
     }, expandOption: { optionId in
-        updateState { state in
-            var state = state
-            state.expandedOptions.insert(optionId)
-            return state
-        }
         let _ = (resultsContext.state
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak resultsContext] state in
             if let optionState = state.options[optionId] {
-                if optionState.canLoadMore && optionState.peers.count <= collapsedResultCount {
+                updateState { state in
+                    var state = state
+                    state.expandedOptions[optionId] = optionState.peers.count
+                    return state
+                }
+                
+                if optionState.canLoadMore {
                     resultsContext?.loadMore(optionOpaqueIdentifier: optionId)
                 }
             }

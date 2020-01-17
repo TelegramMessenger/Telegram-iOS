@@ -8428,6 +8428,7 @@ public extension Api {
         case keyboardButtonBuy(text: String)
         case keyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, buttonId: Int32)
         case inputKeyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, bot: Api.InputUser)
+        case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8503,6 +8504,14 @@ public extension Api {
                     serializeString(url, buffer: buffer, boxed: false)
                     bot.serialize(buffer, true)
                     break
+                case .keyboardButtonRequestPoll(let flags, let quiz, let text):
+                    if boxed {
+                        buffer.appendInt32(-1144565411)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {quiz!.serialize(buffer, true)}
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -8528,6 +8537,8 @@ public extension Api {
                 return ("keyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("buttonId", buttonId)])
                 case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
                 return ("inputKeyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("bot", bot)])
+                case .keyboardButtonRequestPoll(let flags, let quiz, let text):
+                return ("keyboardButtonRequestPoll", [("flags", flags), ("quiz", quiz), ("text", text)])
     }
     }
     
@@ -8674,6 +8685,25 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.KeyboardButton.inputKeyboardButtonUrlAuth(flags: _1!, text: _2!, fwdText: _3, url: _4!, bot: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_keyboardButtonRequestPoll(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.KeyboardButton.keyboardButtonRequestPoll(flags: _1!, quiz: _2, text: _3!)
             }
             else {
                 return nil

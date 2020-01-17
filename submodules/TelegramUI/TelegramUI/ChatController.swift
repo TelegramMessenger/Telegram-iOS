@@ -1852,6 +1852,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             })
+        }, openPollCreation: { [weak self] isQuiz in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentPollCreation(isQuiz: isQuiz)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -6115,9 +6120,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func presentPollCreation() {
+    private func presentPollCreation(isQuiz: Bool? = nil) {
         if case .peer = self.chatLocation, let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, completion: { [weak self] message in
+            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peer: peer, isQuiz: isQuiz, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }
@@ -6703,7 +6708,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, forceInCurrentChat: Bool = false, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {
-        self.navigateToMessage(from: nil, to: messageLocation, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
+        let scrollPosition: ListViewScrollPosition
+        if case .upperBound = messageLocation {
+            scrollPosition = .top(0.0)
+        } else {
+            scrollPosition = .center(.bottom)
+        }
+        self.navigateToMessage(from: nil, to: messageLocation, scrollPosition: scrollPosition, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
     }
     
     private func navigateToMessage(from fromId: MessageId?, to messageLocation: NavigateToMessageLocation, scrollPosition: ListViewScrollPosition = .center(.bottom), rememberInStack: Bool = true, forceInCurrentChat: Bool = false, animated: Bool = true, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {

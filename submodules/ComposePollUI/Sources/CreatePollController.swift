@@ -372,7 +372,7 @@ private struct CreatePollControllerState: Equatable {
     var isQuiz: Bool = false
 }
 
-private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration) -> [CreatePollEntry] {
+private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
     var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
@@ -382,7 +382,13 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     }
     entries.append(.textHeader(presentationData.strings.CreatePoll_TextHeader, textLimitText))
     entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
-    entries.append(.optionsHeader(presentationData.strings.CreatePoll_OptionsHeader))
+    let optionsHeaderTitle: String
+    if let defaultIsQuiz = defaultIsQuiz, defaultIsQuiz {
+        optionsHeaderTitle = presentationData.strings.CreatePoll_QuizOptionsHeader
+    } else {
+        optionsHeaderTitle = presentationData.strings.CreatePoll_OptionsHeader
+    }
+    entries.append(.optionsHeader(optionsHeaderTitle))
     for i in 0 ..< state.options.count {
         let isSecondLast = state.options.count == 2 && i == 0
         let isLast = i == state.options.count - 1
@@ -403,16 +409,26 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     if canBePublic {
         entries.append(.anonymousVotes(presentationData.strings.CreatePoll_Anonymous, state.isAnonymous))
     }
-    entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
-    entries.append(.quiz(presentationData.strings.CreatePoll_Quiz, state.isQuiz))
-    entries.append(.quizInfo(presentationData.strings.CreatePoll_QuizInfo))
+    if let defaultIsQuiz = defaultIsQuiz {
+        if !defaultIsQuiz {
+            entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
+        }
+    } else {
+        entries.append(.multipleChoice(presentationData.strings.CreatePoll_MultipleChoice, state.isMultipleChoice && !state.isQuiz, !state.isQuiz))
+        entries.append(.quiz(presentationData.strings.CreatePoll_Quiz, state.isQuiz))
+        entries.append(.quizInfo(presentationData.strings.CreatePoll_QuizInfo))
+    }
     
     return entries
 }
 
-public func createPollController(context: AccountContext, peer: Peer, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
-    let statePromise = ValuePromise(CreatePollControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: CreatePollControllerState())
+public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+    var initialState = CreatePollControllerState()
+    if let isQuiz = isQuiz {
+        initialState.isQuiz = isQuiz
+    }
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
     let updateState: ((CreatePollControllerState) -> CreatePollControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -738,8 +754,15 @@ public func createPollController(context: AccountContext, peer: Peer, completion
             ensureVisibleItemTag = focusItemTag
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CreatePoll_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, peer: peer, state: state, limitsConfiguration: limitsConfiguration), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil)
+        let title: String
+        if let isQuiz = isQuiz, isQuiz {
+            title = presentationData.strings.CreatePoll_QuizTitle
+        } else {
+            title = presentationData.strings.CreatePoll_Title
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createPollControllerEntries(presentationData: presentationData, peer: peer, state: state, limitsConfiguration: limitsConfiguration, defaultIsQuiz: isQuiz), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: previousIds != nil)
         
         return (controllerState, (listState, arguments))
     }
