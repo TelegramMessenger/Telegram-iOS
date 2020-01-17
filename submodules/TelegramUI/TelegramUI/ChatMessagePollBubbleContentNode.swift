@@ -539,7 +539,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             let shouldHaveRadioNode = optionResult == nil
             let isSelectable: Bool
-            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind {
+            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind, !Namespaces.Message.allScheduled.contains(message.id.namespace) {
                 isSelectable = true
             } else {
                 isSelectable = false
@@ -1155,7 +1155,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
                 
                 var canVote = false
-                if item.message.id.namespace == Namespaces.Message.Cloud, let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !poll.isClosed {
+                if (item.message.id.namespace == Namespaces.Message.Cloud || Namespaces.Message.allScheduled.contains(item.message.id.namespace)), let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !poll.isClosed {
                     var hasVoted = false
                     if let voters = poll.results.voters {
                         for voter in voters {
@@ -1168,9 +1168,6 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     if !hasVoted {
                         canVote = true
                     }
-                }
-                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-                    canVote = false
                 }
                 
                 return (boundingSize.width, { boundingWidth in
@@ -1349,10 +1346,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         
-        var disableAllActions = false
-        if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-            disableAllActions = true
-        }
+        let disableAllActions = false
         
         var hasSelection = false
         switch poll.kind {
