@@ -173,6 +173,9 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
     
     public func currentlyInSplitView() -> Bool {
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout {
+            return validLayout.isNonExclusive
+        }
         return false
     }
     
