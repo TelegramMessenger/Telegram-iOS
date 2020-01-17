@@ -954,7 +954,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
         
         var progressRequired = false
-        if attributes.updatingMedia != nil {
+        if let updatingMedia = attributes.updatingMedia, case .update = updatingMedia.media {
             progressRequired = true
         } else if secretBeginTimeAndTimeout?.0 != nil {
             progressRequired = true
