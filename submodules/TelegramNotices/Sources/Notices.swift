@@ -129,12 +129,12 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case volumeButtonToUnmuteTip = 9
     case archiveChatTips = 10
     case archiveIntroDismissed = 11
-    case callsTabTip = 12
     case cellularDataPermissionWarning = 13
     case chatMessageSearchResultsTip = 14
     case chatMessageOptionsTip = 15
     case chatTextSelectionTip = 16
     case themeChangeTip = 17
+    case callsTabTip = 18
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
