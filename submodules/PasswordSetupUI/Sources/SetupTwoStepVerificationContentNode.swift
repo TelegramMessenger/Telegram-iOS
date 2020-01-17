@@ -160,7 +160,7 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
         
         let minContentHeight = textHeight + inputHeight
         let contentHeight = min(215.0, max(size.height - insets.top - insets.bottom - 40.0, minContentHeight))
-        let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0)
+        let contentOrigin = max(56.0, insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0))
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentOrigin), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize))

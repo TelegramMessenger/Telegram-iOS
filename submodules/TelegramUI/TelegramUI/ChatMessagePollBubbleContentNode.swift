@@ -11,6 +11,7 @@ import CheckNode
 import SwiftSignalKit
 import AccountContext
 import AvatarNode
+import TelegramPresentationData
 
 private struct PercentCounterItem: Comparable  {
     var index: Int = 0
@@ -373,6 +374,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private(set) var currentSelection: ChatMessagePollOptionSelection?
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
+    private var theme: PresentationTheme?
     
     override init() {
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -430,6 +432,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         let makeTitleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let currentResult = maybeNode?.currentResult
         let currentSelection = maybeNode?.currentSelection
+        let currentTheme = maybeNode?.theme
         
         return { accountPeerId, presentationData, message, poll, option, optionResult, constrainedWidth in
             let leftInset: CGFloat = 50.0
@@ -449,8 +452,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                 isSelectable = false
             }
             
+            let themeUpdated = presentationData.theme.theme !== currentTheme
+            
             var updatedPercentageImage: UIImage?
-            if currentResult != optionResult {
+            if currentResult != optionResult || themeUpdated {
                 let value = optionResult?.percent ?? 0
                 updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: value, targetValue: value)
             }
@@ -471,7 +476,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     }
                 }
             }
-            if selection != currentSelection {
+            if selection != currentSelection || themeUpdated {
                 updatedResultIcon = true
                 if let selection = selection {
                     var isQuiz = false
@@ -537,6 +542,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     let previousResult = node.currentResult
                     node.currentResult = optionResult
                     node.currentSelection = selection
+                    node.theme = presentationData.theme.theme
                     
                     node.highlightedBackgroundNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.highlight : presentationData.theme.theme.chat.message.outgoing.polls.highlight
                     
@@ -568,7 +574,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, foregroundColor: presentationData.theme.theme.list.itemCheckColors.foregroundColor, isSelectable: isSelectable, isAnimating: inProgress)
+                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
                     } else if let radioNode = node.radioNode {
                         node.radioNode = nil
                         if animated {
@@ -1071,7 +1077,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-                    canVote = true
+                    canVote = false
                 }
                 
                 return (boundingSize.width, { boundingWidth in
@@ -1275,6 +1281,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         var hasResults = false
         if poll.isClosed {
             hasResults = true
+            hasSelection = false
+            if let totalVoters = poll.results.totalVoters, totalVoters == 0 {
+                hasResults = false
+            }
         } else {
             if let totalVoters = poll.results.totalVoters, totalVoters != 0 {
                 if let voters = poll.results.voters {
@@ -1351,12 +1361,43 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return .ignore
-                    } else if let result = optionNode.currentResult, let item = self.item, let poll = self.poll, case .public = poll.publicity, let option = optionNode.option {
-                        if !isEstimating {
-                            item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
-                            return .ignore
+                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option {
+                        switch poll.publicity {
+                        case .anonymous:
+                            let string: String
+                            switch poll.kind {
+                            case .poll:
+                                if result.count == 0 {
+                                    string = item.presentationData.strings.MessagePoll_NoVotes
+                                } else {
+                                    string = item.presentationData.strings.MessagePoll_VotedCount(result.count)
+                                }
+                            case .quiz:
+                                if result.count == 0 {
+                                    string = item.presentationData.strings.MessagePoll_QuizNoUsers
+                                } else {
+                                    string = item.presentationData.strings.MessagePoll_QuizCount(result.count)
+                                }
+                            }
+                            return .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0))
+                        case .public:
+                            var hasNonZeroVoters = false
+                            if let voters = poll.results.voters {
+                                for voter in voters {
+                                    if voter.count != 0 {
+                                        hasNonZeroVoters = true
+                                        break
+                                    }
+                                }
+                            }
+                            if hasNonZeroVoters {
+                                if !isEstimating {
+                                    item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
+                                    return .ignore
+                                }
+                                return .openMessage
+                            }
                         }
-                        return .openMessage
                     }
                 }
             }

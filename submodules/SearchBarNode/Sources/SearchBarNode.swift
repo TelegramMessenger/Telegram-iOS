@@ -87,12 +87,13 @@ private class SearchBarTextField: UITextField {
         }
         var rect = bounds.insetBy(dx: 4.0, dy: 4.0)
         
-        let prefixSize = self.prefixLabel.measure(bounds.size)
+        let prefixSize = self.prefixLabel.measure(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         if !prefixSize.width.isZero {
             let prefixOffset = prefixSize.width
             rect.origin.x += prefixOffset
             rect.size.width -= prefixOffset
         }
+        rect.size.width = max(rect.size.width, 10.0)
         return rect
     }
     
@@ -117,7 +118,7 @@ private class SearchBarTextField: UITextField {
         let labelSize = self.placeholderLabel.measure(textRect.size)
         self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset), size: labelSize)
         
-        let prefixSize = self.prefixLabel.measure(bounds.size)
+        let prefixSize = self.prefixLabel.measure(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset), size: prefixSize)
     }
