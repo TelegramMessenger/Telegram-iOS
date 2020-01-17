@@ -84,7 +84,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.placesBackgroundNode.isUserInteractionEnabled = true
         
         self.placesButtonNode = HighlightableButtonNode()
-        self.placesButtonNode.setTitle("Places In This Area", with: Font.regular(17.0), with: presentationData.theme.rootController.navigationBar.buttonColor, for: .normal)
+        self.placesButtonNode.setTitle(presentationData.strings.Map_PlacesInThisArea, with: Font.regular(17.0), with: presentationData.theme.rootController.navigationBar.buttonColor, for: .normal)
         
         self.shadowNode = ASImageNode()
         self.shadowNode.contentMode = .scaleToFill

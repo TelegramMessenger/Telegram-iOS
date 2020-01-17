@@ -5280,3 +5280,5 @@ Any member of this group will be able to see messages in the channel.";
 "Forward.ErrorDisabledForChat" = "Sorry, you can't forward messages to this chat.";
 "Forward.ErrorPublicPollDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
 "Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
+
+"Map.PlacesInThisArea" = "Places In This Area";
