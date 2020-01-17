@@ -77,6 +77,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     let backgroundNode: WallpaperBackgroundNode
+    let backgroundDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
     let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
@@ -280,7 +281,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        self.backgroundDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, accountMediaBox: context.account.postbox.mediaBox).start(next: { [weak self] image in
+            if let strongSelf = self, let (image, final) = image {
+                strongSelf.backgroundNode.image = image
+            }
+        }))
         if case .gradient = chatPresentationInterfaceState.chatWallpaper {
             self.backgroundNode.imageContentMode = .scaleToFill
         } else {
@@ -1443,6 +1448,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
+                self.backgroundDisposable.set(chatControllerBackgroundImageSignal(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, accountMediaBox: self.context.account.postbox.mediaBox).start(next: { [weak self] image in
+                    if let strongSelf = self, let (image, final) = image {
+                        strongSelf.backgroundNode.image = image
+                    }
+                }))
                 self.backgroundNode.image = chatControllerBackgroundImage(theme: chatPresentationInterfaceState.theme, wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: self.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
                 if case .gradient = chatPresentationInterfaceState.chatWallpaper {
                     self.backgroundNode.imageContentMode = .scaleToFill
