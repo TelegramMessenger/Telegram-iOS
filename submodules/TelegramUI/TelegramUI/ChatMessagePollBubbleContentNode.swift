@@ -1018,7 +1018,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                if let poll = poll, poll.isClosed, case .poll = poll.kind {
+                if let poll = poll, poll.isClosed {
                     typeText = item.presentationData.strings.MessagePoll_LabelClosed
                 } else if let poll = poll {
                     switch poll.kind {
