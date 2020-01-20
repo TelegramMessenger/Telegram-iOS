@@ -196,7 +196,7 @@ private final class PollResultsOptionContext {
         self.count = count
         
         self.isLoadingMore = true
-        self.disposable.set((account.postbox.transaction { transaction -> [RenderedPeer]? in
+        self.disposable.set((account.postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool)? in
             let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier))) as? CachedPollOptionResult
             if let cachedResult = cachedResult, Int(cachedResult.count) == count {
                 var result: [RenderedPeer] = []
@@ -207,19 +207,20 @@ private final class PollResultsOptionContext {
                         return nil
                     }
                 }
-                return result
+                return (result, Int(cachedResult.count) > result.count)
             } else {
                 return nil
             }
         }
-        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeers in
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersAndCanLoadMore in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.isLoadingMore = false
-            if let cachedPeers = cachedPeers {
+            if let (cachedPeers, canLoadMore) = cachedPeersAndCanLoadMore {
                 strongSelf.results = cachedPeers
                 strongSelf.hasLoadedOnce = true
+                strongSelf.canLoadMore = canLoadMore
             }
             strongSelf.loadMore()
         }))
