@@ -76,7 +76,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             }
         }
         
-        if !message.text.isEmpty || isUnsupportedMedia {
+        var messageText = message.text
+        if let updatingMedia = itemAttributes.updatingMedia {
+            messageText = updatingMedia.text
+        }
+        
+        if !messageText.isEmpty || isUnsupportedMedia {
             if !skipText {
                 if case .group = item.content {
                     messageWithCaptionToAdd = (message, itemAttributes)
