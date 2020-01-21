@@ -5291,3 +5291,5 @@ Any member of this group will be able to see messages in the channel.";
 "Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
 
 "Map.PlacesInThisArea" = "Places In This Area";
+
+"Conversation.LiveLocationYouAndOther" = "**You** and %@";
