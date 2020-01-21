@@ -405,7 +405,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
     private let topSeparatorNode = ASDisplayNode()
     
     private var switchItemNode: ItemListSwitchItemNode
-    private var cornerRadiusItemNode: ThemeSettingsFontSizeItemNode
+    private var cornerRadiusItemNode: BubbleSettingsRadiusItemNode
     
     private(set) var customMode: TextSelectionCustomMode = .chat
     
@@ -420,7 +420,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.switchItemNode = ItemListSwitchItemNode(type: .regular)
-        self.cornerRadiusItemNode = ThemeSettingsFontSizeItemNode()
+        self.cornerRadiusItemNode = BubbleSettingsRadiusItemNode()
         
         super.init()
         
@@ -489,44 +489,8 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_BubbleCorners_AdjustAdjacent, value: self.presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateMergeBubbleCorners?(value)
         })
-        let fontSize: PresentationFontSize
-        switch Int(self.presentationData.chatBubbleCorners.mainRadius) {
-        case 4:
-            fontSize = .extraSmall
-        case 6:
-            fontSize = .small
-        case 8:
-            fontSize = .medium
-        case 10:
-            fontSize = .regular
-        case 12:
-            fontSize = .large
-        case 14:
-            fontSize = .extraLarge
-        case 16:
-            fontSize = .extraLargeX2
-        default:
-            fontSize = .extraLargeX2
-        }
-        let cornerRadiusItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: fontSize, enabled: true, disableLeadingInset: false, displayIcons: false, force: false, sectionId: 0, updated: { [weak self] value in
-            let numericValue: Int32
-            switch value {
-            case .extraSmall:
-                numericValue = 4
-            case .small:
-                numericValue = 6
-            case .medium:
-                numericValue = 8
-            case .regular:
-                numericValue = 10
-            case .large:
-                numericValue = 12
-            case .extraLarge:
-                numericValue = 14
-            case .extraLargeX2:
-                numericValue = 16
-            }
-            self?.updateCornerRadius?(numericValue)
+        let cornerRadiusItem = BubbleSettingsRadiusItem(theme: self.presentationData.theme, value: Int(self.presentationData.chatBubbleCorners.mainRadius), enabled: true, disableLeadingInset: false, displayIcons: false, force: false, sectionId: 0, updated: { [weak self] value in
+            self?.updateCornerRadius?(Int32(max(8, min(16, value))))
         })
         
         /*switchItem.updateNode(async: { f in

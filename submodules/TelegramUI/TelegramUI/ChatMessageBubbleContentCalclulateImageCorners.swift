@@ -13,6 +13,9 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                 case .Neighbour:
                     topLeftCorner = .Corner(mergedWithAnotherContentRadius)
                     topRightCorner = .Corner(mergedWithAnotherContentRadius)
+                case .BubbleNeighbour:
+                    topLeftCorner = .Corner(mergedRadius)
+                    topRightCorner = .Corner(mergedRadius)
                 case let .None(mergeStatus):
                     switch mergeStatus {
                         case .Left:
@@ -32,12 +35,16 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                     topLeftCorner = .Corner(normalRadius)
                 case .merged:
                     topLeftCorner = .Corner(mergedWithAnotherContentRadius)
+                case .mergedBubble:
+                    topLeftCorner = .Corner(mergedRadius)
             }
             switch position.topRight {
                 case .none:
                     topRightCorner = .Corner(normalRadius)
                 case .merged:
                     topRightCorner = .Corner(mergedWithAnotherContentRadius)
+                case .mergedBubble:
+                    topRightCorner = .Corner(mergedRadius)
             }
     }
     
@@ -50,6 +57,9 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                 case .Neighbour:
                     bottomLeftCorner = .Corner(mergedWithAnotherContentRadius)
                     bottomRightCorner = .Corner(mergedWithAnotherContentRadius)
+                case .BubbleNeighbour:
+                    bottomLeftCorner = .Corner(mergedRadius)
+                    bottomRightCorner = .Corner(mergedRadius)
                 case let .None(mergeStatus):
                     switch mergeStatus {
                         case .Left:
@@ -115,7 +125,9 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                     }
                 case .merged:
                     bottomLeftCorner = .Corner(mergedWithAnotherContentRadius)
-                }
+                case .mergedBubble:
+                    bottomLeftCorner = .Corner(mergedRadius)
+            }
             switch position.bottomRight {
                 case let .none(tail):
                     if tail {
@@ -137,6 +149,8 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                     }
                 case .merged:
                     bottomRightCorner = .Corner(mergedWithAnotherContentRadius)
+                case .mergedBubble:
+                    bottomRightCorner = .Corner(mergedRadius)
             }
     }
     

@@ -159,7 +159,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 if forceFullCorners, case .linear = updatedPosition {
                     updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
                 } else if hasReplyMarkup, case let .linear(top, _) = updatedPosition {
-                    updatedPosition = .linear(top: top, bottom: .Neighbour)
+                    updatedPosition = .linear(top: top, bottom: .BubbleNeighbour)
                 }
                 
                 let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)

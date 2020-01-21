@@ -70,7 +70,7 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
         } else {
             context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 5.0, y: bottomEllipse.midY), size: CGSize(width: bottomEllipse.width + 5.0, height: bottomEllipse.height / 2.0)))
         }
-        context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: fixedMainDiameter / 2.0), size: CGSize(width: fixedMainDiameter / 2.0, height: bottomEllipse.midY - fixedMainDiameter / 2.0)))
+        context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: floor(fixedMainDiameter / 2.0)), size: CGSize(width: fixedMainDiameter / 2.0, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
         context.setFillColor(UIColor.clear.cgColor)
         context.setBlendMode(.copy)
         context.fillEllipse(in: topEllipse)
@@ -108,13 +108,13 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     case .side:
         topLeftRadius = maxCornerRadius
         topRightRadius = maxCornerRadius
-        bottomLeftRadius = maxCornerRadius
-        bottomRightRadius = maxCornerRadius
+        bottomLeftRadius = minCornerRadius
+        bottomRightRadius = minCornerRadius
         drawTail = false
     case let .top(side):
         topLeftRadius = maxCornerRadius
-        topRightRadius = side ? minCornerRadius : maxCornerRadius
-        bottomLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = side ? minCornerRadius : maxCornerRadius
         bottomRightRadius = minCornerRadius
         drawTail = false
     }
@@ -162,7 +162,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             } else {
                 context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 2.0, y: bottomEllipse.midY), size: CGSize(width: bottomEllipse.width + 2.0, height: bottomEllipse.height / 2.0)))
             }
-            context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: fixedMainDiameter / 2.0), size: CGSize(width: fixedMainDiameter / 2.0, height: bottomEllipse.midY - fixedMainDiameter / 2.0)))
+            context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: floor(fixedMainDiameter / 2.0)), size: CGSize(width: fixedMainDiameter / 2.0, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
             context.setFillColor(UIColor.clear.cgColor)
             context.setBlendMode(.copy)
             context.fillEllipse(in: topEllipse)
@@ -206,9 +206,9 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
                 context.addQuadCurve(to: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.midY), control: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.maxY))
                 context.fillPath()
             } else {
-                context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 2.0, y: bottomEllipse.midY), size: CGSize(width: bottomEllipse.width + 2.0, height: bottomEllipse.height / 2.0)))
+                context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 2.0, y: floor(bottomEllipse.midY)), size: CGSize(width: bottomEllipse.width + 2.0, height: ceil(bottomEllipse.height / 2.0))))
             }
-            context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: fixedMainDiameter / 2.0), size: CGSize(width: fixedMainDiameter / 2.0 + borderWidth, height: bottomEllipse.midY - fixedMainDiameter / 2.0)))
+            context.fill(CGRect(origin: CGPoint(x: floor(fixedMainDiameter / 2.0), y: fixedMainDiameter / 2.0), size: CGSize(width: fixedMainDiameter / 2.0 + borderWidth, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
             
             context.setBlendMode(.normal)
             context.move(to: CGPoint(x: fixedMainDiameter + borderOffset, y: fixedMainDiameter / 2.0))
@@ -269,7 +269,13 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
         }
     }
-    let outlineImage = outlineContext.generateImage()!
+    let outlineImage = generateImage(outlineContext.size, contextGenerator: { size, context in
+        context.setBlendMode(.copy)
+        let image = outlineContext.generateImage()!
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.normal)
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+    })!
     
     let drawingContext = DrawingContext(size: imageSize)
     drawingContext.withFlippedContext { context in
@@ -323,14 +329,14 @@ public enum MessageBubbleActionButtonPosition {
     case bottomSingle
 }
 
-public func messageBubbleActionButtonImage(color: UIColor, strokeColor: UIColor, position: MessageBubbleActionButtonPosition) -> UIImage {
-    let largeRadius: CGFloat = 17.0
-    let smallRadius: CGFloat = 6.0
+public func messageBubbleActionButtonImage(color: UIColor, strokeColor: UIColor, position: MessageBubbleActionButtonPosition, bubbleCorners: PresentationChatBubbleCorners) -> UIImage {
+    let largeRadius: CGFloat = bubbleCorners.mainRadius
+    let smallRadius: CGFloat = (bubbleCorners.mergeBubbleCorners && largeRadius >= 10.0) ? bubbleCorners.auxiliaryRadius : bubbleCorners.mainRadius
     let size: CGSize
     if case .middle = position {
         size = CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)
     } else {
-        size = CGSize(width: 35.0, height: 35.0)
+        size = CGSize(width: largeRadius + largeRadius, height: largeRadius + largeRadius)
     }
     return generateImage(size, contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

@@ -12,13 +12,13 @@ final class ChatLoadingNode: ASDisplayNode {
     private let activityIndicator: ActivityIndicator
     private let offset: CGPoint
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper) {
+    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
         
-        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper)
+        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper, bubbleCorners: bubbleCorners)
         self.backgroundNode.image = graphics.chatLoadingIndicatorBackgroundImage
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)

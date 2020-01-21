@@ -76,10 +76,10 @@ public struct PresentationResourcesChat {
         }) as! PrincipalThemeEssentialGraphics
     }
     
-    public static func additionalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeAdditionalGraphics {
-        let key: PresentationResourceKey = wallpaper.isBuiltin ? PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithDefaultWallpaper : PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithCustomWallpaper
-        return theme.object(key.rawValue, { theme in
-            return PrincipalThemeAdditionalGraphics(theme.chat, wallpaper: wallpaper)
+    public static func additionalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeAdditionalGraphics {
+        let key: PresentationResourceParameterKey = .chatPrincipalThemeAdditionalGraphics(isCustomWallpaper: !wallpaper.isBuiltin, bubbleCorners: bubbleCorners)
+        return theme.object(key, { theme in
+            return PrincipalThemeAdditionalGraphics(theme.chat, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
         }) as! PrincipalThemeAdditionalGraphics
     }
     

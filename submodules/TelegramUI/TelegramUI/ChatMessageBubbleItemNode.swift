@@ -639,7 +639,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
         mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction]) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
@@ -1291,7 +1291,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
         if let replyMarkup = replyMarkup {
-            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
+            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
         }
@@ -1313,11 +1313,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     case .Neighbour:
                         topLeft = .merged
                         topRight = .merged
+                    case .BubbleNeighbour:
+                        topLeft = .mergedBubble
+                        topRight = .mergedBubble
                     case let .None(status):
                         if position.contains(.top) && position.contains(.left) {
                             switch status {
                             case .Left:
-                                topLeft = .merged
+                                topLeft = .mergedBubble
                             case .Right:
                                 topLeft = .none(tail: false)
                             case .None:
@@ -1332,7 +1335,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             case .Left:
                                 topRight = .none(tail: false)
                             case .Right:
-                                topRight = .merged
+                                topRight = .mergedBubble
                             case .None:
                                 topRight = .none(tail: false)
                             }
@@ -1356,11 +1359,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         case .Neighbour:
                             bottomLeft = .merged
                             bottomRight = .merged
+                        case .BubbleNeighbour:
+                            bottomLeft = .mergedBubble
+                            bottomRight = .mergedBubble
                         case let .None(status):
                             if position.contains(.bottom) && position.contains(.left) {
                                 switch status {
                                 case .Left:
-                                    bottomLeft = .merged
+                                    bottomLeft = .mergedBubble
                                 case .Right:
                                     bottomLeft = .none(tail: false)
                                 case let .None(tailStatus):
@@ -1379,7 +1385,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 case .Left:
                                     bottomRight = .none(tail: false)
                                 case .Right:
-                                    bottomRight = .merged
+                                    bottomRight = .mergedBubble
                                 case let .None(tailStatus):
                                     if case .Outgoing = tailStatus {
                                         bottomRight = .none(tail: true)
@@ -1523,7 +1529,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if currentShareButtonNode != nil {
                 updatedShareButtonNode = currentShareButtonNode
                 if item.presentationData.theme !== currentItem?.presentationData.theme {
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                     if item.message.id.peerId == item.context.account.peerId {
                         updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
                     } else {
@@ -1533,7 +1539,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             } else {
                 let buttonNode = HighlightableButtonNode()
                 let buttonIcon: UIImage?
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 if item.message.id.peerId == item.context.account.peerId {
                     buttonIcon = graphics.chatBubbleNavigateButtonImage
                 } else {
