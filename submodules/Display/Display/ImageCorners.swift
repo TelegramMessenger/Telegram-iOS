@@ -121,20 +121,22 @@ private func cornerContext(_ corner: Corner) -> DrawingContext {
         let context = DrawingContext(size: CGSize(width: CGFloat(corner.radius), height: CGFloat(corner.radius)), clear: true)
         
         context.withContext { c in
-            c.setBlendMode(.copy)
+            c.clear(CGRect(origin: CGPoint(), size: CGSize(width: CGFloat(corner.radius), height: CGFloat(corner.radius))))
             c.setFillColor(UIColor.black.cgColor)
-            let rect: CGRect
             switch corner {
-                case let .TopLeft(radius):
-                    rect = CGRect(origin: CGPoint(), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
-                case let .TopRight(radius):
-                    rect = CGRect(origin: CGPoint(x: -CGFloat(radius), y: 0.0), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
-                case let .BottomLeft(radius):
-                    rect = CGRect(origin: CGPoint(x: 0.0, y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
-                case let .BottomRight(radius):
-                    rect = CGRect(origin: CGPoint(x: -CGFloat(radius), y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
+            case let .TopLeft(radius):
+                let rect = CGRect(origin: CGPoint(), size: CGSize(width: CGFloat(radius * 2), height: CGFloat(radius * 2)))
+                c.fillEllipse(in: rect)
+            case let .TopRight(radius):
+                let rect = CGRect(origin: CGPoint(x: -CGFloat(radius), y: 0.0), size: CGSize(width: CGFloat(radius * 2), height: CGFloat(radius * 2)))
+                c.fillEllipse(in: rect)
+            case let .BottomLeft(radius):
+                let rect = CGRect(origin: CGPoint(x: 0.0, y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius * 2), height: CGFloat(radius * 2)))
+                c.fillEllipse(in: rect)
+            case let .BottomRight(radius):
+                let rect = CGRect(origin: CGPoint(x: -CGFloat(radius), y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius * 2), height: CGFloat(radius * 2)))
+                c.fillEllipse(in: rect)
             }
-            c.fillEllipse(in: rect)
         }
         
         let _ = cachedCorners.modify { current in
@@ -172,7 +174,7 @@ public func addCorners(_ context: DrawingContext, arguments: TransformImageArgum
                 context.withContext { c in
                     c.clear(CGRect(x: drawingRect.minX - 4.0, y: 0.0, width: 4.0, height: drawingRect.maxY - 6.0))
                     c.setFillColor(color.cgColor)
-                    c.fill(CGRect(x: 0.0, y: drawingRect.maxY - 6.0, width: 4.0, height: 6.0))
+                    c.fill(CGRect(x: 0.0, y: drawingRect.maxY - 7.0, width: 4.0, height: 7.0))
                     c.setBlendMode(.destinationIn)
                     let cornerRect = CGRect(origin: CGPoint(x: drawingRect.minX - 6.0, y: drawingRect.maxY - image.size.height), size: image.size)
                     c.translateBy(x: cornerRect.midX, y: cornerRect.midY)
@@ -198,7 +200,7 @@ public func addCorners(_ context: DrawingContext, arguments: TransformImageArgum
                 context.withContext { c in
                     c.clear(CGRect(x: drawingRect.maxX, y: 0.0, width: 4.0, height: drawingRect.maxY - image.size.height))
                     c.setFillColor(color.cgColor)
-                    c.fill(CGRect(x: drawingRect.maxX, y: drawingRect.maxY - 6.0, width: 4.0, height: 6.0))
+                    c.fill(CGRect(x: drawingRect.maxX, y: drawingRect.maxY - 7.0, width: 5.0, height: 7.0))
                     c.setBlendMode(.destinationIn)
                     let cornerRect = CGRect(origin: CGPoint(x: drawingRect.maxX - image.size.width + 6.0, y: drawingRect.maxY - image.size.height), size: image.size)
                     c.translateBy(x: cornerRect.midX, y: cornerRect.midY)
