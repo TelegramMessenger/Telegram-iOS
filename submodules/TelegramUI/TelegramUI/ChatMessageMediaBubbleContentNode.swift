@@ -128,8 +128,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             colors = item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper
                         }
-                        if colors.fill == colors.stroke {
-                            bubbleInsets = UIEdgeInsets()
+                        if colors.fill == colors.stroke || colors.stroke.alpha.isZero {
+                            bubbleInsets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
                         } else {
                             bubbleInsets = layoutConstants.bubble.strokeInsets
                         }
@@ -162,7 +162,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     updatedPosition = .linear(top: top, bottom: .Neighbour)
                 }
                 
-                let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
+                let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                 
                 let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), automaticPlayback, wideLayout, imageCorners)
                 

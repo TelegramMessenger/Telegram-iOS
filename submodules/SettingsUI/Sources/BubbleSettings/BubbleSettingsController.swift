@@ -29,7 +29,7 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
     })
 }
 
-private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollViewDelegate {
+private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
@@ -37,22 +37,17 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     private let referenceTimestamp: Int32
     
     private let scrollNode: ASScrollNode
-    private let pageControlBackgroundNode: ASDisplayNode
-    private let pageControlNode: PageControlNode
     
-    private let chatListBackgroundNode: ASDisplayNode
-    private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
-    private let separatorNode: ASDisplayNode
     private let chatBackgroundNode: WallpaperBackgroundNode
     private let messagesContainerNode: ASDisplayNode
     private var dateHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
-    private let toolbarNode: TextSelectionToolbarNode
+    private let toolbarNode: BubbleSettingsToolbarNode
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (Bool, PresentationFontSize, PresentationFontSize) -> Void) {
+    init(context: AccountContext, presentationThemeSettings: PresentationThemeSettings, dismiss: @escaping () -> Void, apply: @escaping (PresentationChatBubbleSettings) -> Void) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -66,14 +61,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.referenceTimestamp = Int32(calendar.date(from: components)?.timeIntervalSince1970 ?? 0.0)
         
         self.scrollNode = ASScrollNode()
-        
-        self.pageControlBackgroundNode = ASDisplayNode()
-        self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.pageControlBackgroundNode.cornerRadius = 10.5
-        
-        self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
     
-        self.chatListBackgroundNode = ASDisplayNode()
         self.chatBackgroundNode = WallpaperBackgroundNode()
         self.chatBackgroundNode.displaysAsynchronously = false
         
@@ -87,15 +75,13 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             self.chatBackgroundNode.imageContentMode = .scaleToFill
         }
                         
-        self.toolbarNode = TextSelectionToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)
+        self.toolbarNode = BubbleSettingsToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)
                 
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
         self.maskNode.displayWithoutProcessing = true
         self.maskNode.contentMode = .scaleToFill
-        
-        self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
+
         
         super.init()
         
@@ -105,23 +91,13 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
-        self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.presentationData.theme.chatList.backgroundColor)
         
-        self.pageControlNode.isUserInteractionEnabled = false
-        self.pageControlNode.pagesCount = 2
-        
         self.addSubnode(self.scrollNode)
-        self.chatListBackgroundNode.addSubnode(self.maskNode)
-        self.addSubnode(self.pageControlBackgroundNode)
-        self.addSubnode(self.pageControlNode)
         self.addSubnode(self.toolbarNode)
         
-        self.scrollNode.addSubnode(self.chatListBackgroundNode)
         self.scrollNode.addSubnode(self.chatBackgroundNode)
         self.scrollNode.addSubnode(self.messagesContainerNode)
-        
-        self.addSubnode(self.separatorNode)
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -133,33 +109,24 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             }
             if !dismissed {
                 dismissed = true
-                apply(strongSelf.presentationThemeSettings.useSystemFont, strongSelf.presentationThemeSettings.fontSize, strongSelf.presentationThemeSettings.listsFontSize)
+                apply(strongSelf.presentationThemeSettings.chatBubbleSettings)
             }
         }
-        self.toolbarNode.updateUseSystemFont = { [weak self] value in
+        self.toolbarNode.updateMergeBubbleCorners = { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.presentationThemeSettings.useSystemFont = value
+            strongSelf.presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners = value
             strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
         }
-        self.toolbarNode.updateCustomFontSize = { [weak self] value in
+        self.toolbarNode.updateCornerRadius = { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
-            switch strongSelf.toolbarNode.customMode {
-            case .chat:
-                strongSelf.presentationThemeSettings.fontSize = value
-            case .list:
-                strongSelf.presentationThemeSettings.listsFontSize = value
-            }
+            strongSelf.presentationThemeSettings.chatBubbleSettings.mainRadius = Int32(value)
+            strongSelf.presentationThemeSettings.chatBubbleSettings.auxiliaryRadius = Int32(value / 2)
             strongSelf.updatePresentationThemeSettings(strongSelf.presentationThemeSettings)
         }
-          
-        let _ = (chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
-        |> deliverOnMainQueue).start(next: { [weak self] serviceColor in
-            self?.pageControlBackgroundNode.backgroundColor = serviceColor
-        })
     }
     
     override func didLoad() {
@@ -169,29 +136,10 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
         self.scrollNode.view.delegate = self
-        self.pageControlNode.setPage(0.0)
-    }
-    
-    func updateFontSize() {
-        if let (layout, navigationBarHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-        }
+        self.scrollNode.view.alwaysBounceHorizontal = false
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let bounds = scrollView.bounds
-        if !bounds.width.isZero {
-            self.pageControlNode.setPage(scrollView.contentOffset.x / bounds.width)
-            let pageIndex = Int(round(scrollView.contentOffset.x / bounds.width))
-            let customMode: TextSelectionCustomMode = pageIndex >= 1 ? .list : .chat
-            if customMode != self.toolbarNode.customMode {
-                self.toolbarNode.setCustomMode(customMode)
-                if let (layout, navigationBarHeight) = self.validLayout {
-                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                    self.recursivelyEnsureDisplaySynchronously(true)
-                }
-            }
-        }
     }
     
     func animateIn(completion: (() -> Void)? = nil) {
@@ -207,98 +155,6 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
             })
         } else {
             completion?()
-        }
-    }
-    
-    private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        var items: [ChatListItem] = []
-        
-        let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, activateChatPreview: { _, _, gesture in
-            gesture?.cancel()
-        })
-        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
-        
-        let peers = SimpleDictionary<PeerId, Peer>()
-        let messages = SimpleDictionary<MessageId, Message>()
-        let selfPeer = TelegramUser(id: self.context.account.peerId, accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer2 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 2), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_2_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer3 = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: 3), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
-        let peer3Author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 4), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_AuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer4 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 4), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer5 = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: 5), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_5_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .broadcast(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
-        let peer6 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: 5), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_6_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer7 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 6), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_7_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        
-        let timestamp = self.referenceTimestamp
-        
-        let timestamp1 = timestamp + 120
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: selfPeer, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        let presenceTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60 * 60)
-        let timestamp2 = timestamp + 3660
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer2.id, namespace: 0, id: 0), timestamp: timestamp2)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer2.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp2, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer2, text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer2), combinedReadState: nil, notificationSettings: nil, presence: TelegramUserPresence(status: .present(until: presenceTimestamp), lastActivity: presenceTimestamp), summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: [(peer2, .typingText)], isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        let timestamp3 = timestamp + 3200
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer3.id, namespace: 0, id: 0), timestamp: timestamp3)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer3.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp3, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer3Author, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer3), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        let timestamp4 = timestamp + 3000
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer4.id, namespace: 0, id: 0), timestamp: timestamp4)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer4.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp4, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer4, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer4), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        let timestamp5 = timestamp + 1000
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer5.id, namespace: 0, id: 0), timestamp: timestamp5)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer4.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp5, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer5, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_5_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer5), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer6.id, namespace: 0, id: 0), timestamp: timestamp - 360)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer6.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 360, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer6, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_6_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer6), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 1, markedUnread: false))]), notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
-        
-        let width: CGFloat
-        if case .regular = layout.metrics.widthClass {
-            width = layout.size.width / 2.0
-        } else {
-            width = layout.size.width
-        }
-        
-        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
-        if let chatNodes = self.chatNodes {
-            for i in 0 ..< items.count {
-                let itemNode = chatNodes[i]
-                items[i].updateNode(async: { $0() }, node: {
-                    return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
-                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: width, height: layout.size.height))
-                    
-                    itemNode.contentSize = layout.contentSize
-                    itemNode.insets = layout.insets
-                    itemNode.frame = nodeFrame
-                    itemNode.isUserInteractionEnabled = false
-                    
-                    apply(ListViewItemApply(isOnScreen: true))
-                })
-            }
-        } else {
-            var chatNodes: [ListViewItemNode] = []
-            for i in 0 ..< items.count {
-                var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
-                    itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
-                })
-                itemNode!.isUserInteractionEnabled = false
-                chatNodes.append(itemNode!)
-                if self.maskNode.supernode != nil {
-                    self.chatListBackgroundNode.insertSubnode(itemNode!, belowSubnode: self.maskNode)
-                } else {
-                    self.chatListBackgroundNode.addSubnode(itemNode!)
-                }
-            }
-            self.chatNodes = chatNodes
-        }
-        
-        if let chatNodes = self.chatNodes {
-            var topOffset: CGFloat = topInset
-            for itemNode in chatNodes {
-                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: itemNode.frame.size))
-                topOffset += itemNode.frame.height
-            }
         }
     }
     
@@ -397,17 +253,9 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     }
     
     func updatePresentationThemeSettings(_ presentationThemeSettings: PresentationThemeSettings) {
-        let fontSize: PresentationFontSize
-        let listsFontSize: PresentationFontSize
-        if presentationThemeSettings.useSystemFont {
-            let pointSize = UIFont.preferredFont(forTextStyle: .body).pointSize
-            fontSize = PresentationFontSize(systemFontSize: pointSize)
-            listsFontSize = fontSize
-        } else {
-            fontSize = presentationThemeSettings.fontSize
-            listsFontSize = presentationThemeSettings.listsFontSize
-        }
-        self.presentationData = self.presentationData.withFontSizes(chatFontSize: fontSize, listsFontSize: listsFontSize)
+        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners)
+        
+        self.presentationData = self.presentationData.withChatBubbleCorners(chatBubbleCorners)
         self.toolbarNode.updatePresentationData(presentationData: self.presentationData)
         self.toolbarNode.updatePresentationThemeSettings(presentationThemeSettings: self.presentationThemeSettings)
         if let (layout, navigationBarHeight) = self.validLayout {
@@ -424,33 +272,13 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         let toolbarHeight = self.toolbarNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, layout: layout, transition: transition)
         
-        self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
         var chatFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
         
         let bottomInset: CGFloat
-        if case .regular = layout.metrics.widthClass {
-            self.chatListBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
-            chatFrame = CGRect(x: bounds.width / 2.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
-            self.scrollNode.view.contentSize = CGSize(width: bounds.width, height: bounds.height)
-            
-            self.pageControlNode.isHidden = true
-            self.pageControlBackgroundNode.isHidden = true
-            self.separatorNode.isHidden = false
-            
-            self.separatorNode.frame = CGRect(x: bounds.width / 2.0, y: 0.0, width: UIScreenPixel, height: bounds.height - toolbarHeight)
-            
-            bottomInset = 0.0
-        } else {
-            self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-            chatFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
-            self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
-            
-            self.pageControlNode.isHidden = false
-            self.pageControlBackgroundNode.isHidden = false
-            self.separatorNode.isHidden = true
-            
-            bottomInset = 37.0
-        }
+        chatFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        self.scrollNode.view.contentSize = CGSize(width: bounds.width, height: bounds.height)
+        
+        bottomInset = 37.0
         
         self.chatBackgroundNode.frame = chatFrame
         self.chatBackgroundNode.updateLayout(size: chatFrame.size, transition: transition)
@@ -458,23 +286,17 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
         
-        self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
         self.updateMessagesLayout(layout: layout, bottomInset: toolbarHeight + bottomInset, transition: transition)
-        
-        let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 28.0), size: pageControlSize)
-        self.pageControlNode.frame = pageControlFrame
-        self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))
     }
 }
 
-final class TextSizeSelectionController: ViewController {
+final class BubbleSettingsController: ViewController {
     private let context: AccountContext
     
-    private var controllerNode: TextSizeSelectionControllerNode {
-        return self.displayNode as! TextSizeSelectionControllerNode
+    private var controllerNode: BubbleSettingsControllerNode {
+        return self.displayNode as! BubbleSettingsControllerNode
     }
         
     private var didPlayPresentationAnimation = false
@@ -499,7 +321,7 @@ final class TextSizeSelectionController: ViewController {
         self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .modal
         
-        self.navigationItem.title = self.presentationData.strings.Appearance_TextSize_Title
+        self.navigationItem.title = self.presentationData.strings.Appearance_BubbleCorners_Title
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -538,24 +360,22 @@ final class TextSizeSelectionController: ViewController {
     override public func loadDisplayNode() {
         super.loadDisplayNode()
         
-        self.displayNode = TextSizeSelectionControllerNode(context: self.context, presentationThemeSettings: self.presentationThemeSettings, dismiss: { [weak self] in
+        self.displayNode = BubbleSettingsControllerNode(context: self.context, presentationThemeSettings: self.presentationThemeSettings, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
-        }, apply: { [weak self] useSystemFont, fontSize, listsFontSize in
+        }, apply: { [weak self] chatBubbleSettings in
             if let strongSelf = self {
-                strongSelf.apply(useSystemFont: useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize)
+                strongSelf.apply(chatBubbleSettings: chatBubbleSettings)
             }
         })
         self.displayNodeDidLoad()
     }
     
-    private func apply(useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize) {
+    private func apply(chatBubbleSettings: PresentationChatBubbleSettings) {
         let _ = (updatePresentationThemeSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { current in
             var current = current
-            current.useSystemFont = useSystemFont
-            current.fontSize = fontSize
-            current.listsFontSize = listsFontSize
+            current.chatBubbleSettings = chatBubbleSettings
             return current
         })
         |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -575,7 +395,7 @@ private enum TextSelectionCustomMode {
     case chat
 }
 
-private final class TextSelectionToolbarNode: ASDisplayNode {
+private final class BubbleSettingsToolbarNode: ASDisplayNode {
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
     
@@ -585,27 +405,27 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     private let topSeparatorNode = ASDisplayNode()
     
     private var switchItemNode: ItemListSwitchItemNode
-    private var fontSizeItemNode: ThemeSettingsFontSizeItemNode
+    private var cornerRadiusItemNode: ThemeSettingsFontSizeItemNode
     
     private(set) var customMode: TextSelectionCustomMode = .chat
     
     var cancel: (() -> Void)?
     var done: (() -> Void)?
     
-    var updateUseSystemFont: ((Bool) -> Void)?
-    var updateCustomFontSize: ((PresentationFontSize) -> Void)?
+    var updateMergeBubbleCorners: ((Bool) -> Void)?
+    var updateCornerRadius: ((Int32) -> Void)?
     
     init(presentationThemeSettings: PresentationThemeSettings, presentationData: PresentationData) {
         self.presentationThemeSettings = presentationThemeSettings
         self.presentationData = presentationData
         
         self.switchItemNode = ItemListSwitchItemNode(type: .regular)
-        self.fontSizeItemNode = ThemeSettingsFontSizeItemNode()
+        self.cornerRadiusItemNode = ThemeSettingsFontSizeItemNode()
         
         super.init()
         
         self.addSubnode(self.switchItemNode)
-        self.addSubnode(self.fontSizeItemNode)
+        self.addSubnode(self.cornerRadiusItemNode)
         self.addSubnode(self.cancelButton)
         self.addSubnode(self.doneButton)
         self.addSubnode(self.separatorNode)
@@ -666,33 +486,69 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     func updateLayout(width: CGFloat, bottomInset: CGFloat, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         var contentHeight: CGFloat = 0.0
         
-        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
-            self?.updateUseSystemFont?(value)
+        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_BubbleCorners_AdjustAdjacent, value: self.presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
+            self?.updateMergeBubbleCorners?(value)
         })
-        let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.customMode == .chat ? self.presentationThemeSettings.fontSize : self.presentationThemeSettings.listsFontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, force: true, sectionId: 0, updated: { [weak self] value in
-            self?.updateCustomFontSize?(value)
+        let fontSize: PresentationFontSize
+        switch Int(self.presentationData.chatBubbleCorners.mainRadius) {
+        case 4:
+            fontSize = .extraSmall
+        case 6:
+            fontSize = .small
+        case 8:
+            fontSize = .medium
+        case 10:
+            fontSize = .regular
+        case 12:
+            fontSize = .large
+        case 14:
+            fontSize = .extraLarge
+        case 16:
+            fontSize = .extraLargeX2
+        default:
+            fontSize = .extraLargeX2
+        }
+        let cornerRadiusItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: fontSize, enabled: true, disableLeadingInset: false, displayIcons: false, force: false, sectionId: 0, updated: { [weak self] value in
+            let numericValue: Int32
+            switch value {
+            case .extraSmall:
+                numericValue = 4
+            case .small:
+                numericValue = 6
+            case .medium:
+                numericValue = 8
+            case .regular:
+                numericValue = 10
+            case .large:
+                numericValue = 12
+            case .extraLarge:
+                numericValue = 14
+            case .extraLargeX2:
+                numericValue = 16
+            }
+            self?.updateCornerRadius?(numericValue)
         })
         
-        switchItem.updateNode(async: { f in
+        /*switchItem.updateNode(async: { f in
             f()
         }, node: {
             return self.switchItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), previousItem: nil, nextItem: fontSizeItem, animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), previousItem: nil, nextItem: cornerRadiusItem, animation: .None, completion: { layout, apply in
             self.switchItemNode.contentSize = layout.contentSize
             self.switchItemNode.insets = layout.insets
             transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
             contentHeight += layout.contentSize.height
             apply(ListViewItemApply(isOnScreen: true))
-        })
+        })*/
         
-        fontSizeItem.updateNode(async: { f in
+        cornerRadiusItem.updateNode(async: { f in
             f()
         }, node: {
-            return self.fontSizeItemNode
+            return self.cornerRadiusItemNode
         }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), previousItem: switchItem, nextItem: nil, animation: .None, completion: { layout, apply in
-            self.fontSizeItemNode.contentSize = layout.contentSize
-            self.fontSizeItemNode.insets = layout.insets
-            transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
+            self.cornerRadiusItemNode.contentSize = layout.contentSize
+            self.cornerRadiusItemNode.insets = layout.insets
+            transition.updateFrame(node: self.cornerRadiusItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
             contentHeight += layout.contentSize.height
             apply(ListViewItemApply(isOnScreen: true))
         })

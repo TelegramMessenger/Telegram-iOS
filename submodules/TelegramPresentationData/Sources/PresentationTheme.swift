@@ -1182,6 +1182,10 @@ public final class PresentationTheme: Equatable {
         return self.resourceCache.object(key, self, generate)
     }
     
+    public func object(_ key: PresentationResourceParameterKey, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
+        return self.resourceCache.parameterObject(key, self, generate)
+    }
+    
     public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
         return lhs === rhs
     }

@@ -143,7 +143,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let currentItem = self.item
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params)
+            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 100.0, height: 100.0)
             if let telegramFile = telegramFile {

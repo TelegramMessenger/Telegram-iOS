@@ -82,8 +82,8 @@ class ChatMessageBackground: ASDisplayNode {
         super.init()
         
         self.isUserInteractionEnabled = false
-        self.addSubnode(self.outlineImageNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.outlineImageNode)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
