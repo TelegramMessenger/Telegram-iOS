@@ -176,7 +176,12 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
         
         context.setStrokeColor(UIColor.black.cgColor)
-        let borderWidth: CGFloat = UIScreenPixel * 2.0
+        let borderWidth: CGFloat
+        if abs(UIScreenPixel - 0.5) < CGFloat.ulpOfOne {
+            borderWidth = UIScreenPixel
+        } else {
+            borderWidth = UIScreenPixel * 2.0
+        }
         context.setLineWidth(borderWidth)
         
         let borderOffset: CGFloat = borderWidth / 2.0
