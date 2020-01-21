@@ -135,13 +135,13 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                     } else {
                         let otherString: String
                         if filteredPeers.count == 1 {
-                            otherString = peers[0].compactDisplayTitle
+                            otherString = peers[0].compactDisplayTitle.replacingOccurrences(of: "*", with: "")
                         } else {
                             otherString = self.strings.Conversation_LiveLocationMembersCount(Int32(peers.count))
                         }
                         let rawText: String
                         if filteredPeers.count != peers.count {
-                            rawText = self.strings.Conversation_LiveLocationYouAnd(otherString).0.replacingOccurrences(of: "*", with: "**")
+                            rawText = self.strings.Conversation_LiveLocationYouAndOther(otherString).0
                         } else {
                             rawText = otherString
                         }

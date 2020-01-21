@@ -5296,3 +5296,5 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.BubbleCorners.Title" = "Message Corners";
 "Appearance.BubbleCorners.AdjustAdjacent" = "Adjust Adjacent Corners";
 "Appearance.BubbleCorners.Apply" = "Set";
+
+"Conversation.LiveLocationYouAndOther" = "**You** and %@";
