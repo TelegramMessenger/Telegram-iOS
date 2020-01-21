@@ -337,8 +337,17 @@ public class Window1 {
             self?.isInteractionBlocked = value
         }
         
+        let updateOpaqueOverlays: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf._rootController?.displayNode.accessibilityElementsHidden = strongSelf.presentationContext.hasOpaqueOverlay || strongSelf.topPresentationContext.hasOpaqueOverlay
+        }
         self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
-            self?._rootController?.displayNode.accessibilityElementsHidden = value
+            updateOpaqueOverlays()
+        }
+        self.topPresentationContext.updateHasOpaqueOverlay = { [weak self] value in
+            updateOpaqueOverlays()
         }
         
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in

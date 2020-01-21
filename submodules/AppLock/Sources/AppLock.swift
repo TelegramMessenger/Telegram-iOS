@@ -201,6 +201,7 @@ public final class AppLockContextImpl: AppLockContext {
                             }
                         }
                         passcodeController.presentedOverCoveringView = true
+                        passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
                             if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
