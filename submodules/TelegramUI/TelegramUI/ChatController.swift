@@ -289,7 +289,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     private var searchResultsController: ChatSearchResultsController?
     
-    private var screenCaptureEventsDisposable: Disposable?
+    private var screenCaptureManager: ScreenCaptureDetectionManager?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
     private var reportIrrelvantGeoNoticePromise = Promise<Bool?>()
@@ -2496,7 +2496,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.applicationInForegroundDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.networkStateDisposable?.dispose()
-        self.screenCaptureEventsDisposable?.dispose()
         self.chatAdditionalDataDisposable.dispose()
         self.shareStatusDisposable?.dispose()
         self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeTarget(self)
@@ -4639,10 +4638,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if !self.checkedPeerChatServiceActions {
             self.checkedPeerChatServiceActions = true
             
-            if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
-                self.screenCaptureEventsDisposable = screenCaptureEvents().start(next: { [weak self] _ in
+            if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat, self.screenCaptureManager == nil {
+                self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
                     if let strongSelf = self, strongSelf.canReadHistoryValue, strongSelf.traceVisibility() {
                         let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: peerId).start()
+                        return true
+                    } else {
+                        return false
                     }
                 })
             }

@@ -75,3 +75,50 @@ public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
     }
     |> runOn(Queue.mainQueue())
 }
+
+public final class ScreenCaptureDetectionManager {
+    private var observer: NSObjectProtocol?
+    private var screenRecordingDisposable: Disposable?
+    private var screenRecordingCheckTimer: SwiftSignalKit.Timer?
+    
+    public init(check: @escaping () -> Bool) {
+        self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            check()
+        })
+        
+        self.screenRecordingDisposable = screenRecordingActive().start(next: { [weak self] value in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if value {
+                    if strongSelf.screenRecordingCheckTimer == nil {
+                        strongSelf.screenRecordingCheckTimer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if check() {
+                                strongSelf.screenRecordingCheckTimer?.invalidate()
+                                strongSelf.screenRecordingCheckTimer = nil
+                            }
+                        }, queue: Queue.mainQueue())
+                        strongSelf.screenRecordingCheckTimer?.start()
+                    }
+                } else if strongSelf.screenRecordingCheckTimer != nil {
+                    strongSelf.screenRecordingCheckTimer?.invalidate()
+                    strongSelf.screenRecordingCheckTimer = nil
+                }
+            }
+        })
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self.observer)
+        self.screenRecordingDisposable?.dispose()
+        self.screenRecordingCheckTimer?.invalidate()
+        self.screenRecordingCheckTimer = nil
+    }
+}
