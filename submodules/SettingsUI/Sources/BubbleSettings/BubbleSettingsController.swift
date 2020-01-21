@@ -190,7 +190,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         
         let width: CGFloat
         if case .regular = layout.metrics.widthClass {
-            width = layout.size.width / 2.0
+            width = layout.size.width
         } else {
             width = layout.size.width
         }
