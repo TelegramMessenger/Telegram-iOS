@@ -615,7 +615,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let weakSelf = Weak(self)
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params)
+            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
@@ -1546,7 +1546,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
         
         var updatedMergedTop = mergedBottom
         var updatedMergedBottom = mergedTop
@@ -2769,7 +2769,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
                 let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
                 self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)

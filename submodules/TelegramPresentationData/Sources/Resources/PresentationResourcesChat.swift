@@ -69,11 +69,10 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
-        let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
-        return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper)
+        return theme.object(PresentationResourceParameterKey.chatPrincipalThemeEssentialGraphics(hasWallpaper: hasWallpaper, bubbleCorners: bubbleCorners), { theme in
+            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, bubbleCorners: bubbleCorners)
         }) as! PrincipalThemeEssentialGraphics
     }
     
@@ -948,6 +947,12 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceParameterKey.chatFreePartialCheck(size, isDefaultWallpaper), { _ in
             let color = isDefaultWallpaper ? theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText : theme.chat.serviceMessage.components.withCustomWallpaper.primaryText
             return generateCheckImage(partial: true, color: color, width: size)
+        })
+    }
+    
+    public static func chatBubbleMediaCorner(_ theme: PresentationTheme, incoming: Bool, mainRadius: CGFloat, inset: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatBubbleMediaCorner(incoming: incoming, mainRadius: mainRadius, inset: inset), { _ in
+            return mediaBubbleCornerImage(incoming: incoming, radius: mainRadius, inset: inset)
         })
     }
 }

@@ -11,9 +11,9 @@ import ContextUI
 import ChatListUI
 
 struct ChatMessageItemWidthFill {
-    let compactInset: CGFloat
-    let compactWidthBoundary: CGFloat
-    let freeMaximumFillFactor: CGFloat
+    var compactInset: CGFloat
+    var compactWidthBoundary: CGFloat
+    var freeMaximumFillFactor: CGFloat
     
     func widthFor(_ width: CGFloat) -> CGFloat {
         if width <= self.compactWidthBoundary {
@@ -25,68 +25,68 @@ struct ChatMessageItemWidthFill {
 }
 
 struct ChatMessageItemBubbleLayoutConstants {
-    let edgeInset: CGFloat
-    let defaultSpacing: CGFloat
-    let mergedSpacing: CGFloat
-    let maximumWidthFill: ChatMessageItemWidthFill
-    let minimumSize: CGSize
-    let contentInsets: UIEdgeInsets
-    let borderInset: CGFloat
-    let strokeInsets: UIEdgeInsets
+    var edgeInset: CGFloat
+    var defaultSpacing: CGFloat
+    var mergedSpacing: CGFloat
+    var maximumWidthFill: ChatMessageItemWidthFill
+    var minimumSize: CGSize
+    var contentInsets: UIEdgeInsets
+    var borderInset: CGFloat
+    var strokeInsets: UIEdgeInsets
 }
 
 struct ChatMessageItemTextLayoutConstants {
-    let bubbleInsets: UIEdgeInsets
+    var bubbleInsets: UIEdgeInsets
 }
 
 struct ChatMessageItemImageLayoutConstants {
-    let bubbleInsets: UIEdgeInsets
-    let statusInsets: UIEdgeInsets
-    let defaultCornerRadius: CGFloat
-    let mergedCornerRadius: CGFloat
-    let contentMergedCornerRadius: CGFloat
-    let maxDimensions: CGSize
-    let minDimensions: CGSize
+    var bubbleInsets: UIEdgeInsets
+    var statusInsets: UIEdgeInsets
+    var defaultCornerRadius: CGFloat
+    var mergedCornerRadius: CGFloat
+    var contentMergedCornerRadius: CGFloat
+    var maxDimensions: CGSize
+    var minDimensions: CGSize
 }
 
 struct ChatMessageItemVideoLayoutConstants {
-    let maxHorizontalHeight: CGFloat
-    let maxVerticalHeight: CGFloat
+    var maxHorizontalHeight: CGFloat
+    var maxVerticalHeight: CGFloat
 }
 
 struct ChatMessageItemInstantVideoConstants {
-    let insets: UIEdgeInsets
-    let dimensions: CGSize
+    var insets: UIEdgeInsets
+    var dimensions: CGSize
 }
 
 struct ChatMessageItemFileLayoutConstants {
-    let bubbleInsets: UIEdgeInsets
+    var bubbleInsets: UIEdgeInsets
 }
 
 struct ChatMessageItemWallpaperLayoutConstants {
-    let maxTextWidth: CGFloat
+    var maxTextWidth: CGFloat
 }
 
 struct ChatMessageItemLayoutConstants {
-    let avatarDiameter: CGFloat
-    let timestampHeaderHeight: CGFloat
+    var avatarDiameter: CGFloat
+    var timestampHeaderHeight: CGFloat
     
-    let bubble: ChatMessageItemBubbleLayoutConstants
-    let image: ChatMessageItemImageLayoutConstants
-    let video: ChatMessageItemVideoLayoutConstants
-    let text: ChatMessageItemTextLayoutConstants
-    let file: ChatMessageItemFileLayoutConstants
-    let instantVideo: ChatMessageItemInstantVideoConstants
-    let wallpapers: ChatMessageItemWallpaperLayoutConstants
+    var bubble: ChatMessageItemBubbleLayoutConstants
+    var image: ChatMessageItemImageLayoutConstants
+    var video: ChatMessageItemVideoLayoutConstants
+    var text: ChatMessageItemTextLayoutConstants
+    var file: ChatMessageItemFileLayoutConstants
+    var instantVideo: ChatMessageItemInstantVideoConstants
+    var wallpapers: ChatMessageItemWallpaperLayoutConstants
     
     static var `default`: ChatMessageItemLayoutConstants {
         return self.compact
     }
     
     fileprivate static var compact: ChatMessageItemLayoutConstants {
-        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.85), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0 - UIScreenPixel, left: 1.0 - UIScreenPixel, bottom: 1.0 - UIScreenPixel, right: 1.0 - UIScreenPixel))
+        let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.85), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0))
         let text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
-        let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0 + UIScreenPixel, left: 1.0 + UIScreenPixel, bottom: 1.0 + UIScreenPixel, right: 1.0 + UIScreenPixel), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 0.0, maxDimensions: CGSize(width: 300.0, height: 300.0), minDimensions: CGSize(width: 170.0, height: 74.0))
+        let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 16.0, mergedCornerRadius: 8.0, contentMergedCornerRadius: 0.0, maxDimensions: CGSize(width: 300.0, height: 300.0), minDimensions: CGSize(width: 170.0, height: 74.0))
         let video = ChatMessageItemVideoLayoutConstants(maxHorizontalHeight: 250.0, maxVerticalHeight: 360.0)
         let file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
         let instantVideo = ChatMessageItemInstantVideoConstants(insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), dimensions: CGSize(width: 212.0, height: 212.0))
@@ -98,7 +98,7 @@ struct ChatMessageItemLayoutConstants {
     fileprivate static var regular: ChatMessageItemLayoutConstants {
         let bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.0 + UIScreenPixel, mergedSpacing: 1.0, maximumWidthFill: ChatMessageItemWidthFill(compactInset: 36.0, compactWidthBoundary: 500.0, freeMaximumFillFactor: 0.65), minimumSize: CGSize(width: 40.0, height: 35.0), contentInsets: UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 0.0), borderInset: UIScreenPixel, strokeInsets: UIEdgeInsets(top: 1.0 - UIScreenPixel, left: 1.0 - UIScreenPixel, bottom: 1.0 - UIScreenPixel, right: 1.0 - UIScreenPixel))
         let text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 6.0 + UIScreenPixel, left: 12.0, bottom: 6.0 - UIScreenPixel, right: 12.0))
-        let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0 + UIScreenPixel, left: 1.0 + UIScreenPixel, bottom: 1.0 + UIScreenPixel, right: 1.0 + UIScreenPixel), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 440.0, height: 440.0), minDimensions: CGSize(width: 170.0, height: 74.0))
+        let image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 440.0, height: 440.0), minDimensions: CGSize(width: 170.0, height: 74.0))
         let video = ChatMessageItemVideoLayoutConstants(maxHorizontalHeight: 250.0, maxVerticalHeight: 360.0)
         let file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
         let instantVideo = ChatMessageItemInstantVideoConstants(insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), dimensions: CGSize(width: 212.0, height: 212.0))
@@ -108,12 +108,24 @@ struct ChatMessageItemLayoutConstants {
     }
 }
 
-func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams) -> ChatMessageItemLayoutConstants {
+func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams, presentationData: ChatPresentationData) -> ChatMessageItemLayoutConstants {
+    var result: ChatMessageItemLayoutConstants
     if params.width > 680.0 {
-        return constants.1
+        result = constants.1
     } else {
-        return constants.0
+        result = constants.0
     }
+    result.image.defaultCornerRadius = presentationData.chatBubbleCorners.mainRadius
+    result.image.mergedCornerRadius = presentationData.chatBubbleCorners.mergeBubbleCorners ?  presentationData.chatBubbleCorners.auxiliaryRadius : presentationData.chatBubbleCorners.mainRadius
+    let minRadius: CGFloat = 4.0
+    let maxRadius: CGFloat = 16.0
+    let radiusTransition = (presentationData.chatBubbleCorners.mainRadius - minRadius) / (maxRadius - minRadius)
+    let minInset: CGFloat = 9.0
+    let maxInset: CGFloat = 12.0
+    let textInset: CGFloat = min(maxInset, ceil(maxInset * radiusTransition + minInset * (1.0 - radiusTransition)))
+    result.text.bubbleInsets.left = textInset
+    result.text.bubbleInsets.right = textInset
+    return result
 }
 
 enum ChatMessageItemBottomNeighbor {
