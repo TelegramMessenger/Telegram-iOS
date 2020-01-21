@@ -891,7 +891,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         if !hasSelection {
-            item.controllerInteraction.requestOpenMessagePollResults(item.message.id, pollId)
+            if !Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                item.controllerInteraction.requestOpenMessagePollResults(item.message.id, pollId)
+            }
         } else if !selectedOpaqueIdentifiers.isEmpty {
             item.controllerInteraction.requestSelectMessagePollOptions(item.message.id, selectedOpaqueIdentifiers)
         }
@@ -1391,15 +1393,23 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             self.buttonSubmitInactiveTextNode.isHidden = hasSelectedOptions
             self.buttonSubmitActiveTextNode.isHidden = !hasSelectedOptions
             self.buttonNode.isHidden = !hasSelectedOptions
+            self.buttonNode.isUserInteractionEnabled = true
         } else {
             if case .public = poll.publicity, hasResults, !disableAllActions {
                 self.votersNode.isHidden = true
                 self.buttonViewResultsTextNode.isHidden = false
                 self.buttonNode.isHidden = false
+                
+                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                    self.buttonNode.isUserInteractionEnabled = false
+                } else {
+                    self.buttonNode.isUserInteractionEnabled = true
+                }
             } else {
                 self.votersNode.isHidden = false
                 self.buttonViewResultsTextNode.isHidden = true
                 self.buttonNode.isHidden = true
+                self.buttonNode.isUserInteractionEnabled = true
             }
             self.buttonSubmitInactiveTextNode.isHidden = true
             self.buttonSubmitActiveTextNode.isHidden = true
