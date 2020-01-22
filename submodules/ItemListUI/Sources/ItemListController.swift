@@ -56,6 +56,7 @@ public struct ItemListBackButton: Equatable {
 
 public enum ItemListControllerTitle: Equatable {
     case text(String)
+    case textWithSubtitle(String, String)
     case sectionControl([String], Int)
 }
 
@@ -197,12 +198,12 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     
     public var willScrollToTop: (() -> Void)?
     
-    public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Void) {
+    public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Signal<Bool, NoError>) {
         self.reorderEntry = { a, b, list in
-            f(a, b, list.map { $0 as! T })
+            return f(a, b, list.map { $0 as! T })
         }
     }
-    private var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)? {
+    private var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode).reorderEntry = self.reorderEntry
@@ -286,6 +287,10 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                             case let .text(text):
                                 strongSelf.title = text
                                 strongSelf.navigationItem.titleView = nil
+                                strongSelf.segmentedTitleView = nil
+                            case let .textWithSubtitle(title, subtitle):
+                                strongSelf.title = ""
+                                strongSelf.navigationItem.titleView = ItemListTextWithSubtitleTitleView(theme: controllerState.presentationData.theme, title: title, subtitle: subtitle)
                                 strongSelf.segmentedTitleView = nil
                             case let .sectionControl(sections, index):
                                 strongSelf.title = ""
@@ -417,6 +422,10 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         
                         strongSelf.segmentedTitleView?.theme = controllerState.presentationData.theme
                         
+                        if let titleView = strongSelf.navigationItem.titleView as? ItemListTextWithSubtitleTitleView {
+                            titleView.updateTheme(theme: controllerState.presentationData.theme)
+                        }
+                        
                         var items = strongSelf.navigationItem.rightBarButtonItems ?? []
                         for i in 0 ..< strongSelf.rightNavigationButtonTitleAndStyle.count {
                             if case .activity = strongSelf.rightNavigationButtonTitleAndStyle[i].1 {
@@ -517,6 +526,10 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         self.didDisappear?(animated)
     }
     
+    public var listInsets: UIEdgeInsets {
+        return (self.displayNode as! ItemListControllerNode).listNode.insets
+    }
+    
     public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
         (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in
@@ -596,5 +609,70 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                 _ = self?.navigationBar?.executeBack()
             }
         })]
+    }
+}
+
+private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitleView {
+    private let titleNode: ImmediateTextNode
+    private let subtitleNode: ImmediateTextNode
+    
+    private var validLayout: (CGSize, CGRect)?
+    
+    init(theme: PresentationTheme, title: String, subtitle: String) {
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.displaysAsynchronously = false
+        self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.isOpaque = false
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+        
+        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.displaysAsynchronously = false
+        self.subtitleNode.maximumNumberOfLines = 1
+        self.subtitleNode.isOpaque = false
+        
+        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
+        
+        super.init(frame: CGRect())
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.medium(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
+        if let (size, clearBounds) = self.validLayout {
+            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        if let (size, clearBounds) = self.validLayout {
+            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        }
+    }
+    
+    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, clearBounds)
+        
+        let titleSize = self.titleNode.updateLayout(size)
+        let subtitleSize = self.subtitleNode.updateLayout(size)
+        let spacing: CGFloat = 0.0
+        let contentHeight = titleSize.height + spacing + subtitleSize.height
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - contentHeight) / 2.0)), size: titleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + spacing), size: subtitleSize)
+            
+        self.titleNode.frame = titleFrame
+        self.subtitleNode.frame = subtitleFrame
+    }
+    
+    func animateLayoutTransition() {
     }
 }

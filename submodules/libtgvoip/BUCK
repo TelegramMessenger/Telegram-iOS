@@ -44,6 +44,7 @@ static_library(
             '-DWEBRTC_NS_FLOAT',
             '-DWEBRTC_IOS',
             '-DWEBRTC_HAS_NEON',
+            '-DTGVOIP_USE_INSTALLED_OPUS',
         ]),
         ('.*', [
             '-DTGVOIP_USE_CUSTOM_CRYPTO',
@@ -52,6 +53,7 @@ static_library(
             '-DTGVOIP_HAVE_TGLOG',
             '-DWEBRTC_NS_FLOAT',
             '-DWEBRTC_IOS',
+            '-DTGVOIP_USE_INSTALLED_OPUS',
         ]),
     ],
     deps = [

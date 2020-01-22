@@ -84,7 +84,7 @@ final class ChatMessageEventLogPreviousDescriptionContentNode: ChatMessageBubble
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
             /*if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
              if content.instantPage != nil {

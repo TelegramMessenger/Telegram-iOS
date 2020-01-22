@@ -550,7 +550,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         |> mapToSignal { resolvedWallpaper -> Signal<Void, NoError> in
             var updatedTheme = theme
             if case let .cloud(info) = theme {
-                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: info.theme.isCreator ? context.account.id : nil))
             }
             
             updateSettings { settings in
@@ -572,7 +572,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]
-        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }
         
         var availableThemes = defaultThemes
         availableThemes.append(contentsOf: cloudThemes)
@@ -587,6 +587,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.alwaysSynchronous = true
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

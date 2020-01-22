@@ -453,10 +453,10 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }
-    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ProxySettingsControllerEntry]) -> Void in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ProxySettingsControllerEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
         guard case let .server(_, _, _, fromServer, _, _, _, _) = fromEntry else {
-            return
+            return .single(false)
         }
         var referenceServer: ProxyServerSettings?
         var beforeAll = false
@@ -476,7 +476,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
             afterAll = true
         }
 
-        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
+        return updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if let index = current.servers.firstIndex(of: fromServer) {
                 current.servers.remove(at: index)
@@ -503,7 +503,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
                 current.servers.append(fromServer)
             }
             return current
-        }).start()
+        })
     })
     
     shareProxyListImpl = { [weak controller] in

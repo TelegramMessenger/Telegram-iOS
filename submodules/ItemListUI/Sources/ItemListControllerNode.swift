@@ -8,6 +8,10 @@ import SyncCore
 import TelegramPresentationData
 import MergeLists
 
+public protocol ItemListHeaderItemNode: class {
+    func updateTheme(theme: PresentationTheme)
+}
+
 public typealias ItemListSectionId = Int32
 
 public protocol ItemListNodeAnyEntry {
@@ -217,7 +221,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
-    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)?
+    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)?
     public var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
@@ -269,7 +273,7 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.listNode.reorderItem = { [weak self] fromIndex, toIndex, opaqueTransactionState in
             if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
                 if fromIndex >= 0 && fromIndex < mergedEntries.count && toIndex >= 0 && toIndex < mergedEntries.count {
-                    reorderEntry(fromIndex, toIndex, mergedEntries)
+                    return reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
             }
             return .single(false)
@@ -467,6 +471,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
+                
+                self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ItemListHeaderItemNode {
+                        itemHeaderNode.updateTheme(theme: transition.theme)
+                    }
+                })
             }
             
             if let updateStyle = transition.updateStyle {
@@ -501,9 +511,12 @@ open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateAlpha)
             } else if transition.crossfade {
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
                 options.insert(.AnimateCrossfade)
             } else {
                 options.insert(.Synchronous)
+                options.insert(.PreferSynchronousResourceLoading)
                 options.insert(.PreferSynchronousDrawing)
             }
             if self.alwaysSynchronous {

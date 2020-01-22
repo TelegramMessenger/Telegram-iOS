@@ -393,6 +393,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.clearNotices()
                 }).start()
+                if let context = arguments.context {
+                    let _ = (context.account.postbox.transaction { transaction -> Void in
+                        transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedPollResults)
+                    }).start()
+                }
             })
         case let .reimport(theme):
             return ItemListActionItem(presentationData: presentationData, title: "Reimport Application Data", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {

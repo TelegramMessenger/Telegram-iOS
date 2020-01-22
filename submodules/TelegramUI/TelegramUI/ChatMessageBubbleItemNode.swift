@@ -76,7 +76,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             }
         }
         
-        if !message.text.isEmpty || isUnsupportedMedia {
+        var messageText = message.text
+        if let updatingMedia = itemAttributes.updatingMedia {
+            messageText = updatingMedia.text
+        }
+        
+        if !messageText.isEmpty || isUnsupportedMedia {
             if !skipText {
                 if case .group = item.content {
                     messageWithCaptionToAdd = (message, itemAttributes)
@@ -271,14 +276,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             for node in subnodes {
                 if let contextNode = node as? ContextExtractedContentContainingNode {
                     if let contextSubnodes = contextNode.contentNode.subnodes {
-                        for contextSubnode in contextSubnodes {
+                        inner: for contextSubnode in contextSubnodes {
                             if contextSubnode !== self.accessoryItemNode {
-                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                if contextSubnode == self.backgroundNode {
+                                    if self.backgroundNode.hasImage && self.backgroundWallpaperNode.hasImage {
+                                        continue inner
+                                    }
+                                }
+                                contextSubnode.layer.allowsGroupOpacity = true
+                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak contextSubnode] _ in
+                                    contextSubnode?.layer.allowsGroupOpacity = false
+                                })
                             }
                         }
                     }
                 } else if node !== self.accessoryItemNode {
+                    node.layer.allowsGroupOpacity = true
                     node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak node] _ in
+                        node?.layer.allowsGroupOpacity = false
+                    })
                 }
             }
         }
@@ -334,7 +351,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     return .waitForSingleTap
                 }
                 for contentNode in strongSelf.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap, isEstimating: true)
                     switch tapAction {
                         case .none:
                             if let _ = strongSelf.item?.controllerInteraction.tapMessage {
@@ -603,7 +620,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let weakSelf = Weak(self)
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params)
+            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
@@ -627,7 +644,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
         mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction]) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
@@ -1279,7 +1296,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
         if let replyMarkup = replyMarkup {
-            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
+            let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
         }
@@ -1301,11 +1318,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     case .Neighbour:
                         topLeft = .merged
                         topRight = .merged
+                    case .BubbleNeighbour:
+                        topLeft = .mergedBubble
+                        topRight = .mergedBubble
                     case let .None(status):
                         if position.contains(.top) && position.contains(.left) {
                             switch status {
                             case .Left:
-                                topLeft = .merged
+                                topLeft = .mergedBubble
                             case .Right:
                                 topLeft = .none(tail: false)
                             case .None:
@@ -1320,7 +1340,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             case .Left:
                                 topRight = .none(tail: false)
                             case .Right:
-                                topRight = .merged
+                                topRight = .mergedBubble
                             case .None:
                                 topRight = .none(tail: false)
                             }
@@ -1344,11 +1364,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         case .Neighbour:
                             bottomLeft = .merged
                             bottomRight = .merged
+                        case .BubbleNeighbour:
+                            bottomLeft = .mergedBubble
+                            bottomRight = .mergedBubble
                         case let .None(status):
                             if position.contains(.bottom) && position.contains(.left) {
                                 switch status {
                                 case .Left:
-                                    bottomLeft = .merged
+                                    bottomLeft = .mergedBubble
                                 case .Right:
                                     bottomLeft = .none(tail: false)
                                 case let .None(tailStatus):
@@ -1367,7 +1390,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 case .Left:
                                     bottomRight = .none(tail: false)
                                 case .Right:
-                                    bottomRight = .merged
+                                    bottomRight = .mergedBubble
                                 case let .None(tailStatus):
                                     if case .Outgoing = tailStatus {
                                         bottomRight = .none(tail: true)
@@ -1511,7 +1534,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if currentShareButtonNode != nil {
                 updatedShareButtonNode = currentShareButtonNode
                 if item.presentationData.theme !== currentItem?.presentationData.theme {
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                     if item.message.id.peerId == item.context.account.peerId {
                         updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
                     } else {
@@ -1521,7 +1544,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             } else {
                 let buttonNode = HighlightableButtonNode()
                 let buttonIcon: UIImage?
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 if item.message.id.peerId == item.context.account.peerId {
                     buttonIcon = graphics.chatBubbleNavigateButtonImage
                 } else {
@@ -1534,7 +1557,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
         
         var updatedMergedTop = mergedBottom
         var updatedMergedBottom = mergedTop
@@ -2305,7 +2328,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
                 var foundTapAction = false
                 loop: for contentNode in self.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                     switch tapAction {
                         case .none, .ignore:
                             if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
@@ -2394,7 +2417,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             selectAll = false
                         }
                         tapMessage = contentNode.item?.message
-                        let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
+                        let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
                         switch tapAction {
                             case .none, .ignore:
                                 break
@@ -2757,7 +2780,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
                 let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
                 self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
@@ -2894,5 +2917,62 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
         let isPreview = self.item?.presentationData.isPreview ?? false
         return self.contextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
+    }
+    
+    func animateQuizInvalidOptionSelected() {
+        if let supernode = self.supernode, let subnodes = supernode.subnodes {
+            for i in 0 ..< subnodes.count {
+                if subnodes[i] === self {
+                    break
+                }
+            }
+        }
+        
+        let duration: Double = 0.5
+        let minScale: CGFloat = -0.03
+        let scaleAnimation0 = self.layer.makeAnimation(from: 0.0 as NSNumber, to: minScale as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let scaleAnimation1 = strongSelf.layer.makeAnimation(from: minScale as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, additive: true)
+            strongSelf.layer.add(scaleAnimation1, forKey: "quizInvalidScale")
+        })
+        self.layer.add(scaleAnimation0, forKey: "quizInvalidScale")
+        
+        let k = Float(UIView.animationDurationFactor())
+        var speed: Float = 1.0
+        if k != 0 && k != 1 {
+            speed = Float(1.0) / k
+        }
+        
+        let count = 4
+                
+        let animation = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        var values: [CGFloat] = []
+        values.append(0.0)
+        let rotationAmplitude: CGFloat = CGFloat.pi / 180.0 * 3.0
+        for i in 0 ..< count {
+            let sign: CGFloat = (i % 2 == 0) ? 1.0 : -1.0
+            let amplitude: CGFloat = rotationAmplitude
+            values.append(amplitude * sign)
+        }
+        values.append(0.0)
+        animation.values = values.map { ($0 as NSNumber) as AnyObject }
+        var keyTimes: [NSNumber] = []
+        for i in 0 ..< values.count {
+            if i == 0 {
+                keyTimes.append(0.0)
+            } else if i == values.count - 1 {
+                keyTimes.append(1.0)
+            } else {
+                keyTimes.append((Double(i) / Double(values.count - 1)) as NSNumber)
+            }
+        }
+        animation.keyTimes = keyTimes
+        animation.speed = speed
+        animation.duration = duration
+        animation.isAdditive = true
+        
+        self.layer.add(animation, forKey: "quizInvalidRotation")
     }
 }

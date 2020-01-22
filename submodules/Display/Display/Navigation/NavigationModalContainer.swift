@@ -131,6 +131,16 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         return false
     }
     
+    private func checkInteractiveDismissWithControllers() -> Bool {
+        if let controller = self.container.controllers.last {
+            if !controller.attemptNavigation({
+            }) {
+                return false
+            }
+        }
+        return true
+    }
+    
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
@@ -147,7 +157,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             let progress = translation / self.bounds.width
             let velocity = recognizer.velocity(in: self.view).x
             
-            if velocity > 1000 || progress > 0.2 {
+            if (velocity > 1000 || progress > 0.2) && self.checkInteractiveDismissWithControllers() {
                 self.isDismissed = true
                 self.horizontalDismissOffset = self.bounds.width
                 self.dismissProgress = 1.0
@@ -243,7 +253,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         let duration = Double(min(0.3, velocityFactor))
         let transition: ContainedViewLayoutTransition
         let dismissProgress: CGFloat
-        if velocity.y < -0.5 || progress >= 0.5 {
+        if (velocity.y < -0.5 || progress >= 0.5) && self.checkInteractiveDismissWithControllers() {
             dismissProgress = 1.0
             targetOffset = 0.0
             transition = .animated(duration: duration, curve: .easeInOut)

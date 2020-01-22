@@ -564,6 +564,6 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     open func snapshotForReordering() -> UIView? {
-        return self.view.snapshotContentTree()
+        return self.view.snapshotContentTree(keepTransform: true)
     }
 }

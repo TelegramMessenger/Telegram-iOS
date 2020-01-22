@@ -9,6 +9,7 @@ private final class PresentationsResourceCacheHolder {
 
 private final class PresentationsResourceAnyCacheHolder {
     var objects: [Int32: AnyObject] = [:]
+    var parameterObjects: [PresentationResourceParameterKey: AnyObject] = [:]
 }
 
 public final class PresentationsResourceCache {
@@ -61,6 +62,24 @@ public final class PresentationsResourceCache {
             if let object = generate(theme) {
                 self.objectCache.with { holder -> Void in
                     holder.objects[key] = object
+                }
+                return object
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public func parameterObject(_ key: PresentationResourceParameterKey, _ theme: PresentationTheme, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
+        let result = self.objectCache.with { holder -> AnyObject? in
+            return holder.parameterObjects[key]
+        }
+        if let result = result {
+            return result
+        } else {
+            if let object = generate(theme) {
+                self.objectCache.with { holder -> Void in
+                    holder.parameterObjects[key] = object
                 }
                 return object
             } else {

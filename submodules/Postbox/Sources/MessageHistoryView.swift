@@ -29,13 +29,13 @@ public struct MessageHistoryMessageEntry {
 
 enum MutableMessageHistoryEntry {
     case IntermediateMessageEntry(IntermediateMessage, MessageHistoryEntryLocation?, MessageHistoryEntryMonthLocation?)
-    case MessageEntry(MessageHistoryMessageEntry, reloadAssociatedMessages: Bool)
+    case MessageEntry(MessageHistoryMessageEntry, reloadAssociatedMessages: Bool, reloadPeers: Bool)
     
     var index: MessageIndex {
         switch self {
         case let .IntermediateMessageEntry(message, _, _):
             return message.index
-        case let .MessageEntry(message, _):
+        case let .MessageEntry(message, _, _):
             return message.message.index
         }
     }
@@ -44,7 +44,7 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, _, _):
             return message.tags
-        case let .MessageEntry(message, _):
+        case let .MessageEntry(message, _, _):
             return message.message.tags
         }
     }
@@ -53,8 +53,8 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, _, monthLocation):
             return .IntermediateMessageEntry(message, location, monthLocation)
-        case let .MessageEntry(message, reloadAssociatedMessages):
-            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: location, monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+        case let .MessageEntry(message, reloadAssociatedMessages, reloadPeers):
+            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: location, monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
         }
     }
     
@@ -62,8 +62,8 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, location, _):
             return .IntermediateMessageEntry(message, location, monthLocation)
-        case let .MessageEntry(message, reloadAssociatedMessages):
-            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: message.location, monthLocation: monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+        case let .MessageEntry(message, reloadAssociatedMessages, reloadPeers):
+            return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: message.location, monthLocation: monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
         }
     }
     
@@ -79,12 +79,12 @@ enum MutableMessageHistoryEntry {
             } else {
                 return self
             }
-        case let .MessageEntry(message, reloadAssociatedMessages):
+        case let .MessageEntry(message, reloadAssociatedMessages, reloadPeers):
             if let location = message.location {
                 if message.message.index > index {
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index + 1, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index + 1, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 } else {
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count + 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 }
             } else {
                 return self
@@ -107,15 +107,15 @@ enum MutableMessageHistoryEntry {
             } else {
                 return self
             }
-        case let .MessageEntry(message, reloadAssociatedMessages):
+        case let .MessageEntry(message, reloadAssociatedMessages, reloadPeers):
             if let location = message.location {
                 if message.message.index > index {
                     //assert(location.index > 0)
                     //assert(location.count != 0)
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 } else {
                     //assert(location.count != 0)
-                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                    return .MessageEntry(MessageHistoryMessageEntry(message: message.message, location: MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation: message.monthLocation, attributes: message.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 }
             } else {
                 return self
@@ -128,10 +128,10 @@ enum MutableMessageHistoryEntry {
         case let .IntermediateMessageEntry(message, location, monthLocation):
             let updatedMessage = IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia)
             return .IntermediateMessageEntry(updatedMessage, location, monthLocation)
-        case let .MessageEntry(value, reloadAssociatedMessages):
+        case let .MessageEntry(value, reloadAssociatedMessages, reloadPeers):
             let message = value.message
             let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
         }
     }
     
@@ -139,7 +139,7 @@ enum MutableMessageHistoryEntry {
         switch self {
         case let .IntermediateMessageEntry(message, location, monthLocation):
             return []
-        case let .MessageEntry(value, _):
+        case let .MessageEntry(value, _, _):
             return value.message.associatedMessageIds
         }
     }
@@ -258,6 +258,7 @@ final class MutableMessageHistoryView {
     let tag: MessageTags?
     let namespaces: MessageIdNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
+    private let clipHoles: Bool
     private let anchor: HistoryViewInputAnchor
     
     fileprivate var combinedReadStates: MessageHistoryViewReadState?
@@ -271,10 +272,11 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, clipHoles: Bool, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
+        self.clipHoles = clipHoles
         self.peerIds = peerIds
         self.combinedReadStates = combinedReadStates
         self.transientReadStates = transientReadStates
@@ -290,12 +292,12 @@ final class MutableMessageHistoryView {
             switch sampledState {
             case let .ready(anchor, holes):
                 self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, namespaces: namespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
-                self.sampledState = self.state.sample(postbox: postbox)
+                self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
             case .loadHole:
                 break
             }
         }
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         
         self.render(postbox: postbox)
     }
@@ -320,7 +322,7 @@ final class MutableMessageHistoryView {
                 break
             }
         }
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
     }
     
     func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
@@ -509,7 +511,7 @@ final class MutableMessageHistoryView {
                     break
                 }
             }
-            self.sampledState = self.state.sample(postbox: postbox)
+            self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         }
         
         for operationSet in operations {

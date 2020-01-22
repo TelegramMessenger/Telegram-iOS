@@ -333,7 +333,7 @@ final class AuthorizedApplicationContext {
                                         return false
                                     }
                                     return true
-                                })
+                                }, excludeNavigationSubControllers: true)
                                 
                                 if foundOverlay {
                                     return true
@@ -362,7 +362,7 @@ final class AuthorizedApplicationContext {
                             return false
                         }, expandAction: { expandData in
                             if let strongSelf = self {
-                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
+                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
                                 //chatController.navigation_setNavigationController(strongSelf.rootController)
                                 chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
                                 //strongSelf.rootController.pushViewController(chatController)
@@ -659,7 +659,7 @@ final class AuthorizedApplicationContext {
         
         let showCallsTabSignal = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
         |> map { sharedData -> Bool in
-            var value = true
+            var value = CallListSettings.defaultSettings.showTab
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
                 value = settings.showTab
             }

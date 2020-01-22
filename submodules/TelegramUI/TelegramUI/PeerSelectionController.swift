@@ -22,6 +22,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     public var peerSelected: ((PeerId) -> Void)?
     private let filter: ChatListNodePeersFilter
     
+    private let attemptSelection: ((Peer) -> Void)?
+    
     public var inProgress: Bool = false {
         didSet {
             if self.inProgress != oldValue {
@@ -58,6 +60,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.filter = params.filter
         self.hasContactSelector = params.hasContactSelector
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.attemptSelection = params.attemptSelection
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -136,6 +139,12 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.peerSelectionNode.requestOpenPeer = { [weak self] peerId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peerId)
+            }
+        }
+        
+        self.peerSelectionNode.requestOpenDisabledPeer = { [weak self] peer in
+            if let strongSelf = self {
+                strongSelf.attemptSelection?(peer)
             }
         }
         

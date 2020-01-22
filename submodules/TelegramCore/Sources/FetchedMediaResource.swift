@@ -445,12 +445,12 @@ struct RevalidatedMediaResource {
 func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> {
     var updatedReference = info.reference
     if case let .media(media, resource) = updatedReference {
-        if case let .message(_, mediaValue) = media {
+        if case let .message(messageReference, mediaValue) = media {
             if let file = mediaValue as? TelegramMediaFile {
                 if let partialReference = file.partialReference {
                     updatedReference = partialReference.mediaReference(media.media).resourceReference(resource)
                 }
-                if file.isSticker {
+                if file.isSticker, messageReference.isSecret == true {
                     var stickerPackReference: StickerPackReference?
                     for attribute in file.attributes {
                         if case let .Sticker(sticker) = attribute {

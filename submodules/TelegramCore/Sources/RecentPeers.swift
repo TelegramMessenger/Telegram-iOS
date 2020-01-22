@@ -231,3 +231,20 @@ public func recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double)],
     }
 }
 
+public func removeRecentlyUsedInlineBot(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, itemId: RecentPeerItemId(peerId).rawValue)
+        
+        if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.contacts.resetTopPeerRating(category: .topPeerCategoryBotsInline, peer: apiPeer))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}

@@ -2344,17 +2344,28 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .UpdateMessagePoll(pollId, apiPoll, results):
                 if let poll = transaction.getMedia(pollId) as? TelegramMediaPoll {
                     var updatedPoll = poll
-                    if let apiPoll = apiPoll {
-                        switch apiPoll {
-                            case let .poll(id, flags, question, answers):
-                                updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
-                        }
-                    }
-                    
                     let resultsMin: Bool
                     switch results {
-                        case let .pollResults(pollResults):
-                            resultsMin = (pollResults.flags & (1 << 0)) != 0
+                    case let .pollResults(pollResults):
+                        resultsMin = (pollResults.flags & (1 << 0)) != 0
+                    }
+                    if let apiPoll = apiPoll {
+                        switch apiPoll {
+                        case let .poll(id, flags, question, answers):
+                            let publicity: TelegramMediaPollPublicity
+                            if (flags & (1 << 1)) != 0 {
+                                publicity = .public
+                            } else {
+                                publicity = .anonymous
+                            }
+                            let kind: TelegramMediaPollKind
+                            if (flags & (1 << 3)) != 0 {
+                                kind = .quiz
+                            } else {
+                                kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
+                            }
+                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0)
+                        }
                     }
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
                     updateMessageMedia(transaction: transaction, id: pollId, media: updatedPoll)

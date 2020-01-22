@@ -816,12 +816,12 @@ final class SharedApplicationContext {
                     return
                 }
                 var exists = false
-                strongSelf.mainWindow.forEachViewController { controller in
+                strongSelf.mainWindow.forEachViewController({ controller in
                     if controller is ThemeSettingsCrossfadeController || controller is ThemeSettingsController {
                         exists = true
                     }
                     return true
-                }
+                })
                 
                 if !exists {
                     strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
@@ -1156,6 +1156,8 @@ final class SharedApplicationContext {
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
                     self.resetIntentsIfNeeded(context: context.context)
+                    
+                    let _ = storeCurrentCallListTabDefaultValue(accountManager: context.context.sharedContext.accountManager).start()
                 }))
             } else {
                 self.mainWindow.viewController = nil
@@ -1380,8 +1382,7 @@ final class SharedApplicationContext {
             UIApplication.shared.setStatusBarHidden(false, with: .none)
         }
         
-        #if canImport(BackgroundTasks)
-        if #available(iOS 13.0, *) {
+        /*if #available(iOS 13.0, *) {
             BGTaskScheduler.shared.register(forTaskWithIdentifier: baseAppBundleId + ".refresh", using: nil, launchHandler: { task in
                 let _ = (self.sharedContextPromise.get()
                 |> take(1)
@@ -1400,8 +1401,7 @@ final class SharedApplicationContext {
                     })
                 })
             })
-        }
-        #endif
+        }*/
         
         return true
     }
@@ -1425,12 +1425,12 @@ final class SharedApplicationContext {
                 }
             }
         }
-        self.mainWindow.forEachViewController { controller in
+        self.mainWindow.forEachViewController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
             return true
-        }
+        })
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {

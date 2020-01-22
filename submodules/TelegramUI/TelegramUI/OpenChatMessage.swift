@@ -305,7 +305,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], sendSticker: params.sendSticker, actionPerformed: { info, items, action in
+                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, actionPerformed: { info, items, action in
                     let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = params.navigationController {
@@ -334,6 +334,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.present(controller, nil)
                 return true
             case let .document(file, immediateShare):
+                params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)

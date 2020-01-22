@@ -755,7 +755,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
-            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool) -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
@@ -1331,7 +1331,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: layoutOffset), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false)
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.frame = reorderControlFrame
@@ -1344,7 +1344,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: strongSelf.pinnedIconNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
                         } else if let reorderControlNode = strongSelf.reorderControlNode {
-                            let _ = reorderControlSizeAndApply.1(layout.contentSize.height, false)
+                            let _ = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
                             transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
                         }
                     } else if let reorderControlNode = strongSelf.reorderControlNode {

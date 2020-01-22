@@ -631,17 +631,23 @@ public final class PresentationThemeChatBubblePolls {
     public let highlight: UIColor
     public let separator: UIColor
     public let bar: UIColor
+    public let barIconForeground: UIColor
+    public let barPositive: UIColor
+    public let barNegative: UIColor
     
-    public init(radioButton: UIColor, radioProgress: UIColor, highlight: UIColor, separator: UIColor, bar: UIColor) {
+    public init(radioButton: UIColor, radioProgress: UIColor, highlight: UIColor, separator: UIColor, bar: UIColor, barIconForeground: UIColor, barPositive: UIColor, barNegative: UIColor) {
         self.radioButton = radioButton
         self.radioProgress = radioProgress
         self.highlight = highlight
         self.separator = separator
         self.bar = bar
+        self.barIconForeground = barIconForeground
+        self.barPositive = barPositive
+        self.barNegative = barNegative
     }
     
-    public func withUpdated(radioButton: UIColor? = nil, radioProgress: UIColor? = nil, highlight: UIColor? = nil, separator: UIColor? = nil, bar: UIColor? = nil) -> PresentationThemeChatBubblePolls {
-        return PresentationThemeChatBubblePolls(radioButton: radioButton ?? self.radioButton, radioProgress: radioProgress ?? self.radioProgress, highlight: highlight ?? self.highlight, separator: separator ?? self.separator, bar: bar ?? self.bar)
+    public func withUpdated(radioButton: UIColor? = nil, radioProgress: UIColor? = nil, highlight: UIColor? = nil, separator: UIColor? = nil, bar: UIColor? = nil, barIconForeground: UIColor? = nil, barPositive: UIColor? = nil, barNegative: UIColor? = nil) -> PresentationThemeChatBubblePolls {
+        return PresentationThemeChatBubblePolls(radioButton: radioButton ?? self.radioButton, radioProgress: radioProgress ?? self.radioProgress, highlight: highlight ?? self.highlight, separator: separator ?? self.separator, bar: bar ?? self.bar, barIconForeground: barIconForeground ?? self.barIconForeground, barPositive: barPositive ?? self.barPositive, barNegative: barNegative ?? self.barNegative)
     }
 }
 
@@ -655,6 +661,7 @@ public final class PresentationThemePartedColors {
     public let textHighlightColor: UIColor
     public let accentTextColor: UIColor
     public let accentControlColor: UIColor
+    public let accentControlDisabledColor: UIColor
     public let mediaActiveControlColor: UIColor
     public let mediaInactiveControlColor: UIColor
     public let mediaControlInnerBackgroundColor: UIColor
@@ -670,7 +677,7 @@ public final class PresentationThemePartedColors {
     public let textSelectionColor: UIColor
     public let textSelectionKnobColor: UIColor
     
-    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, mediaControlInnerBackgroundColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, accentControlDisabledColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, mediaControlInnerBackgroundColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
         self.bubble = bubble
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -680,6 +687,7 @@ public final class PresentationThemePartedColors {
         self.textHighlightColor = textHighlightColor
         self.accentTextColor = accentTextColor
         self.accentControlColor = accentControlColor
+        self.accentControlDisabledColor = accentControlDisabledColor
         self.mediaActiveControlColor = mediaActiveControlColor
         self.mediaInactiveControlColor = mediaInactiveControlColor
         self.mediaControlInnerBackgroundColor = mediaControlInnerBackgroundColor
@@ -696,8 +704,8 @@ public final class PresentationThemePartedColors {
         self.textSelectionKnobColor = textSelectionKnobColor
     }
     
-    public func withUpdated(bubble: PresentationThemeBubbleColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, linkTextColor: UIColor? = nil, linkHighlightColor: UIColor? = nil, scamColor: UIColor? = nil, textHighlightColor: UIColor? = nil, accentTextColor: UIColor? = nil, accentControlColor: UIColor? = nil, mediaActiveControlColor: UIColor? = nil, mediaInactiveControlColor: UIColor? = nil, mediaControlInnerBackgroundColor: UIColor? = nil, pendingActivityColor: UIColor? = nil, fileTitleColor: UIColor? = nil, fileDescriptionColor: UIColor? = nil, fileDurationColor: UIColor? = nil, mediaPlaceholderColor: UIColor? = nil, polls: PresentationThemeChatBubblePolls? = nil, actionButtonsFillColor: PresentationThemeVariableColor? = nil, actionButtonsStrokeColor: PresentationThemeVariableColor? = nil, actionButtonsTextColor: PresentationThemeVariableColor? = nil, textSelectionColor: UIColor? = nil, textSelectionKnobColor: UIColor? = nil) -> PresentationThemePartedColors {
-        return PresentationThemePartedColors(bubble: bubble ?? self.bubble, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, linkTextColor: linkTextColor ?? self.linkTextColor, linkHighlightColor: linkHighlightColor ?? self.linkHighlightColor, scamColor: scamColor ?? self.scamColor, textHighlightColor: textHighlightColor ?? self.textHighlightColor, accentTextColor: accentTextColor ?? self.accentTextColor, accentControlColor: accentControlColor ?? self.accentControlColor, mediaActiveControlColor: mediaActiveControlColor ?? self.mediaActiveControlColor, mediaInactiveControlColor: mediaInactiveControlColor ?? self.mediaInactiveControlColor, mediaControlInnerBackgroundColor: mediaControlInnerBackgroundColor ?? self.mediaControlInnerBackgroundColor, pendingActivityColor: pendingActivityColor ?? self.pendingActivityColor, fileTitleColor: fileTitleColor ?? self.fileTitleColor, fileDescriptionColor: fileDescriptionColor ?? self.fileDescriptionColor, fileDurationColor: fileDurationColor ?? self.fileDurationColor, mediaPlaceholderColor: mediaPlaceholderColor ?? self.mediaPlaceholderColor, polls: polls ?? self.polls, actionButtonsFillColor: actionButtonsFillColor ?? self.actionButtonsFillColor, actionButtonsStrokeColor: actionButtonsStrokeColor ?? self.actionButtonsStrokeColor, actionButtonsTextColor: actionButtonsTextColor ?? self.actionButtonsTextColor, textSelectionColor: textSelectionColor ?? self.textSelectionColor, textSelectionKnobColor: textSelectionKnobColor ?? self.textSelectionKnobColor)
+    public func withUpdated(bubble: PresentationThemeBubbleColor? = nil, primaryTextColor: UIColor? = nil, secondaryTextColor: UIColor? = nil, linkTextColor: UIColor? = nil, linkHighlightColor: UIColor? = nil, scamColor: UIColor? = nil, textHighlightColor: UIColor? = nil, accentTextColor: UIColor? = nil, accentControlColor: UIColor? = nil, accentControlDisabledColor: UIColor? = nil, mediaActiveControlColor: UIColor? = nil, mediaInactiveControlColor: UIColor? = nil, mediaControlInnerBackgroundColor: UIColor? = nil, pendingActivityColor: UIColor? = nil, fileTitleColor: UIColor? = nil, fileDescriptionColor: UIColor? = nil, fileDurationColor: UIColor? = nil, mediaPlaceholderColor: UIColor? = nil, polls: PresentationThemeChatBubblePolls? = nil, actionButtonsFillColor: PresentationThemeVariableColor? = nil, actionButtonsStrokeColor: PresentationThemeVariableColor? = nil, actionButtonsTextColor: PresentationThemeVariableColor? = nil, textSelectionColor: UIColor? = nil, textSelectionKnobColor: UIColor? = nil) -> PresentationThemePartedColors {
+        return PresentationThemePartedColors(bubble: bubble ?? self.bubble, primaryTextColor: primaryTextColor ?? self.primaryTextColor, secondaryTextColor: secondaryTextColor ?? self.secondaryTextColor, linkTextColor: linkTextColor ?? self.linkTextColor, linkHighlightColor: linkHighlightColor ?? self.linkHighlightColor, scamColor: scamColor ?? self.scamColor, textHighlightColor: textHighlightColor ?? self.textHighlightColor, accentTextColor: accentTextColor ?? self.accentTextColor, accentControlColor: accentControlColor ?? self.accentControlColor, accentControlDisabledColor: accentControlDisabledColor ?? self.accentControlDisabledColor, mediaActiveControlColor: mediaActiveControlColor ?? self.mediaActiveControlColor, mediaInactiveControlColor: mediaInactiveControlColor ?? self.mediaInactiveControlColor, mediaControlInnerBackgroundColor: mediaControlInnerBackgroundColor ?? self.mediaControlInnerBackgroundColor, pendingActivityColor: pendingActivityColor ?? self.pendingActivityColor, fileTitleColor: fileTitleColor ?? self.fileTitleColor, fileDescriptionColor: fileDescriptionColor ?? self.fileDescriptionColor, fileDurationColor: fileDurationColor ?? self.fileDurationColor, mediaPlaceholderColor: mediaPlaceholderColor ?? self.mediaPlaceholderColor, polls: polls ?? self.polls, actionButtonsFillColor: actionButtonsFillColor ?? self.actionButtonsFillColor, actionButtonsStrokeColor: actionButtonsStrokeColor ?? self.actionButtonsStrokeColor, actionButtonsTextColor: actionButtonsTextColor ?? self.actionButtonsTextColor, textSelectionColor: textSelectionColor ?? self.textSelectionColor, textSelectionKnobColor: textSelectionKnobColor ?? self.textSelectionKnobColor)
     }
 }
 
@@ -1172,6 +1180,10 @@ public final class PresentationTheme: Equatable {
     
     public func object(_ key: Int32, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
         return self.resourceCache.object(key, self, generate)
+    }
+    
+    public func object(_ key: PresentationResourceParameterKey, _ generate: (PresentationTheme) -> AnyObject?) -> AnyObject? {
+        return self.resourceCache.parameterObject(key, self, generate)
     }
     
     public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {

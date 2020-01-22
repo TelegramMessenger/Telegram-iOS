@@ -429,17 +429,7 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
             var scale = scale
             
             let drawingRect = arguments.drawingRect
-            var fittedSize = arguments.imageSize
-            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
-                fittedSize.width = arguments.boundingSize.width
-            }
-            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
-                fittedSize.height = arguments.boundingSize.height
-            }
-            fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
-            
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-    
+         
             if let customArguments = arguments.custom as? PatternWallpaperArguments, let combinedColor = customArguments.colors.first {
                 if customArguments.preview {
                     scale = max(1.0, UIScreenScale - 1.0)
@@ -479,6 +469,17 @@ public func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Da
                     
                     let image = customArguments.preview ? (scaledSizeImage ?? fullSizeImage) : fullSizeImage
                     if let image = image {
+                        var fittedSize = CGSize(width: image.width, height: image.height)
+                        if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                            fittedSize.width = arguments.boundingSize.width
+                        }
+                        if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                            fittedSize.height = arguments.boundingSize.height
+                        }
+                        fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+                        
+                        let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                        
                         c.setBlendMode(.normal)
                         c.interpolationQuality = customArguments.preview ? .low : .medium
                         c.clip(to: fittedRect, mask: image)
@@ -538,7 +539,7 @@ public func solidColorImage(_ color: UIColor) -> Signal<(TransformImageArguments
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         
         context.withFlippedContext { c in
-            c.setFillColor(color.cgColor)
+            c.setFillColor(color.withAlphaComponent(1.0).cgColor)
             c.fill(arguments.drawingRect)
         }
         
@@ -563,7 +564,7 @@ public func gradientImage(_ colors: [UIColor], rotation: Int32? = nil) -> Signal
         let context = DrawingContext(size: arguments.drawingSize, clear: !arguments.corners.isEmpty)
         
         context.withContext { c in
-            let gradientColors = colors.map { $0.cgColor } as CFArray
+            let gradientColors = colors.map { $0.withAlphaComponent(1.0).cgColor } as CFArray
             let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
             
             var locations: [CGFloat] = []
@@ -779,7 +780,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
     
     c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 42.0 - UIScreenPixel), size: CGSize(width: drawingRect.width - 2.0, height: UIScreenPixel)))
     
     c.setFillColor(theme.rootController.navigationBar.secondaryTextColor.cgColor)
     c.fillEllipse(in: CGRect(origin: CGPoint(x: drawingRect.width - 28.0 - 7.0, y: drawingRect.height - 7.0 - 28.0 - UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
@@ -796,7 +797,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
         
         c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-        c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+        c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: UIScreenPixel)))
     }
     
     c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
@@ -1323,7 +1324,6 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
                 c.scaleBy(x: 1.0, y: -1.0)
                 c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                
                 c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
                 
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)

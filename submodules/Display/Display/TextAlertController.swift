@@ -360,8 +360,8 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
     var dismissImpl: (() -> Void)?
     let attributedText: NSAttributedString
     if parseMarkdown {
-        let font = title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
-        let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
+        let font = title == nil ? Font.semibold(theme.baseFontSize * 13.0 / 17.0) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
+        let boldFont = title == nil ? Font.bold(theme.baseFontSize * 13.0 / 17.0) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
         let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
         let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
         attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)

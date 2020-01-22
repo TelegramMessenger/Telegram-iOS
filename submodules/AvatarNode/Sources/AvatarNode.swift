@@ -54,16 +54,6 @@ private class AvatarNodeParameters: NSObject {
     }
 }
 
-private let gradientColors: [NSArray] = [
-    [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
-    [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
-    [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
-    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
-    [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
-    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
-    [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
-]
-
 private func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
@@ -167,6 +157,16 @@ public final class AvatarEditOverlayNode: ASDisplayNode {
 }
 
 public final class AvatarNode: ASDisplayNode {
+    public static let gradientColors: [NSArray] = [
+        [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
+        [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
+        [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+        [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+        [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
+        [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
+        [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
+    ]
+    
     public var font: UIFont {
         didSet {
             if oldValue !== font {
@@ -318,7 +318,7 @@ public final class AvatarNode: ASDisplayNode {
             
             let parameters: AvatarNodeParameters
             
-            if let peer = peer, let signal = peerAvatarImage(account: context.account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
+            if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.ready)
@@ -416,7 +416,7 @@ public final class AvatarNode: ASDisplayNode {
                     if peerId.namespace == -1 {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(clamping: accountPeerId.id &+ peerId.id))
+                        colorIndex = abs(Int(clamping: peerId.id))
                     }
                 } else {
                     colorIndex = -1
@@ -456,7 +456,7 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = grayscaleColors
             }
         } else {
-            colorsArray = gradientColors[colorIndex % gradientColors.count]
+            colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count]
         }
         
         var locations: [CGFloat] = [1.0, 0.0]
@@ -555,7 +555,7 @@ public final class AvatarNode: ASDisplayNode {
     }
 }
 
-public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont, letters: [String], accountPeerId: PeerId, peerId: PeerId) {
+public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont, letters: [String], peerId: PeerId) {
     context.beginPath()
     context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
         size.height))
@@ -572,7 +572,7 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     if colorIndex == -1 {
         colorsArray = grayscaleColors
     } else {
-        colorsArray = gradientColors[colorIndex % gradientColors.count]
+        colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count]
     }
     
     var locations: [CGFloat] = [1.0, 0.0]
@@ -581,6 +581,8 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
     
     context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    
+    context.resetClip()
     
     context.setBlendMode(.normal)
     
@@ -597,7 +599,9 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, font: UIFont
     context.scaleBy(x: 1.0, y: -1.0)
     context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
     
+    let textPosition = context.textPosition
     context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
     CTLineDraw(line, context)
     context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    context.textPosition = textPosition
 }

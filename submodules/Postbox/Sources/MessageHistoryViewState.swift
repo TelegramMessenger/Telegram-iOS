@@ -874,10 +874,10 @@ final class HistoryViewLoadedState {
                 let currentLocation = nextLocation
                 nextLocation = nextLocation.successor
                 switch entry {
-                    case let .IntermediateMessageEntry(message, _, monthLocation):
-                        return .IntermediateMessageEntry(message, currentLocation, monthLocation)
-                    case let .MessageEntry(entry, reloadAssociatedMessages):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: currentLocation, monthLocation: entry.monthLocation, attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                case let .IntermediateMessageEntry(message, _, monthLocation):
+                    return .IntermediateMessageEntry(message, currentLocation, monthLocation)
+                case let .MessageEntry(entry, reloadAssociatedMessages, reloadPeers):
+                    return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: currentLocation, monthLocation: entry.monthLocation, attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 }
             }
         }
@@ -900,8 +900,8 @@ final class HistoryViewLoadedState {
                 switch entry {
                     case let .IntermediateMessageEntry(message, location, _):
                         return .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)))
-                    case let .MessageEntry(entry, reloadAssociatedMessages):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                    case let .MessageEntry(entry, reloadAssociatedMessages, reloadPeers):
+                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                 }
             }
         }
@@ -960,8 +960,8 @@ final class HistoryViewLoadedState {
                     switch entry {
                         case let .IntermediateMessageEntry(message, location, monthLocation):
                             return .IntermediateMessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation)
-                        case let .MessageEntry(messageEntry, reloadAssociatedMessages):
-                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                        case let .MessageEntry(messageEntry, reloadAssociatedMessages, reloadPeers):
+                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedGroupInfo(groupInfo), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                     }
                 }
                 return nil
@@ -983,8 +983,8 @@ final class HistoryViewLoadedState {
             switch entry {
                 case let .IntermediateMessageEntry(message, location, monthLocation):
                     return .IntermediateMessageEntry(message.withUpdatedEmbeddedMedia(buffer), location, monthLocation)
-                case let .MessageEntry(messageEntry, reloadAssociatedMessages):
-                    return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                case let .MessageEntry(messageEntry, reloadAssociatedMessages, reloadPeers):
+                    return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message, location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
             }
         })
     }
@@ -994,8 +994,9 @@ final class HistoryViewLoadedState {
         for space in self.orderedEntriesBySpace.keys {
             let spaceUpdated = self.orderedEntriesBySpace[space]!.mutableScan({ entry in
                 switch entry {
-                    case let .MessageEntry(value, reloadAssociatedMessages):
+                    case let .MessageEntry(value, reloadAssociatedMessages, reloadPeers):
                         let message = value.message
+                        var reloadPeers = reloadPeers
                         
                         var rebuild = false
                         for media in message.media {
@@ -1010,6 +1011,9 @@ final class HistoryViewLoadedState {
                             for media in message.media {
                                 if let mediaId = media.id, let updated = updatedMedia[mediaId] {
                                     if let updated = updated {
+                                        if media.peerIds != updated.peerIds {
+                                            reloadPeers = true
+                                        }
                                         messageMedia.append(updated)
                                     }
                                 } else {
@@ -1017,7 +1021,7 @@ final class HistoryViewLoadedState {
                                 }
                             }
                             let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-                            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                            return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                         }
                     case .IntermediateMessageEntry:
                         break
@@ -1046,9 +1050,9 @@ final class HistoryViewLoadedState {
                     switch current {
                     case .IntermediateMessageEntry:
                         return current
-                    case let .MessageEntry(messageEntry, _):
+                    case let .MessageEntry(messageEntry, _, reloadPeers):
                         updated = true
-                        return .MessageEntry(messageEntry, reloadAssociatedMessages: true)
+                        return .MessageEntry(messageEntry, reloadAssociatedMessages: true, reloadPeers: reloadPeers)
                     }
                 })
             }
@@ -1109,11 +1113,11 @@ final class HistoryViewLoadedState {
                     switch current {
                     case .IntermediateMessageEntry:
                         return current
-                    case let .MessageEntry(messageEntry, reloadAssociatedMessages):
+                    case let .MessageEntry(messageEntry, reloadAssociatedMessages, reloadPeers):
                         updated = true
                         
                         if let associatedMessages = messageEntry.message.associatedMessages.filteredOut(keysIn: [index.id]) {
-                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedAssociatedMessages(associatedMessages), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages)
+                            return .MessageEntry(MessageHistoryMessageEntry(message: messageEntry.message.withUpdatedAssociatedMessages(associatedMessages), location: messageEntry.location, monthLocation: messageEntry.monthLocation, attributes: messageEntry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                         } else {
                             return current
                         }
@@ -1130,7 +1134,7 @@ final class HistoryViewLoadedState {
         return updated
     }
     
-    func completeAndSample(postbox: Postbox) -> HistoryViewLoadedSample {
+    func completeAndSample(postbox: Postbox, clipHoles: Bool) -> HistoryViewLoadedSample {
         if !self.spacesWithRemovals.isEmpty {
             for space in self.spacesWithRemovals {
                 self.fillSpace(space: space, postbox: postbox)
@@ -1161,7 +1165,7 @@ final class HistoryViewLoadedState {
                         entry = self.orderedEntriesBySpace[space]!.higherThanAnchor[index]
                     }
                     
-                    if !clipRanges.isEmpty {
+                    if clipHoles && !clipRanges.isEmpty {
                         let entryIndex = entry.index
                         for range in clipRanges {
                             if range.contains(entryIndex) {
@@ -1177,14 +1181,22 @@ final class HistoryViewLoadedState {
                     }
                     
                     switch entry {
-                        case let .MessageEntry(value, reloadAssociatedMessages):
+                        case let .MessageEntry(value, reloadAssociatedMessages, reloadPeers):
+                            var updatedMessage = value.message
                             if reloadAssociatedMessages {
                                 let associatedMessages = postbox.messageHistoryTable.renderAssociatedMessages(associatedMessageIds: value.message.associatedMessageIds, peerTable: postbox.peerTable)
-                                let updatedValue = MessageHistoryMessageEntry(message: value.message.withUpdatedAssociatedMessages(associatedMessages), location: value.location, monthLocation: value.monthLocation, attributes: value.attributes)
+                                updatedMessage = value.message.withUpdatedAssociatedMessages(associatedMessages)
+                            }
+                            if reloadPeers {
+                                updatedMessage = postbox.messageHistoryTable.renderMessagePeers(updatedMessage, peerTable: postbox.peerTable)
+                            }
+                            
+                            if value.message !== updatedMessage {
+                                let updatedValue = MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes)
                                 if directionIndex == 0 {
-                                    self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false))
+                                    self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false, reloadPeers: false))
                                 } else {
-                                    self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false))
+                                    self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(updatedValue, reloadAssociatedMessages: false, reloadPeers: false))
                                 }
                                 result.append(updatedValue)
                             } else {
@@ -1198,9 +1210,9 @@ final class HistoryViewLoadedState {
                             }
                             let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
                             if directionIndex == 0 {
-                                self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false))
+                                self.orderedEntriesBySpace[space]!.setLowerOrAtAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false, reloadPeers: false))
                             } else {
-                                self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false))
+                                self.orderedEntriesBySpace[space]!.setHigherThanAnchorAtArrayIndex(index, to: .MessageEntry(entry, reloadAssociatedMessages: false, reloadPeers: false))
                             }
                             result.append(entry)
                     }
@@ -1361,12 +1373,12 @@ enum HistoryViewState {
         }
     }
     
-    func sample(postbox: Postbox) -> HistoryViewSample {
+    func sample(postbox: Postbox, clipHoles: Bool) -> HistoryViewSample {
         switch self {
-            case let .loading(loadingState):
-                return .loading(loadingState.checkAndSample(postbox: postbox))
-            case let .loaded(loadedState):
-                return .loaded(loadedState.completeAndSample(postbox: postbox))
+        case let .loading(loadingState):
+            return .loading(loadingState.checkAndSample(postbox: postbox))
+        case let .loaded(loadedState):
+            return .loaded(loadedState.completeAndSample(postbox: postbox, clipHoles: clipHoles))
         }
     }
 }

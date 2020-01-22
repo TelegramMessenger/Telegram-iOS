@@ -349,14 +349,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 let duration = value.status.duration
-                if duration != strongSelf.currentDuration {
+                if duration != strongSelf.currentDuration && !duration.isZero {
                     strongSelf.currentDuration = duration
                     if let layout = strongSelf.validLayout {
                         strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
                     }
                 }
                 
-                strongSelf.rateButton.isHidden = rateButtonIsHidden || strongSelf.currentDuration.isZero
+                strongSelf.rateButton.isHidden = rateButtonIsHidden
             } else {
                 strongSelf.playPauseButton.isEnabled = false
                 strongSelf.backwardButton.isEnabled = false

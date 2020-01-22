@@ -337,8 +337,17 @@ public class Window1 {
             self?.isInteractionBlocked = value
         }
         
+        let updateOpaqueOverlays: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf._rootController?.displayNode.accessibilityElementsHidden = strongSelf.presentationContext.hasOpaqueOverlay || strongSelf.topPresentationContext.hasOpaqueOverlay
+        }
         self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
-            self?._rootController?.displayNode.accessibilityElementsHidden = value
+            updateOpaqueOverlays()
+        }
+        self.topPresentationContext.updateHasOpaqueOverlay = { [weak self] value in
+            updateOpaqueOverlays()
         }
         
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
@@ -1222,10 +1231,12 @@ public class Window1 {
         return hidden
     }
     
-    public func forEachViewController(_ f: (ContainableController) -> Bool) {
+    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false) {
         if let navigationController = self._rootController as? NavigationController {
-            for case let controller as ContainableController in navigationController.viewControllers {
-                !f(controller)
+            if !excludeNavigationSubControllers {
+                for case let controller as ContainableController in navigationController.viewControllers {
+                    !f(controller)
+                }
             }
             if let controller = navigationController.topOverlayController {
                 !f(controller)

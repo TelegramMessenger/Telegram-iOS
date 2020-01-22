@@ -241,9 +241,6 @@ public class ComposeController: ViewController {
     
     private func activateSearch() {
         if self.displayNavigationBar {
-            if let scrollToTop = self.scrollToTop {
-                scrollToTop()
-            }
             if let searchContentNode = self.searchContentNode {
                 self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
             }

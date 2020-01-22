@@ -698,10 +698,10 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     if case .modal = mode {
         controller.navigationPresentation = .modal
     }
-    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [InstalledStickerPacksEntry]) -> Void in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [InstalledStickerPacksEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
         guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _) = fromEntry else {
-            return
+            return .single(false)
         }
         var referenceId: ItemCollectionId?
         var beforeAll = false
@@ -731,20 +731,26 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             }
         }
         
+        var previousIndex: Int?
         for i in 0 ..< currentIds.count {
             if currentIds[i] == fromPackInfo.id {
+                previousIndex = i
                 currentIds.remove(at: i)
                 break
             }
         }
+        
+        var didReorder = false
         
         if let referenceId = referenceId {
             var inserted = false
             for i in 0 ..< currentIds.count {
                 if currentIds[i] == referenceId {
                     if fromIndex < toIndex {
+                        didReorder = previousIndex != i + 1
                         currentIds.insert(fromPackInfo.id, at: i + 1)
                     } else {
+                        didReorder = previousIndex != i
                         currentIds.insert(fromPackInfo.id, at: i)
                     }
                     inserted = true
@@ -752,15 +758,20 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 }
             }
             if !inserted {
+                didReorder = previousIndex != currentIds.count
                 currentIds.append(fromPackInfo.id)
             }
         } else if beforeAll {
+            didReorder = previousIndex != 0
             currentIds.insert(fromPackInfo.id, at: 0)
         } else if afterAll {
+            didReorder = previousIndex != currentIds.count
             currentIds.append(fromPackInfo.id)
         }
         
         temporaryPackOrder.set(.single(currentIds))
+        
+        return .single(didReorder)
     })
     
     controller.setReorderCompleted({ (entries: [InstalledStickerPacksEntry]) -> Void in
@@ -827,7 +838,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
+                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: packs, parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = navigationControllerImpl?() {

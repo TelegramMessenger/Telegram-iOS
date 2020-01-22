@@ -248,7 +248,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             
             TgVoipEndpoint endpoint;
             endpoint.endpointId = connection.connectionId;
-            endpoint.host = std::string(connection.ip.UTF8String);
+            endpoint.host = {
+                .ipv4 = std::string(connection.ip.UTF8String),
+                .ipv6 = std::string(connection.ipv6.UTF8String)
+            };
             endpoint.port = (uint16_t)connection.port;
             endpoint.type = TgVoipEndpointType::UdpRelay;
             memcpy(endpoint.peerTag, peerTag, 16);
@@ -277,14 +280,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .isOutgoing = isOutgoing,
         };
         
+        /*
+         TgVoipConfig const &config,
+             TgVoipPersistentState const &persistentState,
+             std::vector<TgVoipEndpoint> const &endpoints,
+             std::unique_ptr<TgVoipProxy> const &proxy,
+             TgVoipNetworkType initialNetworkType,
+             TgVoipEncryptionKey const &encryptionKey
+         #ifdef TGVOIP_USE_CUSTOM_CRYPTO
+             ,
+             TgVoipCrypto const &crypto
+         */
+        
         _tgVoip = TgVoip::makeInstance(
-            crypto,
             config,
             { derivedStateValue },
             endpoints,
             proxyValue,
             callControllerNetworkTypeForType(networkType),
-            encryptionKey
+            encryptionKey,
+            crypto
         );
         
         _state = OngoingCallStateInitializing;

@@ -26,14 +26,264 @@ public func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColo
     })!.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false) -> UIImage {
-    let diameter: CGFloat = 36.0
-    let corner: CGFloat = 7.0
+private let minRadiusForFullTailCorner: CGFloat = 14.0
+
+func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> UIImage {
+    let imageSize = CGSize(width: radius + 7.0, height: 8.0)
+    let fixedMainDiameter: CGFloat = 33.0
+    
+    let formContext = DrawingContext(size: imageSize)
+    formContext.withFlippedContext { context in
+        context.clear(CGRect(origin: CGPoint(), size: imageSize))
+        context.translateBy(x: imageSize.width / 2.0, y: imageSize.height / 2.0)
+        context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
+        context.translateBy(x: -imageSize.width / 2.0, y: -imageSize.height / 2.0)
+        
+        context.setFillColor(UIColor.black.cgColor)
+        
+        let bottomEllipse = CGRect(origin: CGPoint(x: 24.0, y: 16.0), size: CGSize(width: 27.0, height: 17.0)).insetBy(dx: inset, dy: inset).offsetBy(dx: inset, dy: inset)
+        let topEllipse = CGRect(origin: CGPoint(x: 33.0, y: 14.0), size: CGSize(width: 23.0, height: 21.0)).insetBy(dx: -inset, dy: -inset).offsetBy(dx: inset, dy: inset)
+        
+        context.translateBy(x: -fixedMainDiameter + imageSize.width - 6.0, y: -fixedMainDiameter + imageSize.height)
+        
+        let topLeftRadius: CGFloat = 2.0
+        let topRightRadius: CGFloat = 2.0
+        let bottomLeftRadius: CGFloat = 2.0
+        let bottomRightRadius: CGFloat = radius
+        
+        context.move(to: CGPoint(x: 0.0, y: topLeftRadius))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topLeftRadius, y: 0.0), radius: topLeftRadius)
+        context.addLine(to: CGPoint(x: fixedMainDiameter - topRightRadius, y: 0.0))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: 0.0), tangent2End: CGPoint(x: fixedMainDiameter, y: topRightRadius), radius: topRightRadius)
+        context.addLine(to: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter - bottomRightRadius))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter), tangent2End: CGPoint(x: fixedMainDiameter - bottomRightRadius, y: fixedMainDiameter), radius: bottomRightRadius)
+        context.addLine(to: CGPoint(x: bottomLeftRadius, y: fixedMainDiameter))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: fixedMainDiameter), tangent2End: CGPoint(x: 0.0, y: fixedMainDiameter - bottomLeftRadius), radius: bottomLeftRadius)
+        context.addLine(to: CGPoint(x: 0.0, y: topLeftRadius))
+        context.fillPath()
+        
+        if radius >= minRadiusForFullTailCorner {
+            context.move(to: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.midY))
+            context.addQuadCurve(to: CGPoint(x: bottomEllipse.midX, y: bottomEllipse.maxY), control: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.maxY))
+            context.addQuadCurve(to: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.midY), control: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.maxY))
+            context.fillPath()
+        } else {
+            context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 5.0, y: bottomEllipse.midY), size: CGSize(width: bottomEllipse.width + 5.0, height: bottomEllipse.height / 2.0)))
+        }
+        context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: floor(fixedMainDiameter / 2.0)), size: CGSize(width: fixedMainDiameter / 2.0, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
+        context.setFillColor(UIColor.clear.cgColor)
+        context.setBlendMode(.copy)
+        context.fillEllipse(in: topEllipse)
+    }
+    
+    return formContext.generateImage()!
+}
+
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false) -> UIImage {
+    let topLeftRadius: CGFloat
+    let topRightRadius: CGFloat
+    let bottomLeftRadius: CGFloat
+    let bottomRightRadius: CGFloat
+    let drawTail: Bool
+    
+    switch neighbors {
+    case .none:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .both:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .bottom:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .side:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = minCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case let .top(side):
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = side ? minCornerRadius : maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    }
+    
+    let fixedMainDiameter: CGFloat = 33.0
+    let innerSize = CGSize(width: fixedMainDiameter + 6.0, height: fixedMainDiameter)
+    let strokeInset: CGFloat = 1.0
+    let sourceRawSize = CGSize(width: innerSize.width + strokeInset * 2.0, height: innerSize.height + strokeInset * 2.0)
+    let additionalInset: CGFloat = 1.0
+    let imageSize = CGSize(width: sourceRawSize.width + additionalInset * 2.0, height: sourceRawSize.height + additionalInset * 2.0)
+    let outgoingStretchPoint: (x: Int, y: Int) = (Int(additionalInset + strokeInset + round(fixedMainDiameter / 2.0)) - 1, Int(additionalInset + strokeInset + round(fixedMainDiameter / 2.0)))
+    let incomingStretchPoint: (x: Int, y: Int) = (Int(sourceRawSize.width) - outgoingStretchPoint.x + 1, outgoingStretchPoint.y)
+    
     let knockout = knockoutValue && !mask
     
-    let inset: CGFloat = 1.0
+    let rawSize = imageSize
     
-    return generateImage(CGSize(width: 42.0 + inset * 2.0, height: diameter + inset * 2.0), contextGenerator: { rawSize, context in
+    let bottomEllipse = CGRect(origin: CGPoint(x: 24.0, y: 16.0), size: CGSize(width: 27.0, height: 17.0))
+    let topEllipse = CGRect(origin: CGPoint(x: 33.0, y: 14.0), size: CGSize(width: 23.0, height: 21.0))
+    
+    let formContext = DrawingContext(size: imageSize)
+    formContext.withFlippedContext { context in
+        context.clear(CGRect(origin: CGPoint(), size: rawSize))
+        context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
+        
+        context.setFillColor(UIColor.black.cgColor)
+        
+        context.move(to: CGPoint(x: 0.0, y: topLeftRadius))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topLeftRadius, y: 0.0), radius: topLeftRadius)
+        context.addLine(to: CGPoint(x: fixedMainDiameter - topRightRadius, y: 0.0))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: 0.0), tangent2End: CGPoint(x: fixedMainDiameter, y: topRightRadius), radius: topRightRadius)
+        context.addLine(to: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter - bottomRightRadius))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter), tangent2End: CGPoint(x: fixedMainDiameter - bottomRightRadius, y: fixedMainDiameter), radius: bottomRightRadius)
+        context.addLine(to: CGPoint(x: bottomLeftRadius, y: fixedMainDiameter))
+        context.addArc(tangent1End: CGPoint(x: 0.0, y: fixedMainDiameter), tangent2End: CGPoint(x: 0.0, y: fixedMainDiameter - bottomLeftRadius), radius: bottomLeftRadius)
+        context.addLine(to: CGPoint(x: 0.0, y: topLeftRadius))
+        context.fillPath()
+        
+        if drawTail {
+            if maxCornerRadius >= minRadiusForFullTailCorner {
+                context.move(to: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.midY))
+                context.addQuadCurve(to: CGPoint(x: bottomEllipse.midX, y: bottomEllipse.maxY), control: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.maxY))
+                context.addQuadCurve(to: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.midY), control: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.maxY))
+                context.fillPath()
+            } else {
+                context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 2.0, y: bottomEllipse.midY), size: CGSize(width: bottomEllipse.width + 2.0, height: bottomEllipse.height / 2.0)))
+            }
+            context.fill(CGRect(origin: CGPoint(x: fixedMainDiameter / 2.0, y: floor(fixedMainDiameter / 2.0)), size: CGSize(width: fixedMainDiameter / 2.0, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
+            context.setFillColor(UIColor.clear.cgColor)
+            context.setBlendMode(.copy)
+            context.fillEllipse(in: topEllipse)
+        }
+    }
+    let formImage = formContext.generateImage()!
+    
+    let outlineContext = DrawingContext(size: imageSize)
+    outlineContext.withFlippedContext { context in
+        context.clear(CGRect(origin: CGPoint(), size: rawSize))
+        context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
+        
+        context.setStrokeColor(UIColor.black.cgColor)
+        let borderWidth: CGFloat
+        if abs(UIScreenPixel - 0.5) < CGFloat.ulpOfOne {
+            borderWidth = UIScreenPixel
+        } else {
+            borderWidth = UIScreenPixel * 2.0
+        }
+        context.setLineWidth(borderWidth)
+        
+        let borderOffset: CGFloat = borderWidth / 2.0
+        
+        context.move(to: CGPoint(x: -borderOffset, y: topLeftRadius + borderOffset))
+        context.addArc(tangent1End: CGPoint(x: -borderOffset, y: -borderOffset), tangent2End: CGPoint(x: topLeftRadius + borderOffset, y: -borderOffset), radius: topLeftRadius + borderOffset * 2.0)
+        context.addLine(to: CGPoint(x: fixedMainDiameter - topRightRadius - borderOffset, y: -borderOffset))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter + borderOffset, y: -borderOffset), tangent2End: CGPoint(x: fixedMainDiameter + borderOffset, y: topRightRadius + borderOffset), radius: topRightRadius + borderOffset * 2.0)
+        context.addLine(to: CGPoint(x: fixedMainDiameter + borderOffset, y: fixedMainDiameter - bottomRightRadius - borderOffset))
+        context.addArc(tangent1End: CGPoint(x: fixedMainDiameter + borderOffset, y: fixedMainDiameter + borderOffset), tangent2End: CGPoint(x: fixedMainDiameter - bottomRightRadius - borderOffset, y: fixedMainDiameter + borderOffset), radius: bottomRightRadius + borderOffset * 2.0)
+        context.addLine(to: CGPoint(x: bottomLeftRadius + borderOffset, y: fixedMainDiameter + borderOffset))
+        context.addArc(tangent1End: CGPoint(x: -borderOffset, y: fixedMainDiameter + borderOffset), tangent2End: CGPoint(x: -borderOffset, y: fixedMainDiameter - bottomLeftRadius - borderOffset), radius: bottomLeftRadius + borderOffset * 2.0)
+        context.closePath()
+        context.strokePath()
+        
+        if drawTail {
+            let outlineBottomEllipse = bottomEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
+            let outlineInnerTopEllipse = topEllipse.insetBy(dx: borderOffset, dy: borderOffset)
+            let outlineTopEllipse = topEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
+            
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            
+            if maxCornerRadius >= minRadiusForFullTailCorner {
+                context.move(to: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.midY))
+                context.addQuadCurve(to: CGPoint(x: bottomEllipse.midX, y: bottomEllipse.maxY), control: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.maxY))
+                context.addQuadCurve(to: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.midY), control: CGPoint(x: bottomEllipse.maxX, y: bottomEllipse.maxY))
+                context.fillPath()
+            } else {
+                context.fill(CGRect(origin: CGPoint(x: bottomEllipse.minX - 2.0, y: floor(bottomEllipse.midY)), size: CGSize(width: bottomEllipse.width + 2.0, height: ceil(bottomEllipse.height / 2.0))))
+            }
+            context.fill(CGRect(origin: CGPoint(x: floor(fixedMainDiameter / 2.0), y: fixedMainDiameter / 2.0), size: CGSize(width: fixedMainDiameter / 2.0 + borderWidth, height: ceil(bottomEllipse.midY) - floor(fixedMainDiameter / 2.0))))
+            
+            context.setBlendMode(.normal)
+            context.move(to: CGPoint(x: fixedMainDiameter + borderOffset, y: fixedMainDiameter / 2.0))
+            context.addLine(to: CGPoint(x: fixedMainDiameter + borderOffset, y: outlineBottomEllipse.midY))
+            context.strokePath()
+            
+            let bubbleTailContext = DrawingContext(size: imageSize)
+            bubbleTailContext.withFlippedContext { context in
+                context.clear(CGRect(origin: CGPoint(), size: rawSize))
+                context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
+                
+                context.setStrokeColor(UIColor.black.cgColor)
+                context.setLineWidth(borderWidth)
+                
+                if maxCornerRadius >= minRadiusForFullTailCorner {
+                    context.move(to: CGPoint(x: outlineBottomEllipse.minX, y: outlineBottomEllipse.midY))
+                    context.addQuadCurve(to: CGPoint(x: outlineBottomEllipse.midX, y: outlineBottomEllipse.maxY), control: CGPoint(x: outlineBottomEllipse.minX, y: outlineBottomEllipse.maxY))
+                    context.addQuadCurve(to: CGPoint(x: outlineBottomEllipse.maxX, y: outlineBottomEllipse.midY), control: CGPoint(x: outlineBottomEllipse.maxX, y: outlineBottomEllipse.maxY))
+                } else {
+                    context.move(to: CGPoint(x: outlineBottomEllipse.minX - 2.0, y: outlineBottomEllipse.maxY))
+                    context.addLine(to: CGPoint(x: outlineBottomEllipse.minX, y: outlineBottomEllipse.maxY))
+                    context.addLine(to: CGPoint(x: outlineBottomEllipse.maxX, y: outlineBottomEllipse.maxY))
+                }
+                context.strokePath()
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+                context.fillEllipse(in: outlineInnerTopEllipse)
+                
+                context.move(to: CGPoint(x: 0.0, y: topLeftRadius))
+                context.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topLeftRadius, y: 0.0), radius: topLeftRadius)
+                context.addLine(to: CGPoint(x: fixedMainDiameter - topRightRadius, y: 0.0))
+                context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: 0.0), tangent2End: CGPoint(x: fixedMainDiameter, y: topRightRadius), radius: topRightRadius)
+                context.addLine(to: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter - bottomRightRadius))
+                context.addArc(tangent1End: CGPoint(x: fixedMainDiameter, y: fixedMainDiameter), tangent2End: CGPoint(x: fixedMainDiameter - bottomRightRadius, y: fixedMainDiameter), radius: bottomRightRadius)
+                context.addLine(to: CGPoint(x: bottomLeftRadius, y: fixedMainDiameter))
+                context.addArc(tangent1End: CGPoint(x: 0.0, y: fixedMainDiameter), tangent2End: CGPoint(x: 0.0, y: fixedMainDiameter - bottomLeftRadius), radius: bottomLeftRadius)
+                context.addLine(to: CGPoint(x: 0.0, y: topLeftRadius))
+                context.fillPath()
+                
+                let bottomEllipseMask = generateImage(bottomEllipse.insetBy(dx: -1.0, dy: -1.0).size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(UIColor.black.cgColor)
+                    if maxCornerRadius >= minRadiusForFullTailCorner {
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 1.0 - borderOffset, y: 1.0 - borderOffset), size: CGSize(width: outlineBottomEllipse.width, height: outlineBottomEllipse.height)))
+                    } else {
+                        context.fill(CGRect(origin: CGPoint(x: 1.0 - borderOffset, y: 1.0 - borderOffset), size: CGSize(width: outlineBottomEllipse.width, height: outlineBottomEllipse.height)))
+                    }
+                    context.clear(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+                })!
+                
+                context.clip(to: bottomEllipse.insetBy(dx: -1.0, dy: -1.0), mask: bottomEllipseMask.cgImage!)
+                context.strokeEllipse(in: outlineInnerTopEllipse)
+                context.resetClip()
+            }
+            
+            context.translateBy(x: -(additionalInset + strokeInset), y: -(additionalInset + strokeInset))
+            context.draw(bubbleTailContext.generateImage()!.cgImage!, in: CGRect(origin: CGPoint(), size: rawSize))
+            context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
+        }
+    }
+    let outlineImage = generateImage(outlineContext.size, contextGenerator: { size, context in
+        context.setBlendMode(.copy)
+        let image = outlineContext.generateImage()!
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.normal)
+        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+    })!
+    
+    let drawingContext = DrawingContext(size: imageSize)
+    drawingContext.withFlippedContext { context in
         var drawWithClearColor = false
         
         if knockout {
@@ -48,94 +298,33 @@ public func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: 
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
         }
         
-        let additionalOffset: CGFloat
-        switch neighbors {
-        case .none, .bottom:
-            additionalOffset = 0.0
-        case .both, .side, .top:
-            additionalOffset = 6.0
-        }
-        
-        context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
-        context.scaleBy(x: incoming ? 1.0 : -1.0, y: -1.0)
-        context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
-        
-        context.translateBy(x: additionalOffset + 0.5, y: 0.5)
-        
-        let size = CGSize(width: rawSize.width - inset * 2.0, height: rawSize.height - inset * 2.0)
-        context.translateBy(x: inset, y: inset)
-        
-        var lineWidth: CGFloat = 1.0
-        
         if drawWithClearColor {
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
-            context.setStrokeColor(UIColor.clear.cgColor)
         } else {
+            context.setBlendMode(.normal)
             context.setFillColor(fillColor.cgColor)
-            context.setLineWidth(lineWidth)
-            context.setStrokeColor(strokeColor.cgColor)
         }
         
-        if onlyOutline {
-            if knockout {
-                lineWidth = max(UIScreenPixel, 1.0 - 0.5)
-            }
-            context.setLineWidth(lineWidth)
-            context.setStrokeColor(strokeColor.cgColor)
+        context.saveGState()
+        
+        context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
+        context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
+        context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
+        
+        if !onlyOutline {
+            context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: formImage.cgImage!)
+            context.fill(CGRect(origin: CGPoint(), size: rawSize))
+        } else {
+            context.setFillColor(strokeColor.cgColor)
+            context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: outlineImage.cgImage!)
+            context.fill(CGRect(origin: CGPoint(), size: rawSize))
         }
         
-        switch neighbors {
-        case .none:
-            if onlyOutline {
-                let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
-                context.strokePath()
-            } else {
-                let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
-                context.fillPath()
-            }
-        case .side:
-            if onlyOutline {
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 35.0, height: 35.0)))
-            } else {
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 35.0, height: 35.0)))
-            }
-        case let .top(side):
-            if side {
-                if onlyOutline {
-                    let _ = try? drawSvgPath(context, path: "M17.5,0 L17.5,0 C27.1649831,-1.7754286e-15 35,7.83501688 35,17.5 L35,29 C35,32.3137085 32.3137085,35 29,35 L6,35 C2.6862915,35 4.05812251e-16,32.3137085 0,29 L0,17.5 C-1.18361906e-15,7.83501688 7.83501688,1.7754286e-15 17.5,0 ")
-                    context.strokePath()
-                } else {
-                    let _ = try? drawSvgPath(context, path: "M17.5,0 L17.5,0 C27.1649831,-1.7754286e-15 35,7.83501688 35,17.5 L35,29 C35,32.3137085 32.3137085,35 29,35 L6,35 C2.6862915,35 4.05812251e-16,32.3137085 0,29 L0,17.5 C-1.18361906e-15,7.83501688 7.83501688,1.7754286e-15 17.5,0 ")
-                    context.fillPath()
-                }
-            } else {
-                if onlyOutline {
-                    let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                    context.strokePath()
-                } else {
-                    let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L17.5,0 C7.83501688,0 0,7.83289181 0,17.5 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                    context.fillPath()
-                }
-            }
-        case .bottom:
-            if onlyOutline {
-                let _ = try? drawSvgPath(context, path: "M6,17.5 L6,5.99681848 C6,2.6882755 8.68486709,0 11.9968185,0 L23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41103066e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
-                context.strokePath()
-            } else {
-                let _ = try? drawSvgPath(context, path: "M6,17.5 L6,5.99681848 C6,2.6882755 8.68486709,0 11.9968185,0 L23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41103066e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
-                context.fillPath()
-            }
-        case .both:
-            if onlyOutline {
-                let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L5.99681848,0 C2.68486709,0 0,2.6882755 0,5.99681848 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                context.strokePath()
-            } else {
-                let _ = try? drawSvgPath(context, path: "M35,17.5 C35,7.83501688 27.1671082,0 17.5,0 L5.99681848,0 C2.68486709,0 0,2.6882755 0,5.99681848 L0,29.0031815 C0,32.3151329 2.6882755,35 5.99681848,35 L17.5,35 C27.1649831,35 35,27.1671082 35,17.5 L35,17.5 L35,17.5 ")
-                context.fillPath()
-            }
-        }
-    })!.stretchableImage(withLeftCapWidth: incoming ? Int(inset + corner + diameter / 2.0 - 1.0) : Int(inset + diameter / 2.0), topCapHeight: Int(inset + diameter / 2.0))
+        context.restoreGState()
+    }
+    
+    return drawingContext.generateImage()!.stretchableImage(withLeftCapWidth: incoming ? incomingStretchPoint.x : outgoingStretchPoint.x, topCapHeight: incoming ? incomingStretchPoint.y : outgoingStretchPoint.y)
 }
 
 public enum MessageBubbleActionButtonPosition {
@@ -145,14 +334,14 @@ public enum MessageBubbleActionButtonPosition {
     case bottomSingle
 }
 
-public func messageBubbleActionButtonImage(color: UIColor, strokeColor: UIColor, position: MessageBubbleActionButtonPosition) -> UIImage {
-    let largeRadius: CGFloat = 17.0
-    let smallRadius: CGFloat = 6.0
+public func messageBubbleActionButtonImage(color: UIColor, strokeColor: UIColor, position: MessageBubbleActionButtonPosition, bubbleCorners: PresentationChatBubbleCorners) -> UIImage {
+    let largeRadius: CGFloat = bubbleCorners.mainRadius
+    let smallRadius: CGFloat = (bubbleCorners.mergeBubbleCorners && largeRadius >= 10.0) ? bubbleCorners.auxiliaryRadius : bubbleCorners.mainRadius
     let size: CGSize
     if case .middle = position {
         size = CGSize(width: smallRadius + smallRadius, height: smallRadius + smallRadius)
     } else {
-        size = CGSize(width: 35.0, height: 35.0)
+        size = CGSize(width: largeRadius + largeRadius, height: largeRadius + largeRadius)
     }
     return generateImage(size, contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

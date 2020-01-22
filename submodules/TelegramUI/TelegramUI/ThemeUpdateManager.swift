@@ -111,10 +111,10 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                             return .complete()
                                         }
                                         accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData, synchronous: true)
-                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper)), presentationTheme))
+                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper, creatorAccountId: theme.isCreator ? account.id : nil)), presentationTheme))
                                     }
                                 } else {
-                                    return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil)), presentationTheme))
+                                    return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? account.id : nil)), presentationTheme))
                                 }
                             }
                         }
@@ -139,7 +139,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         theme = updatedTheme
                                     }
                                     
-                                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 })
                             }).start()
                         }

@@ -412,7 +412,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _ in
-        }, requestSelectMessagePollOption: { _, _ in
+        }, requestSelectMessagePollOptions: { _, _ in
+        }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in    
         }, seekToTimecode: { _, _, _ in    
@@ -424,6 +425,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, openMessageReactions: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
+        }, openMessagePollResults: { _, _ in
+        }, openPollCreation: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

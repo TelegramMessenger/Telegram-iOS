@@ -415,6 +415,7 @@ private struct ThemeSettingsThemeItemNodeTransition {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let crossfade: Bool
+    let entries: [ThemeSettingsThemeEntry]
 }
 
 private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeSettingsThemeEntry], to toEntries: [ThemeSettingsThemeEntry], crossfade: Bool) -> ThemeSettingsThemeItemNodeTransition {
@@ -424,7 +425,7 @@ private func preparedTransition(context: AccountContext, action: @escaping (Pres
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: .Down) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: nil) }
     
-    return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade)
+    return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade, entries: toEntries)
 }
 
 private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) -> Bool {
@@ -512,10 +513,13 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         if self.initialized && transition.crossfade {
             options.insert(.AnimateCrossfade)
         }
+        options.insert(.Synchronous)
         
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized {
-            if let index = item.themes.firstIndex(where: { $0.index == item.currentTheme.index }) {
+            if let index = transition.entries.firstIndex(where: { entry in
+                return entry.theme.index == item.currentTheme.index
+            }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }

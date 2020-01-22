@@ -234,9 +234,9 @@ public final class ThemePreviewController: ViewController {
                 |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
                     if let theme = theme {
                         if case let .file(file) = wallpaper, file.id != 0 {
-                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper)))
+                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper, creatorAccountId: theme.isCreator ? context.account.id : nil)))
                         } else {
-                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil)))
+                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil)))
                         }
                     } else {
                         return .complete()
@@ -313,7 +313,7 @@ public final class ThemePreviewController: ViewController {
                                     }
                                     if case let .result(theme) = result, let file = theme.file {
                                         context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)), true))
+                                        return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: theme.isCreator ? context.account.id : nil)), true))
                                     } else {
                                         return .complete()
                                     }
@@ -332,7 +332,7 @@ public final class ThemePreviewController: ViewController {
                                     }
                                     if case let .result(updatedTheme) = result, let file = updatedTheme.file {
                                         context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                        return .single((.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)), true))
+                                        return .single((.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper, creatorAccountId: updatedTheme.isCreator ? context.account.id : nil)), true))
                                     } else {
                                         return .complete()
                                     }

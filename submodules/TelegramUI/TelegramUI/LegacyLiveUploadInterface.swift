@@ -62,6 +62,7 @@ final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUploadInter
     
     override func fileUpdated(_ completed: Bool) -> Any! {
         let _ = super.fileUpdated(completed)
+        print("**fileUpdated \(completed)")
         if completed {
             let result = self.dataValue.modify { dataValue in
                 if let dataValue = dataValue {

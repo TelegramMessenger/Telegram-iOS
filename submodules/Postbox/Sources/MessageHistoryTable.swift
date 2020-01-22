@@ -2275,6 +2275,42 @@ final class MessageHistoryTable: Table {
         return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds)
     }
     
+    func renderMessagePeers(_ message: Message, peerTable: PeerTable) -> Message {
+        var author: Peer?
+        var peers = SimpleDictionary<PeerId, Peer>()
+        if let authorId = message.author?.id {
+            author = peerTable.get(authorId)
+        }
+        
+        if let chatPeer = peerTable.get(message.id.peerId) {
+            peers[chatPeer.id] = chatPeer
+            
+            if let associatedPeerId = chatPeer.associatedPeerId {
+                if let peer = peerTable.get(associatedPeerId) {
+                    peers[peer.id] = peer
+                }
+            }
+        }
+        
+        for media in message.media {
+            for peerId in media.peerIds {
+                if let peer = peerTable.get(peerId) {
+                    peers[peer.id] = peer
+                }
+            }
+        }
+        
+        for attribute in message.attributes {
+            for peerId in attribute.associatedPeerIds {
+                if let peer = peerTable.get(peerId) {
+                    peers[peer.id] = peer
+                }
+            }
+        }
+        
+        return message.withUpdatedPeers(peers)
+    }
+    
     func renderAssociatedMessages(associatedMessageIds: [MessageId], peerTable: PeerTable) -> SimpleDictionary<MessageId, Message> {
         var associatedMessages = SimpleDictionary<MessageId, Message>()
         for messageId in associatedMessageIds {

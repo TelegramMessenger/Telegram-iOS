@@ -55,7 +55,6 @@ extension TelegramWallpaper: Codable {
                         }
                         
                         if components.count >= 2 && components.count <= 5 && [6, 8].contains(components[0].count) && !optionKeys.contains(components[0]) && [6, 8].contains(components[1].count) && !optionKeys.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
-                            
                             var rotation: Int32?
                             if components.count > 2, components[2].count <= 3, let value = Int32(components[2]) {
                                 if value >= 0 && value < 360 {
@@ -1051,15 +1050,24 @@ extension PresentationThemeChatBubblePolls: Codable {
         case highlight
         case separator
         case bar
+        case barIconForeground
+        case barPositive
+        case barNegative
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(radioButton: try decodeColor(values, .radioButton),
-                  radioProgress: try decodeColor(values, .radioProgress),
-                  highlight: try decodeColor(values, .highlight),
-                  separator: try decodeColor(values, .separator),
-                  bar: try decodeColor(values, .bar))
+        let bar = try decodeColor(values, .bar)
+        self.init(
+            radioButton: try decodeColor(values, .radioButton),
+            radioProgress: try decodeColor(values, .radioProgress),
+            highlight: try decodeColor(values, .highlight),
+            separator: try decodeColor(values, .separator),
+            bar: bar,
+            barIconForeground: (try? decodeColor(values, .barIconForeground)) ?? .clear,
+            barPositive: (try? decodeColor(values, .barPositive)) ?? bar,
+            barNegative: (try? decodeColor(values, .barNegative)) ?? bar
+        )
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -1069,6 +1077,9 @@ extension PresentationThemeChatBubblePolls: Codable {
         try encodeColor(&values, self.highlight, .highlight)
         try encodeColor(&values, self.separator, .separator)
         try encodeColor(&values, self.bar, .bar)
+        try encodeColor(&values, self.barIconForeground, .barIconForeground)
+        try encodeColor(&values, self.barPositive, .barPositive)
+        try encodeColor(&values, self.barNegative, .barNegative)
     }
 }
 
@@ -1097,11 +1108,13 @@ extension PresentationThemePartedColors: Codable {
         case actionButtonsText
         case textSelection
         case textSelectionKnob
+        case accentControlDisabled
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
+        let accentControlColor = try decodeColor(values, .accentControl)
         self.init(
             bubble: try values.decode(PresentationThemeBubbleColor.self, forKey: .bubble),
             primaryTextColor: try decodeColor(values, .primaryText),
@@ -1111,7 +1124,8 @@ extension PresentationThemePartedColors: Codable {
             scamColor: try decodeColor(values, .scam),
             textHighlightColor: try decodeColor(values, .textHighlight),
             accentTextColor: try decodeColor(values, .accentText),
-            accentControlColor: try decodeColor(values, .accentControl),
+            accentControlColor: accentControlColor,
+            accentControlDisabledColor: (try? decodeColor(values, .accentControlDisabled)) ?? accentControlColor.withAlphaComponent(0.5),
             mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
             mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
             mediaControlInnerBackgroundColor: try decodeColor(values, .mediaControlInnerBg, decoder: decoder, fallbackKey: codingPath + ".bubble.withWp.bg"),

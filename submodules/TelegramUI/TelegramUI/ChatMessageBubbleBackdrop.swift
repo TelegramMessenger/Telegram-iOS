@@ -16,6 +16,10 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     private var maskView: UIImageView?
     
+    var hasImage: Bool {
+        return self.backgroundContent.contents != nil
+    }
+    
     override var frame: CGRect {
         didSet {
             if let maskView = self.maskView {
@@ -87,7 +91,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     }
     
     func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, mediaBox: MediaBox, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode: Bool) {
-        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode {
+        if self.currentType != type || self.theme != theme || self.currentMaskMode != maskMode || self.essentialGraphics !== essentialGraphics {
             self.currentType = type
             self.theme = theme
             self.essentialGraphics = essentialGraphics

@@ -1,0 +1,29 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ArchivedStickerPacksNotice",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/ItemListStickerPackItem:ItemListStickerPackItem",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

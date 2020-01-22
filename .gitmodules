@@ -1,7 +1,7 @@
 
 [submodule "submodules/rlottie/rlottie"]
 	path = submodules/rlottie/rlottie
-	url = https://github.com/laktyushin/rlottie.git
+url=../rlottie.git
 [submodule "submodules/libtgvoip/libtgvoip"]
-	path = submodules/libtgvoip/libtgvoip
-	url = https://github.com/peter-iakovlev/libtgvoip.git
+path = submodules/libtgvoip/libtgvoip
+url = https://github.com/telegramdesktop/libtgvoip.git

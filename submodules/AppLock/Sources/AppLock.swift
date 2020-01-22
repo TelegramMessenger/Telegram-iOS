@@ -44,19 +44,19 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: scale, y: scale)
         UIGraphicsPushContext(context)
-        window.forEachViewController { controller in
+        window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 0.0
             }
             return true
-        }
+        })
         window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
-        window.forEachViewController { controller in
+        window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 1.0
             }
             return true
-        }
+        })
         UIGraphicsPopContext()
     }).flatMap(applyScreenshotEffectToImage)
 }
@@ -201,6 +201,7 @@ public final class AppLockContextImpl: AppLockContext {
                             }
                         }
                         passcodeController.presentedOverCoveringView = true
+                        passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
                             if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {

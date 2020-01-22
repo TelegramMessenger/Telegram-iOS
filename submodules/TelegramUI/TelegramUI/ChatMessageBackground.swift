@@ -66,6 +66,10 @@ class ChatMessageBackground: ASDisplayNode {
     private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
     
+    var hasImage: Bool {
+        self.imageNode.image != nil
+    }
+    
     override init() {
         self.imageNode = ASImageNode()
         self.imageNode.displaysAsynchronously = false
@@ -78,8 +82,8 @@ class ChatMessageBackground: ASDisplayNode {
         super.init()
         
         self.isUserInteractionEnabled = false
-        self.addSubnode(self.outlineImageNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.outlineImageNode)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

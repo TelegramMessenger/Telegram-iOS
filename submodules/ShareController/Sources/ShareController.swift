@@ -172,10 +172,19 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                 text.append("\n— \(option.text)")
             }
             let totalVoters = poll.results.totalVoters ?? 0
-            if totalVoters == 0 {
-                text.append("\n\(strings.MessagePoll_NoVotes)")
-            } else {
-                text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
+            switch poll.kind {
+            case .poll:
+                if totalVoters == 0 {
+                    text.append("\n\(strings.MessagePoll_NoVotes)")
+                } else {
+                    text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
+                }
+            case .quiz:
+                if totalVoters == 0 {
+                    text.append("\n\(strings.MessagePoll_QuizNoUsers)")
+                } else {
+                    text.append("\n\(strings.MessagePoll_QuizCount(totalVoters))")
+                }
             }
             signals.append(.single(.done(.text(text))))
         } else if let mediaReference = item.mediaReference, let contact = mediaReference.media as? TelegramMediaContact {
