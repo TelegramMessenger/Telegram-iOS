@@ -110,6 +110,10 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
+    open var extractedBackgroundNode: ASDisplayNode? {
+        return nil
+    }
+    
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
     
