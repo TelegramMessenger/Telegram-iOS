@@ -212,7 +212,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
     case textHeader(String, ItemListSectionHeaderAccessoryText)
     case text(String, String, Int)
     case optionsHeader(String)
-    case option(id: Int, ordering: OrderedLinkedListItemOrdering, placeholder: String, text: String, revealed: Bool, hasNext: Bool, isLast: Bool, isSelected: Bool?)
+    case option(id: Int, ordering: OrderedLinkedListItemOrdering, placeholder: String, text: String, revealed: Bool, hasNext: Bool, isLast: Bool, canMove: Bool, isSelected: Bool?)
     case optionsInfo(String)
     case anonymousVotes(String, Bool)
     case multipleChoice(String, Bool, Bool)
@@ -314,7 +314,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             }, tag: CreatePollEntryTag.text)
         case let .optionsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .option(id, _, placeholder, text, revealed, hasNext, isLast, isSelected):
+        case let .option(id, _, placeholder, text, revealed, hasNext, isLast, canMove, isSelected):
             return CreatePollOptionItem(presentationData: presentationData, id: id, placeholder: placeholder, value: text, isSelected: isSelected, maxLength: maxOptionLength, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
                 arguments.setItemIdWithRevealedOptions(id, fromId)
             }, updated: { value, isFocused in
@@ -328,6 +328,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
                     arguments.moveToPreviousOption(id)
                 }
             }, canDelete: !isLast,
+            canMove: canMove,
             focused: { isFocused in
                 arguments.optionFocused(id, isFocused)
             }, toggleSelected: {
@@ -393,7 +394,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
         let isSecondLast = state.options.count == 2 && i == 0
         let isLast = i == state.options.count - 1
         let option = state.options[i].item
-        entries.append(.option(id: option.id, ordering: state.options[i].ordering, placeholder: isLast ? presentationData.strings.CreatePoll_AddOption : presentationData.strings.CreatePoll_OptionPlaceholder, text: option.text, revealed: state.optionIdWithRevealControls == option.id, hasNext: i != 9, isLast: isLast || isSecondLast, isSelected: state.isQuiz ? option.isSelected : nil))
+        entries.append(.option(id: option.id, ordering: state.options[i].ordering, placeholder: isLast ? presentationData.strings.CreatePoll_AddOption : presentationData.strings.CreatePoll_OptionPlaceholder, text: option.text, revealed: state.optionIdWithRevealControls == option.id, hasNext: i != 9, isLast: isLast || isSecondLast, canMove: !isLast || state.options.count == 10, isSelected: state.isQuiz ? option.isSelected : nil))
     }
     if state.options.count < maxOptionCount {
         entries.append(.optionsInfo(presentationData.strings.CreatePoll_AddMoreOptions(Int32(maxOptionCount - state.options.count))))

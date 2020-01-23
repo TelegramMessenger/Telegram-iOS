@@ -27,11 +27,12 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
     let next: (() -> Void)?
     let delete: (Bool) -> Void
     let canDelete: Bool
+    let canMove: Bool
     let focused: (Bool) -> Void
     let toggleSelected: () -> Void
     let tag: ItemListItemTag?
     
-    init(presentationData: ItemListPresentationData, id: Int, placeholder: String, value: String, isSelected: Bool?, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String, Bool) -> Void, next: (() -> Void)?, delete: @escaping (Bool) -> Void, canDelete: Bool, focused: @escaping (Bool) -> Void, toggleSelected: @escaping () -> Void, tag: ItemListItemTag?) {
+    init(presentationData: ItemListPresentationData, id: Int, placeholder: String, value: String, isSelected: Bool?, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String, Bool) -> Void, next: (() -> Void)?, delete: @escaping (Bool) -> Void, canDelete: Bool, canMove: Bool, focused: @escaping (Bool) -> Void, toggleSelected: @escaping () -> Void, tag: ItemListItemTag?) {
         self.presentationData = presentationData
         self.id = id
         self.placeholder = placeholder
@@ -45,6 +46,7 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
         self.next = next
         self.delete = delete
         self.canDelete = canDelete
+        self.canMove = canMove
         self.focused = focused
         self.toggleSelected = toggleSelected
         self.tag = tag
@@ -442,7 +444,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     let _ = reorderSizeAndApply.1(layout.contentSize.height, displayTextLimit, transition)
                     let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0, y: 0.0), size: CGSize(width: reorderSizeAndApply.0, height: layout.contentSize.height))
                     strongSelf.reorderControlNode.frame = reorderControlFrame
-                    strongSelf.reorderControlNode.isHidden = !item.canDelete
+                    strongSelf.reorderControlNode.isHidden = !item.canMove
                     
                     let _ = textLimitApply()
                     strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: max(floor(reorderControlFrame.midY + 2.0), layout.contentSize.height - 15.0 - textLimitLayout.size.height)), size: textLimitLayout.size)
