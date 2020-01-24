@@ -768,6 +768,7 @@ public final class ChatListNode: ListView {
             
             if filter != previousView?.filter {
                 disableAnimations = true
+                updatedScrollPosition = nil
             }
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
