@@ -366,6 +366,14 @@ public final class ChatListNode: ListView {
     }
     
     private var currentLocation: ChatListNodeLocation?
+    var chatListFilter: ChatListNodeFilter = .all {
+        didSet {
+            if self.chatListFilter != oldValue {
+                self.chatListFilterValue.set(self.chatListFilter)
+            }
+        }
+    }
+    private let chatListFilterValue = ValuePromise<ChatListNodeFilter>(.all)
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
@@ -522,10 +530,21 @@ public final class ChatListNode: ListView {
         
         let viewProcessingQueue = self.viewProcessingQueue
         
-        let chatListViewUpdate = self.chatListLocation.get()
-        |> distinctUntilChanged
-        |> mapToSignal { location in
-            return chatListViewForLocation(groupId: groupId, location: location, account: context.account)
+        let chatListViewUpdate = combineLatest(self.chatListLocation.get(), self.chatListFilterValue.get())
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.0 != rhs.0 {
+                return false
+            }
+            if lhs.1 != rhs.1 {
+                return false
+            }
+            return true
+        })
+        |> mapToSignal { location, filter -> Signal<(ChatListNodeViewUpdate, ChatListNodeFilter), NoError> in
+            return chatListViewForLocation(groupId: groupId, filter: filter, location: location, account: context.account)
+            |> map { update in
+                return (update, filter)
+            }
         }
         
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
@@ -575,7 +594,8 @@ public final class ChatListNode: ListView {
         let currentPeerId: PeerId = context.account.peerId
         
         let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+            let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
@@ -633,7 +653,7 @@ public final class ChatListNode: ListView {
                 }
             }
             
-            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries, isLoading: isLoading)
+            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries, isLoading: isLoading, filter: filter)
             let previousView = previousView.swap(processedView)
             let previousState = previousState.swap(state)
             
@@ -744,6 +764,10 @@ public final class ChatListNode: ListView {
             var searchMode = false
             if case .peers = mode {
                 searchMode = true
+            }
+            
+            if filter != previousView?.filter {
+                disableAnimations = true
             }
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
@@ -1439,17 +1463,23 @@ public final class ChatListNode: ListView {
                 guard index < 10 else {
                     return
                 }
-                let _ = (chatListViewForLocation(groupId: self.groupId, location: .initial(count: 10), account: self.context.account)
+                let _ = (self.chatListFilterValue.get()
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { update in
-                    let entries = update.view.entries
-                    if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _) = entries[10 - index - 1] {
-                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
-                        self.setChatListLocation(location)
-                        self.peerSelected?(renderedPeer.peerId, false, false)
+                |> deliverOnMainQueue).start(next: { [weak self] filter in
+                    guard let self = self else {
+                        return
                     }
+                    let _ = (chatListViewForLocation(groupId: self.groupId, filter: filter, location: .initial(count: 10), account: self.context.account)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { update in
+                        let entries = update.view.entries
+                        if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _) = entries[10 - index - 1] {
+                            let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                            self.setChatListLocation(location)
+                            self.peerSelected?(renderedPeer.peerId, false, false)
+                        }
+                    })
                 })
-                break
         }
     }
     

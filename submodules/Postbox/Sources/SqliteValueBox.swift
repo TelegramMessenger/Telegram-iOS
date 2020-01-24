@@ -1498,6 +1498,38 @@ public final class SqliteValueBox: ValueBox {
         withExtendedLifetime(end, {})
     }
     
+    public func filteredRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> ValueBoxFilterResult, limit: Int) {
+        var currentStart = start
+        var acceptedCount = 0
+        while acceptedCount < limit {
+            var hadStop = false
+            var lastKey: ValueBoxKey?
+            self.range(table, start: currentStart, end: end, values: { key, value in
+                lastKey = key
+                let result = values(key, value)
+                switch result {
+                case .accept:
+                    acceptedCount += 1
+                    return true
+                case .skip:
+                    return true
+                case .stop:
+                    hadStop = true
+                    return false
+                }
+                return true
+            }, limit: limit)
+            if let lastKey = lastKey {
+                currentStart = lastKey
+            } else {
+                break
+            }
+            if hadStop {
+                break
+            }
+        }
+    }
+    
     public func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> Bool, limit: Int) {
         precondition(self.queue.isCurrent())
         if let _ = self.tables[table.id] {

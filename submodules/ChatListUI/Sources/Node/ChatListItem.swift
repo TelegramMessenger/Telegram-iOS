@@ -699,7 +699,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isPeerGroup = false
                     isAd = isAdValue
                     displayAsMessage = displayAsMessageValue
-                    hasFailedMessages = hasFailedMessagesValue
+                    hasFailedMessages = messageValue?.flags.contains(.Failed) ?? false // hasFailedMessagesValue
                 case let .groupReference(_, peers, messageValue, unreadState, hiddenByDefault):
                     if let _ = messageValue, !peers.isEmpty {
                         contentPeer = .chat(peers[0].peer)

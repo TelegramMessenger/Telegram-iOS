@@ -99,7 +99,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
+public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate, TabBarContainedController {
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -1789,5 +1789,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         } else {
             return nil
         }
+    }
+    
+    public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
+        if self.isNodeLoaded {
+            let controller = TabBarChatListFilterController(context: self.context, sourceNodes: sourceNodes, currentFilter: self.chatListDisplayNode.chatListNode.chatListFilter, updateFilter: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatListDisplayNode.chatListNode.chatListFilter = value
+            })
+            self.context.sharedContext.mainWindow?.present(controller, on: .root)
+        }
+    }
+    
+    public func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
+        
     }
 }

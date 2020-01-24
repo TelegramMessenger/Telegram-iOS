@@ -177,14 +177,23 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         
         context.setStrokeColor(UIColor.black.cgColor)
         let borderWidth: CGFloat
-        if abs(UIScreenPixel - 0.5) < CGFloat.ulpOfOne {
-            borderWidth = UIScreenPixel
+        let borderOffset: CGFloat
+        
+        let innerExtension: CGFloat
+        if knockout && !mask {
+            innerExtension = 0.25
         } else {
-            borderWidth = UIScreenPixel * 2.0
+            innerExtension = 0.25
+        }
+        
+        if abs(UIScreenPixel - 0.5) < CGFloat.ulpOfOne {
+            borderWidth = UIScreenPixel + innerExtension
+            borderOffset = -innerExtension / 2.0 + UIScreenPixel / 2.0
+        } else {
+            borderWidth = UIScreenPixel * 2.0 + innerExtension
+            borderOffset = -innerExtension / 2.0 + UIScreenPixel * 2.0 / 2.0
         }
         context.setLineWidth(borderWidth)
-        
-        let borderOffset: CGFloat = borderWidth / 2.0
         
         context.move(to: CGPoint(x: -borderOffset, y: topLeftRadius + borderOffset))
         context.addArc(tangent1End: CGPoint(x: -borderOffset, y: -borderOffset), tangent2End: CGPoint(x: topLeftRadius + borderOffset, y: -borderOffset), radius: topLeftRadius + borderOffset * 2.0)
@@ -277,8 +286,6 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     let outlineImage = generateImage(outlineContext.size, contextGenerator: { size, context in
         context.setBlendMode(.copy)
         let image = outlineContext.generateImage()!
-        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-        context.setBlendMode(.normal)
         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
     })!
     
