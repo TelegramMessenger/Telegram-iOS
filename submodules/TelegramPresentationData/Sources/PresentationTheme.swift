@@ -566,18 +566,18 @@ public final class PresentationThemeBubbleColorComponents {
     public let gradientFill: UIColor
     public let highlightedFill: UIColor
     public let stroke: UIColor
-    //public let shadow: PresentationThemeBubbleShadow?
+    public let shadow: PresentationThemeBubbleShadow?
     
-    public init(fill: UIColor, gradientFill: UIColor? = nil, highlightedFill: UIColor, stroke: UIColor/*, shadow: PresentationThemeBubbleShadow?*/) {
+    public init(fill: UIColor, gradientFill: UIColor? = nil, highlightedFill: UIColor, stroke: UIColor, shadow: PresentationThemeBubbleShadow?) {
         self.fill = fill
         self.gradientFill = gradientFill ?? fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
-        //self.shadow = shadow
+        self.shadow = shadow
     }
     
     public func withUpdated(fill: UIColor? = nil, gradientFill: UIColor? = nil, highlightedFill: UIColor? = nil, stroke: UIColor? = nil) -> PresentationThemeBubbleColorComponents {
-        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, gradientFill: gradientFill ?? self.gradientFill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke/*, shadow: self.shadow*/)
+        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, gradientFill: gradientFill ?? self.gradientFill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke, shadow: self.shadow)
     }
 }
 

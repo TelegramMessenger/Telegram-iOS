@@ -293,19 +293,22 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     drawingContext.withFlippedContext { context in
         if onlyShadow {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
-            return;
             
-            context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
-            context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
-            context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
+            let bubbleColors = incoming ? theme.message.incoming : theme.message.outgoing
             
-            context.setShadow(offset: CGSize(width: 0.0, height: -5.0), blur: 16.0, color: UIColor(white: 0.0, alpha: 0.15).cgColor)
-            context.draw(formImage.cgImage!, in: CGRect(origin: CGPoint(), size: rawSize))
-            
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: formImage.cgImage!)
-            context.fill(CGRect(origin: CGPoint(), size: rawSize))
+            if let shadow = bubbleColors.bubble.withWallpaper.shadow {
+                context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
+                context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
+                context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: -shadow.verticalOffset), blur: shadow.radius, color: shadow.color.cgColor)
+                context.draw(formImage.cgImage!, in: CGRect(origin: CGPoint(), size: rawSize))
+                
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: formImage.cgImage!)
+                context.fill(CGRect(origin: CGPoint(), size: rawSize))
+            }
         } else {
             var drawWithClearColor = false
             

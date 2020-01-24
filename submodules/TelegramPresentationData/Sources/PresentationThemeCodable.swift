@@ -990,16 +990,16 @@ extension PresentationThemeBubbleShadow: Codable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
             color: try decodeColor(values, .color),
-            radius: try CGFloat(values.decode(Float.self, forKey: .radius)),
-            verticalOffset: try CGFloat(values.decode(Float.self, forKey: .verticalOffset))
+            radius: try CGFloat(Double(truncating: values.decode(Decimal.self, forKey: .radius) as NSNumber)),
+            verticalOffset: try CGFloat(Double(truncating: values.decode(Decimal.self, forKey: .verticalOffset) as NSNumber))
         )
     }
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try encodeColor(&values, self.color, .color)
-        try values.encode(Float(self.radius), forKey: .radius)
-        try values.encode(Float(self.verticalOffset), forKey: .verticalOffset)
+        try values.encode(Decimal(Double(self.radius)), forKey: .radius)
+        try values.encode(Decimal(Double(self.verticalOffset)), forKey: .verticalOffset)
     }
 }
 
@@ -1019,8 +1019,8 @@ extension PresentationThemeBubbleColorComponents: Codable {
             fill: try decodeColor(values, .bg),
             gradientFill: try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: codingPath + ".bg"),
             highlightedFill: try decodeColor(values, .highlightedBg),
-            stroke: try decodeColor(values, .stroke)//,
-            //shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
+            stroke: try decodeColor(values, .stroke),
+            shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
         )
     }
     

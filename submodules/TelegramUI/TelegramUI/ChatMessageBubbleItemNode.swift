@@ -497,8 +497,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 var bounds = strongSelf.bounds
                 bounds.origin.x = offset
                 strongSelf.bounds = bounds
+                
+                var shadowBounds = strongSelf.shadowNode.bounds
+                shadowBounds.origin.x = offset
+                strongSelf.shadowNode.bounds = shadowBounds
+                
                 if animated {
                     strongSelf.layer.animateBoundsOriginXAdditive(from: -offset, to: 0.0, duration: 0.1, mediaTimingFunction: CAMediaTimingFunction(name: .easeOut))
+                    strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: -offset, to: 0.0, duration: 0.1, mediaTimingFunction: CAMediaTimingFunction(name: .easeOut))
                 }
                 if let swipeToReplyNode = strongSelf.swipeToReplyNode {
                     swipeToReplyNode.alpha = max(0.0, min(1.0, abs(offset / 40.0)))
@@ -512,8 +518,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let offset = bounds.origin.x
                 bounds.origin.x = 0.0
                 strongSelf.bounds = bounds
+                
+                var shadowBounds = strongSelf.shadowNode.bounds
+                let shadowOffset = shadowBounds.origin.x
+                shadowBounds.origin.x = 0.0
+                strongSelf.shadowNode.bounds = shadowBounds
+                
                 if !offset.isZero {
                     strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+                if !shadowOffset.isZero {
+                    strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                 }
                 if let swipeToReplyNode = strongSelf.swipeToReplyNode {
                     strongSelf.swipeToReplyNode = nil
@@ -565,8 +580,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         let offset = bounds.origin.x
                         bounds.origin.x = 0.0
                         strongSelf.bounds = bounds
+                        var shadowBounds = strongSelf.shadowNode.bounds
+                        let shadowOffset = shadowBounds.origin.x
+                        shadowBounds.origin.x = 0.0
+                        strongSelf.shadowNode.bounds = shadowBounds
                         if !offset.isZero {
                             strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+                        }
+                        if !shadowOffset.isZero {
+                            strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                         }
                         if let swipeToReplyNode = strongSelf.swipeToReplyNode {
                             strongSelf.swipeToReplyNode = nil
@@ -583,8 +605,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     let offset = bounds.origin.x
                     bounds.origin.x = 0.0
                     strongSelf.bounds = bounds
+                    var shadowBounds = strongSelf.shadowNode.bounds
+                    let shadowOffset = shadowBounds.origin.x
+                    shadowBounds.origin.x = 0.0
+                    strongSelf.shadowNode.bounds = shadowBounds
                     if !offset.isZero {
                         strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    if !shadowOffset.isZero {
+                        strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                     if let swipeToReplyNode = strongSelf.swipeToReplyNode {
                         strongSelf.swipeToReplyNode = nil
@@ -2035,8 +2064,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             let offset = bounds.origin.x
             bounds.origin.x = 0.0
             strongSelf.bounds = bounds
+            var shadowBounds = strongSelf.shadowNode.bounds
+            let shadowOffset = shadowBounds.origin.x
+            shadowBounds.origin.x = 0.0
+            strongSelf.shadowNode.bounds = shadowBounds
             if !offset.isZero {
                 strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            if !shadowOffset.isZero {
+                strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
             }
             if let swipeToReplyNode = strongSelf.swipeToReplyNode {
                 strongSelf.swipeToReplyNode = nil
@@ -2843,6 +2879,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 var bounds = self.bounds
                 bounds.origin.x = -translation.x
                 self.bounds = bounds
+                var shadowBounds = self.shadowNode.bounds
+                shadowBounds.origin.x = -translation.x
+                self.shadowNode.bounds = shadowBounds
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
@@ -2866,7 +2905,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let previousBounds = bounds
                 bounds.origin.x = 0.0
                 self.bounds = bounds
+                var shadowBounds = self.shadowNode.bounds
+                let previousShadowBounds = shadowBounds
+                shadowBounds.origin.x = 0.0
+                self.shadowNode.bounds = shadowBounds
                 self.layer.animateBounds(from: previousBounds, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.shadowNode.layer.animateBounds(from: previousShadowBounds, to: shadowBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     self.swipeToReplyNode = nil
                     swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
