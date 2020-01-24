@@ -293,11 +293,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     drawingContext.withFlippedContext { context in
         if onlyShadow {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
-            
-            //print("theme.message.outgoing.bubble.withWallpaper.fill.rgb \(theme.message.outgoing.bubble.withWallpaper.fill.rgb)")
-            if theme.message.outgoing.bubble.withWallpaper.fill.rgb == 14023347 {
-                return
-            }
+            return;
             
             context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
             context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
