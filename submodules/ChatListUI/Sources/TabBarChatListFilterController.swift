@@ -420,10 +420,10 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
         let sideInset: CGFloat = 18.0
         
         var contentSize = CGSize()
-        contentSize.width = min(layout.size.width - 40.0, 250.0)
+        contentSize.width = min(layout.size.width - 60.0, 220.0)
         var applyNodes: [(ASDisplayNode, CGFloat, (CGFloat) -> Void)] = []
         for itemNode in self.contentNodes {
-            let (width, height, apply) = itemNode.updateLayout(maxWidth: layout.size.width - sideInset * 2.0)
+            let (width, height, apply) = itemNode.updateLayout(maxWidth: contentSize.width - sideInset * 2.0)
             applyNodes.append((itemNode, height, apply))
             contentSize.width = max(contentSize.width, width)
             contentSize.height += height
@@ -433,9 +433,9 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
         
         let contentOrigin: CGPoint
         if let sourceNode = self.sourceNodes.first, let screenFrame = sourceNode.supernode?.convert(sourceNode.frame, to: nil) {
-            contentOrigin = CGPoint(x: screenFrame.maxX - contentSize.width + 8.0, y: layout.size.height - 66.0 - insets.bottom - contentSize.height)
+            contentOrigin = CGPoint(x: max(16.0, screenFrame.maxX - contentSize.width + 8.0), y: layout.size.height - 66.0 - insets.bottom - contentSize.height)
         } else {
-            contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width, y: layout.size.height - 66.0 - layout.intrinsicInsets.bottom - contentSize.height)
+            contentOrigin = CGPoint(x: max(16.0, layout.size.width - sideInset - contentSize.width), y: layout.size.height - 66.0 - layout.intrinsicInsets.bottom - contentSize.height)
         }
 
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: contentOrigin, size: contentSize))
