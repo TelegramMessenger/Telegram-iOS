@@ -294,6 +294,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
 
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+        self.historyNode.enableExtractedBackgrounds = true
     
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)

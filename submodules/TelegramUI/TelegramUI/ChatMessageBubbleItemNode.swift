@@ -147,7 +147,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
+    private let shadowNode: ChatMessageShadowNode
     private var transitionClippingNode: ASDisplayNode?
+    
+    override var extractedBackgroundNode: ASDisplayNode? {
+        return self.shadowNode
+    }
     
     private var selectionNode: ChatMessageSelectionNode?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
@@ -199,6 +204,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
         
         self.backgroundNode = ChatMessageBackground()
+        self.shadowNode = ChatMessageShadowNode()
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
@@ -272,6 +278,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
+        self.shadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
         if let subnodes = self.subnodes {
             for node in subnodes {
                 if let contextNode = node as? ContextExtractedContentContainingNode {
@@ -308,6 +316,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak self] _ in
             self?.allowsGroupOpacity = false
         })
+        self.shadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
         self.layer.animateScale(from: 1.0, to: 0.1, duration: 0.15, removeOnCompletion: false)
         self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: self.bounds.width / 2.0 - self.backgroundNode.frame.midX, y: self.backgroundNode.frame.midY), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
     }
@@ -1681,6 +1690,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
         strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: transition)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, mediaBox: item.context.account.postbox.mediaBox, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode)
+        strongSelf.shadowNode.setType(type: backgroundType, hasWallpaper: hasWallpaper, graphics: graphics)
         
         strongSelf.backgroundType = backgroundType
         
@@ -1953,10 +1963,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 transition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition)
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
+                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: transition)
             } else {
                 strongSelf.backgroundNode.frame = backgroundFrame
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
                 strongSelf.backgroundWallpaperNode.frame = backgroundFrame
+                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
             }
             if let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
@@ -2153,6 +2165,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             self.backgroundNode.frame = backgroundFrame
             self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
             self.backgroundWallpaperNode.frame = backgroundFrame
+            self.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
             
             if let type = self.backgroundNode.type {
                 var incomingOffset: CGFloat = 0.0
