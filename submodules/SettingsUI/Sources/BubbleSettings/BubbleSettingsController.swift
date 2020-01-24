@@ -224,6 +224,10 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
                 self.messagesContainerNode.addSubnode(itemNode!)
+                if let extractedBackgroundNode = itemNode!.extractedBackgroundNode {
+                    extractedBackgroundNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                    self.messagesContainerNode.insertSubnode(extractedBackgroundNode, at: 0)
+                }
             }
             self.messageNodes = messageNodes
         }
@@ -232,6 +236,9 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         if let messageNodes = self.messageNodes {
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
+                if let extractedBackgroundNode = itemNode.extractedBackgroundNode {
+                    transition.updateFrame(node: extractedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
+                }
                 bottomOffset += itemNode.frame.height
                 itemNode.updateFrame(itemNode.frame, within: layout.size)
             }

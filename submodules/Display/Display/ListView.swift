@@ -230,6 +230,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var synchronousNodes = false
     public final var debugInfo = false
     
+    public var enableExtractedBackgrounds: Bool = false {
+        didSet {
+            if self.enableExtractedBackgrounds != oldValue {
+                if self.enableExtractedBackgrounds {
+                    let extractedBackgroundsContainerNode = ASDisplayNode()
+                    self.extractedBackgroundsContainerNode = extractedBackgroundsContainerNode
+                    self.insertSubnode(extractedBackgroundsContainerNode, at: 0)
+                } else if let extractedBackgroundsContainerNode = self.extractedBackgroundsContainerNode {
+                    self.extractedBackgroundsContainerNode = nil
+                    extractedBackgroundsContainerNode.removeFromSupernode()
+                }
+            }
+        }
+    }
+    private final var extractedBackgroundsContainerNode: ASDisplayNode?
+    
     private final var items: [ListViewItem] = []
     private final var itemNodes: [ListViewItemNode] = []
     private final var itemHeaderNodes: [Int64: ListViewItemHeaderNode] = [:]
@@ -1095,7 +1111,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 topItemOverscrollBackground = ListViewOverscrollBackgroundNode(color: value.color)
                 topItemOverscrollBackground.isLayerBacked = true
                 self.topItemOverscrollBackground = topItemOverscrollBackground
-                self.insertSubnode(topItemOverscrollBackground, at: 0)
+                if let extractedBackgroundsContainerNode = self.extractedBackgroundsContainerNode {
+                    self.insertSubnode(topItemOverscrollBackground, aboveSubnode: extractedBackgroundsContainerNode)
+                } else {
+                    self.insertSubnode(topItemOverscrollBackground, at: 0)
+                }
             }
             var topItemFound = false
             var topItemNodeIndex: Int?
@@ -1203,7 +1223,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 bottomItemOverscrollBackground = ASDisplayNode()
                 bottomItemOverscrollBackground.backgroundColor = color
                 bottomItemOverscrollBackground.isLayerBacked = true
-                self.insertSubnode(bottomItemOverscrollBackground, at: 0)
+                if let extractedBackgroundsContainerNode = self.extractedBackgroundsContainerNode {
+                    self.insertSubnode(bottomItemOverscrollBackground, aboveSubnode: extractedBackgroundsContainerNode)
+                } else {
+                    self.insertSubnode(bottomItemOverscrollBackground, at: 0)
+                }
                 self.bottomItemOverscrollBackground = bottomItemOverscrollBackground
             }
             
@@ -2295,12 +2319,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         } else {
                             self.addSubnode(node)
                         }
+                        if let extractedBackgroundsNode = node.extractedBackgroundNode {
+                            self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
+                        }
                     } else {
                         if animated {
                             if let topItemOverscrollBackground = self.topItemOverscrollBackground {
                                 self.insertSubnode(node, aboveSubnode: topItemOverscrollBackground)
+                            } else if let extractedBackgroundsContainerNode = self.extractedBackgroundsContainerNode {
+                                self.insertSubnode(node, aboveSubnode: extractedBackgroundsContainerNode)
                             } else {
                                 self.insertSubnode(node, at: 0)
+                            }
+                            if let extractedBackgroundsNode = node.extractedBackgroundNode {
+                                self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
                             }
                         } else {
                             if let itemNode = self.reorderNode?.itemNode, itemNode.supernode == self {
@@ -2311,6 +2343,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 self.insertSubnode(node, belowSubnode: verticalScrollIndicator)
                             } else {
                                 self.addSubnode(node)
+                            }
+                            if let extractedBackgroundsNode = node.extractedBackgroundNode {
+                                self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
                             }
                         }
                     }
@@ -2339,6 +2374,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 self.insertSubnode(referenceNode, belowSubnode: verticalScrollIndicator)
                             } else {
                                 self.addSubnode(referenceNode)
+                            }
+                            if let extractedBackgroundsNode = referenceNode.extractedBackgroundNode {
+                                self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
                             }
                         }
                     } else {
@@ -2846,6 +2884,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         } else {
                             self.addSubnode(itemNode)
                         }
+                        if let extractedBackgroundsNode = itemNode.extractedBackgroundNode {
+                            self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
+                        }
                     }
                     
                     var temporaryHeaderNodes: [ListViewItemHeaderNode] = []
@@ -2945,6 +2986,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     animation.completion = { _ in
                         for itemNode in temporaryPreviousNodes {
                             itemNode.removeFromSupernode()
+                            itemNode.extractedBackgroundNode?.removeFromSupernode()
                         }
                         for headerNode in temporaryHeaderNodes {
                             headerNode.removeFromSupernode()
@@ -3023,7 +3065,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         let node = self.itemNodes[index]
         self.itemNodes.remove(at: index)
         node.removeFromSupernode()
-        
+        node.extractedBackgroundNode?.removeFromSupernode()
         node.accessoryItemNode?.removeFromSupernode()
         node.setAccessoryItemNode(nil, leftInset: self.insets.left, rightInset: self.insets.right)
         node.headerAccessoryItemNode?.removeFromSupernode()
