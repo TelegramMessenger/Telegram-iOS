@@ -94,19 +94,21 @@ enum SyncProviderImpl {
                     if let channel = peerTable.get(peerId) as? TelegramChannel {
                         switch channel.info {
                         case .broadcast:
-                            tag = .channels
+                            tag = .channel
                         case .group:
                             if channel.username != nil {
-                                tag = .publicGroups
+                                tag = .publicGroup
                             } else {
-                                tag = .regularChatsAndPrivateGroups
+                                tag = .privateGroup
                             }
                         }
                     } else {
-                        tag = .channels
+                        tag = .channel
                     }
+                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                    tag = .privateGroup
                 } else {
-                    tag = .regularChatsAndPrivateGroups
+                    tag = .privateChat
                 }
                 
                 var totalCount: Int32 = -1

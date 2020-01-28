@@ -366,14 +366,17 @@ public final class ChatListNode: ListView {
     }
     
     private var currentLocation: ChatListNodeLocation?
-    var chatListFilter: ChatListNodeFilter = .all {
+    var chatListFilter: ChatListFilterPreset? {
         didSet {
             if self.chatListFilter != oldValue {
                 self.chatListFilterValue.set(self.chatListFilter)
             }
         }
     }
-    private let chatListFilterValue = ValuePromise<ChatListNodeFilter>(.all)
+    private let chatListFilterValue = ValuePromise<ChatListFilterPreset?>(nil)
+    var chatListFilterSignal: Signal<ChatListFilterPreset?, NoError> {
+        return self.chatListFilterValue.get()
+    }
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
@@ -540,7 +543,7 @@ public final class ChatListNode: ListView {
             }
             return true
         })
-        |> mapToSignal { location, filter -> Signal<(ChatListNodeViewUpdate, ChatListNodeFilter), NoError> in
+        |> mapToSignal { location, filter -> Signal<(ChatListNodeViewUpdate, ChatListFilterPreset?), NoError> in
             return chatListViewForLocation(groupId: groupId, filter: filter, location: location, account: context.account)
             |> map { update in
                 return (update, filter)

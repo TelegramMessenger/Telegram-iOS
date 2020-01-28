@@ -4,6 +4,7 @@ import TelegramCore
 import SyncCore
 import SwiftSignalKit
 import Display
+import TelegramUIPreferences
 
 enum ChatListNodeLocation: Equatable {
     case initial(count: Int)
@@ -31,35 +32,20 @@ struct ChatListNodeViewUpdate {
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
 
-struct ChatListNodeFilter: OptionSet {
-    var rawValue: Int32
-    
-    init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    static let muted = ChatListNodeFilter(rawValue: 1 << 1)
-    static let privateChats = ChatListNodeFilter(rawValue: 1 << 2)
-    static let groups = ChatListNodeFilter(rawValue: 1 << 3)
-    static let bots = ChatListNodeFilter(rawValue: 1 << 4)
-    static let channels = ChatListNodeFilter(rawValue: 1 << 5)
-    
-    static let all: ChatListNodeFilter = [
-        .muted,
-        .privateChats,
-        .groups,
-        .bots,
-        .channels
-    ]
-}
-
-func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListNodeFilter, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
-    let filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?
-    if filter == .all {
-        filterPredicate = nil
-    } else {
-        filterPredicate = { peer, notificationSettings in
-            if !filter.contains(.muted) {
+func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListFilterPreset?, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+    let filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?
+    if let filter = filter {
+        let includePeers = Set(filter.additionallyIncludePeers)
+        filterPredicate = { peer, notificationSettings, isUnread in
+            if includePeers.contains(peer.id) {
+                return true
+            }
+            if !filter.includeCategories.contains(.read) {
+                if !isUnread {
+                    return false
+                }
+            }
+            if !filter.includeCategories.contains(.muted) {
                 if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
                     if case .muted = notificationSettings.muteState {
                         return false
@@ -68,32 +54,46 @@ func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListNodeFilter, l
                     return false
                 }
             }
-            if !filter.contains(.privateChats) {
+            if !filter.includeCategories.contains(.privateChats) {
                 if let user = peer as? TelegramUser {
                     if user.botInfo == nil {
                         return false
                     }
-                } else if let _ = peer as? TelegramSecretChat {
+                }
+            }
+            if !filter.includeCategories.contains(.secretChats) {
+                if let _ = peer as? TelegramSecretChat {
                     return false
                 }
             }
-            if !filter.contains(.bots) {
+            if !filter.includeCategories.contains(.bots) {
                 if let user = peer as? TelegramUser {
                     if user.botInfo != nil {
                         return false
                     }
                 }
             }
-            if !filter.contains(.groups) {
+            if !filter.includeCategories.contains(.privateGroups) {
                 if let _ = peer as? TelegramGroup {
                     return false
                 } else if let channel = peer as? TelegramChannel {
                     if case .group = channel.info {
-                        return false
+                        if channel.username == nil {
+                            return false
+                        }
                     }
                 }
             }
-            if !filter.contains(.channels) {
+            if !filter.includeCategories.contains(.publicGroups) {
+                if let channel = peer as? TelegramChannel {
+                    if case .group = channel.info {
+                        if channel.username != nil {
+                            return false
+                        }
+                    }
+                }
+            }
+            if !filter.includeCategories.contains(.channels) {
                 if let channel = peer as? TelegramChannel {
                     if case .broadcast = channel.info {
                         return false
@@ -102,6 +102,8 @@ func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListNodeFilter, l
             }
             return true
         }
+    } else {
+        filterPredicate = nil
     }
     
     switch location {

@@ -1362,11 +1362,14 @@ public final class Postbox {
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
         let _ = self.transaction({ transaction -> Void in
-            let reindexUnreadVersion: Int32 = 1
+            let reindexUnreadVersion: Int32 = 2
             if self.messageHistoryMetadataTable.getShouldReindexUnreadCountsState() != reindexUnreadVersion {
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
                 self.messageHistoryMetadataTable.setShouldReindexUnreadCountsState(value: reindexUnreadVersion)
             }
+            #if DEBUG
+            self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: true)
+            #endif
             
             if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
@@ -1650,12 +1653,13 @@ public final class Postbox {
         self.synchronizeGroupMessageStatsTable.set(groupId: groupId, namespace: namespace, needsValidation: false, operations: &self.currentUpdatedGroupSummarySynchronizeOperations)
     }
     
-    private func mappedChatListFilterPredicate(_ predicate: @escaping (Peer, PeerNotificationSettings?) -> Bool) -> (ChatListIntermediateEntry) -> Bool {
+    private func mappedChatListFilterPredicate(_ predicate: @escaping (Peer, PeerNotificationSettings?, Bool) -> Bool) -> (ChatListIntermediateEntry) -> Bool {
         return { entry in
             switch entry {
             case let .message(index, _, _):
                 if let peer = self.peerTable.get(index.messageIndex.id.peerId) {
-                    if predicate(peer, self.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId)) {
+                    let isUnread = self.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
+                    if predicate(peer, self.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId), isUnread) {
                         return true
                     } else {
                         return false
@@ -1669,7 +1673,7 @@ public final class Postbox {
         }
     }
     
-    func fetchAroundChatEntries(groupId: PeerGroupId, index: ChatListIndex, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
+    func fetchAroundChatEntries(groupId: PeerGroupId, index: ChatListIndex, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
         let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
         let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
@@ -1685,7 +1689,7 @@ public final class Postbox {
         return (entries, lower, upper)
     }
     
-    func fetchEarlierChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?) -> [MutableChatListEntry] {
+    func fetchEarlierChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> [MutableChatListEntry] {
         let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
         let intermediateEntries = self.chatListTable.earlierEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
@@ -1694,7 +1698,7 @@ public final class Postbox {
         return entries
     }
     
-    func fetchLaterChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?) -> [MutableChatListEntry] {
+    func fetchLaterChatEntries(groupId: PeerGroupId, index: ChatListIndex?, count: Int, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?) -> [MutableChatListEntry] {
         let mappedPredicate = filterPredicate.flatMap(self.mappedChatListFilterPredicate)
         let intermediateEntries = self.chatListTable.laterEntries(groupId: groupId, index: index.flatMap({ ($0, true) }), messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count, predicate: mappedPredicate)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
@@ -2542,11 +2546,11 @@ public final class Postbox {
         |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)? = nil, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)? = nil, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in

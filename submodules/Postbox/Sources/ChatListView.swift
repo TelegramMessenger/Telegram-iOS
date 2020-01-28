@@ -297,7 +297,7 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
 
 final class MutableChatListView {
     let groupId: PeerGroupId
-    let filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?
+    let filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?
     private let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var additionalItemIds: Set<PeerId>
     fileprivate var additionalItemEntries: [MutableChatListEntry]
@@ -307,7 +307,7 @@ final class MutableChatListView {
     fileprivate var groupEntries: [ChatListGroupReferenceEntry]
     private var count: Int
     
-    init(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?) -> Bool)?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         let (entries, earlier, later) = postbox.fetchAroundChatEntries(groupId: groupId, index: aroundIndex, count: count, filterPredicate: filterPredicate)
         
         self.groupId = groupId
@@ -496,8 +496,9 @@ final class MutableChatListView {
             if let filterPredicate = self.filterPredicate {
                 for (peerId, settingsChange) in updatedPeerNotificationSettings {
                     if let peer = postbox.peerTable.get(peerId) {
-                        let wasIncluded = filterPredicate(peer, settingsChange.0)
-                        let isIncluded = filterPredicate(peer, settingsChange.1)
+                        let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                        let wasIncluded = filterPredicate(peer, settingsChange.0, isUnread)
+                        let isIncluded = filterPredicate(peer, settingsChange.1, isUnread)
                         if wasIncluded != isIncluded {
                             if isIncluded {
                                 if let entry = postbox.chatListTable.getEntry(groupId: self.groupId, peerId: peerId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable) {
@@ -664,7 +665,8 @@ final class MutableChatListView {
             switch initialEntry {
             case .IntermediateMessageEntry(let index, _, _, _), .MessageEntry(let index, _, _, _, _, _, _, _, _):
                 if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
-                    if !filterPredicate(peer, postbox.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId)) {
+                    let isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
+                    if !filterPredicate(peer, postbox.peerNotificationSettingsTable.getEffective(index.messageIndex.id.peerId), isUnread) {
                         return false
                     }
                 } else {

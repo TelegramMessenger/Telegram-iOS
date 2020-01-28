@@ -1,8 +1,13 @@
 import Foundation
 
-struct PeerIdAndNamespace: Hashable {
-    let peerId: PeerId
-    let namespace: MessageId.Namespace
+public struct PeerIdAndNamespace: Hashable {
+    public let peerId: PeerId
+    public let namespace: MessageId.Namespace
+    
+    public init(peerId: PeerId, namespace: MessageId.Namespace) {
+        self.peerId = peerId
+        self.namespace = namespace
+    }
 }
 
 private func canContainHoles(_ peerIdAndNamespace: PeerIdAndNamespace, seedConfiguration: SeedConfiguration) -> Bool {

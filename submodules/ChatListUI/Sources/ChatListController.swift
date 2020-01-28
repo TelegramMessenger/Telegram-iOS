@@ -261,11 +261,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         if !self.hideNetworkActivityStatus {
-            self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode, self.chatListDisplayNode.chatListNode.state).start(next: { [weak self] networkState, proxy, passcode, state in
+            self.titleDisposable = combineLatest(queue: .mainQueue(),
+                context.account.networkState,
+                hasProxy,
+                passcode,
+                self.chatListDisplayNode.chatListNode.state,
+                self.chatListDisplayNode.chatListNode.chatListFilterSignal
+            ).start(next: { [weak self] networkState, proxy, passcode, state, chatListFilter in
                 if let strongSelf = self {
                     let defaultTitle: String
                     if case .root = strongSelf.groupId {
-                        defaultTitle = strongSelf.presentationData.strings.DialogList_Title
+                        if let chatListFilter = chatListFilter {
+                            let title: String
+                            switch chatListFilter.name {
+                            case .unread:
+                                title = "Unread"
+                            case let .custom(value):
+                                title = value
+                            }
+                            defaultTitle = title
+                        } else {
+                            defaultTitle = strongSelf.presentationData.strings.DialogList_Title
+                        }
                     } else {
                         defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                     }
@@ -1793,13 +1810,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
         if self.isNodeLoaded {
-            let controller = TabBarChatListFilterController(context: self.context, sourceNodes: sourceNodes, currentFilter: self.chatListDisplayNode.chatListNode.chatListFilter, updateFilter: { [weak self] value in
+            let _ = (self.context.account.postbox.transaction { transaction -> [ChatListFilterPreset] in
+                let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatListFilterSettings) as? ChatListFilterSettings ?? ChatListFilterSettings.default
+                return settings.presets
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] presetList in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.chatListDisplayNode.chatListNode.chatListFilter = value
+                let controller = TabBarChatListFilterController(context: strongSelf.context, sourceNodes: sourceNodes, presetList: presetList, currentPreset: strongSelf.chatListDisplayNode.chatListNode.chatListFilter, setup: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context))
+                }, updatePreset: { value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatListDisplayNode.chatListNode.chatListFilter = value
+                })
+                strongSelf.context.sharedContext.mainWindow?.present(controller, on: .root)
             })
-            self.context.sharedContext.mainWindow?.present(controller, on: .root)
         }
     }
     

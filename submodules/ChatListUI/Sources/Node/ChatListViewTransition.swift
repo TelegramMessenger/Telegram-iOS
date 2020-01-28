@@ -6,12 +6,13 @@ import SwiftSignalKit
 import Display
 import MergeLists
 import SearchUI
+import TelegramUIPreferences
 
 struct ChatListNodeView {
     let originalView: ChatListView
     let filteredEntries: [ChatListNodeEntry]
     let isLoading: Bool
-    let filter: ChatListNodeFilter
+    let filter: ChatListFilterPreset?
 }
 
 enum ChatListNodeViewTransitionReason {
