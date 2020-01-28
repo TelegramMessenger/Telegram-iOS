@@ -47,7 +47,6 @@ framework(
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/WatchCommon/Host:WatchCommon",
         "//submodules/LightweightAccountData:LightweightAccountData",
-        "//submodules/HockeySDK-iOS:HockeySDK",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/BuildConfigExtra:BuildConfigExtra",
         "//submodules/rlottie:RLottieBinding",
