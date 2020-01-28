@@ -7,7 +7,6 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
-import PresentationDataUtils
 import AccountContext
 import TelegramUIPreferences
 import ItemListPeerItem

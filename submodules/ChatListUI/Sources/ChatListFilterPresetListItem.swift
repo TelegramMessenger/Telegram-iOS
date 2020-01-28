@@ -8,8 +8,6 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import ItemListUI
-import PresentationDataUtils
-import ActivityIndicator
 import TelegramUIPreferences
 
 struct ChatListFilterPresetListItemEditing: Equatable {
