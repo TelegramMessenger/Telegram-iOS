@@ -7,21 +7,18 @@ import Display
 import TelegramUIPreferences
 
 enum ChatListNodeLocation: Equatable {
-    case initial(count: Int)
-    case navigation(index: ChatListIndex)
-    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
+    case initial(count: Int, filter: ChatListFilterPreset?)
+    case navigation(index: ChatListIndex, filter: ChatListFilterPreset?)
+    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilterPreset?)
     
-    static func ==(lhs: ChatListNodeLocation, rhs: ChatListNodeLocation) -> Bool {
-        switch lhs {
-            case let .navigation(index):
-                switch rhs {
-                    case .navigation(index):
-                        return true
-                    default:
-                        return false
-                }
-            default:
-                return false
+    var filter: ChatListFilterPreset? {
+        switch self {
+        case let .initial(initial):
+            return initial.filter
+        case let .navigation(navigation):
+            return navigation.filter
+        case let .scroll(scroll):
+            return scroll.filter
         }
     }
 }
@@ -32,9 +29,9 @@ struct ChatListNodeViewUpdate {
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
 
-func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListFilterPreset?, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
     let filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?
-    if let filter = filter {
+    if let filter = location.filter {
         let includePeers = Set(filter.additionallyIncludePeers)
         filterPredicate = { peer, notificationSettings, isUnread in
             if includePeers.contains(peer.id) {
@@ -107,14 +104,14 @@ func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListFilterPreset?
     }
     
     switch location {
-        case let .initial(count):
+        case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
             signal = account.viewTracker.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
             }
-        case let .navigation(index):
+        case let .navigation(index, _):
             var first = true
             return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
             |> map { view, updateType -> ChatListNodeViewUpdate in
@@ -127,7 +124,7 @@ func chatListViewForLocation(groupId: PeerGroupId, filter: ChatListFilterPreset?
                 }
                 return ChatListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil)
             }
-        case let .scroll(index, sourceIndex, scrollPosition, animated):
+        case let .scroll(index, sourceIndex, scrollPosition, animated, _):
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true

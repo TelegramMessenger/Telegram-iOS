@@ -680,6 +680,35 @@ final class ChatListTable: Table {
         return entries
     }
     
+    func allPeerIds(groupId: PeerGroupId) -> [PeerId] {
+        var peerIds: [PeerId] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            
+            let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+            if type == ChatListEntryType.message.rawValue {
+                peerIds.append(messageIndex.id.peerId)
+            }
+            return true
+        }, limit: 0)
+        return peerIds
+    }
+    
+    func allHoles(groupId: PeerGroupId) -> [ChatListHole] {
+        var entries: [ChatListHole] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            if type == ChatListEntryType.hole.rawValue {
+                let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+                entries.append(ChatListHole(index: index.messageIndex))
+            }
+            return true
+        }, limit: 0)
+        return entries
+    }
+    
     func entriesInRange(groupId: PeerGroupId, upperBound: ChatListIndex, lowerBound: ChatListIndex) -> [ChatListEntryInfo] {
         var entries: [ChatListEntryInfo] = []
         let upperBoundKey: ValueBoxKey

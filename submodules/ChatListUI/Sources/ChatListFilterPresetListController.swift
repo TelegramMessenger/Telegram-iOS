@@ -46,7 +46,7 @@ private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings
 
 private enum ChatListFilterPresetListEntryStableId: Hashable {
     case listHeader
-    case preset(ChatListFilterPresetName)
+    case preset(Int64)
     case addItem
     case listFooter
 }
@@ -82,7 +82,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         case .listHeader:
             return .listHeader
         case let .preset(preset):
-            return .preset(preset.preset.name)
+            return .preset(preset.preset.id)
         case .addItem:
             return .addItem
         case .listFooter:
@@ -141,7 +141,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     return entries
 }
 
-func chatListFilterPresetListController(context: AccountContext) -> ViewController {
+func chatListFilterPresetListController(context: AccountContext, updated: @escaping ([ChatListFilterPreset]) -> Void) -> ViewController {
     let initialState = ChatListFilterPresetListControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -154,9 +154,9 @@ func chatListFilterPresetListController(context: AccountContext) -> ViewControll
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let arguments = ChatListFilterPresetListControllerArguments(context: context, openPreset: { preset in
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset))
+        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: updated))
     }, addNew: {
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil))
+        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: updated))
     }, setItemWithRevealedOptions: { preset, fromPreset in
         updateState { state in
             var state = state
@@ -166,13 +166,16 @@ func chatListFilterPresetListController(context: AccountContext) -> ViewControll
             return state
         }
     }, removePreset: { preset in
-        let _ = updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             if let index = settings.presets.index(of: preset) {
                 settings.presets.remove(at: index)
             }
             return settings
-        }).start()
+        })
+        |> deliverOnMainQueue).start(next: { settings in
+            updated(settings.presets)
+        })
     })
     
     let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])

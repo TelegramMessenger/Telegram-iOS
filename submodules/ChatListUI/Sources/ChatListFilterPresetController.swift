@@ -53,9 +53,11 @@ private func filterEntry(presentationData: ItemListPresentationData, arguments: 
 private enum ChatListFilterPresetEntryStableId: Hashable {
     case index(Int)
     case peer(PeerId)
+    case additionalPeerInfo
 }
 
 private enum ChatListFilterPresetEntry: ItemListNodeEntry {
+    case nameHeader(String)
     case name(placeholder: String, value: String)
     case filterPrivateChats(title: String, value: Bool)
     case filterSecretChats(title: String, value: Bool)
@@ -68,46 +70,51 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case additionalPeersHeader(String)
     case addAdditionalPeer(title: String)
     case additionalPeer(index: Int, peer: RenderedPeer, isRevealed: Bool)
+    case additionalPeerInfo(String)
     
     var section: ItemListSectionId {
         switch self {
-        case .name:
+        case .nameHeader, .name:
             return ChatListFilterPresetControllerSection.name.rawValue
         case .filterPrivateChats, .filterSecretChats, .filterPrivateGroups, .filterBots, .filterPublicGroups, .filterChannels:
             return ChatListFilterPresetControllerSection.categories.rawValue
         case .filterMuted, .filterRead:
             return ChatListFilterPresetControllerSection.excludeCategories.rawValue
-        case .additionalPeersHeader, .addAdditionalPeer, .additionalPeer:
+        case .additionalPeersHeader, .addAdditionalPeer, .additionalPeer, .additionalPeerInfo:
             return ChatListFilterPresetControllerSection.additionalPeers.rawValue
         }
     }
     
     var stableId: ChatListFilterPresetEntryStableId {
         switch self {
-        case .name:
+        case .nameHeader:
             return .index(0)
-        case .filterPrivateChats:
+        case .name:
             return .index(1)
-        case .filterSecretChats:
+        case .filterPrivateChats:
             return .index(2)
-        case .filterPrivateGroups:
+        case .filterSecretChats:
             return .index(3)
-        case .filterBots:
+        case .filterPrivateGroups:
             return .index(4)
-        case .filterPublicGroups:
+        case .filterBots:
             return .index(5)
-        case .filterChannels:
+        case .filterPublicGroups:
             return .index(6)
-        case .filterMuted:
+        case .filterChannels:
             return .index(7)
-        case .filterRead:
+        case .filterMuted:
             return .index(8)
-        case .additionalPeersHeader:
+        case .filterRead:
             return .index(9)
-        case .addAdditionalPeer:
+        case .additionalPeersHeader:
             return .index(10)
+        case .addAdditionalPeer:
+            return .index(11)
         case let .additionalPeer(additionalPeer):
             return .peer(additionalPeer.peer.peerId)
+        case .additionalPeerInfo:
+            return .additionalPeerInfo
         }
     }
     
@@ -119,6 +126,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 return lhsIndex < rhsIndex
             case .peer:
                 return true
+            case .additionalPeerInfo:
+                return true
             }
         case .peer:
             switch lhs {
@@ -126,6 +135,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 switch rhs.stableId {
                 case .index:
                     return false
+                case .additionalPeerInfo:
+                    return true
                 case .peer:
                     switch rhs {
                     case let .additionalPeer(rhsIndex, _, _):
@@ -137,12 +148,23 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             default:
                 preconditionFailure()
             }
+        case .additionalPeerInfo:
+            switch rhs.stableId {
+            case .index:
+                return false
+            case .peer:
+                return false
+            case .additionalPeerInfo:
+                return false
+            }
         }
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChatListFilterPresetControllerArguments
         switch self {
+        case let .nameHeader(title):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .name(placeholder, value):
             return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), sectionId: self.section, textUpdated: { value in
                 arguments.updateState { current in
@@ -201,6 +223,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             }, removePeer: { id in
                 arguments.deleteAdditionalPeer(id)
             })
+        case let .additionalPeerInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -226,6 +250,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
 private func chatListFilterPresetControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetControllerState, peers: [RenderedPeer]) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
+    entries.append(.nameHeader("NAME"))
     entries.append(.name(placeholder: "Preset Name", value: state.name))
     
     entries.append(.filterPrivateChats(title: "Private Chats", value: state.includeCategories.contains(.privateChats)))
@@ -245,10 +270,12 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         entries.append(.additionalPeer(index: entries.count, peer: peer, isRevealed: state.revealedPeerId == peer.peerId))
     }
     
+    entries.append(.additionalPeerInfo("These chats will always be included in the list."))
+    
     return entries
 }
 
-func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilterPreset?) -> ViewController {
+func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilterPreset?, updated: @escaping ([ChatListFilterPreset]) -> Void) -> ViewController {
     let initialName: String
     if let currentPreset = currentPreset {
         switch currentPreset.name {
@@ -352,14 +379,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             let state = stateValue.with { $0 }
-            let preset = ChatListFilterPreset(name: .custom(state.name), includeCategories: state.includeCategories, additionallyIncludePeers: state.additionallyIncludePeers)
+            let preset = ChatListFilterPreset(id: currentPreset?.id ?? arc4random64(), name: .custom(state.name), includeCategories: state.includeCategories, additionallyIncludePeers: state.additionallyIncludePeers)
             let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
                 var settings = settings
                 settings.presets = settings.presets.filter { $0 != preset && $0 != currentPreset }
                 settings.presets.append(preset)
                 return settings
             })
-            |> deliverOnMainQueue).start(completed: {
+            |> deliverOnMainQueue).start(next: { settings in
+                updated(settings.presets)
                 dismissImpl?()
             })
         })
