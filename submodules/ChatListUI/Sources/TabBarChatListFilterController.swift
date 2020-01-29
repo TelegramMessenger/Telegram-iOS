@@ -462,7 +462,7 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
                         if preset.includeCategories.contains(.publicGroups) {
                             tags.append(.publicGroup)
                         }
-                        if preset.includeCategories.contains(.privateChats) {
+                        if preset.includeCategories.contains(.channels) {
                             tags.append(.channel)
                         }
                         

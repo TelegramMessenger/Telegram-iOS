@@ -4,6 +4,7 @@ import SwiftSignalKit
 
 private final class ManagedChatListHolesState {
     private var holeDisposables: [ChatListHolesEntry: Disposable] = [:]
+    private var additionalLatestHoleDisposable: (ChatListHole, Disposable)?
     
     func clearDisposables() -> [Disposable] {
         let disposables = Array(self.holeDisposables.values)
@@ -11,7 +12,7 @@ private final class ManagedChatListHolesState {
         return disposables
     }
     
-    func update(entries: Set<ChatListHolesEntry>) -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable]) {
+    func update(entries: Set<ChatListHolesEntry>, additionalLatestHole: ChatListHole?) -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable], addedAdditionalLatestHole: (ChatListHole, MetaDisposable)?) {
         var removed: [Disposable] = []
         var added: [ChatListHolesEntry: MetaDisposable] = [:]
         
@@ -30,7 +31,21 @@ private final class ManagedChatListHolesState {
             }
         }
         
-        return (removed, added)
+        var addedAdditionalLatestHole: (ChatListHole, MetaDisposable)?
+        if self.holeDisposables.isEmpty {
+            if self.additionalLatestHoleDisposable?.0 != additionalLatestHole {
+                if let (_, disposable) = self.additionalLatestHoleDisposable {
+                    removed.append(disposable)
+                }
+                if let additionalLatestHole = additionalLatestHole {
+                    let disposable = MetaDisposable()
+                    self.additionalLatestHoleDisposable = (additionalLatestHole, disposable)
+                    addedAdditionalLatestHole = (additionalLatestHole, disposable)
+                }
+            }
+        }
+        
+        return (removed, added, addedAdditionalLatestHole)
     }
 }
 
@@ -38,9 +53,17 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
     return Signal { _ in
         let state = Atomic(value: ManagedChatListHolesState())
         
-        let disposable = postbox.chatListHolesView().start(next: { view in
-            let (removed, added) = state.with { state -> (removed: [Disposable], added: [ChatListHolesEntry: MetaDisposable]) in
-                return state.update(entries: view.entries)
+        let topRootHoleKey = PostboxViewKey.allChatListHoles(.root)
+        let topRootHole = postbox.combinedView(keys: [topRootHoleKey])
+        
+        let disposable = combineLatest(postbox.chatListHolesView(), topRootHole).start(next: { view, topRootHoleView in
+            var additionalLatestHole: ChatListHole?
+            if let topRootHole = topRootHoleView.views[topRootHoleKey] as? AllChatListHolesView {
+                additionalLatestHole = topRootHole.latestHole
+            }
+            
+            let (removed, added, addedAdditionalLatestHole) = state.with { state in
+                return state.update(entries: view.entries, additionalLatestHole: additionalLatestHole)
             }
             
             for disposable in removed {
@@ -49,6 +72,10 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
             
             for (entry, disposable) in added {
                 disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: entry.groupId, hole: entry.hole).start())
+            }
+            
+            if let (hole, disposable) = addedAdditionalLatestHole {
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: .root, hole: hole).start())
             }
         })
         

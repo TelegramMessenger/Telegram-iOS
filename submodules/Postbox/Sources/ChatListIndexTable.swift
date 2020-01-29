@@ -570,13 +570,10 @@ final class ChatListIndexTable: Table {
     
     func debugReindexUnreadCounts(postbox: Postbox) -> (ChatListTotalUnreadState, [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {
         var peerIds: [PeerId] = []
-        self.valueBox.scanInt64(self.table, values: { key, _ in
-            let peerId = PeerId(key)
-            if peerId.namespace != Int32.max {
-                peerIds.append(peerId)
-            }
-            return true
-        })
+        for groupId in postbox.chatListTable.existingGroups() + [.root] {
+            let groupPeerIds = postbox.chatListTable.allPeerIds(groupId: groupId)
+            peerIds.append(contentsOf: groupPeerIds)
+        }
         var rootState = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
         var summaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
         for peerId in peerIds {

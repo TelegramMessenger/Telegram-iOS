@@ -370,6 +370,12 @@ public final class ChatListNode: ListView {
         didSet {
             if self.chatListFilter != oldValue {
                 self.chatListFilterValue.set(self.chatListFilter)
+                
+                if self.chatListFilter?.includeCategories != oldValue?.includeCategories || self.chatListFilter?.additionallyIncludePeers != oldValue?.additionallyIncludePeers {
+                    if let currentLocation = self.currentLocation {
+                        self.setChatListLocation(.initial(count: 50, filter: self.chatListFilter))
+                    }
+                }
             }
         }
     }
@@ -533,20 +539,12 @@ public final class ChatListNode: ListView {
         
         let viewProcessingQueue = self.viewProcessingQueue
         
-        let chatListViewUpdate = combineLatest(self.chatListLocation.get(), self.chatListFilterValue.get())
-        |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if lhs.0 != rhs.0 {
-                return false
-            }
-            if lhs.1 != rhs.1 {
-                return false
-            }
-            return true
-        })
-        |> mapToSignal { location, filter -> Signal<(ChatListNodeViewUpdate, ChatListFilterPreset?), NoError> in
-            return chatListViewForLocation(groupId: groupId, filter: filter, location: location, account: context.account)
+        let chatListViewUpdate = self.chatListLocation.get()
+        |> distinctUntilChanged
+        |> mapToSignal { location -> Signal<(ChatListNodeViewUpdate, ChatListFilterPreset?), NoError> in
+            return chatListViewForLocation(groupId: groupId, location: location, account: context.account)
             |> map { update in
-                return (update, filter)
+                return (update, location.filter)
             }
         }
         
@@ -792,9 +790,9 @@ public final class ChatListNode: ListView {
                 if let range = range.loadedRange {
                     var location: ChatListNodeLocation?
                     if range.firstIndex < 5 && originalView.laterIndex != nil {
-                        location = .navigation(index: originalView.entries[originalView.entries.count - 1].index)
+                        location = .navigation(index: originalView.entries[originalView.entries.count - 1].index, filter: strongSelf.chatListFilter)
                     } else if range.firstIndex >= 5 && range.lastIndex >= originalView.entries.count - 5 && originalView.earlierIndex != nil {
-                        location = .navigation(index: originalView.entries[0].index)
+                        location = .navigation(index: originalView.entries[0].index, filter: strongSelf.chatListFilter)
                     }
                     
                     if let location = location, location != strongSelf.currentLocation {
@@ -850,10 +848,10 @@ public final class ChatListNode: ListView {
         
         let initialLocation: ChatListNodeLocation
         switch mode {
-            case .chatList:
-                initialLocation = .initial(count: 50)
-            case .peers:
-                initialLocation = .initial(count: 200)
+        case .chatList:
+            initialLocation = .initial(count: 50, filter: self.chatListFilter)
+        case .peers:
+            initialLocation = .initial(count: 200, filter: self.chatListFilter)
         }
         self.setChatListLocation(initialLocation)
         
@@ -1332,12 +1330,12 @@ public final class ChatListNode: ListView {
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound, scrollPosition: .top(0.0), animated: true)
+                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound, scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
                 self.setChatListLocation(location)
             }
         } else {
             let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                , scrollPosition: .top(0.0), animated: true)
+                , scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
             self.setChatListLocation(location)
         }
     }
@@ -1373,11 +1371,11 @@ public final class ChatListNode: ListView {
             
             if let index = index {
                 let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound
-                    , scrollPosition: .center(.top), animated: true)
+                    , scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
                 strongSelf.setChatListLocation(location)
             } else {
                 let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                    , scrollPosition: .top(0.0), animated: true)
+                    , scrollPosition: .top(0.0), animated: true, filter: strongSelf.chatListFilter)
                 strongSelf.setChatListLocation(location)
             }
         })
@@ -1433,7 +1431,7 @@ public final class ChatListNode: ListView {
                     guard let strongSelf = self, let index = index else {
                         return
                     }
-                    let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true)
+                    let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
                     strongSelf.setChatListLocation(location)
                     strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
                 })
@@ -1457,7 +1455,7 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if let target = target {
-                    let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                    let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: self.chatListFilter)
                     self.setChatListLocation(location)
                     self.peerSelected?(target.1, false, false)
                 }
@@ -1473,12 +1471,12 @@ public final class ChatListNode: ListView {
                     guard let self = self else {
                         return
                     }
-                    let _ = (chatListViewForLocation(groupId: self.groupId, filter: filter, location: .initial(count: 10), account: self.context.account)
+                    let _ = (chatListViewForLocation(groupId: self.groupId, location: .initial(count: 10, filter: filter), account: self.context.account)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { update in
                         let entries = update.view.entries
                         if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _) = entries[10 - index - 1] {
-                            let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                            let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: filter)
                             self.setChatListLocation(location)
                             self.peerSelected?(renderedPeer.peerId, false, false)
                         }

@@ -1822,7 +1822,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context))
+                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { presets in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let currentPreset = strongSelf.chatListDisplayNode.chatListNode.chatListFilter {
+                            var found = false
+                            if let index = presets.index(where: { $0.id == currentPreset.id }) {
+                                found = true
+                                if currentPreset != presets[index] {
+                                    strongSelf.chatListDisplayNode.chatListNode.chatListFilter = presets[index]
+                                }
+                            }
+                            if !found {
+                                strongSelf.chatListDisplayNode.chatListNode.chatListFilter = nil
+                            }
+                        }
+                    }))
                 }, updatePreset: { value in
                     guard let strongSelf = self else {
                         return
