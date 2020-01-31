@@ -675,7 +675,9 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
-                    flags |= (1 << 9)
+                    if !messages.contains(where: { $0.0.groupingKey == nil }) {
+                        flags |= (1 << 9)
+                    }
                     
                     var forwardIds: [(MessageId, Int64)] = []
                     for (message, content) in messages {
