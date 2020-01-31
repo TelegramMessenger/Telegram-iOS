@@ -1244,3 +1244,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 }
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
+
+private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
+    if let _ = peer as? TelegramGroup  {
+        return groupInfoController(context: context, peerId: peer.id)
+    } else if let channel = peer as? TelegramChannel {
+        if case .group = channel.info {
+            return groupInfoController(context: context, peerId: peer.id)
+        } else {
+            return channelInfoController(context: context, peerId: peer.id)
+        }
+    } else if peer is TelegramUser {
+        return PeerInfoScreen(context: context, peerId: peer.id)
+    } else if peer is TelegramSecretChat {
+        return userInfoController(context: context, peerId: peer.id, mode: mode)
+    }
+    return nil
+}
