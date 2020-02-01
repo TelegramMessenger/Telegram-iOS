@@ -11,3 +11,6 @@
 [submodule "build-system/bazel-rules/apple_support"]
 	path = build-system/bazel-rules/apple_support
 	url = https://github.com/bazelbuild/apple_support.git
+[submodule "build-system/bazel-rules/rules_apple_extras"]
+	path = build-system/bazel-rules/rules_apple_extras
+	url = https://github.com/thii/rules_apple_extras.git

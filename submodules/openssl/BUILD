@@ -1,6 +1,6 @@
 load(
-    "//Config/objc_module_provider.bzl",
-    "objc_module",
+    "@rules_apple_extras//apple:objc_library.bzl",
+    "objc_library",
 )
 
 openssl_headers = [
@@ -170,13 +170,9 @@ objc_library(
     module_name = "openssl",
     enable_modules = True,
     hdrs = ["Public/openssl/" + x for x in openssl_headers],
-    includes = [
-        "Public/openssl",
-    ],
     deps = [
         ":openssl_lib",
     ],
-    ,
     visibility = [
         "//visibility:public",
     ]

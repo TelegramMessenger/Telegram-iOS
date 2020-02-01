@@ -4,16 +4,20 @@ load(
 )
 
 objc_library(
-    name = "OpenSSLEncryptionProvider",
+    name = "TonBinding",
     srcs = glob([
         "Sources/**/*.m",
+        "Sources/**/*.mm",
     ]),
     hdrs = glob([
         "Sources/**/*.h",
     ]),
     deps = [
-        "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/openssl:openssl",
+        "//submodules/ton:ton",
     ],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:public",
+    ],
 )

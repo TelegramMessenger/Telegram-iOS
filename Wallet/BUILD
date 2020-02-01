@@ -47,6 +47,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/openssl:openssl",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/WalletCore:WalletCore",
     ],
 )
 
