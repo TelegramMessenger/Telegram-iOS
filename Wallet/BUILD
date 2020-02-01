@@ -48,6 +48,10 @@ swift_library(
         "//submodules/openssl:openssl",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//submodules/WalletCore:WalletCore",
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/AppBundle:AppBundle",
+        #"//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        #"//submodules/WalletUI:WalletUI",
     ],
 )
 

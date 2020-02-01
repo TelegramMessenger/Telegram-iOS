@@ -5,6 +5,8 @@ load(
 
 objc_library(
     name = "TonBinding",
+    module_name = "TonBinding",
+    enable_modules = True,
     srcs = glob([
         "Sources/**/*.m",
         "Sources/**/*.mm",
@@ -12,6 +14,9 @@ objc_library(
     hdrs = glob([
         "Sources/**/*.h",
     ]),
+    copts = [
+        "-std=c++14",
+    ],
     deps = [
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/openssl:openssl",

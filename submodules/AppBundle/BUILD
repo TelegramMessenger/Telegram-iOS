@@ -1,17 +1,18 @@
+load(
+    "@rules_apple_extras//apple:objc_library.bzl",
+    "objc_library",
+)
 
 objc_library(
     name = "AppBundle",
-    enable_modules = True,
     module_name = "AppBundle",
+    enable_modules = True,
     srcs = glob([
         "Source/AppBundle/*.m",
     ]),
     hdrs = glob([
         "Source/AppBundle/*.h",
     ]),
-    includes = [
-      "Source",
-    ],
     sdk_frameworks = [
       "Foundation",
       "UIKit",

@@ -52,4 +52,6 @@ local_repository(
     path = "build-system/bazel-rules/rules_apple_extras",
 )
 
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
+bazel_skylib_workspace()

@@ -3,9 +3,9 @@
 set -x
 set -e
 
-OUT_DIR="$1"
-SOURCE_DIR="$2"
-openssl_base_path="$3"
+OUT_DIR="$(pwd)/$1"
+SOURCE_DIR="$(pwd)/$2"
+openssl_base_path="$(pwd)/$3"
 
 if [ -z "$openssl_base_path" ]; then
   echo "Usage: sh build-ton.sh path/to/openssl"

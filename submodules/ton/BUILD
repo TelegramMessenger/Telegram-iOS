@@ -41,49 +41,59 @@ ton_lib_names = [
 ]
 
 genrule(
-    name = "",
-)
-
-genrule(
     name = "ton_build",
     srcs = [
         "build-ton.sh",
         "iOS.cmake",
-        "tonlib-src.zip",
+        "tonlib-src.tar.gz",
         "//submodules/openssl:openssl_include",
+        "//submodules/openssl:libcrypto.a",
     ],
     cmd_bash = 
     """
+    set -ex
+
     cp $(location :build-ton.sh) "$(RULEDIR)/"
     cp $(location :iOS.cmake) "$(RULEDIR)/"
-    unzip 
-    cp $(location :iOS.cmake) "$(RULEDIR)/"
-    "tonlib-src.zip",
+    tar -xzf $(location tonlib-src.tar.gz) -C "$(RULEDIR)/"
 
-    mkdir -p "$(RULEDIR)/openssl_headers/openssl"
+    mkdir -p "$(RULEDIR)/openssl_headers/include/openssl"
+    mkdir -p "$(RULEDIR)/openssl_headers/lib"
+    cp -f "$(location //submodules/openssl:libcrypto.a)" "$(RULEDIR)/openssl_headers/lib/"
     for f in $(locations //submodules/openssl:openssl_include); do
-        cp -f "$$f" "$(RULEDIR)/openssl_headers/openssl/"
+        cp -f "$$f" "$(RULEDIR)/openssl_headers/include/openssl/"
     done
     mkdir -p "$(RULEDIR)/Public/ton"
 
-    sh $(RULEDIR)/build-ton.sh "$(RULEDIR)/Public/ton" $(RULEDIR) "$(RULEDIR)/openssl_headers"
-    """,
-    outs = ["Public/ton/" + x for x in ton_headers],
+    sh $(RULEDIR)/build-ton.sh "$(RULEDIR)" "$(RULEDIR)" "$(RULEDIR)/openssl_headers"
+    """ +
+    "\n".join([
+        "cp -f \"$(RULEDIR)/build/out/include/{}\" \"$(location Public/ton/include/{})\"".format(header, header) for header in ton_headers
+    ]) +
+    "\n" +
+    "\n".join([
+        "cp -f \"$(RULEDIR)/build/out/lib/lib{}.a\" \"$(location Public/ton/lib/lib{}.a)\"".format(lib, lib) for lib in ton_lib_names
+    ]),
+    outs = ["Public/ton/include/" + x for x in ton_headers] +
+    ["Public/ton/lib/lib{}.a".format(x) for x in ton_lib_names],
     visibility = [
         "//visibility:public",
     ]
 )
 
-#ton_header_targets = gen_header_targets(ton_header_paths, "ton_header_", "", "ton_build", "build/out/include")
-
 cc_library(
     name = "ton_lib",
-    srcs = [":lib" + x + ".a" for x in ton_lib_names],
+    srcs = [":Public/ton/lib/lib" + x + ".a" for x in ton_lib_names],
 )
 
 objc_library(
     name = "ton",
-    hdrs = ["Public/ton/" + x for x in ton_headers],
+    module_name = "ton",
+    enable_modules = True,
+    hdrs = [":Public/ton/include/" + x for x in ton_headers],
+    includes = [
+        "Public/ton/include",
+    ],
     deps = [
         ":ton_lib",
     ],
