@@ -813,8 +813,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .theme:
                         break
+                    #if ENABLE_WALLET
                     case .wallet:
                         break
+                    #endif
                     case .settings:
                         break
                 }

@@ -882,6 +882,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         })
         allItems.append(passport)
 
+        #if ENABLE_WALLET
         if hasWallet {
             let wallet = SettingsSearchableItem(id: .wallet(0), title: strings.Settings_Wallet, alternate: synonyms(strings.SettingsSearch_Synonyms_Wallet), icon: .wallet, breadcrumbs: [], present: { context, _, present in
                 context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
@@ -890,6 +891,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             })
             allItems.append(wallet)
         }
+        #endif
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
             let _ = (supportPeerId(account: context.account)

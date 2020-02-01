@@ -15,13 +15,15 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
+#if ENABLE_WALLET
 import WalletUI
+import WalletCore
+#endif
 import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
-import WalletCore
 
 private enum CallStatusText: Equatable {
     case none
@@ -892,7 +894,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeTempAccountContext(account: Account) -> AccountContext {
-        return AccountContextImpl(sharedContext: self, account: account, tonContext: nil, limitsConfiguration: .defaultValue, contentSettings: .default, temp: true)
+        return AccountContextImpl(sharedContext: self, account: account/*, tonContext: nil*/, limitsConfiguration: .defaultValue, contentSettings: .default, temp: true)
     }
     
     public func openChatMessage(_ params: OpenChatMessageParams) -> Bool {
@@ -1146,6 +1148,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context)
     }
     
+    #if ENABLE_WALLET
     public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
         guard let storedContext = context.tonContext else {
             return
@@ -1205,6 +1208,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         })
     }
+    #endif
     
     public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

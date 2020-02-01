@@ -271,7 +271,7 @@ public class ShareRootControllerImpl {
                 |> castError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, tonContext: nil, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account/*, tonContext: nil*/, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1)
                     return (context, data.data, otherAccounts)
                 }
             }

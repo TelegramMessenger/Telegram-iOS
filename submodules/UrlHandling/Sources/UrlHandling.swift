@@ -12,7 +12,9 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+#if ENABLE_WALLET
 import WalletUrl
+#endif
 
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
@@ -425,11 +427,13 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 }
 
 public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+    #if ENABLE_WALLET
     if url.hasPrefix("ton://") {
         if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
             return .single(.wallet(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment))
         }
     }
+    #endif
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {

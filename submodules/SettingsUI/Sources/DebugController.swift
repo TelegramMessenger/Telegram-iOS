@@ -17,7 +17,6 @@ import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
-import WalletUI
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {

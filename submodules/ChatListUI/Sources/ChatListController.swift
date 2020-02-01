@@ -99,7 +99,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate, TabBarContainedController {
+public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate/*, TabBarContainedController*/ {
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -1808,7 +1808,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
     }
     
-    public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
+    /*public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
         if self.isNodeLoaded {
             let _ = (self.context.account.postbox.transaction { transaction -> [ChatListFilterPreset] in
                 let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatListFilterSettings) as? ChatListFilterSettings ?? ChatListFilterSettings.default
@@ -1852,5 +1852,5 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
         
-    }
+    }*/
 }

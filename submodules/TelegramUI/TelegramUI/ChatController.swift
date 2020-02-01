@@ -49,8 +49,10 @@ import ReactionSelectionNode
 import AvatarNode
 import MessageReactionListUI
 import AppBundle
+#if ENABLE_WALLET
 import WalletUI
 import WalletUrl
+#endif
 import LocalizedPeerData
 import PhoneNumberFormat
 import SettingsUI
@@ -5695,9 +5697,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             if let (host, port, username, password, secret) = parseProxyUrl(code) {
                                 strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
-                            } else if let url = URL(string: code), let parsedWalletUrl = parseWalletUrl(url) {
+                            }/* else if let url = URL(string: code), let parsedWalletUrl = parseWalletUrl(url) {
                                 //strongSelf.openResolved(ResolvedUrl.wallet(address: parsedWalletUrl.address, amount: parsedWalletUrl.amount, comment: parsedWalletUrl.comment))
-                            }
+                            }*/
                         }
                     }, presentSchedulePicker: { [weak self] done in
                         if let strongSelf = self {
