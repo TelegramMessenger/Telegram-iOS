@@ -50,7 +50,7 @@ swift_library(
         "//submodules/WalletCore:WalletCore",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/AppBundle:AppBundle",
-        #"//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         #"//submodules/WalletUI:WalletUI",
     ],
 )

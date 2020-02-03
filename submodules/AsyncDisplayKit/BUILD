@@ -1,10 +1,14 @@
+load(
+    "@rules_apple_extras//apple:objc_library.bzl",
+    "objc_library",
+)
 
 public_headers = glob([
-  "Source/Public/AsyncDisplayKit/*.h",
+  "Source/PublicHeaders/AsyncDisplayKit/*.h",
 ])
 
 private_headers = glob([
-  "Source/Implementation/AsyncDisplayKit/*.h",
+  "Source/*.h",
 ])
 
 objc_library(
@@ -18,14 +22,6 @@ objc_library(
     hdrs = public_headers,
     defines = [
         "MINIMAL_ASDK",
-    ],
-    copts = [
-      "-w",
-      "-isystem",
-      "submodules/AsyncDisplayKit/Source/Implementation",
-    ],
-    includes = [
-      "Source/Public",
     ],
     sdk_frameworks = [
       "Foundation",

@@ -1,3 +1,5 @@
 build --strategy=Genrule=local
 build --apple_platform_type=ios
 build --cxxopt='-std=c++14'
+build --copt='-w'
+build --swiftcopt='-Xcc' --swiftcopt='-w'
