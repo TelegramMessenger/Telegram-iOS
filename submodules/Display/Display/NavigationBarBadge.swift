@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-final class NavigationBarBadgeNode: ASDisplayNode {
+public final class NavigationBarBadgeNode: ASDisplayNode {
     private var fillColor: UIColor
     private var strokeColor: UIColor
     private var textColor: UIColor
@@ -19,7 +19,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         }
     }
     
-    init(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
+    public init(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
         self.fillColor = fillColor
         self.strokeColor = strokeColor
         self.textColor = textColor
@@ -48,7 +48,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let badgeSize = self.textNode.measure(constrainedSize)
         let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
         let backgroundFrame = CGRect(origin: CGPoint(), size: backgroundSize)

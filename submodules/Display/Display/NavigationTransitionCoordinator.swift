@@ -15,12 +15,17 @@ private func generateShadow() -> UIImage? {
         context.setShadow(offset: CGSize(), blur: 16.0, color: UIColor(white: 0.0, alpha: 0.5).cgColor)
         context.fill(CGRect(origin: CGPoint(x: size.width, y: 0.0), size: CGSize(width: 16.0, height: 1.0)))
     })
-    //return UIImage(named: "NavigationShadow", in: getAppBundle(), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
 }
 
 private let shadowImage = generateShadow()
 
-class NavigationTransitionCoordinator {
+public protocol CustomNavigationTransitionNode: ASDisplayNode {
+    func setup(topNavigationBar: NavigationBar, bottomNavigationBar: NavigationBar)
+    func update(containerSize: CGSize, fraction: CGFloat, transition: ContainedViewLayoutTransition)
+    func restore()
+}
+
+final class NavigationTransitionCoordinator {
     private var _progress: CGFloat = 0.0
     var progress: CGFloat {
         get {
@@ -36,6 +41,7 @@ class NavigationTransitionCoordinator {
     private let bottomNavigationBar: NavigationBar?
     private let dimNode: ASDisplayNode
     private let shadowNode: ASImageNode
+    private let customTransitionNode: CustomNavigationTransitionNode?
     
     private let inlineNavigationBarTransition: Bool
     
@@ -58,25 +64,43 @@ class NavigationTransitionCoordinator {
         self.shadowNode.displayWithoutProcessing = true
         self.shadowNode.image = shadowImage
         
-        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar, !topNavigationBar.isHidden, !bottomNavigationBar.isHidden, topNavigationBar.canTransitionInline, bottomNavigationBar.canTransitionInline, topNavigationBar.item?.leftBarButtonItem == nil {
-            var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container.view)
-            var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container.view)
-            topFrame.origin.x = 0.0
-            bottomFrame.origin.x = 0.0
-            self.inlineNavigationBarTransition = true// topFrame.equalTo(bottomFrame)
+        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar {
+            if let customTransitionNode = topNavigationBar.makeCustomTransitionNode?(bottomNavigationBar) {
+                self.inlineNavigationBarTransition = false
+                customTransitionNode.setup(topNavigationBar: topNavigationBar, bottomNavigationBar: bottomNavigationBar)
+                self.customTransitionNode = customTransitionNode
+            } else if let customTransitionNode = bottomNavigationBar.makeCustomTransitionNode?(topNavigationBar) {
+                self.inlineNavigationBarTransition = false
+                customTransitionNode.setup(topNavigationBar: topNavigationBar, bottomNavigationBar: bottomNavigationBar)
+                self.customTransitionNode = customTransitionNode
+            } else if !topNavigationBar.isHidden, !bottomNavigationBar.isHidden, topNavigationBar.canTransitionInline, bottomNavigationBar.canTransitionInline, topNavigationBar.item?.leftBarButtonItem == nil {
+                var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container.view)
+                var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container.view)
+                topFrame.origin.x = 0.0
+                bottomFrame.origin.x = 0.0
+                self.inlineNavigationBarTransition = true
+                self.customTransitionNode = nil
+            } else {
+                self.inlineNavigationBarTransition = false
+                self.customTransitionNode = nil
+            }
         } else {
             self.inlineNavigationBarTransition = false
+            self.customTransitionNode = nil
         }
         
         switch transition {
-            case .Push:
-                self.container.addSubnode(topNode)
-            case .Pop:
-                self.container.insertSubnode(bottomNode, belowSubnode: topNode)
+        case .Push:
+            self.container.addSubnode(topNode)
+        case .Pop:
+            self.container.insertSubnode(bottomNode, belowSubnode: topNode)
         }
         
         self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
-        self.container.insertSubnode(self.shadowNode, belowSubnode: dimNode)
+        self.container.insertSubnode(self.shadowNode, belowSubnode: self.dimNode)
+        if let customTransitionNode = self.customTransitionNode {
+            self.container.addSubnode(customTransitionNode)
+        }
         
         self.maybeCreateNavigationBarTransition()
         self.updateProgress(0.0, transition: .immediate, completion: {})
@@ -91,10 +115,10 @@ class NavigationTransitionCoordinator {
         
         let position: CGFloat
         switch self.transition {
-            case .Push:
-                position = 1.0 - progress
-            case .Pop:
-                position = progress
+        case .Push:
+            position = 1.0 - progress
+        case .Pop:
+            position = progress
         }
         
         var dimInset: CGFloat = 0.0
@@ -119,10 +143,15 @@ class NavigationTransitionCoordinator {
         
         self.updateNavigationBarTransition(transition: transition)
         
+        if let customTransitionNode = self.customTransitionNode {
+            customTransitionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerSize.width, height: containerSize.height))
+            customTransitionNode.update(containerSize: containerSize, fraction: position, transition: transition)
+        }
+        
         self.didUpdateProgress?(self.progress, transition, topFrame, bottomFrame)
     }
     
-    func updateNavigationBarTransition(transition: ContainedViewLayoutTransition) {
+    private func updateNavigationBarTransition(transition: ContainedViewLayoutTransition) {
         if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
             let position: CGFloat
             switch self.transition {
@@ -178,6 +207,9 @@ class NavigationTransitionCoordinator {
             strongSelf.dimNode.removeFromSupernode()
             strongSelf.shadowNode.removeFromSupernode()
             
+            strongSelf.customTransitionNode?.restore()
+            strongSelf.customTransitionNode?.removeFromSupernode()
+            
             strongSelf.endNavigationBarTransition()
             
             if let currentCompletion = strongSelf.currentCompletion {
@@ -195,6 +227,9 @@ class NavigationTransitionCoordinator {
         self.dimNode.removeFromSupernode()
         self.shadowNode.removeFromSupernode()
         
+        self.customTransitionNode?.restore()
+        self.customTransitionNode?.removeFromSupernode()
+        
         self.endNavigationBarTransition()
         
         if let currentCompletion = self.currentCompletion {
@@ -208,6 +243,9 @@ class NavigationTransitionCoordinator {
             if let strongSelf = self {
                 strongSelf.dimNode.removeFromSupernode()
                 strongSelf.shadowNode.removeFromSupernode()
+                
+                strongSelf.customTransitionNode?.restore()
+                strongSelf.customTransitionNode?.removeFromSupernode()
                 
                 strongSelf.endNavigationBarTransition()
                 
@@ -227,6 +265,9 @@ class NavigationTransitionCoordinator {
         let f = {
             self.dimNode.removeFromSupernode()
             self.shadowNode.removeFromSupernode()
+            
+            self.customTransitionNode?.restore()
+            self.customTransitionNode?.removeFromSupernode()
             
             self.endNavigationBarTransition()
             

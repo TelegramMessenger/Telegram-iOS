@@ -34,6 +34,13 @@ public class ImmediateTextNode: TextNode {
     public var tapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
     public var longTapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
     
+    public func makeCopy() -> TextNode {
+        let node = TextNode()
+        node.cachedLayout = self.cachedLayout
+        node.frame = self.frame
+        return node
+    }
+    
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)
         let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke))

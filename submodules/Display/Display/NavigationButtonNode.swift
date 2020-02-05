@@ -53,6 +53,7 @@ private final class NavigationButtonItemNode: ASTextNode {
     }
     
     private var imageNode: ASImageNode?
+    private let imageRippleNode: ASImageNode
     
     private var _image: UIImage?
     public var image: UIImage? {
@@ -61,18 +62,34 @@ private final class NavigationButtonItemNode: ASTextNode {
         } set(value) {
             _image = value
             
-            if let _ = value {
+            if let value = value {
                 if self.imageNode == nil {
                     let imageNode = ASImageNode()
                     imageNode.displayWithoutProcessing = true
                     imageNode.displaysAsynchronously = false
                     self.imageNode = imageNode
+                    if value.size == CGSize(width: 30.0, height: 30.0) {
+                        if self.imageRippleNode.supernode == nil {
+                            self.addSubnode(self.imageRippleNode)
+                            self.imageRippleNode.image = generateFilledCircleImage(diameter: 30.0, color: self.rippleColor)
+                        }
+                    } else {
+                        if self.imageRippleNode.supernode != nil {
+                            self.imageRippleNode.image = nil
+                            self.imageRippleNode.removeFromSupernode()
+                        }
+                    }
+                    
                     self.addSubnode(imageNode)
                 }
                 self.imageNode?.image = image
             } else if let imageNode = self.imageNode {
                 imageNode.removeFromSupernode()
                 self.imageNode = nil
+                if self.imageRippleNode.supernode != nil {
+                    self.imageRippleNode.image = nil
+                    self.imageRippleNode.removeFromSupernode()
+                }
             }
             
             self.invalidateCalculatedLayout()
@@ -97,6 +114,14 @@ private final class NavigationButtonItemNode: ASTextNode {
         didSet {
             if let text = self._text {
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            }
+        }
+    }
+    
+    public var rippleColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.05) {
+        didSet {
+            if self.imageRippleNode.image != nil {
+                self.imageRippleNode.image = generateFilledCircleImage(diameter: 30.0, color: self.rippleColor)
             }
         }
     }
@@ -160,6 +185,11 @@ private final class NavigationButtonItemNode: ASTextNode {
     }
     
     override public init() {
+        self.imageRippleNode = ASImageNode()
+        self.imageRippleNode.displaysAsynchronously = false
+        self.imageRippleNode.displayWithoutProcessing = true
+        self.imageRippleNode.alpha = 0.0
+        
         super.init()
         
         self.isAccessibilityElement = true
@@ -183,7 +213,9 @@ private final class NavigationButtonItemNode: ASTextNode {
         } else if let imageNode = self.imageNode {
             let nodeSize = imageNode.image?.size ?? CGSize()
             let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
-            imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
+            imageNode.frame = imageFrame
+            self.imageRippleNode.frame = imageFrame
             return size
         }
         return superSize
@@ -242,7 +274,15 @@ private final class NavigationButtonItemNode: ASTextNode {
             }
             
             if shouldChangeHighlight {
-                self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                if let imageNode = self.imageNode {
+                    let previousAlpha = self.imageRippleNode.alpha
+                    self.imageRippleNode.alpha = highlighted ? 1.0 : 0.0
+                    if !highlighted {
+                        self.imageRippleNode.layer.animateAlpha(from: previousAlpha, to: self.imageRippleNode.alpha, duration: 0.25)
+                    }
+                } else {
+                    self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                }
                 self.highlightChanged(highlighted)
             }
         }
@@ -263,7 +303,7 @@ private final class NavigationButtonItemNode: ASTextNode {
 }
 
 
-final class NavigationButtonNode: ASDisplayNode {
+public final class NavigationButtonNode: ASDisplayNode {
     private var nodes: [NavigationButtonItemNode] = []
     
     public var pressed: (Int) -> () = { _ in }
@@ -274,6 +314,16 @@ final class NavigationButtonNode: ASDisplayNode {
             if !self.color.isEqual(oldValue) {
                 for node in self.nodes {
                     node.color = self.color
+                }
+            }
+        }
+    }
+    
+    public var rippleColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.05) {
+        didSet {
+            if !self.rippleColor.isEqual(oldValue) {
+                for node in self.nodes {
+                    node.rippleColor = self.rippleColor
                 }
             }
         }
@@ -296,7 +346,7 @@ final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    override public init() {
         super.init()
         
         self.isAccessibilityElement = false
@@ -313,6 +363,7 @@ final class NavigationButtonNode: ASDisplayNode {
         } else {
             node = NavigationButtonItemNode()
             node.color = self.color
+            node.rippleColor = self.rippleColor
             node.highlightChanged = { [weak node, weak self] value in
                 if let strongSelf = self, let node = node {
                     if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
@@ -353,6 +404,7 @@ final class NavigationButtonNode: ASDisplayNode {
             } else {
                 node = NavigationButtonItemNode()
                 node.color = self.color
+                node.rippleColor = self.rippleColor
                 node.highlightChanged = { [weak node, weak self] value in
                     if let strongSelf = self, let node = node {
                         if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
@@ -385,7 +437,7 @@ final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(constrainedSize: CGSize) -> CGSize {
+    public func updateLayout(constrainedSize: CGSize) -> CGSize {
         var nodeOrigin = CGPoint()
         var totalSize = CGSize()
         for node in self.nodes {

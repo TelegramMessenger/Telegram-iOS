@@ -95,6 +95,15 @@ public class ChatTitleActivityContentNode: ASDisplayNode {
         self.textNode.attributedText = text
     }
     
+    func makeCopy() -> ASDisplayNode {
+        let node = ASDisplayNode()
+        let textNode = self.textNode.makeCopy()
+        textNode.frame = self.textNode.frame
+        node.addSubnode(textNode)
+        node.frame = self.frame
+        return node
+    }
+    
     public func animateOut(to: ChatTitleActivityNodeState, style: ChatTitleActivityAnimationStyle, completion: @escaping () -> Void) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration, removeOnCompletion: false, completion: { _ in
             completion()

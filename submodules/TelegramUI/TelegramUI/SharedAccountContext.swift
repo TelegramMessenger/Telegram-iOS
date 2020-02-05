@@ -1004,8 +1004,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         handleTextLinkActionImpl(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
     
-    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
-        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode)
+    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool) -> ViewController? {
+        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded)
         controller?.navigationPresentation = .modalInLargeLayout
         return controller
     }
@@ -1245,7 +1245,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
-private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
+private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool) -> ViewController? {
     if let _ = peer as? TelegramGroup  {
         return groupInfoController(context: context, peerId: peer.id)
     } else if let channel = peer as? TelegramChannel {
@@ -1255,7 +1255,7 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
             return channelInfoController(context: context, peerId: peer.id)
         }
     } else if peer is TelegramUser {
-        return PeerInfoScreen(context: context, peerId: peer.id)
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded)
     } else if peer is TelegramSecretChat {
         return userInfoController(context: context, peerId: peer.id, mode: mode)
     }

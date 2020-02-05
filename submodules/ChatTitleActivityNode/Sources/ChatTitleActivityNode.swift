@@ -61,6 +61,15 @@ public class ChatTitleActivityNode: ASDisplayNode {
         super.init()
     }
     
+    public func makeCopy() -> ASDisplayNode {
+        let node = ASDisplayNode()
+        if let contentNode = self.contentNode {
+            node.addSubnode(contentNode.makeCopy())
+        }
+        node.frame = self.frame
+        return node
+    }
+    
     public func transitionToState(_ state: ChatTitleActivityNodeState, animation: ChatTitleActivityAnimationStyle = .crossfade, completion: @escaping () -> Void = {}) -> Bool {
         if self.state != state {
             let currentState = self.state

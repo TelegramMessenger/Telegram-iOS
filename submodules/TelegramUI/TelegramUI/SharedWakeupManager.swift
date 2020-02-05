@@ -315,7 +315,7 @@ public final class SharedWakeupManager {
                         if let taskId = self.beginBackgroundTask("background-wakeup", {
                             handleExpiration()
                         }) {
-                            let timer = SwiftSignalKit.Timer(timeout: min(30.0, self.backgroundTimeRemaining()), repeat: false, completion: {
+                            let timer = SwiftSignalKit.Timer(timeout: min(30.0, max(0.0, self.backgroundTimeRemaining() - 5.0)), repeat: false, completion: {
                                 handleExpiration()
                             }, queue: Queue.mainQueue())
                             self.currentTask = (taskId, currentTime, timer)

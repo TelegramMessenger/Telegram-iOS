@@ -112,7 +112,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
     private var disabledOverlayNode: ASDisplayNode?
     private let maskNode: ASImageNode
     
-    private let avatarNode: AvatarNode
+    let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let appNode: TextNode
     private let locationNode: TextNode

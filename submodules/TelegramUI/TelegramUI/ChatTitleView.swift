@@ -15,6 +15,7 @@ import PeerPresenceStatusManager
 import ChatTitleActivityNode
 import LocalizedPeerData
 import PhoneNumberFormat
+import ChatTitleActivityNode
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
@@ -92,13 +93,15 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private var nameDisplayOrder: PresentationPersonNameOrder
     
     private let contentContainer: ASDisplayNode
-    private let titleNode: ImmediateTextNode
-    private let titleLeftIconNode: ASImageNode
-    private let titleRightIconNode: ASImageNode
-    private let titleCredibilityIconNode: ASImageNode
-    private let activityNode: ChatTitleActivityNode
+    let titleNode: ImmediateTextNode
+    let titleLeftIconNode: ASImageNode
+    let titleRightIconNode: ASImageNode
+    let titleCredibilityIconNode: ASImageNode
+    let activityNode: ChatTitleActivityNode
     
     private let button: HighlightTrackingButtonNode
+    
+    let avatarNode: ChatAvatarNavigationNode?
     
     private var validLayout: (CGSize, CGRect)?
     
@@ -136,7 +139,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 statusNode = ChatTitleNetworkStatusNode(theme: self.theme)
                 self.networkStatusNode = statusNode
-                self.insertSubview(statusNode.view, belowSubview: self.button.view)
+                self.insertSubview(statusNode.view, aboveSubview: self.contentContainer.view)
             }
             switch self.networkState {
                 case .waitingForNetwork:
@@ -451,7 +454,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, displayAvatar: Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -482,6 +485,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         self.activityNode = ChatTitleActivityNode()
         self.button = HighlightTrackingButtonNode()
+        if displayAvatar {
+            self.avatarNode = ChatAvatarNavigationNode()
+        } else {
+            self.avatarNode = nil
+        }
         
         super.init(frame: CGRect())
         
@@ -492,12 +500,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.contentContainer.addSubnode(self.titleNode)
         self.contentContainer.addSubnode(self.activityNode)
         self.addSubnode(self.button)
+        self.avatarNode.flatMap(self.contentContainer.addSubnode)
         
         self.presenceManager = PeerPresenceStatusManager(update: { [weak self] in
             self?.updateStatus()
         })
         
-        self.button.addTarget(self, action: #selector(buttonPressed), forControlEvents: [.touchUpInside])
+        self.button.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: [.touchUpInside])
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
@@ -558,7 +567,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         let transition: ContainedViewLayoutTransition = .immediate
         
-        self.button.frame = clearBounds
         self.contentContainer.frame = clearBounds
         
         var leftIconWidth: CGFloat = 0.0
@@ -592,35 +600,35 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleRightIconNode.removeFromSupernode()
         }
         
+        var leftInset: CGFloat = 12.0
+        if let avatarNode = self.avatarNode {
+            let avatarSize = CGSize(width: 37.0, height: 37.0)
+            let avatarFrame = CGRect(origin: CGPoint(x: leftInset + 10.0, y: floor((size.height - avatarSize.height) / 2.0)), size: avatarSize)
+            avatarNode.frame = avatarFrame
+            leftInset += avatarSize.width + 10.0 + 8.0
+        }
+        
+        self.button.frame = CGRect(origin: CGPoint(x: leftInset - 20.0, y: 0.0), size: CGSize(width: clearBounds.width - leftInset, height: size.height))
+        
         let titleSideInset: CGFloat = 3.0
         if size.height > 40.0 {
             var titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
             titleSize.width += credibilityIconWidth
-            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
+            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .left)
             let titleInfoSpacing: CGFloat = 0.0
             
             var titleFrame: CGRect
             
             if activitySize.height.isZero {
-                titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
-                if titleFrame.size.width < size.width {
-                    titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
-                }
+                titleFrame = CGRect(origin: CGPoint(x: leftInset + leftIconWidth, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
                 self.titleNode.frame = titleFrame
             } else {
                 let combinedHeight = titleSize.height + activitySize.height + titleInfoSpacing
                 
-                titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
-                if titleFrame.size.width < size.width {
-                    titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
-                }
-                titleFrame.origin.x = max(titleFrame.origin.x, clearBounds.minX + leftIconWidth)
+                titleFrame = CGRect(origin: CGPoint(x: leftInset + leftIconWidth, y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
                 self.titleNode.frame = titleFrame
                 
-                var activityFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - activitySize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
-                if activitySize.width < size.width {
-                    activityFrame.origin.x = -clearBounds.minX + floor((size.width - activityFrame.width) / 2.0)
-                }
+                var activityFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
                 self.activityNode.frame = activityFrame
             }
             
@@ -662,13 +670,18 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     @objc func buttonPressed() {
-        if let pressed = self.pressed {
-            pressed()
-        }
+        self.pressed?()
     }
     
     func animateLayoutTransition() {
         UIView.transition(with: self, duration: 0.25, options: [.transitionCrossDissolve], animations: {
         }, completion: nil)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.button.frame.contains(point) {
+            return self.button.view
+        }
+        return super.hitTest(point, with: event)
     }
 }
