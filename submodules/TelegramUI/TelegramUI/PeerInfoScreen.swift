@@ -904,7 +904,7 @@ private final class PeerInfoHeaderNode: ASDisplayNode {
     
     private(set) var isAvatarExpanded: Bool
     
-    private let avatarListNode: PeerInfoAvatarListNode
+    let avatarListNode: PeerInfoAvatarListNode
     
     let regularContentNode: PeerInfoHeaderRegularContentNode
     let editingContentNode: PeerInfoHeaderEditingContentNode
@@ -1195,7 +1195,7 @@ private final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 
                 let titleScale = (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * titleFrame.height * neutralTitleScale) / (titleFrame.height)
-                let subtitleScale = (transitionFraction * transitionSourceSubtitleFrame.height + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)
+                let subtitleScale = max(0.01, min(10.0, (transitionFraction * transitionSourceSubtitleFrame.height + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)))
                 
                 let titleOrigin = CGPoint(x: transitionFraction * transitionSourceTitleFrame.minX + (1.0 - transitionFraction) * titleFrame.minX, y: transitionFraction * transitionSourceTitleFrame.minY + (1.0 - transitionFraction) * titleFrame.minY)
                 let subtitleOrigin = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.minX + (1.0 - transitionFraction) * subtitleFrame.minX, y: transitionFraction * transitionSourceSubtitleFrame.minY + (1.0 - transitionFraction) * subtitleFrame.minY)
@@ -1441,8 +1441,9 @@ private final class PeerInfoHeaderNode: ASDisplayNode {
 protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     
-    func update(size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
+    func update(size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
+    func transferVelocity(_ velocity: CGFloat)
     func findLoadedMessage(id: MessageId) -> Message?
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     func updateSelectedMessages(animated: Bool)
@@ -1466,21 +1467,21 @@ final class PeerInfoPaneInteraction {
 private final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
     let node: PeerInfoPaneNode
-    private var appliedParams: (CGSize, Bool, PresentationData)?
+    private var appliedParams: (CGSize, CGFloat, Bool, PresentationData)?
     
     init(key: PeerInfoPaneKey, node: PeerInfoPaneNode) {
         self.key = key
         self.node = node
     }
     
-    func update(size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        if let (currentSize, currentIsScrollingLockedAtTop, currentPresentationData) = self.appliedParams {
+    func update(size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        if let (currentSize, visibleHeight, currentIsScrollingLockedAtTop, currentPresentationData) = self.appliedParams {
             if currentSize == size && currentIsScrollingLockedAtTop == isScrollingLockedAtTop && currentPresentationData === presentationData {
                 return
             }
         }
-        self.appliedParams = (size, isScrollingLockedAtTop, presentationData)
-        self.node.update(size: size, isScrollingLockedAtTop: isScrollingLockedAtTop, presentationData: presentationData, synchronous: synchronous, transition: transition)
+        self.appliedParams = (size, visibleHeight, isScrollingLockedAtTop, presentationData)
+        self.node.update(size: size, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, presentationData: presentationData, synchronous: synchronous, transition: transition)
     }
 }
 
@@ -1582,6 +1583,8 @@ private final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
     func update(size: CGSize, presentationData: PresentationData, paneList: [PeerInfoPaneSpecifier], selectedPane: PeerInfoPaneKey?, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
+        let focusOnSelectedPane = self.currentParams?.1 != selectedPane
+        
         if self.currentParams?.2.theme !== presentationData.theme {
             self.selectedLineNode.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -1673,6 +1676,16 @@ private final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
         if let selectedFrame = selectedFrame {
             self.selectedLineNode.isHidden = false
             transition.updateFrame(node: self.selectedLineNode, frame: CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0)))
+            if focusOnSelectedPane {
+                if selectedPane == paneList.first?.key {
+                    transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
+                } else if selectedPane == paneList.last?.key {
+                    transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, y: 0.0), size: self.scrollNode.bounds.size))
+                } else {
+                    let contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(selectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
+                    transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
+                }
+            }
         } else {
             self.selectedLineNode.isHidden = true
         }
@@ -1695,9 +1708,9 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
     let isReady = Promise<Bool>()
     var didSetIsReady = false
     
-    private var currentParams: (size: CGSize, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?)?
+    private var currentParams: (size: CGSize, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?)?
     private(set) var currentPaneKey: PeerInfoPaneKey?
-    private var currentPane: PeerInfoPaneWrapper?
+    private(set) var currentPane: PeerInfoPaneWrapper?
     
     private var currentCandidatePaneKey: PeerInfoPaneKey?
     private var candidatePane: (PeerInfoPaneWrapper, Disposable, Bool)?
@@ -1763,8 +1776,8 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
             }
             strongSelf.currentCandidatePaneKey = key
             
-            if let (size, expansionFraction, presentationData, data) = strongSelf.currentParams {
-                strongSelf.update(size: size, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .immediate)
+            if let (size, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                strongSelf.update(size: size, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .immediate)
             }
         }
     }
@@ -1793,7 +1806,7 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, transition: ContainedViewLayoutTransition) {
         let availablePanes = data?.availablePanes ?? []
         
         let previousCurrentPaneKey = self.currentPaneKey
@@ -1812,7 +1825,7 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
             self.currentCandidatePaneKey = availablePanes.first
         }
         
-        self.currentParams = (size, expansionFraction, presentationData, data)
+        self.currentParams = (size, visibleHeight, expansionFraction, presentationData, data)
         
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
@@ -1874,8 +1887,8 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
                         strongSelf.candidatePane = (candidatePane, disposable, true)
                         
                         if shouldReLayout {
-                            if let (size, expansionFraction, presentationData, data) = strongSelf.currentParams {
-                                strongSelf.update(size: size, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: strongSelf.currentPane != nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
+                            if let (size, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                                strongSelf.update(size: size, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: strongSelf.currentPane != nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
                             }
                         }
                     }
@@ -1897,7 +1910,7 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
                 self.addSubnode(candidatePane.node)
             }
             candidatePane.node.frame = paneFrame
-            candidatePane.update(size: paneFrame.size, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: .immediate)
+            candidatePane.update(size: paneFrame.size, visibleHeight: max(0.0, visibleHeight - paneFrame.minY), isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: .immediate)
             
             if let previousPane = previousPane {
                 let directionToRight: Bool
@@ -1923,7 +1936,7 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
             
             let paneTransition: ContainedViewLayoutTransition = paneWasAdded ? .immediate : transition
             paneTransition.updateFrame(node: currentPane.node, frame: paneFrame)
-            currentPane.update(size: paneFrame.size, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+            currentPane.update(size: paneFrame.size, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
         }
         
         transition.updateFrame(node: self.tabsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: tabsHeight)))
@@ -1949,13 +1962,14 @@ private final class PeerInfoPaneContainerNode: ASDisplayNode {
         if let (candidatePane, _, _) = self.candidatePane {
             let paneTransition: ContainedViewLayoutTransition = .immediate
             paneTransition.updateFrame(node: candidatePane.node, frame: paneFrame)
-            candidatePane.update(size: paneFrame.size, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: paneTransition)
+            candidatePane.update(size: paneFrame.size, visibleHeight: visibleHeight, isScrollingLockedAtTop: expansionFraction < 1.0 - CGFloat.ulpOfOne, presentationData: presentationData, synchronous: true, transition: paneTransition)
         }
-        if !self.didSetIsReady {
-            self.didSetIsReady = true
+        if !self.didSetIsReady && data != nil {
             if let currentPane = self.currentPane {
+                self.didSetIsReady = true
                 self.isReady.set(currentPane.node.isReady)
-            } else {
+            } else if self.candidatePane == nil {
+                self.didSetIsReady = true
                 self.isReady.set(.single(true))
             }
         }
@@ -3990,7 +4004,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true
-            self._ready.set(self.paneContainerNode.isReady.get())
+            let avatarReady = self.headerNode.avatarListNode.isReady.get()
+            let combinedSignal = combineLatest(queue: .mainQueue(),
+                avatarReady,
+                self.paneContainerNode.isReady.get()
+            )
+            |> map { lhs, rhs in
+                return lhs && rhs
+            }
+            self._ready.set(combinedSignal
+            |> filter { $0 }
+            |> take(1))
         }
     }
     
@@ -4025,7 +4049,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             transition.updateAlpha(node: self.headerNode.separatorNode, alpha: 1.0 - effectiveAreaExpansionFraction)
             
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, expansionFraction: paneAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
+            let visibleHeight = self.scrollNode.view.contentOffset.y + self.scrollNode.view.bounds.height - self.paneContainerNode.frame.minY
+            
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, visibleHeight: visibleHeight, expansionFraction: paneAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
             self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 44.0))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
             
@@ -4058,6 +4084,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.canUpdateAvatarExpansion = true
     }
     
+    private var previousVelocityM1: CGFloat = 0.0
+    private var previousVelocity: CGFloat = 0.0
+    
+    private let velocityKey: String = encodeText("`wfsujdbmWfmpdjuz", -1)
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.ignoreScrolling {
             return
@@ -4065,6 +4096,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.updateNavigation(transition: .immediate, additive: false)
         
         if !self.state.isEditing {
+            self.previousVelocityM1 = self.previousVelocity
+            if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
+                //print("previousVelocity \(CGFloat(value))")
+                self.previousVelocity = CGFloat(value)
+            }
+            
             let offsetY = self.scrollNode.view.contentOffset.y
             var shouldBeExpanded: Bool?
             if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
@@ -4093,6 +4130,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
                 }
             }
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard let (_, navigationHeight) = self.validLayout else {
+            return
+        }
+        
+        let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
+        if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
+            self.paneContainerNode.currentPane?.node.transferVelocity(self.previousVelocityM1)
         }
     }
     
@@ -4413,7 +4461,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             }
             
             let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNode.bounds.height) / previousTitleNode.bounds.height
-            let subtitleScale = (fraction * previousStatusNode.bounds.height + (1.0 - fraction) * self.headerNode.subtitleNode.bounds.height) / previousStatusNode.bounds.height
+            let subtitleScale = max(0.01, min(10.0, (fraction * previousStatusNode.bounds.height + (1.0 - fraction) * self.headerNode.subtitleNode.bounds.height) / previousStatusNode.bounds.height))
             
             transition.updateFrame(node: previousTitleContainerNode, frame: CGRect(origin: self.headerNode.titleNodeRawContainer.frame.origin.offsetBy(dx: previousTitleFrame.size.width * 0.5 * (titleScale - 1.0), dy: previousTitleFrame.size.height * 0.5 * (titleScale - 1.0)), size: previousTitleFrame.size))
             transition.updateFrame(node: previousTitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: previousTitleFrame.size))
@@ -4442,4 +4490,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         self.headerNode.navigationTransition = nil
         self.screenNode.insertSubnode(self.headerNode, aboveSubnode: self.screenNode.scrollNode)
     }
+}
+
+private func encodeText(_ string: String, _ key: Int) -> String {
+    var result = ""
+    for c in string.unicodeScalars {
+        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
+    }
+    return result
 }

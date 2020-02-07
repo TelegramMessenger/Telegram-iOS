@@ -172,7 +172,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
     }
     
-    func update(size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -183,6 +183,12 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     func findLoadedMessage(id: MessageId) -> Message? {
         self.listNode.messageInCurrentHistoryView(id)
+    }
+    
+    func transferVelocity(_ velocity: CGFloat) {
+        if velocity > 0.0 {
+            self.listNode.transferVelocity(velocity)
+        }
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {

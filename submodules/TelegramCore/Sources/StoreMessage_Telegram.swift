@@ -386,6 +386,8 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Strikethrough))
             case let .messageEntityBlockquote(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote))
+            case let .messageEntityBankCard(offset, length):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BankCard))
         }
     }
     return result

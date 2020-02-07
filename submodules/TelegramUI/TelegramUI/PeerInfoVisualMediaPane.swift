@@ -314,7 +314,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         return self._itemInteraction!
     }
     
-    private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -331,6 +331,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var currentView: MessageHistoryView?
     private var isRequestingView: Bool = false
     private var isFirstHistoryView: Bool = true
+    
+    private var decelerationAnimator: ConstantDisplayLinkAnimator?
     
     init(context: AccountContext, openMessage: @escaping (MessageId) -> Bool, peerId: PeerId, interaction: PeerInfoPaneInteraction) {
         self.context = context
@@ -414,8 +416,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let wasFirstHistoryView = self.isFirstHistoryView
             self.isFirstHistoryView = false
             
-            if let (size, isScrollingLockedAtTop, presentationData) = self.currentParams {
-                self.update(size: size, isScrollingLockedAtTop: isScrollingLockedAtTop, presentationData: presentationData, synchronous: wasFirstHistoryView, transition: .immediate)
+            if let (size, visibleHeight, isScrollingLockedAtTop, presentationData) = self.currentParams {
+                self.update(size: size, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, presentationData: presentationData, synchronous: wasFirstHistoryView, transition: .immediate)
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -442,6 +444,43 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         return nil
     }
     
+    func transferVelocity(_ velocity: CGFloat) {
+        if velocity > 0.0 {
+            //print("transferVelocity \(velocity)")
+            self.decelerationAnimator?.isPaused = true
+            let startTime = CACurrentMediaTime()
+            var currentOffset = self.scrollNode.view.contentOffset
+            let decelerationRate: CGFloat = 0.998
+            self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let t = CACurrentMediaTime() - startTime
+                var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
+                //print("value at \(t) = \(currentVelocity)")
+                currentOffset.y += currentVelocity
+                let maxOffset = strongSelf.scrollNode.view.contentSize.height - strongSelf.scrollNode.bounds.height
+                if currentOffset.y >= maxOffset {
+                    currentOffset.y = maxOffset
+                    currentVelocity = 0.0
+                }
+                if currentOffset.y < 0.0 {
+                    currentOffset.y = 0.0
+                    currentVelocity = 0.0
+                }
+                
+                if abs(currentVelocity) < 0.1 {
+                    strongSelf.decelerationAnimator?.isPaused = true
+                    strongSelf.decelerationAnimator = nil
+                }
+                var contentOffset = strongSelf.scrollNode.view.contentOffset
+                contentOffset.y = floorToScreenPixels(currentOffset.y)
+                strongSelf.scrollNode.view.setContentOffset(contentOffset, animated: false)
+            })
+            self.decelerationAnimator?.isPaused = false
+        }
+    }
+    
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         for item in self.mediaItems {
             if item.message.id == messageId {
@@ -461,8 +500,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
     }
     
-    func update(size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, isScrollingLockedAtTop, presentationData)
+    func update(size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        self.currentParams = (size, visibleHeight, isScrollingLockedAtTop, presentationData)
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -474,7 +513,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         let contentHeight = CGFloat(rowCount + 1) * itemSpacing + CGFloat(rowCount) * itemSize
         
         self.scrollNode.view.contentSize = CGSize(width: size.width, height: contentHeight)
-        self.updateVisibleItems(size: size, theme: presentationData.theme, synchronousLoad: synchronous)
+        self.updateVisibleItems(size: size, visibleHeight: visibleHeight, theme: presentationData.theme, synchronousLoad: synchronous)
         
         if isScrollingLockedAtTop {
             transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
@@ -482,9 +521,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.scrollNode.view.isScrollEnabled = !isScrollingLockedAtTop
     }
     
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.decelerationAnimator?.isPaused = true
+        self.decelerationAnimator = nil
+    }
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if let (size, _, presentationData) = self.currentParams {
-            self.updateVisibleItems(size: size, theme: presentationData.theme, synchronousLoad: false)
+        if let (size, visibleHeight, _, presentationData) = self.currentParams {
+            self.updateVisibleItems(size: size, visibleHeight: visibleHeight, theme: presentationData.theme, synchronousLoad: false)
             
             if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height * 2.0, let currentView = self.currentView, currentView.earlierId != nil {
                 if !self.isRequestingView {
@@ -495,9 +539,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
     }
     
-    private func updateVisibleItems(size: CGSize, theme: PresentationTheme, synchronousLoad: Bool) {
+    private func updateVisibleItems(size: CGSize, visibleHeight: CGFloat, theme: PresentationTheme, synchronousLoad: Bool) {
         let itemSpacing: CGFloat = 1.0
-        let itemsInRow: Int = max(3, min(6, Int(size.width / 100.0)))
+        let itemsInRow: Int = max(3, min(6, Int(size.width / 140.0)))
         let itemSize: CGFloat = floor(size.width / CGFloat(itemsInRow))
         
         let rowCount: Int = self.mediaItems.count / itemsInRow + (self.mediaItems.count % itemsInRow == 0 ? 0 : 1)
@@ -529,7 +573,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     self.scrollNode.addSubnode(itemNode)
                 }
                 itemNode.frame = itemFrame
-                itemNode.update(size: itemFrame.size, item: self.mediaItems[i], theme: theme, synchronousLoad: synchronousLoad)
+                var itemSynchronousLoad = false
+                if itemFrame.maxY <= visibleHeight {
+                    itemSynchronousLoad = synchronousLoad
+                }
+                itemNode.update(size: itemFrame.size, item: self.mediaItems[i], theme: theme, synchronousLoad: itemSynchronousLoad)
             }
         }
         var removeKeys: [UInt32] = []
@@ -543,5 +591,18 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 itemNode.removeFromSupernode()
             }
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = super.hitTest(point, with: event) else {
+            return nil
+        }
+        if self.decelerationAnimator != nil {
+            self.decelerationAnimator?.isPaused = true
+            self.decelerationAnimator = nil
+            
+            return self.scrollNode.view
+        }
+        return result
     }
 }
