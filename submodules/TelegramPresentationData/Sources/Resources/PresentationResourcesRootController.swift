@@ -71,6 +71,19 @@ public struct PresentationResourcesRootController {
         })
     }
     
+    public static func navigationMoreIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationMoreIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
+                let dotSize: CGFloat = 4.0
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: floor((size.height - dotSize) / 2.0)), size: CGSize(width: dotSize, height: dotSize)))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 13.0, y: floor((size.height - dotSize) / 2.0)), size: CGSize(width: dotSize, height: dotSize)))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 20.0, y: floor((size.height - dotSize) / 2.0)), size: CGSize(width: dotSize, height: dotSize)))
+            })
+        })
+    }
+    
     public static func navigationAddIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationAddIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddIcon"), color: theme.rootController.navigationBar.accentTextColor)

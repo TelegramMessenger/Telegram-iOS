@@ -6,13 +6,14 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 
-enum ChatNavigationButtonAction {
-    case openChatInfo
+enum ChatNavigationButtonAction: Equatable {
+    case openChatInfo(expandAvatar: Bool)
     case clearHistory
     case clearCache
     case cancelMessageSelection
     case search
     case dismiss
+    case toggleInfoPanel
 }
 
 struct ChatNavigationButton: Equatable {

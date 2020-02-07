@@ -48,6 +48,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
     
+    var tapped: (() -> Void)?
+    
     override init() {
         self.containerNode = ContextControllerSourceNode()
         self.avatarNode = AvatarNode(font: normalFont)
@@ -67,6 +69,9 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             }
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
+        
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))
+        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))
     }
     
     override func didLoad() {
@@ -74,6 +79,14 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.view.isOpaque = false
         (self.view as? ChatAvatarNavigationNodeView)?.targetNode = self
         (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
+        
+        self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:))))
+    }
+    
+    @objc private func avatarTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.tapped?()
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -85,7 +98,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     func onLayout() {
-        let bounds = self.bounds
+        /*let bounds = self.bounds
         if self.bounds.size.height.isLessThanOrEqualTo(26.0) {
             if !self.avatarNode.bounds.size.equalTo(bounds.size) {
                 self.avatarNode.font = smallFont
@@ -98,6 +111,6 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             }
             self.containerNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
             self.avatarNode.frame = bounds
-        }
+        }*/
     }
 }

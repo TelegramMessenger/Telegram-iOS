@@ -77,10 +77,18 @@ public func peerAvatarImage(account: Account, peerReference: PeerReference?, aut
                         if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                             context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
                             context.setBlendMode(.copy)
+                            
+                            if round && displayDimensions.width != 60.0 {
+                                context.addEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                context.clip()
+                            }
+                            
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
                             if round {
-                                context.setBlendMode(.destinationOut)
-                                context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                if displayDimensions.width == 60.0 {
+                                    context.setBlendMode(.destinationOut)
+                                    context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                                }
                             }
                         } else {
                             if let emptyColor = emptyColor {
