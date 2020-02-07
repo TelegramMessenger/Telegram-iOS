@@ -262,6 +262,11 @@
 "State.Updating" = "Updating...";
 "State.WaitingForNetwork" = "Waiting for network";
 
+"ChatState.Connecting" = "connecting...";
+"ChatState.ConnectingToProxy" = "connecting to proxy...";
+"ChatState.Updating" = "updating...";
+"ChatState.WaitingForNetwork" = "waiting for network...";
+
 // Presence
 "Presence.online" = "online";
 

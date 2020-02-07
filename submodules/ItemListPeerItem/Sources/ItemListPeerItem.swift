@@ -424,7 +424,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont = avatarPlaceholderFont(size: 15.0)
+private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 private let badgeFont = Font.regular(15.0)
 
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {

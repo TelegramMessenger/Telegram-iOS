@@ -132,6 +132,15 @@ class MessageHistoryTagsTable: Table {
         return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
     }
     
+    func latestIndex(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.lowerBound(tag: tag, peerId: peerId, namespace: namespace), end: self.upperBound(tag: tag, peerId: peerId, namespace: namespace), keys: { key in
+            result = extractKey(key)
+            return true
+        }, limit: 1)
+        return result
+    }
+    
     func findRandomIndex(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>), isMessage: (MessageIndex) -> Bool) -> MessageIndex? {
         var indices: [MessageIndex] = []
         self.valueBox.range(self.table, start: self.lowerBound(tag: tag, peerId: peerId, namespace: namespace), end: self.upperBound(tag: tag, peerId: peerId, namespace: namespace), keys: { key in

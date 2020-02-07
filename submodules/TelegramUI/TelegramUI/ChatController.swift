@@ -1892,7 +1892,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentInGlobalOverlay(contextController)
             }
             avatarNode.tapped = { [weak self] in
-                self?.navigationButtonAction(.openChatInfo(expandAvatar: true))
+                guard let strongSelf = self else {
+                    return
+                }
+                var expandAvatar = false
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, peer.smallProfileImage != nil {
+                    expandAvatar = true
+                }
+                strongSelf.navigationButtonAction(.openChatInfo(expandAvatar: expandAvatar))
             }
         }
         self.navigationItem.titleView = self.chatTitleView

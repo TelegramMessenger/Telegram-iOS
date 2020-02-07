@@ -87,7 +87,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         return self.measureNode.measure(CGSize(width: 240.0, height: 160.0)).width
     }
     
-    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
+    func update(theme: PresentationTheme?, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         let previousContentSize = self.previousContentSize
@@ -263,7 +263,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 var originY: CGFloat = 5.0
                 switch mediaDownloadState {
                     case .remote:
-                        if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
+                        if let theme = theme, let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
                             state = .customIcon(image)
                         } else {
                             state = .none

@@ -8,13 +8,26 @@ import TelegramPresentationData
 import AccountContext
 import ContextUI
 import PhotoResources
+import RadialStatusNode
+import TelegramStringFormatting
+import GridMessageSelectionNode
+
+private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
+private let mediaBadgeTextColor = UIColor.white
 
 private final class VisualMediaItemInteraction {
     let openMessage: (MessageId) -> Void
-    var hiddenMedia: [MessageId: [Media]] = [:]
+    let toggleSelection: (MessageId) -> Void
     
-    init(openMessage: @escaping (MessageId) -> Void) {
+    var hiddenMedia: [MessageId: [Media]] = [:]
+    var selectedMessageIds: Set<MessageId>?
+    
+    init(
+        openMessage: @escaping (MessageId) -> Void,
+        toggleSelection: @escaping (MessageId) -> Void
+    ) {
         self.openMessage = openMessage
+        self.toggleSelection = toggleSelection
     }
 }
 
@@ -24,12 +37,16 @@ private final class VisualMediaItemNode: ASDisplayNode {
     
     private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
+    private var statusNode: RadialStatusNode
+    private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
+    private var selectionNode: GridMessageSelectionNode?
     
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
     private var resourceStatus: MediaResourceStatus?
     
     private var item: (VisualMediaItem, Media?, CGSize, CGSize?)?
+    private var theme: PresentationTheme?
     
     init(context: AccountContext, interaction: VisualMediaItemInteraction) {
         self.context = context
@@ -37,11 +54,19 @@ private final class VisualMediaItemNode: ASDisplayNode {
         
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+        let progressDiameter: CGFloat = 40.0
+        self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
+        self.statusNode.isUserInteractionEnabled = false
+        
+        self.mediaBadgeNode = ChatMessageInteractiveMediaBadge()
+        self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 50.0, height: 50.0))
         
         super.init()
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.mediaBadgeNode)
         
         self.containerNode.isGestureEnabled = false
     }
@@ -69,6 +94,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
         if item === self.item?.0 && size == self.item?.2 {
             return
         }
+        self.theme = theme
         var media: Media?
         for value in item.message.media {
             if let image = value as? TelegramMediaImage {
@@ -88,20 +114,20 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
-                /*self.statusNode.transitionToState(.none, completion: { [weak self] in
+                self.statusNode.transitionToState(.none, completion: { [weak self] in
                     self?.statusNode.isHidden = true
-                })*/
-                //self.mediaBadgeNode.isHidden = true
+                })
+                self.mediaBadgeNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions?.cgSize
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
-                /*self.mediaBadgeNode.isHidden = false
+                self.mediaBadgeNode.isHidden = false
                 
                 self.resourceStatus = nil
-                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self, let item = strongSelf.item {
+                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: item.message.id, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self, let (item, _, _, _) = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
                         let isStreamable = isMediaStreamable(message: item.message, media: file)
@@ -158,17 +184,24 @@ private final class VisualMediaItemNode: ASDisplayNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
                             }
                             
-                            strongSelf.mediaBadgeNode.update(theme: item.theme, content: badgeContent, mediaDownloadState: mediaDownloadState, alignment: .right, animated: false, badgeAnimated: false)
+                            strongSelf.mediaBadgeNode.update(theme: nil, content: badgeContent, mediaDownloadState: mediaDownloadState, alignment: .right, animated: false, badgeAnimated: false)
                         }
                     }
                 }))
                 if self.statusNode.supernode == nil {
                     self.imageNode.addSubnode(self.statusNode)
-                }*/
+                }
             } else {
-                //self.mediaBadgeNode.isHidden = true
+                self.mediaBadgeNode.isHidden = true
             }
             self.item = (item, media, size, mediaDimensions)
+            
+            let progressDiameter: CGFloat = 40.0
+            self.statusNode.frame = CGRect(origin: CGPoint(x: floor((size.width - progressDiameter) / 2.0), y: floor((size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+            
+            self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
+            
+            self.selectionNode?.frame = CGRect(origin: CGPoint(), size: size)
             
             self.updateHiddenMedia()
         }
@@ -185,6 +218,46 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 let imageSize = mediaDimensions.aspectFilled(imageFrame.size)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), emptyColor: theme.list.mediaPlaceholderColor))()
             }
+            
+            self.updateSelectionState(animated: false)
+        }
+    }
+    
+    func updateSelectionState(animated: Bool) {
+        if let (item, media, _, mediaDimensions) = self.item, let theme = self.theme {
+            if let selectedIds = self.interaction.selectedMessageIds {
+                let selected = selectedIds.contains(item.message.id)
+                
+                if let selectionNode = self.selectionNode {
+                    selectionNode.updateSelected(selected, animated: animated)
+                    selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                } else {
+                    let selectionNode = GridMessageSelectionNode(theme: theme, toggle: { [weak self] value in
+                        if let strongSelf = self, let messageId = strongSelf.item?.0.message.id {
+                            strongSelf.interaction.toggleSelection(messageId)
+                        }
+                    })
+                    
+                    selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    self.containerNode.addSubnode(selectionNode)
+                    self.selectionNode = selectionNode
+                    selectionNode.updateSelected(selected, animated: false)
+                    if animated {
+                        selectionNode.animateIn()
+                    }
+                }
+            } else {
+                if let selectionNode = self.selectionNode {
+                    self.selectionNode = nil
+                    if animated {
+                        selectionNode.animateOut { [weak selectionNode] in
+                            selectionNode?.removeFromSupernode()
+                        }
+                    } else {
+                        selectionNode.removeFromSupernode()
+                    }
+                }
+            }
         }
     }
     
@@ -194,15 +267,15 @@ private final class VisualMediaItemNode: ASDisplayNode {
             var statusNodeHidden = false
             var accessoryHidden = false
             if let strongSelf = self {
-                //statusNodeHidden = strongSelf.statusNode.isHidden
-                //accessoryHidden = strongSelf.mediaBadgeNode.isHidden
-                //strongSelf.statusNode.isHidden = true
-                //strongSelf.mediaBadgeNode.isHidden = true
+                statusNodeHidden = strongSelf.statusNode.isHidden
+                accessoryHidden = strongSelf.mediaBadgeNode.isHidden
+                strongSelf.statusNode.isHidden = true
+                strongSelf.mediaBadgeNode.isHidden = true
             }
             let view = imageNode?.view.snapshotContentTree(unhide: true)
             if let strongSelf = self {
-                //strongSelf.statusNode.isHidden = statusNodeHidden
-                //strongSelf.mediaBadgeNode.isHidden = accessoryHidden
+                strongSelf.statusNode.isHidden = statusNodeHidden
+                strongSelf.mediaBadgeNode.isHidden = accessoryHidden
             }
             return (view, nil)
         })
@@ -232,6 +305,8 @@ private final class VisualMediaItem {
 final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let peerId: PeerId
+    private let interaction: PeerInfoPaneInteraction
+    
     private let scrollNode: ASScrollNode
     
     private var _itemInteraction: VisualMediaItemInteraction?
@@ -257,17 +332,24 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var isRequestingView: Bool = false
     private var isFirstHistoryView: Bool = true
     
-    init(context: AccountContext, openMessage: @escaping (MessageId) -> Bool, peerId: PeerId) {
+    init(context: AccountContext, openMessage: @escaping (MessageId) -> Bool, peerId: PeerId, interaction: PeerInfoPaneInteraction) {
         self.context = context
         self.peerId = peerId
+        self.interaction = interaction
         
         self.scrollNode = ASScrollNode()
         
         super.init()
         
-        self._itemInteraction = VisualMediaItemInteraction(openMessage: { id in
-            openMessage(id)
-        })
+        self._itemInteraction = VisualMediaItemInteraction(
+            openMessage: { id in
+                openMessage(id)
+            },
+            toggleSelection: { id in
+                interaction.toggleMessageSelected(id)
+            }
+        )
+        self.itemInteraction.selectedMessageIds = self.interaction.selectedMessageIds
         
         self.scrollNode.view.showsVerticalScrollIndicator = false
         if #available(iOS 11.0, *) {
@@ -372,6 +454,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         return nil
     }
     
+    func updateSelectedMessages(animated: Bool) {
+        self.itemInteraction.selectedMessageIds = self.interaction.selectedMessageIds
+        for (_, itemNode) in self.visibleMediaItems {
+            itemNode.updateSelectionState(animated: animated)
+        }
+    }
+    
     func update(size: CGSize, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
@@ -420,10 +509,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         maxVisibleRow = min(rowCount - 1, maxVisibleRow)
         
         let minVisibleIndex = minVisibleRow * itemsInRow
-        let maxVisibleIndex = min(self.mediaItems.count - 1, maxVisibleRow * itemsInRow - 1)
+        let maxVisibleIndex = min(self.mediaItems.count - 1, (maxVisibleRow + 1) * itemsInRow - 1)
         
         var validIds = Set<UInt32>()
-        if minVisibleIndex < maxVisibleIndex {
+        if minVisibleIndex <= maxVisibleIndex {
             for i in minVisibleIndex ... maxVisibleIndex {
                 let stableId = self.mediaItems[i].message.stableId
                 validIds.insert(stableId)

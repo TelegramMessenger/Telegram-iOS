@@ -77,7 +77,7 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
             data.copyBytes(to: self.memory.assumingMemoryBound(to: UInt8.self), count: data.count)
             self.capacity = data.count
             self.length = data.count
-            self.freeWhenDone = false
+            self.freeWhenDone = true
         }
     }
     

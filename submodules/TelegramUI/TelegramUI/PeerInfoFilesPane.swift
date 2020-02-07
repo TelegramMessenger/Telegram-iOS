@@ -13,6 +13,8 @@ import TelegramUIPreferences
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId
+    private let paneInteraction: PeerInfoPaneInteraction
+    private let controllerInteraction: ChatControllerInteraction
     
     private let listNode: ChatHistoryListNode
     
@@ -24,14 +26,25 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.ready.get()
     }
     
+    private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
+    private var selectedMessages: Set<MessageId>? {
+        didSet {
+            if self.selectedMessages != oldValue {
+                self.selectedMessagesPromise.set(.single(self.selectedMessages))
+            }
+        }
+    }
+    
     private var hiddenMediaDisposable: Disposable?
     
-    init(context: AccountContext, openMessage: @escaping (MessageId) -> Bool, peerId: PeerId, tagMask: MessageTags) {
+    init(context: AccountContext, openMessage: @escaping (MessageId) -> Bool, peerId: PeerId, tagMask: MessageTags, interaction: PeerInfoPaneInteraction) {
         self.context = context
         self.peerId = peerId
+        self.paneInteraction = interaction
         
         var openMessageImpl: ((MessageId) -> Bool)?
-        let controllerInteraction = ChatControllerInteraction(openMessage: { message, _ in
+        var toggleMessageSelectionImpl: (([MessageId]) -> Void)?
+        self.controllerInteraction = ChatControllerInteraction(openMessage: { message, _ in
             return openMessageImpl?(message.id) ?? false
         }, openPeer: { _, _, _ in
         }, openPeerMention: { _ in
@@ -39,7 +52,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in
         }, tapMessage: nil, clickThroughMessage: {
-        }, toggleMessagesSelection: { _, _ in
+        }, toggleMessagesSelection: { ids, _ in
+            toggleMessageSelectionImpl?(ids)
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
         }, sendSticker: { _, _, _, _ in
@@ -97,13 +111,24 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
+        self.controllerInteraction.selectionState = self.paneInteraction.selectedMessageIds.flatMap { ids in
+            return ChatInterfaceSelectionState(selectedIds: ids)
+        }
+        self.selectedMessages = self.paneInteraction.selectedMessageIds
+        self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: nil, controllerInteraction: controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: false))
+        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: nil, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false))
         
         super.init()
         
         openMessageImpl = { id in
             return openMessage(id)
+        }
+        
+        toggleMessageSelectionImpl = { [weak self] ids in
+            for id in ids {
+                self?.paneInteraction.toggleMessageSelected(id)
+            }
         }
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
@@ -116,7 +141,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     hiddenMedia[messageId] = [media]
                 }
             }
-            controllerInteraction.hiddenMedia = hiddenMedia
+            strongSelf.controllerInteraction.hiddenMedia = hiddenMedia
             strongSelf.listNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ListMessageNode {
                     itemNode.updateHiddenMedia()
@@ -170,5 +195,17 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
         return transitionNode
+    }
+    
+    func updateSelectedMessages(animated: Bool) {
+        self.controllerInteraction.selectionState = self.paneInteraction.selectedMessageIds.flatMap { ids in
+            return ChatInterfaceSelectionState(selectedIds: ids)
+        }
+        self.listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                itemNode.updateSelectionState(animated: animated)
+            }
+        }
+        self.selectedMessages = self.paneInteraction.selectedMessageIds
     }
 }

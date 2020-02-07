@@ -241,7 +241,7 @@ private final class NavigationButtonItemNode: ASTextNode {
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesMoved(touches, with: event)
         
-        self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
+        //self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
     }
     
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -251,7 +251,7 @@ private final class NavigationButtonItemNode: ASTextNode {
         let previousTouchCount = self.touchCount
         self.touchCount = max(0, self.touchCount - touches.count)
         
-        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && self.touchInsideApparentBounds(touches.first!) {
+        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled {
             self.pressed()
         }
     }
@@ -454,5 +454,13 @@ public final class NavigationButtonNode: ASDisplayNode {
             nodeOrigin.x += node.bounds.width
         }
         return totalSize
+    }
+    
+    func internalHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.nodes.count == 1 {
+            return self.nodes[0].view
+        } else {
+            return super.hitTest(point, with: event)
+        }
     }
 }
