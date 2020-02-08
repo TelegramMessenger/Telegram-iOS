@@ -1866,12 +1866,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.controllerInteraction = controllerInteraction
         
-        var displayNavigationAvatar = false
-        if case let .peer(peerId) = chatLocation, peerId != context.account.peerId {
-            displayNavigationAvatar = true
+        if case let .peer(peerId) = chatLocation, peerId != context.account.peerId, subject != .scheduledMessages {
             self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
         }
-        self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, displayAvatar: displayNavigationAvatar)
+        self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, displayAvatar: true)
         if let avatarNode = self.chatTitleView?.avatarNode {
             avatarNode.chatController = self
             avatarNode.contextAction = { [weak self] node, gesture in
@@ -1988,8 +1986,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages)
-                                strongSelf.chatTitleView?.avatarNode?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: peer.isDeleted ? .deletedIcon : .none)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                let imageOverride: AvatarNodeImageOverride?
+                                if strongSelf.context.account.peerId == peer.id {
+                                    imageOverride = .savedMessagesIcon
+                                } else if peer.isDeleted {
+                                    imageOverride = .deletedIcon
+                                } else {
+                                    imageOverride = nil
+                                }
+                                strongSelf.chatTitleView?.avatarNode?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
+                                strongSelf.chatTitleView?.avatarNode?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && imageOverride == nil && peer.smallProfileImage != nil
                             }
                             
                             if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
@@ -5074,6 +5080,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.navigationItem.setLeftBarButton(nil, animated: transition.isAnimated)
             self.leftNavigationButton = nil
         }
+        
+        self.chatTitleView?.displayAvatar = updatedChatPresentationInterfaceState.interfaceState.selectionState == nil
         
         if let button = rightNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
             if self.rightNavigationButton != button {

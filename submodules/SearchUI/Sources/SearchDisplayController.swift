@@ -22,7 +22,7 @@ public final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings, fieldStyle: .modern)
         self.mode = mode
         self.contentNode = contentNode
@@ -47,6 +47,9 @@ public final class SearchDisplayController {
         self.contentNode.setQuery = { [weak self] prefix, query in
             self?.searchBar.prefixString = prefix
             self?.searchBar.text = query
+        }
+        if let placeholder = placeholder {
+            self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         }
         self.contentNode.setPlaceholder = { [weak self] string in
             guard string != self?.searchBar.placeholderString?.string else {
@@ -153,6 +156,7 @@ public final class SearchDisplayController {
         if let placeholder = placeholder {
             self.searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
         } else {
+            self.searchBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         }
     }

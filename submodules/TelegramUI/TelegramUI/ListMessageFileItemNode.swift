@@ -658,7 +658,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             strongSelf.addSubnode(waveformScrubbingNode)
                         }
                         
-                        strongSelf.waveformScrubbingNode?.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 10.0), size: CGSize(width: params.width - (leftOffset + leftInset) - 16.0, height: 12.0))
+                        transition.updateFrame(node: waveformScrubbingNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 10.0), size: CGSize(width: params.width - leftInset - 16.0, height: 12.0)))
                         
                         waveformNode.setup(color: item.theme.list.controlSecondaryColor, waveform: waveform)
                         waveformForegroundNode.setup(color: item.theme.list.itemAccentColor, waveform: waveform)
@@ -809,7 +809,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             }
         }
         self.waveformScrubbingNode?.enableScrubbing = enableScrubbing
-        if let musicIsPlaying = musicIsPlaying, !isVoice {
+        if let musicIsPlaying = musicIsPlaying, !isVoice, !isInstantVideo {
             if self.playbackOverlayNode == nil {
                 let playbackOverlayNode = ListMessagePlaybackOverlayNode()
                 playbackOverlayNode.frame = self.iconImageNode.frame

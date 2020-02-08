@@ -35,24 +35,24 @@ private struct GroupsInCommonListEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> ListViewItem {
         let peer = self.peer
         return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: self.peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
             openPeer(peer)
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, removePeer: { _ in
         }, contextAction: { node, gesture in
-            //arguments.contextAction(peer, node, gesture)
+            openPeerContextAction(peer, node, gesture)
         }, hasTopStripe: false, noInsets: true)
     }
 }
 
-private func preparedTransition(from fromEntries: [GroupsInCommonListEntry], to toEntries: [GroupsInCommonListEntry], context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void) -> GroupsInCommonListTransaction {
+private func preparedTransition(from fromEntries: [GroupsInCommonListEntry], to toEntries: [GroupsInCommonListEntry], context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> GroupsInCommonListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer, openPeerContextAction: openPeerContextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     
     return GroupsInCommonListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -60,7 +60,8 @@ private func preparedTransition(from fromEntries: [GroupsInCommonListEntry], to 
 final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId
-    private let paneInteraction: PeerInfoPaneInteraction
+    private let chatControllerInteraction: ChatControllerInteraction
+    private let openPeerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     
     private let listNode: ListView
     private var peers: [Peer] = []
@@ -75,10 +76,11 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId, interaction: PeerInfoPaneInteraction, peers: [Peer]) {
+    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, peers: [Peer]) {
         self.context = context
         self.peerId = peerId
-        self.paneInteraction = interaction
+        self.chatControllerInteraction = chatControllerInteraction
+        self.openPeerContextAction = openPeerContextAction
         
         self.listNode = ListView()
         
@@ -102,14 +104,14 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
     }
     
-    func update(size: CGSize, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
 
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), headerInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
@@ -124,7 +126,9 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             entries.append(GroupsInCommonListEntry(index: entries.count, peer: peer))
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            self?.paneInteraction.openPeer(peer)
+            self?.chatControllerInteraction.openPeer(peer.id, .default, nil)
+        }, openPeerContextAction: { [weak self] peer, node, gesture in
+            self?.openPeerContextAction(peer, node, gesture)
         })
         self.currentEntries = entries
         self.enqueuedTransactions.append(transaction)
@@ -156,11 +160,20 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return nil
     }
     
+    func updateHiddenMedia() {
+    }
+    
     func transferVelocity(_ velocity: CGFloat) {
+        if velocity > 0.0 {
+            self.listNode.transferVelocity(velocity)
+        }
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
+    }
+    
+    func addToTransitionSurface(view: UIView) {
     }
     
     func updateSelectedMessages(animated: Bool) {

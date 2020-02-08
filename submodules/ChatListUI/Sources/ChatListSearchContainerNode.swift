@@ -193,8 +193,10 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }, setPeerIdWithRevealedOptions: setPeerIdWithRevealedOptions, deletePeer: deletePeer, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = peer.peer.peers[peer.peer.peerId] {
+                        if let chatPeer = peer.peer.peers[peer.peer.peerId], chatPeer.id.namespace != Namespaces.Peer.SecretChat {
                             peerContextAction(chatPeer, .recentSearch, node, gesture)
+                        } else {
+                            gesture?.cancel()
                         }
                     }
                 })
@@ -415,7 +417,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = chatPeer {
+                        if let chatPeer = chatPeer, chatPeer.id.namespace != Namespaces.Peer.SecretChat {
                             peerContextAction(chatPeer, .search, node, gesture)
                         } else {
                             gesture?.cancel()

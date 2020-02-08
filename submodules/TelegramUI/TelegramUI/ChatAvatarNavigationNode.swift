@@ -80,12 +80,20 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         (self.view as? ChatAvatarNavigationNodeView)?.targetNode = self
         (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
         
-        self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:))))
+        let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:)))
+        self.avatarNode.view.addGestureRecognizer(tapRecognizer)
     }
     
-    @objc private func avatarTapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func avatarTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.tapped?()
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap:
+                    self.tapped?()
+                default:
+                    break
+                }
+            }
         }
     }
     

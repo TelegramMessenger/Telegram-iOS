@@ -38,6 +38,20 @@ public class ImmediateTextNode: TextNode {
         let node = TextNode()
         node.cachedLayout = self.cachedLayout
         node.frame = self.frame
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                if let subnode = subnode as? ASImageNode {
+                    let copySubnode = ASImageNode()
+                    copySubnode.isLayerBacked = subnode.isLayerBacked
+                    copySubnode.image = subnode.image
+                    copySubnode.displaysAsynchronously = false
+                    copySubnode.displayWithoutProcessing = true
+                    copySubnode.frame = subnode.frame
+                    copySubnode.alpha = subnode.alpha
+                    node.addSubnode(copySubnode)
+                }
+            }
+        }
         return node
     }
     

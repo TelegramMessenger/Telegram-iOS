@@ -371,7 +371,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
                 var preset = preset
                 if currentPreset == nil {
-                    preset.id = max(1, settings.filters.map({ $0.id }).max() ?? 1)
+                    preset.id = max(2, settings.filters.map({ $0.id }).max() ?? 2)
                 }
                 var settings = settings
                 settings.filters = settings.filters.filter { $0 != preset && $0 != currentPreset }

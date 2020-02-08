@@ -133,6 +133,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }*/
     }
     
+    func hasNonReadyControllers() -> Bool {
+        if let pending = self.state.pending, !pending.isReady {
+            return true
+        }
+        return false
+    }
+    
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
@@ -185,6 +192,17 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     if let strongSelf = self {
                         if let top = strongSelf.state.top {
                             strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
+                            
+                            var updatedStatusBarStyle = strongSelf.statusBarStyle
+                            if let childTransition = strongSelf.state.transition, childTransition.coordinator.progress >= 0.3 {
+                                updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
+                            } else {
+                                updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+                            }
+                            if strongSelf.statusBarStyle != updatedStatusBarStyle {
+                                strongSelf.statusBarStyle = updatedStatusBarStyle
+                                strongSelf.statusBarStyleUpdated?(.animated(duration: 0.3, curve: .easeInOut))
+                            }
                         }
                     }
                 })
@@ -337,7 +355,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             }
             self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
-            updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+            if let childTransition = self.state.transition, childTransition.coordinator.progress >= 0.3 {
+                updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
+            } else {
+                updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+            }
         } else {
             updatedStatusBarStyle = .Ignore
         }
