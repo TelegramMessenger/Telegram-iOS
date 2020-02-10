@@ -4,8 +4,8 @@ set -e
 set -x
 
 API_HOST="https://api.appcenter.ms"
-IPA_PATH="build/Telegram_Signed.ipa"
-DSYM_PATH="build/DSYM.zip"
+IPA_PATH="build/artifacts/Telegram.ipa"
+DSYM_PATH="build/artifacts/Telegram.DSYMs.zip"
 
 upload_ipa() {
     GROUP_DATA=$(curl \
