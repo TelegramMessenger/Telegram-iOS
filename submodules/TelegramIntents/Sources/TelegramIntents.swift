@@ -135,7 +135,8 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                             signals.append(.single((peer, subject, savedMessagesAvatar)))
                         } else {
                             let peerAndAvatar = (peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil))
-                            |> map { avatarImage in
+                            |> map { imageVersions -> (Peer, SendMessageIntentSubject, UIImage?) in
+                                let avatarImage = imageVersions?.0
                                 return (peer, subject, avatarImage)
                             }
                             signals.append(peerAndAvatar)

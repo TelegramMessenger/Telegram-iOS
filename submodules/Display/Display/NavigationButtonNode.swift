@@ -306,6 +306,13 @@ private final class NavigationButtonItemNode: ASTextNode {
 public final class NavigationButtonNode: ASDisplayNode {
     private var nodes: [NavigationButtonItemNode] = []
     
+    public var singleCustomNode: ASDisplayNode? {
+        for node in self.nodes {
+            return node.node
+        }
+        return nil
+    }
+    
     public var pressed: (Int) -> () = { _ in }
     public var highlightChanged: (Int, Bool) -> () = { _, _ in }
     

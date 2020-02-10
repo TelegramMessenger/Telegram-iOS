@@ -1476,7 +1476,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let inset: CGFloat = 3.0
             if let signal = peerAvatarImage(account: primary.0, peerReference: PeerReference(primary.1), authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                 return signal
-                |> map { image -> (UIImage, UIImage)? in
+                |> map { imageVersions -> (UIImage, UIImage)? in
+                    let image = imageVersions?.0
                     if let image = image, let selectedImage = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)

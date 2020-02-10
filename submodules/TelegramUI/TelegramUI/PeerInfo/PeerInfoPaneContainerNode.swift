@@ -128,7 +128,12 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
         
         super.init()
         
-        self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.scrollNode.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.scrollNode.view.contentOffset.x > .ulpOfOne
+        }
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.scrollsToTop = false
         if #available(iOS 11.0, *) {
@@ -249,7 +254,7 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
                 }
                 leftOffset += paneNodeSize.width + spacing
             }
-            self.scrollNode.view.contentSize = CGSize(width: leftOffset + sideInset, height: size.height)
+            self.scrollNode.view.contentSize = CGSize(width: leftOffset - spacing + sideInset, height: size.height)
         }
         
         if let selectedFrame = selectedFrame {

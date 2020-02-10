@@ -1628,10 +1628,11 @@ private final class MergedAvatarsNode: ASDisplayNode {
                     if self.disposables[peer.peerId] == nil {
                         if let signal = peerAvatarImage(account: context.account, peerReference: peerReference, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: mergedImageSize, height: mergedImageSize), synchronousLoad: synchronousLoad) {
                             let disposable = (signal
-                            |> deliverOnMainQueue).start(next: { [weak self] image in
+                            |> deliverOnMainQueue).start(next: { [weak self] imageVersions in
                                 guard let strongSelf = self else {
                                     return
                                 }
+                                let image = imageVersions?.0
                                 if let image = image {
                                     strongSelf.images[peer.peerId] = image
                                     strongSelf.setNeedsDisplay()

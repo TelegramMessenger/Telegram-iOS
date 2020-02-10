@@ -112,7 +112,7 @@ open class NavigationBar: ASDisplayNode {
     public var backPressed: () -> () = { }
     
     public var userInfo: Any?
-    public var makeCustomTransitionNode: ((NavigationBar) -> CustomNavigationTransitionNode?)?
+    public var makeCustomTransitionNode: ((NavigationBar, Bool) -> CustomNavigationTransitionNode?)?
     
     private var collapsed: Bool {
         get {

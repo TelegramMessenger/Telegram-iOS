@@ -191,6 +191,8 @@ public final class AvatarNode: ASDisplayNode {
     private let imageReadyDisposable = MetaDisposable()
     private var state: AvatarNodeState = .empty
     
+    public var unroundedImage: UIImage?
+    
     private let imageReady = Promise<Bool>(false)
     public var ready: Signal<Void, NoError> {
         let imageReady = self.imageReady
@@ -283,7 +285,7 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) {
+    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -318,11 +320,18 @@ public final class AvatarNode: ASDisplayNode {
             
             let parameters: AvatarNodeParameters
             
-            if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
+            if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.ready)
-                self.imageNode.setSignal(signal)
+                self.imageNode.setSignal(signal |> beforeNext { [weak self] next in
+                    Queue.mainQueue().async {
+                        self?.unroundedImage = next?.1
+                    }
+                }
+                |> map { next -> UIImage? in
+                    return next?.0
+                })
                 
                 if case .editAvatarIcon = icon {
                     if self.editOverlayNode == nil {

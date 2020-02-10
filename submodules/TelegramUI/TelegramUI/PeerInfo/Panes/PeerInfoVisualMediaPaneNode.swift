@@ -372,6 +372,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         )
         self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         
+        self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never

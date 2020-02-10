@@ -101,8 +101,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private let button: HighlightTrackingButtonNode
     
-    let avatarNode: ChatAvatarNavigationNode?
-    
     private var validLayout: (CGSize, CGRect)?
     
     private var titleLeftIcon: ChatTitleIcon = .none
@@ -178,15 +176,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     var pressed: (() -> Void)?
-    
-    var displayAvatar: Bool = true {
-        didSet {
-            if self.displayAvatar != oldValue {
-                self.avatarNode?.isHidden = !self.displayAvatar
-                self.setNeedsLayout()
-            }
-        }
-    }
     
     var titleContent: ChatTitleContent? {
         didSet {
@@ -480,7 +469,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, displayAvatar: Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -511,11 +500,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         self.activityNode = ChatTitleActivityNode()
         self.button = HighlightTrackingButtonNode()
-        if displayAvatar {
-            self.avatarNode = ChatAvatarNavigationNode()
-        } else {
-            self.avatarNode = nil
-        }
         
         super.init(frame: CGRect())
         
@@ -526,7 +510,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.contentContainer.addSubnode(self.titleNode)
         self.contentContainer.addSubnode(self.activityNode)
         self.addSubnode(self.button)
-        self.avatarNode.flatMap(self.contentContainer.addSubnode)
         
         self.presenceManager = PeerPresenceStatusManager(update: { [weak self] in
             self?.updateStatus()
@@ -541,16 +524,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     strongSelf.titleCredibilityIconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                     strongSelf.activityNode.alpha = 0.4
-                    strongSelf.titleCredibilityIconNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.activityNode.alpha = 1.0
                     strongSelf.titleCredibilityIconNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.activityNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.titleLeftIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.titleRightIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.titleCredibilityIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -587,6 +566,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         let transition: ContainedViewLayoutTransition = .immediate
         
+        self.button.frame = clearBounds
         self.contentContainer.frame = clearBounds
         
         var leftIconWidth: CGFloat = 0.0
@@ -604,7 +584,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         if let image = self.titleCredibilityIconNode.image {
             if self.titleCredibilityIconNode.supernode == nil {
-                self.contentContainer.addSubnode(self.titleCredibilityIconNode)
+                self.titleNode.addSubnode(self.titleCredibilityIconNode)
             }
             credibilityIconWidth = image.size.width + 3.0
         } else if self.titleCredibilityIconNode.supernode != nil {
@@ -620,47 +600,67 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleRightIconNode.removeFromSupernode()
         }
         
-        var leftInset: CGFloat = 12.0
-        if let avatarNode = self.avatarNode {
-            let avatarSize = CGSize(width: 37.0, height: 37.0)
-            let avatarFrame = CGRect(origin: CGPoint(x: leftInset + 10.0, y: floor((size.height - avatarSize.height) / 2.0)), size: avatarSize)
-            avatarNode.frame = avatarFrame
-            if self.displayAvatar {
-                leftInset += avatarSize.width + 10.0 + 8.0
-            }
-        }
-        
-        self.button.frame = CGRect(origin: CGPoint(x: leftInset - 20.0, y: 0.0), size: CGSize(width: clearBounds.width - leftInset, height: size.height))
-        
         let titleSideInset: CGFloat = 3.0
-        var titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0 - leftInset, height: size.height))
-        titleSize.width += credibilityIconWidth
-        let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .left)
-        let titleInfoSpacing: CGFloat = 0.0
-        
-        var titleFrame: CGRect
-        
-        if activitySize.height.isZero {
-            titleFrame = CGRect(origin: CGPoint(x: leftInset + leftIconWidth, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
-            self.titleNode.frame = titleFrame
+        if size.height > 40.0 {
+            var titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
+            titleSize.width += credibilityIconWidth
+            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
+            let titleInfoSpacing: CGFloat = 0.0
+            
+            var titleFrame: CGRect
+            
+            if activitySize.height.isZero {
+                titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                if titleFrame.size.width < size.width {
+                    titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
+                }
+                self.titleNode.frame = titleFrame
+            } else {
+                let combinedHeight = titleSize.height + activitySize.height + titleInfoSpacing
+                
+                titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+                if titleFrame.size.width < size.width {
+                    titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
+                }
+                titleFrame.origin.x = max(titleFrame.origin.x, clearBounds.minX + leftIconWidth)
+                self.titleNode.frame = titleFrame
+                
+                var activityFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - activitySize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
+                if activitySize.width < size.width {
+                    activityFrame.origin.x = -clearBounds.minX + floor((size.width - activityFrame.width) / 2.0)
+                }
+                self.activityNode.frame = activityFrame
+            }
+            
+            if let image = self.titleLeftIconNode.image {
+                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
+            }
+            if let image = self.titleCredibilityIconNode.image {
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width - image.size.width - 1.0, y: 2.0), size: image.size)
+            }
+            if let image = self.titleRightIconNode.image {
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width + 3.0, y: 6.0), size: image.size)
+            }
         } else {
-            let combinedHeight = titleSize.height + activitySize.height + titleInfoSpacing
+            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height))
+            let activitySize = self.activityNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height), alignment: .center)
             
-            titleFrame = CGRect(origin: CGPoint(x: leftInset + leftIconWidth, y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+            let titleInfoSpacing: CGFloat = 8.0
+            let combinedWidth = titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + activitySize.width + titleInfoSpacing
+            
+            let titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((clearBounds.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             self.titleNode.frame = titleFrame
+            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + credibilityIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
             
-            var activityFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
-            self.activityNode.frame = activityFrame
-        }
-        
-        if let image = self.titleLeftIconNode.image {
-            self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
-        }
-        if let image = self.titleCredibilityIconNode.image {
-            self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 2.0), size: image.size)
-        }
-        if let image = self.titleRightIconNode.image {
-            self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width + 3.0, y: 6.0), size: image.size)
+            if let image = self.titleLeftIconNode.image {
+                self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
+            }
+            if let image = self.titleCredibilityIconNode.image {
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
+            }
+            if let image = self.titleRightIconNode.image {
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
+            }
         }
     }
     

@@ -2020,10 +2020,10 @@ public func instantPageImageFile(account: Account, fileReference: FileMediaRefer
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
        
-        let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+        let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource, attemptSynchronously: attemptSynchronously)
     
         let signal = maybeFullSize
         |> take(1)
@@ -2037,7 +2037,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
-                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(smallestRepresentation.resource).start(next: { next in
+                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(smallestRepresentation.resource, attemptSynchronously: attemptSynchronously).start(next: { next in
                         subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
@@ -2052,7 +2052,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                 if autoFetchFullSize {
                     fullSizeData = Signal<Tuple2<Data?, Bool>, NoError> { subscriber in
                         let fetchedFullSizeDisposable = fetchedFullSize.start()
-                        let fullSizeDisposable = account.postbox.mediaBox.resourceData(largestRepresentation.resource).start(next: { next in
+                        let fullSizeDisposable = account.postbox.mediaBox.resourceData(largestRepresentation.resource, attemptSynchronously: attemptSynchronously).start(next: { next in
                             subscriber.putNext(Tuple(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                         }, error: subscriber.putError, completed: subscriber.putCompletion)
                         
@@ -2082,8 +2082,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize)
+public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously)
     
     return signal
     |> map { value in

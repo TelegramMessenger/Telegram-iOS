@@ -35,6 +35,7 @@ final class NavigationTransitionCoordinator {
     
     private let container: ASDisplayNode
     private let transition: NavigationTransition
+    let isInteractive: Bool
     let topNode: ASDisplayNode
     let bottomNode: ASDisplayNode
     private let topNavigationBar: NavigationBar?
@@ -49,8 +50,9 @@ final class NavigationTransitionCoordinator {
     private var currentCompletion: (() -> Void)?
     private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)?
     
-    init(transition: NavigationTransition, container: ASDisplayNode, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
+    init(transition: NavigationTransition, isInteractive: Bool, container: ASDisplayNode, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
+        self.isInteractive = isInteractive
         self.container = container
         self.didUpdateProgress = didUpdateProgress
         self.topNode = topNode
@@ -65,11 +67,11 @@ final class NavigationTransitionCoordinator {
         self.shadowNode.image = shadowImage
         
         if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar {
-            if let customTransitionNode = topNavigationBar.makeCustomTransitionNode?(bottomNavigationBar) {
+            if let customTransitionNode = topNavigationBar.makeCustomTransitionNode?(bottomNavigationBar, isInteractive) {
                 self.inlineNavigationBarTransition = false
                 customTransitionNode.setup(topNavigationBar: topNavigationBar, bottomNavigationBar: bottomNavigationBar)
                 self.customTransitionNode = customTransitionNode
-            } else if let customTransitionNode = bottomNavigationBar.makeCustomTransitionNode?(topNavigationBar) {
+            } else if let customTransitionNode = bottomNavigationBar.makeCustomTransitionNode?(topNavigationBar, isInteractive) {
                 self.inlineNavigationBarTransition = false
                 customTransitionNode.setup(topNavigationBar: topNavigationBar, bottomNavigationBar: bottomNavigationBar)
                 self.customTransitionNode = customTransitionNode
@@ -131,9 +133,16 @@ final class NavigationTransitionCoordinator {
         let topFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * containerSize.width), y: 0.0), size: containerSize)
         let bottomFrame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
         
+        var canInvokeCompletion = false
+        var hadEarlyCompletion = false
         transition.updateFrame(node: self.topNode, frame: topFrame, completion: { _ in
-            completion()
+            if canInvokeCompletion {
+                completion()
+            } else {
+                hadEarlyCompletion = true
+            }
         })
+        canInvokeCompletion = true
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, topFrame.minX), height: self.container.bounds.size.height - dimInset)))
         transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: self.dimNode.frame.maxX - shadowWidth, y: dimInset), size: CGSize(width: shadowWidth, height: containerSize.height - dimInset)))
         transition.updateAlpha(node: self.dimNode, alpha: (1.0 - position) * 0.15)
@@ -149,6 +158,10 @@ final class NavigationTransitionCoordinator {
         }
         
         self.didUpdateProgress?(self.progress, transition, topFrame, bottomFrame)
+        
+        if hadEarlyCompletion {
+            completion()
+        }
     }
     
     private func updateNavigationBarTransition(transition: ContainedViewLayoutTransition) {
