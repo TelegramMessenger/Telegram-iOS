@@ -5317,7 +5317,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeopleNearby.VisibleUntil" = "visible until %@";
 
 "PeopleNearby.MakeVisibleTitle" = "Make Myself Visible";
-"PeopleNearby.MakeVisibleDescription" = "Allow people nearby to view your profile for 24 hours?\n\nYour phone number will remain hidden.";
+"PeopleNearby.MakeVisibleDescription" = "Users nearby will be able to view your profile and send you messages. This may help you find new friends, but could also attract excessive attention. You can stop sharing your profile and location at any time.\n\nYour phone number will remain hidden.";
 
 "PeopleNearby.DiscoverDescription" = "Exchange contact info with people nearby\nand find new friends.";
 
