@@ -293,32 +293,34 @@ private struct PeersNearbyData: Equatable {
     let longitude: Double
     let address: String?
     let visible: Bool
+    let accountPeerId: PeerId
     let users: [PeerNearbyEntry]
     let groups: [PeerNearbyEntry]
     let channels: [PeerNearbyEntry]
     
-    init(latitude: Double, longitude: Double, address: String?, visible: Bool, users: [PeerNearbyEntry], groups: [PeerNearbyEntry], channels: [PeerNearbyEntry]) {
+    init(latitude: Double, longitude: Double, address: String?, visible: Bool, accountPeerId: PeerId, users: [PeerNearbyEntry], groups: [PeerNearbyEntry], channels: [PeerNearbyEntry]) {
         self.latitude = latitude
         self.longitude = longitude
         self.address = address
         self.visible = visible
+        self.accountPeerId = accountPeerId
         self.users = users
         self.groups = groups
         self.channels = channels
     }
     
     static func ==(lhs: PeersNearbyData, rhs: PeersNearbyData) -> Bool {
-        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude && lhs.address == rhs.address && lhs.visible == rhs.visible && arePeerNearbyArraysEqual(lhs.users, rhs.users) && arePeerNearbyArraysEqual(lhs.groups, rhs.groups) && arePeerNearbyArraysEqual(lhs.channels, rhs.channels)
+        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude && lhs.address == rhs.address && lhs.visible == rhs.visible && lhs.accountPeerId == rhs.accountPeerId && arePeerNearbyArraysEqual(lhs.users, rhs.users) && arePeerNearbyArraysEqual(lhs.groups, rhs.groups) && arePeerNearbyArraysEqual(lhs.channels, rhs.channels)
     }
 }
 
-private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationData: PresentationData, displayLoading: Bool, expanded: Bool) -> [PeersNearbyEntry] {
+private func peersNearbyControllerEntries(data: PeersNearbyData?, state: PeersNearbyState, presentationData: PresentationData, displayLoading: Bool, expanded: Bool) -> [PeersNearbyEntry] {
     var entries: [PeersNearbyEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.PeopleNearby_DiscoverDescription))
     entries.append(.usersHeader(presentationData.theme, presentationData.strings.PeopleNearby_Users.uppercased(), displayLoading && data == nil))
     
-    let visible = data?.visible ?? false
+    let visible = state.visibilityExpires != nil
     entries.append(.visibility(presentationData.theme, visible ? presentationData.strings.PeopleNearby_MakeInvisible : presentationData.strings.PeopleNearby_MakeVisible, visible))
     
     if let data = data, !data.users.isEmpty {
@@ -332,8 +334,10 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
         }
         
         for user in users {
-            entries.append(.user(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, user))
-            i += 1
+            if user.peer.0.id != data.accountPeerId {
+                entries.append(.user(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, user))
+                i += 1
+            }
         }
         
         if !effectiveExpanded {
@@ -458,8 +462,6 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     
     let dataPromise = Promise<PeersNearbyData?>(nil)
     let addressPromise = Promise<String?>(nil)
-    
-    let visibilityPromise = ValuePromise<Bool>(true)
     let expandedPromise = ValuePromise<Bool>(false)
     
     let coordinatePromise = Promise<CLLocationCoordinate2D?>(nil)
@@ -478,11 +480,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                 })
             })]), nil)
             
-            visibilityPromise.set(true)
+            
         } else {
             let _ = peersNearbyUpdateVisibility(account: context.account, update: .invisible, background: false).start()
-            
-            visibilityPromise.set(false)
         }
     }, openProfile: { peer in
         navigateToProfileImpl?(peer)
@@ -585,7 +585,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                                 }
                         }
                     }
-                    return PeersNearbyData(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address, visible: visible, users: users, groups: groups, channels: [])
+                    return PeersNearbyData(latitude: coordinate.latitude, longitude: coordinate.longitude, address: address, visible: visible, accountPeerId: context.account.peerId, users: users, groups: groups, channels: [])
                 }
             }
             
@@ -607,11 +607,12 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         .single(true)
         |> delay(1.0, queue: Queue.mainQueue())
     )
-    
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading, visibilityPromise.get(), expandedPromise.get())
+        
+    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading, expandedPromise.get(), context.account.postbox.preferencesView(keys: [PreferencesKeys.peersNearby]))
     |> deliverOnMainQueue
-    |> map { presentationData, data, displayLoading, visibility, expanded -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, displayLoading, expanded, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
+        let state = view.values[PreferencesKeys.peersNearby] as? PeersNearbyState ?? .default
         
         var crossfade = false
         if (data?.users.isEmpty ?? true) != (previous?.users.isEmpty ?? true) {
@@ -622,7 +623,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PeopleNearby_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, presentationData: presentationData, displayLoading: displayLoading, expanded: expanded), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, state: state, presentationData: presentationData, displayLoading: displayLoading, expanded: expanded), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
         
         return (controllerState, (listState, arguments))
     }
@@ -635,7 +636,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
             (navigationController as? NavigationController)?.pushViewController(controller)
         }
     }

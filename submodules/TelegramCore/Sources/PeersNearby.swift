@@ -34,7 +34,7 @@ public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisi
         case let .visible(latitude, longitude):
             flags |= (1 << 0)
             geoPoint = .inputGeoPoint(lat: latitude, long: longitude)
-            selfExpires = 86400
+            selfExpires = 0x7fffffff
         case let .location(latitude, longitude):
             geoPoint = .inputGeoPoint(lat: latitude, long: longitude)
         case .invisible:
@@ -46,10 +46,10 @@ public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisi
     let _ = (account.postbox.transaction { transaction in
         transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
             var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
-            if let expires = selfExpires {
-                settings.visibilityExpires = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + expires
-            } else if case .invisible = update {
+            if case .invisible = update {
                 settings.visibilityExpires = nil
+            } else if let expires = selfExpires {
+                settings.visibilityExpires = expires
             }
             return settings
         })

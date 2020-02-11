@@ -1374,6 +1374,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     }))
                                 }
+                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    UIPasteboard.general.string = number
+                                }))
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
