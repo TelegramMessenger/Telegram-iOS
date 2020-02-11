@@ -15953,6 +15953,44 @@ public extension Api {
         }
     
     }
+    public enum BankCardOpenUrl: TypeConstructorDescription {
+        case bankCardOpenUrl(url: String, name: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .bankCardOpenUrl(let url, let name):
+                    if boxed {
+                        buffer.appendInt32(-177732982)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .bankCardOpenUrl(let url, let name):
+                return ("bankCardOpenUrl", [("url", url), ("name", name)])
+    }
+    }
+    
+        public static func parse_bankCardOpenUrl(_ reader: BufferReader) -> BankCardOpenUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BankCardOpenUrl.bankCardOpenUrl(url: _1!, name: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum ChatPhoto: TypeConstructorDescription {
         case chatPhotoEmpty
         case chatPhoto(photoSmall: Api.FileLocation, photoBig: Api.FileLocation, dcId: Int32)

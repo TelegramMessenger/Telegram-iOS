@@ -491,44 +491,42 @@ public struct payments {
     
     }
     public enum BankCardData: TypeConstructorDescription {
-        case bankCardData(flags: Int32, title: String, url: String?, urlName: String?)
+        case bankCardData(title: String, openUrls: [Api.BankCardOpenUrl])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .bankCardData(let flags, let title, let url, let urlName):
+                case .bankCardData(let title, let openUrls):
                     if boxed {
-                        buffer.appendInt32(-419239361)
+                        buffer.appendInt32(1042605427)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(urlName!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(openUrls.count))
+                    for item in openUrls {
+                        item.serialize(buffer, true)
+                    }
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .bankCardData(let flags, let title, let url, let urlName):
-                return ("bankCardData", [("flags", flags), ("title", title), ("url", url), ("urlName", urlName)])
+                case .bankCardData(let title, let openUrls):
+                return ("bankCardData", [("title", title), ("openUrls", openUrls)])
     }
     }
     
         public static func parse_bankCardData(_ reader: BufferReader) -> BankCardData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.BankCardOpenUrl]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BankCardOpenUrl.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.payments.BankCardData.bankCardData(flags: _1!, title: _2!, url: _3, urlName: _4)
+            if _c1 && _c2 {
+                return Api.payments.BankCardData.bankCardData(title: _1!, openUrls: _2!)
             }
             else {
                 return nil

@@ -3263,6 +3263,33 @@ public extension Api {
                     })
                 }
             }
+            public static func inputMediaDice() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.InputMedia>) {
+                let buffer = Buffer()
+                buffer.appendInt32(-1358977017)
+                
+                return (FunctionDescription(name: "inputMediaDice", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.InputMedia? in
+                    let reader = BufferReader(buffer)
+                    var result: Api.InputMedia?
+                    if let signature = reader.readInt32() {
+                        result = Api.parse(reader, signature: signature) as? Api.InputMedia
+                    }
+                    return result
+                })
+            }
+        
+            public static func messageMediaDice(value: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                let buffer = Buffer()
+                buffer.appendInt32(1670374507)
+                serializeInt32(value, buffer: buffer, boxed: false)
+                return (FunctionDescription(name: "messageMediaDice", parameters: [("value", value)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    let reader = BufferReader(buffer)
+                    var result: Api.MessageMedia?
+                    if let signature = reader.readInt32() {
+                        result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                    }
+                    return result
+                })
+            }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()

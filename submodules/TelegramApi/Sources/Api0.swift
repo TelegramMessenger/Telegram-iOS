@@ -561,6 +561,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1739392570] = { return Api.DocumentAttribute.parse_documentAttributeAudio($0) }
     dict[358154344] = { return Api.DocumentAttribute.parse_documentAttributeFilename($0) }
     dict[-1744710921] = { return Api.DocumentAttribute.parse_documentAttributeHasStickers($0) }
+    dict[-177732982] = { return Api.BankCardOpenUrl.parse_bankCardOpenUrl($0) }
     dict[307276766] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[935395612] = { return Api.ChatPhoto.parse_chatPhotoEmpty($0) }
     dict[1197267925] = { return Api.ChatPhoto.parse_chatPhoto($0) }
@@ -818,7 +819,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
     dict[-892779534] = { return Api.WebAuthorization.parse_webAuthorization($0) }
     dict[-805141448] = { return Api.ImportedContact.parse_importedContact($0) }
-    dict[-419239361] = { return Api.payments.BankCardData.parse_bankCardData($0) }
+    dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     return dict
 }()
 
@@ -1237,6 +1238,8 @@ public struct Api {
             case let _1 as Api.auth.CodeType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DocumentAttribute:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BankCardOpenUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.Authorizations:
                 _1.serialize(buffer, boxed)

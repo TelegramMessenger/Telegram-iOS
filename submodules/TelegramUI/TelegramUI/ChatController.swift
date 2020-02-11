@@ -1357,17 +1357,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let message = message else {
                             return
                         }
+                        
                         let _ = (getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
                         |> deliverOnMainQueue).start(next: { [weak self] info in
                             if let strongSelf = self, let info = info {
                                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                 var items: [ActionSheetItem] = []
                                 items.append(ActionSheetTextItem(title: info.title))
-                                if let url = info.url, let actionTitle = info.actionTitle {
-                                    items.append(ActionSheetButtonItem(title: actionTitle, color: .accent, action: { [weak actionSheet] in
+                                for url in info.urls {
+                                    items.append(ActionSheetButtonItem(title: url.title, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction?.openUrl(url, false, false, message)
+                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message)
                                         }
                                     }))
                                 }
