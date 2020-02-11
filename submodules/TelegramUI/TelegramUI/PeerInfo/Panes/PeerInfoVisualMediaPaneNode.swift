@@ -87,7 +87,11 @@ private final class VisualMediaItemNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -237,6 +241,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     
     func updateSelectionState(animated: Bool) {
         if let (item, media, _, mediaDimensions) = self.item, let theme = self.theme {
+            self.containerNode.isGestureEnabled = self.interaction.selectedMessageIds == nil
+            
             if let selectedIds = self.interaction.selectedMessageIds {
                 let selected = selectedIds.contains(item.message.id)
                 
@@ -373,6 +379,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         
         self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.canCancelContentTouches = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never

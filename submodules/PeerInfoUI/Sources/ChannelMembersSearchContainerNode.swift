@@ -17,7 +17,7 @@ import ContactsPeerItem
 import ChatListSearchItemHeader
 import ItemListUI
 
-enum ChannelMembersSearchMode {
+public enum ChannelMembersSearchMode {
     case searchMembers
     case searchAdmins
     case searchBanned
@@ -239,10 +239,10 @@ private struct GroupMembersSearchContextState {
     var members: [RenderedChannelParticipant] = []
 }
 
-final class GroupMembersSearchContext {
+public final class GroupMembersSearchContext {
     fileprivate let state = Promise<GroupMembersSearchContextState>()
     
-    init(context: AccountContext, peerId: PeerId) {
+    public init(context: AccountContext, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
         
         let combinedSignal = combineLatest(queue: .mainQueue(), categorySignal(context: context, peerId: peerId, category: .contacts), categorySignal(context: context, peerId: peerId, category: .bots), categorySignal(context: context, peerId: peerId, category: .admins), categorySignal(context: context, peerId: peerId, category: .members))
@@ -275,7 +275,7 @@ private struct ChannelMembersSearchContainerState: Equatable {
     var removingParticipantIds = Set<PeerId>()
 }
 
-final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
+public final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
@@ -298,7 +298,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let presentationDataPromise: Promise<PresentationData>
     
-    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
@@ -1170,7 +1170,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.removeMemberDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
     }
     
@@ -1179,7 +1179,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.listNode.backgroundColor = theme.chatList.backgroundColor
     }
     
-    override func searchTextUpdated(text: String) {
+    override public func searchTextUpdated(text: String) {
         if text.isEmpty {
             self.searchQuery.set(.single(nil))
         } else {
@@ -1244,7 +1244,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -1268,7 +1268,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         }
     }
     
-    override func scrollToTop() {
+    override public func scrollToTop() {
         if self.listNode.isHidden {
             self.emptyQueryListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         } else {

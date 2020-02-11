@@ -17,6 +17,7 @@ private struct PeerMembersListTransaction {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let animated: Bool
 }
 
 enum PeerMembersListAction {
@@ -94,7 +95,7 @@ private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toE
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: action), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: action), directionHint: nil) }
     
-    return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates)
+    return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
 }
 
 final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
@@ -207,7 +208,11 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.enqueuedTransactions.remove(at: 0)
         
         var options = ListViewDeleteAndInsertOptions()
-        options.insert(.Synchronous)
+        if transaction.animated {
+            options.insert(.AnimateInsertion)
+        } else {
+            options.insert(.Synchronous)
+        }
         
         self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             guard let strongSelf = self else {

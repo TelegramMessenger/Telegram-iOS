@@ -5322,3 +5322,11 @@ Any member of this group will be able to see messages in the channel.";
 "PeopleNearby.DiscoverDescription" = "Exchange contact info with people nearby\nand find new friends.";
 
 "Time.TomorrowAt" = "tomorrow at %@";
+
+"PeerInfo.ButtonMessage" = "Message";
+"PeerInfo.ButtonDiscuss" = "Discuss";
+"PeerInfo.ButtonCall" = "Call";
+"PeerInfo.ButtonMute" = "Mute";
+"PeerInfo.ButtonUnmute" = "Unmute";
+"PeerInfo.ButtonMore" = "More";
+"PeerInfo.ButtonAddMember" = "Add Members";
