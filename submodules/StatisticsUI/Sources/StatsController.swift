@@ -13,8 +13,6 @@ import PresentationDataUtils
 import AccountContext
 import PresentationDataUtils
 import AppBundle
-import ContextUI
-import TelegramNotices
 
 private final class StatsArguments {
     init() {
