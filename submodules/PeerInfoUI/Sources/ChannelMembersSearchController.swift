@@ -14,7 +14,7 @@ enum ChannelMembersSearchControllerMode {
     case ban
 }
 
-enum ChannelMembersSearchFilter {
+public enum ChannelMembersSearchFilter {
     case exclude([PeerId])
     case disable([PeerId])
 }

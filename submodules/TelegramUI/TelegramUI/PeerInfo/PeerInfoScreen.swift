@@ -601,25 +601,26 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     interaction.openAddContact()
                 }))
             }
-            if let cachedData = data.cachedData as? CachedUserData {
-                if cachedData.isBlocked {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
-                        interaction.updateBlocked(false)
-                    }))
+        }
+        if let cachedData = data.cachedData as? CachedUserData {
+            if cachedData.isBlocked {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                    interaction.updateBlocked(false)
+                }))
+            } else {
+                if user.flags.contains(.isSupport) {
                 } else {
-                    if user.flags.contains(.isSupport) {
-                    } else {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                            interaction.updateBlocked(true)
-                        }))
-                    }
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                        interaction.updateBlocked(true)
+                    }))
                 }
             }
-            if user.botInfo != nil, !user.isVerified {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.ReportPeer_Report, action: {
-                    interaction.openReport()
-                }))
-            }
+        }
+        
+        if user.botInfo != nil, !user.isVerified {
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.ReportPeer_Report, action: {
+                interaction.openReport()
+            }))
         }
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1
@@ -1170,14 +1171,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 }
                             }))
                         }
-                        
-                        items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-                                strongSelf.expandTabs()
-                            }
-                        }))
+                        if strongSelf.searchDisplayController == nil {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
+                                    strongSelf.expandTabs()
+                                }
+                            }))
+                        }
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -1575,6 +1577,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self?.openAvatarForEditing()
         }
         
+        self.headerNode.requestUpdateLayout = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+        }
+        
         self.headerNode.navigationButtonContainer.performAction = { [weak self] key in
             guard let strongSelf = self else {
                 return
@@ -1646,7 +1657,36 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     } else if let group = data.peer as? TelegramGroup, canEditPeerInfo(peer: group) {
                         let title = strongSelf.headerNode.editingContentNode.editingTextForKey(.title) ?? ""
+                        let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
                         
+                        var updateDataSignals: [Signal<Never, Void>] = []
+                        
+                        if title != group.title {
+                            updateDataSignals.append(
+                                updatePeerTitle(account: strongSelf.context.account, peerId: group.id, title: title)
+                                |> ignoreValues
+                                |> mapError { _ in return Void() }
+                            )
+                        }
+                        if description != (data.cachedData as? CachedGroupData)?.about {
+                            updateDataSignals.append(
+                                updatePeerDescription(account: strongSelf.context.account, peerId: group.id, description: description.isEmpty ? nil : description)
+                                |> ignoreValues
+                                |> mapError { _ in return Void() }
+                            )
+                        }
+                        strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
+                        |> deliverOnMainQueue).start(error: { _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                        }, completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                        }))
                     } else if let channel = data.peer as? TelegramChannel, canEditPeerInfo(peer: channel) {
                         let title = strongSelf.headerNode.editingContentNode.editingTextForKey(.title) ?? ""
                         let description = strongSelf.headerNode.editingContentNode.editingTextForKey(.description) ?? ""
@@ -3106,17 +3146,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 } else {
                     mode = .privateLink
                 }
-                let visibilityController = channelVisibilityController(context: strongSelf.context, peerId: groupPeer.id, mode: mode, upgradedToSupergroup: { _, f in f() })
-                visibilityController.navigationPresentation = .modal
+                let visibilityController = channelVisibilityController(context: strongSelf.context, peerId: groupPeer.id, mode: mode, upgradedToSupergroup: { _, f in f() }, onDismissRemoveController: contactsController)
+                //visibilityController.navigationPresentation = .modal
                 
-                if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                contactsController?.push(visibilityController)
+                
+                /*if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers
                     if let contactsController = contactsController {
                         controllers.removeAll(where: { $0 === contactsController })
                     }
                     controllers.append(visibilityController)
                     navigationController.setViewControllers(controllers, animated: true)
-                }
+                }*/
             }
 
             strongSelf.controller?.push(contactsController)
@@ -3312,21 +3354,33 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
         
-        var tagMask: MessageTags = .file
-        if let currentPaneKey = self.paneContainerNode.currentPaneKey {
-            switch currentPaneKey {
-            case .links:
-                tagMask = .webPage
-            case .music:
-                tagMask = .music
-            default:
-                break
+        if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .members = currentPaneKey {
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .searchMembers, filters: [], searchContext: nil, openPeer: { [weak self] peer, participant in
+                self?.openPeer(peerId: peer.id, navigation: .info)
+            }, updateActivity: { _ in
+            }, pushController: { [weak self] c in
+                self?.controller?.push(c)
+            }), cancel: { [weak self] in
+                self?.deactivateSearch()
+            })
+        } else {
+            var tagMask: MessageTags = .file
+            if let currentPaneKey = self.paneContainerNode.currentPaneKey {
+                switch currentPaneKey {
+                case .links:
+                    tagMask = .webPage
+                case .music:
+                    tagMask = .music
+                default:
+                    break
+                }
             }
+            
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.peerId, tagMask: tagMask, interfaceInteraction: self.chatInterfaceInteraction), cancel: { [weak self] in
+                self?.deactivateSearch()
+            })
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Common_Search, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.peerId, tagMask: tagMask, interfaceInteraction: self.chatInterfaceInteraction), cancel: { [weak self] in
-            self?.deactivateSearch()
-        })
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
         if let navigationBar = self.controller?.navigationBar {
             transition.updateAlpha(node: navigationBar, alpha: 0.0)
@@ -3653,7 +3707,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if self.state.selectedMessageIds == nil {
                     if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                         switch currentPaneKey {
-                        case .files, .music, .links:
+                        case .files, .music, .links, .members:
                             navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
                         default:
                             break
