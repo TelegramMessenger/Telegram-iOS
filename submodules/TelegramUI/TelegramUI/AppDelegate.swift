@@ -5,7 +5,6 @@ import TelegramCore
 import SyncCore
 import UserNotifications
 import Intents
-//import HockeySDK
 import Postbox
 import PushKit
 import AsyncDisplayKit
@@ -157,12 +156,13 @@ final class SharedApplicationContext {
     }
 }
 
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate/*, BITHockeyManagerDelegate*/, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
+@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
     private var dataImportSplash: LegacyDataImportSplash?
     
+    private var buildConfig: BuildConfig?
     let episodeId = arc4random()
     
     private let isInForegroundPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -369,6 +369,7 @@ final class SharedApplicationContext {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        self.buildConfig = buildConfig
         let signatureDict = BuildConfigExtra.signatureDict()
         
         let apiId: Int32 = buildConfig.apiId
@@ -1338,46 +1339,6 @@ final class SharedApplicationContext {
             self.isActivePromise.set(true)
         }
         
-        /*BITHockeyBaseManager.setPresentAlert({ [weak self] alert in
-            if let strongSelf = self, let alert = alert {
-                var actions: [TextAlertAction] = []
-                for action in alert.actions {
-                    let isDefault = action.style == .default
-                    actions.append(TextAlertAction(type: isDefault ? .defaultAction : .genericAction, title: action.title ?? "", action: {
-                        if let action = action as? BITAlertAction {
-                            action.invokeAction()
-                        }
-                    }))
-                }
-                if let sharedContext = strongSelf.contextValue?.context.sharedContext {
-                    let presentationData = sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
-                }
-            }
-        })
-        
-        BITHockeyBaseManager.setPresentView({ [weak self] controller in
-            if let strongSelf = self, let controller = controller {
-                let parent = LegacyController(presentation: .modal(animateIn: true), theme: nil)
-                let navigationController = UINavigationController(rootViewController: controller)
-                controller.navigation_setDismiss({ [weak parent] in
-                    parent?.dismiss()
-                }, rootController: nil)
-                parent.bind(controller: navigationController)
-                strongSelf.mainWindow.present(parent, on: .root)
-            }
-        })
-        
-        if let hockeyAppId = buildConfig.hockeyAppId, !hockeyAppId.isEmpty {
-            BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
-            BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
-            BITHockeyManager.shared().start()
-            #if targetEnvironment(simulator)
-            #else
-            BITHockeyManager.shared().authenticator.authenticateInstallation()
-            #endif
-        }*/
-        
         if UIApplication.shared.isStatusBarHidden {
             UIApplication.shared.setStatusBarHidden(false, with: .none)
         }
@@ -1402,6 +1363,8 @@ final class SharedApplicationContext {
                 })
             })
         }*/
+        
+        self.maybeCheckForUpdates()
         
         return true
     }
@@ -1486,6 +1449,8 @@ final class SharedApplicationContext {
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+        
+        self.maybeCheckForUpdates()
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -2204,6 +2169,60 @@ final class SharedApplicationContext {
         completionHandler()
     }
     
+    private var lastCheckForUpdatesTimestamp: Double?
+    private let currentCheckForUpdatesDisposable = MetaDisposable()
+    
+    private func maybeCheckForUpdates() {
+        #if targetEnvironment(simulator)
+        return;
+        #endif
+        
+        guard let buildConfig = self.buildConfig, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
+            return
+        }
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if self.lastCheckForUpdatesTimestamp == nil || self.lastCheckForUpdatesTimestamp! < timestamp - 10.0 * 60.0 {
+            self.lastCheckForUpdatesTimestamp = timestamp
+            
+            if let url = URL(string: "https://api.appcenter.ms/v0.1/public/sdk/apps/\(appCenterId)/releases/latest") {
+                self.currentCheckForUpdatesDisposable.set((downloadHTTPData(url: url)
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard let json = try? JSONSerialization.jsonObject(with: data, options: []) else {
+                        return
+                    }
+                    guard let dict = json as? [String: Any] else {
+                        return
+                    }
+                    guard let versionString = dict["version"] as? String, let version = Int(versionString) else {
+                        return
+                    }
+                    guard let releaseNotesUrl = dict["release_notes_url"] as? String else {
+                        return
+                    }
+                    guard let currentVersionString = Bundle.main.infoDictionary?["CFBundleVersion"] as? String, let currentVersion = Int(currentVersionString) else {
+                        return
+                    }
+                    if currentVersion < version {
+                        let _ = (strongSelf.sharedContextPromise.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { sharedContext in
+                            let presentationData = sharedContext.sharedContext.currentPresentationData.with { $0 }
+                            sharedContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "A new build is available", actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: "Show", action: {
+                                    sharedContext.sharedContext.applicationBindings.openUrl(releaseNotesUrl)
+                                })
+                            ]), on: .root, blockInteraction: false, completion: {})
+                        })
+                    }
+                }))
+            }
+        }
+    }
+    
     override var next: UIResponder? {
         if let context = self.contextValue, let controller = context.context.keyShortcutsController {
             return controller
@@ -2344,4 +2363,30 @@ private func messageIdFromNotification(peerId: PeerId, notification: UNNotificat
         return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(msgIdValue.intValue))
     }
     return nil
+}
+
+private enum DownloadFileError {
+    case network
+}
+
+private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
+    return Signal { subscriber in
+        let completed = Atomic<Bool>(value: false)
+        let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
+            let _ = completed.swap(true)
+            if let location = location, let data = try? Data(contentsOf: location) {
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putError(.network)
+            }
+        })
+        downloadTask.resume()
+        
+        return ActionDisposable {
+            if !completed.with({ $0 }) {
+                downloadTask.cancel()
+            }
+        }
+    }
 }
