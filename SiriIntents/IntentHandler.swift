@@ -567,9 +567,9 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         completion(.success(with: .missed))
     }
     
-    public func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
+    /*public func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
         completion(.success(with: .missed))
-    }
+    }*/
     
     public func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()

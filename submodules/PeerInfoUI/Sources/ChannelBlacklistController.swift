@@ -366,7 +366,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
             }
             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupRemoved_ViewUserInfo, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: participant.peer, mode: .generic) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     pushControllerImpl?(infoController)
                 }
             }))

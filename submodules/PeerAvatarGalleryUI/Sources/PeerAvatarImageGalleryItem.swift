@@ -127,6 +127,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             self?._ready.set(.single(Void()))
         }
         
+        self.imageNode.contentAnimations = .subsequentUpdates
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
         
@@ -355,7 +356,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
 }

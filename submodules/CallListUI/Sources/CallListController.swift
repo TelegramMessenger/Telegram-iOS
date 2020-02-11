@@ -59,7 +59,12 @@ public final class CallListController: ViewController {
         if case .tab = self.mode {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
             
-            let icon = UIImage(bundleImageName: "Chat List/Tabs/IconCalls")
+            let icon: UIImage?
+            if useSpecialTabBarIcons() {
+                icon = UIImage(bundleImageName: "Chat List/Tabs/Holiday/IconCalls")
+            } else {
+                icon = UIImage(bundleImageName: "Chat List/Tabs/IconCalls")
+            }
             self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
@@ -149,7 +154,7 @@ public final class CallListController: ViewController {
                 let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
-                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages)) {
+                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages), avatarInitiallyExpanded: false, fromChat: false) {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })

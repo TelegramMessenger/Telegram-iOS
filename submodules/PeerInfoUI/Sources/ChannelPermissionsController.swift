@@ -335,7 +335,7 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
     }
 }
 
-let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
+public let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
     (.banSendMessages, .sendMessages),
     (.banSendMedia, .sendMessages),
     (.banSendGifs, .sendMessages),
@@ -666,7 +666,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, openPeerInfo: { peer in
-        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
             pushControllerImpl?(controller)
         }
     }, openKicked: {

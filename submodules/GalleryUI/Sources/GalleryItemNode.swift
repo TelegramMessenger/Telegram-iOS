@@ -21,6 +21,10 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     public var toggleControlsVisibility: () -> Void = { }
+    public var goToPreviousItem: () -> Void = { }
+    public var goToNextItem: () -> Void = { }
+    public var canGoToPreviousItem: () -> Bool = { return false }
+    public var canGoToNextItem: () -> Bool = { return false }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
@@ -54,8 +58,8 @@ open class GalleryItemNode: ASDisplayNode {
         return .single(nil)
     }
     
-    open func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(nil)
+    open func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((nil, nil))
     }
     
     open func navigationStyle() -> Signal<GalleryItemNodeNavigationStyle, NoError> {

@@ -152,6 +152,7 @@ private var declaredEncodables: Void = {
     declareEncodable(EmbeddedMediaStickersMessageAttribute.self, f: { EmbeddedMediaStickersMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaWebpageAttribute.self, f: { TelegramMediaWebpageAttribute(decoder: $0) })
     declareEncodable(CachedPollOptionResult.self, f: { CachedPollOptionResult(decoder: $0) })
+    //declareEncodable(ChatListFiltersState.self, f: { ChatListFiltersState(decoder: $0) })
     
     return
 }()

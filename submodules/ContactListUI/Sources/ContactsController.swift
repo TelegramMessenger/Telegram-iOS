@@ -105,7 +105,12 @@ public class ContactsController: ViewController {
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         
-        let icon = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
+        let icon: UIImage?
+        if useSpecialTabBarIcons() {
+            icon = UIImage(bundleImageName: "Chat List/Tabs/Holiday/IconContacts")
+        } else {
+            icon = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
+        }
         
         self.tabBarItem.image = icon
         self.tabBarItem.selectedImage = icon
@@ -530,7 +535,7 @@ public class ContactsController: ViewController {
                             return
                         }
                         if let peer = peer {
-                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                 (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         } else {

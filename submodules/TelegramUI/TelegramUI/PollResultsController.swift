@@ -303,7 +303,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         })
     }, openPeer: { peer in
         if let peer = peer.peers[peer.peerId] {
-            if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
+            if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                 pushControllerImpl?(controller)
             }
         }

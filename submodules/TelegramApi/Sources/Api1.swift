@@ -15695,6 +15695,44 @@ public extension Api {
         }
     
     }
+    public enum BankCardOpenUrl: TypeConstructorDescription {
+        case bankCardOpenUrl(url: String, name: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .bankCardOpenUrl(let url, let name):
+                    if boxed {
+                        buffer.appendInt32(-177732982)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .bankCardOpenUrl(let url, let name):
+                return ("bankCardOpenUrl", [("url", url), ("name", name)])
+    }
+    }
+    
+        public static func parse_bankCardOpenUrl(_ reader: BufferReader) -> BankCardOpenUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BankCardOpenUrl.bankCardOpenUrl(url: _1!, name: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum ChatPhoto: TypeConstructorDescription {
         case chatPhotoEmpty
         case chatPhoto(photoSmall: Api.FileLocation, photoBig: Api.FileLocation, dcId: Int32)
@@ -20982,6 +21020,7 @@ public extension Api {
         case messageEntityUnderline(offset: Int32, length: Int32)
         case messageEntityStrike(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
+        case messageEntityBankCard(offset: Int32, length: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21115,6 +21154,13 @@ public extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .messageEntityBankCard(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(1981704948)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21156,6 +21202,8 @@ public extension Api {
                 return ("messageEntityStrike", [("offset", offset), ("length", length)])
                 case .messageEntityBlockquote(let offset, let length):
                 return ("messageEntityBlockquote", [("offset", offset), ("length", length)])
+                case .messageEntityBankCard(let offset, let length):
+                return ("messageEntityBankCard", [("offset", offset), ("length", length)])
     }
     }
     
@@ -21420,6 +21468,20 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityBlockquote(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityBankCard(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityBankCard(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -21727,6 +21789,7 @@ public extension Api {
     }
     public enum PeerLocated: TypeConstructorDescription {
         case peerLocated(peer: Api.Peer, expires: Int32, distance: Int32)
+        case peerSelfLocated(expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21738,6 +21801,12 @@ public extension Api {
                     serializeInt32(expires, buffer: buffer, boxed: false)
                     serializeInt32(distance, buffer: buffer, boxed: false)
                     break
+                case .peerSelfLocated(let expires):
+                    if boxed {
+                        buffer.appendInt32(-118740917)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21745,6 +21814,8 @@ public extension Api {
         switch self {
                 case .peerLocated(let peer, let expires, let distance):
                 return ("peerLocated", [("peer", peer), ("expires", expires), ("distance", distance)])
+                case .peerSelfLocated(let expires):
+                return ("peerSelfLocated", [("expires", expires)])
     }
     }
     
@@ -21762,6 +21833,17 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.PeerLocated.peerLocated(peer: _1!, expires: _2!, distance: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_peerSelfLocated(_ reader: BufferReader) -> PeerLocated? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PeerLocated.peerSelfLocated(expires: _1!)
             }
             else {
                 return nil

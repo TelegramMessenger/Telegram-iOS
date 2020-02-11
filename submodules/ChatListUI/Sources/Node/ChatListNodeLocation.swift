@@ -7,11 +7,11 @@ import Display
 import TelegramUIPreferences
 
 enum ChatListNodeLocation: Equatable {
-    case initial(count: Int, filter: ChatListFilterPreset?)
-    case navigation(index: ChatListIndex, filter: ChatListFilterPreset?)
-    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilterPreset?)
+    case initial(count: Int, filter: ChatListFilter?)
+    case navigation(index: ChatListIndex, filter: ChatListFilter?)
+    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
     
-    var filter: ChatListFilterPreset? {
+    var filter: ChatListFilter? {
         switch self {
         case let .initial(initial):
             return initial.filter
@@ -32,17 +32,17 @@ struct ChatListNodeViewUpdate {
 func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
     let filterPredicate: ((Peer, PeerNotificationSettings?, Bool) -> Bool)?
     if let filter = location.filter {
-        let includePeers = Set(filter.additionallyIncludePeers)
+        let includePeers = Set(filter.includePeers)
         filterPredicate = { peer, notificationSettings, isUnread in
             if includePeers.contains(peer.id) {
                 return true
             }
-            if !filter.includeCategories.contains(.read) {
+            if filter.excludeRead {
                 if !isUnread {
                     return false
                 }
             }
-            if !filter.includeCategories.contains(.muted) {
+            if filter.excludeMuted {
                 if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
                     if case .muted = notificationSettings.muteState {
                         return false
@@ -51,26 +51,26 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                     return false
                 }
             }
-            if !filter.includeCategories.contains(.privateChats) {
+            if !filter.categories.contains(.privateChats) {
                 if let user = peer as? TelegramUser {
                     if user.botInfo == nil {
                         return false
                     }
                 }
             }
-            if !filter.includeCategories.contains(.secretChats) {
+            if !filter.categories.contains(.secretChats) {
                 if let _ = peer as? TelegramSecretChat {
                     return false
                 }
             }
-            if !filter.includeCategories.contains(.bots) {
+            if !filter.categories.contains(.bots) {
                 if let user = peer as? TelegramUser {
                     if user.botInfo != nil {
                         return false
                     }
                 }
             }
-            if !filter.includeCategories.contains(.privateGroups) {
+            if !filter.categories.contains(.privateGroups) {
                 if let _ = peer as? TelegramGroup {
                     return false
                 } else if let channel = peer as? TelegramChannel {
@@ -81,7 +81,7 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                     }
                 }
             }
-            if !filter.includeCategories.contains(.publicGroups) {
+            if !filter.categories.contains(.publicGroups) {
                 if let channel = peer as? TelegramChannel {
                     if case .group = channel.info {
                         if channel.username != nil {
@@ -90,7 +90,7 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                     }
                 }
             }
-            if !filter.includeCategories.contains(.channels) {
+            if !filter.categories.contains(.channels) {
                 if let channel = peer as? TelegramChannel {
                     if case .broadcast = channel.info {
                         return false

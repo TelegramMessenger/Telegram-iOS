@@ -757,6 +757,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }

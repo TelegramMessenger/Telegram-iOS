@@ -145,6 +145,87 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
     }
 }
 
+private let soundOnImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SoundOn"), color: .white)
+private let soundOffImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/SoundOff"), color: .white)
+private var roundButtonBackgroundImage = {
+    return generateImage(CGSize(width: 42.0, height: 42), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+        context.fillEllipse(in: bounds)
+    })
+}()
+
+private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentNode {
+    private let soundButtonNode: HighlightableButtonNode
+    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat)?
+    
+    override init() {
+        self.soundButtonNode = HighlightableButtonNode()
+        self.soundButtonNode.alpha = 0.0
+        self.soundButtonNode.setBackgroundImage(roundButtonBackgroundImage, for: .normal)
+        self.soundButtonNode.setImage(soundOffImage, for: .normal)
+        self.soundButtonNode.setImage(soundOnImage, for: .selected)
+        self.soundButtonNode.setImage(soundOnImage, for: [.selected, .highlighted])
+        
+        super.init()
+        
+        self.soundButtonNode.addTarget(self, action: #selector(self.soundButtonPressed), forControlEvents: .touchUpInside)
+        self.addSubnode(self.soundButtonNode)
+    }
+    
+    func hide() {
+        self.soundButtonNode.isHidden = true
+    }
+    
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
+        
+        let soundButtonDiameter: CGFloat = 42.0
+        let inset: CGFloat = 12.0
+        let effectiveBottomInset = self.visibilityAlpha < 1.0 ? 0.0 : bottomInset
+        let soundButtonFrame = CGRect(origin: CGPoint(x: size.width - soundButtonDiameter - inset - rightInset, y: size.height - soundButtonDiameter - inset - effectiveBottomInset), size: CGSize(width: soundButtonDiameter, height: soundButtonDiameter))
+        transition.updateFrame(node: self.soundButtonNode, frame: soundButtonFrame)
+    }
+    
+    override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.soundButtonNode, alpha: 1.0)
+    }
+    
+    override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        transition.updateAlpha(node: self.soundButtonNode, alpha: 0.0)
+    }
+    
+    override func setVisibilityAlpha(_ alpha: CGFloat) {
+        super.setVisibilityAlpha(alpha)
+        self.updateSoundButtonVisibility()
+    }
+    
+    func updateSoundButtonVisibility() {
+        if self.soundButtonNode.isSelected {
+            self.soundButtonNode.alpha = self.visibilityAlpha
+        } else {
+            self.soundButtonNode.alpha = 1.0
+        }
+        
+        if let validLayout = self.validLayout {
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
+    }
+    
+    @objc func soundButtonPressed() {
+        self.soundButtonNode.isSelected = !self.soundButtonNode.isSelected
+        self.updateSoundButtonVisibility()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.soundButtonNode.frame.contains(point) {
+            return nil
+        }
+        return super.hitTest(point, with: event)
+    }
+}
+
 private struct FetchControls {
     let fetch: () -> Void
     let cancel: () -> Void
@@ -161,6 +242,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private let scrubberView: ChatVideoGalleryItemScrubberView
     private let footerContentNode: ChatItemGalleryFooterContentNode
+    private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
     
     private var videoNode: UniversalVideoNode?
     private var videoFramePreview: MediaPlayerFramePreview?
@@ -173,6 +255,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var _isVisible: Bool?
     private var initiallyActivated = false
     private var hideStatusNodeUntilCentrality = false
+    private var playOnContentOwnership = false
+    private var skipInitialPause = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -205,6 +289,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.scrubberView = self.scrubberView
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
+        
+        self.overlayContentNode = UniversalVideoGalleryItemOverlayNode()
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -391,6 +477,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.ownsContentNodeUpdated = { [weak self] value in
                 if let strongSelf = self {
                     strongSelf.updateDisplayPlaceholder(!value)
+                    
+                    if strongSelf.playOnContentOwnership {
+                        strongSelf.playOnContentOwnership = false
+                        strongSelf.initiallyActivated = true
+                        strongSelf.skipInitialPause = true
+                        strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                    }
                 }
             }
             self.videoNode = videoNode
@@ -398,6 +491,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false
+                self.overlayContentNode.hide()
             } else {
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
@@ -625,7 +719,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     private func shouldAutoplayOnCentrality() -> Bool {
-        if let item = self.item, let content = item.content as? NativeVideoContent, !self.initiallyActivated {
+//        !self.initiallyActivated
+        if let item = self.item, let content = item.content as? NativeVideoContent {
             var isLocal = false
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 isLocal = true
@@ -658,14 +753,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     self.hideStatusNodeUntilCentrality = false
                     self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
+
                     if videoNode.ownsContentNode {
                         if isAnimated {
                             videoNode.seek(0.0)
                             videoNode.play()
-                        }
-                        else if self.shouldAutoplayOnCentrality()  {
+                        } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                        }
+                    } else {
+                        if self.shouldAutoplayOnCentrality()  {
+                            self.playOnContentOwnership = true
                         }
                     }
                 } else {
@@ -689,8 +788,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if hadPreviousValue {
                     videoNode.canAttachContent = isVisible
                     if isVisible {
-                        videoNode.pause()
-                        videoNode.seek(0.0)
+                        if self.skipInitialPause {
+                            self.skipInitialPause = false
+                        } else {
+                            videoNode.pause()
+                            videoNode.seek(0.0)
+                        }
                     } else {
                         videoNode.continuePlayingWithoutSound()
                     }
@@ -982,7 +1085,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
             }
             
-            let initialScale: CGFloat = 1.0 //min(videoNode.layer.bounds.width / node.0.view.bounds.width, videoNode.layer.bounds.height / node.0.view.bounds.height)
+            let initialScale: CGFloat = 1.0
             let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
             
             videoNode.backgroundColor = .clear
@@ -1197,7 +1300,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
 }

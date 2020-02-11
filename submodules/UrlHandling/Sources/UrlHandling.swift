@@ -16,6 +16,8 @@ import AccountContext
 import WalletUrl
 #endif
 
+private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
+
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
@@ -348,7 +350,6 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
 
 public func isTelegramMeLink(_ url: String) -> Bool {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -362,7 +363,6 @@ public func isTelegramMeLink(_ url: String) -> Bool {
 
 public func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -384,7 +384,6 @@ public func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username
 
 public func parseStickerPackUrl(_ url: String) -> String? {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -406,7 +405,6 @@ public func parseStickerPackUrl(_ url: String) -> String? {
 
 public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
@@ -435,7 +433,6 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
     }
     #endif
     let schemes = ["http://", "https://", ""]
-    let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"

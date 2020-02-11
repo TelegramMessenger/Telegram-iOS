@@ -6,13 +6,14 @@ import SyncCore
 import TelegramPresentationData
 import AccountContext
 
-enum ChatNavigationButtonAction {
-    case openChatInfo
+enum ChatNavigationButtonAction: Equatable {
+    case openChatInfo(expandAvatar: Bool)
     case clearHistory
     case clearCache
     case cancelMessageSelection
     case search
     case dismiss
+    case toggleInfoPanel
 }
 
 struct ChatNavigationButton: Equatable {
@@ -71,7 +72,12 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
+    if presentationInterfaceState.isScheduledMessages {
+        return nil
+    }
+    
     if case .standard(true) = presentationInterfaceState.mode {
+        return nil
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
             if presentationInterfaceState.isScheduledMessages {

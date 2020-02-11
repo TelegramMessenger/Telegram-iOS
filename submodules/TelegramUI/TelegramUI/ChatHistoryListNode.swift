@@ -13,6 +13,7 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import ChatListSearchItemNode
 import Emoji
+import AppBundle
 
 private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 5.0
@@ -308,7 +309,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: StickerPackItem], isScheduledMessages: Bool) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], isScheduledMessages: Bool) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     if case let .peer(peerId) = chatLocation {
@@ -605,19 +606,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         |> distinctUntilChanged
         
         let animatedEmojiStickers = loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false)
-        |> map { result -> [String: StickerPackItem] in
+        |> map { result -> [String: [StickerPackItem]] in
             switch result {
                 case let .result(_, items, _):
-                    var animatedEmojiStickers: [String: StickerPackItem] = [:]
+                    var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
                     for case let item as StickerPackItem in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            animatedEmojiStickers[emoji.basicEmoji.0] = item
+                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
                             let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
                             if animatedEmojiStickers[strippedEmoji] == nil {
-                                animatedEmojiStickers[strippedEmoji] = item
+                                animatedEmojiStickers[strippedEmoji] = [item]
                             }
                         }
                     }
+                    
+                    if let path = getAppBundle().path(forResource: "Dice_1", ofType: "tgs") {
+                        var dices: [StickerPackItem] = []
+                        for i in 1...6 {
+                            let path = path.replacingOccurrences(of: "_1", with: "_\(i)")
+                            let id = arc4random64()
+                            let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: id)
+                            dices.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(i), id: Int64(i)), file: TelegramMediaFile(fileId: MediaId(namespace: 10, id: Int64(i)), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgsticker", size: nil, attributes: []), indexKeys: []))
+                        }
+                        animatedEmojiStickers["🎲".strippedEmoji] = dices
+                    }
+                    
                     return animatedEmojiStickers
                 default:
                     return [:]

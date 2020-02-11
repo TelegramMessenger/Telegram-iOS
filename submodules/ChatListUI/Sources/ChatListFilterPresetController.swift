@@ -1,4 +1,4 @@
-import Foundation
+/*import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
@@ -35,7 +35,7 @@ private enum ChatListFilterPresetControllerSection: Int32 {
     case additionalPeers
 }
 
-private func filterEntry(presentationData: ItemListPresentationData, arguments: ChatListFilterPresetControllerArguments, title: String, value: Bool, filter: ChatListIncludeCategoryFilter, section: Int32) -> ItemListCheckboxItem {
+private func filterEntry(presentationData: ItemListPresentationData, arguments: ChatListFilterPresetControllerArguments, title: String, value: Bool, filter: ChatListFilterPeerCategories, section: Int32) -> ItemListCheckboxItem {
     return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: section, action: {
         arguments.updateState { current in
             var state = current
@@ -188,11 +188,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
                 arguments.updateState { current in
                     var state = current
-                    if state.includeCategories.contains(.muted) {
-                        state.includeCategories.remove(.muted)
-                    } else {
-                        state.includeCategories.insert(.muted)
-                    }
+                    state.excludeMuted = !state.excludeMuted
                     return state
                 }
             })
@@ -200,11 +196,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
                 arguments.updateState { current in
                     var state = current
-                    if state.includeCategories.contains(.read) {
-                        state.includeCategories.remove(.read)
-                    } else {
-                        state.includeCategories.insert(.read)
-                    }
+                    state.excludeRead = !state.excludeRead
                     return state
                 }
             })
@@ -230,7 +222,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
 
 private struct ChatListFilterPresetControllerState: Equatable {
     var name: String
-    var includeCategories: ChatListIncludeCategoryFilter
+    var includeCategories: ChatListFilterPeerCategories
+    var excludeMuted: Bool
+    var excludeRead: Bool
     var additionallyIncludePeers: [PeerId]
     
     var revealedPeerId: PeerId?
@@ -239,7 +233,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
         if self.name.isEmpty {
             return false
         }
-        if self.includeCategories.isEmpty && self.additionallyIncludePeers.isEmpty {
+        if self.includeCategories.isEmpty && self.additionallyIncludePeers.isEmpty && !self.excludeMuted && !self.excludeRead {
             return false
         }
         return true
@@ -259,8 +253,8 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     entries.append(.filterPublicGroups(title: "Public Groups", value: state.includeCategories.contains(.publicGroups)))
     entries.append(.filterChannels(title: "Channels", value: state.includeCategories.contains(.channels)))
     
-    entries.append(.filterMuted(title: "Exclude Muted", value: !state.includeCategories.contains(.muted)))
-    entries.append(.filterRead(title: "Exclude Read", value: !state.includeCategories.contains(.read)))
+    entries.append(.filterMuted(title: "Exclude Muted", value: state.excludeMuted))
+    entries.append(.filterRead(title: "Exclude Read", value: state.excludeRead))
     
     entries.append(.additionalPeersHeader("ALWAYS INCLUDE"))
     entries.append(.addAdditionalPeer(title: "Add"))
@@ -274,19 +268,14 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     return entries
 }
 
-func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilterPreset?, updated: @escaping ([ChatListFilterPreset]) -> Void) -> ViewController {
+func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilter?, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
     let initialName: String
     if let currentPreset = currentPreset {
-        switch currentPreset.name {
-        case .unread:
-            initialName = "Unread"
-        case let .custom(value):
-            initialName = value
-        }
+        initialName = currentPreset.title ?? ""
     } else {
         initialName = "New Preset"
     }
-    let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.includeCategories ?? .all, additionallyIncludePeers: currentPreset?.additionallyIncludePeers ?? [])
+    let initialState = ChatListFilterPresetControllerState(name: initialName, includeCategories: currentPreset?.categories ?? .all, excludeMuted: currentPreset?.excludeMuted ?? false, excludeRead: currentPreset?.excludeRead ?? false, additionallyIncludePeers: currentPreset?.includePeers ?? [])
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void = { f in
@@ -378,15 +367,19 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             let state = stateValue.with { $0 }
-            let preset = ChatListFilterPreset(id: currentPreset?.id ?? arc4random64(), name: .custom(state.name), includeCategories: state.includeCategories, additionallyIncludePeers: state.additionallyIncludePeers)
+            let preset = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, includePeers: state.additionallyIncludePeers)
             let _ = (updateChatListFilterSettingsInteractively(postbox: context.account.postbox, { settings in
+                var preset = preset
+                if currentPreset == nil {
+                    preset.id = max(2, settings.filters.map({ $0.id }).max() ?? 2)
+                }
                 var settings = settings
-                settings.presets = settings.presets.filter { $0 != preset && $0 != currentPreset }
-                settings.presets.append(preset)
+                settings.filters = settings.filters.filter { $0 != preset && $0 != currentPreset }
+                settings.filters.append(preset)
                 return settings
             })
             |> deliverOnMainQueue).start(next: { settings in
-                updated(settings.presets)
+                updated(settings.filters)
                 dismissImpl?()
             })
         })
@@ -412,3 +405,4 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     return controller
 }
 
+*/

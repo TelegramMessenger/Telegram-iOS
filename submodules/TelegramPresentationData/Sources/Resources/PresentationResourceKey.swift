@@ -20,6 +20,7 @@ public enum PresentationResourceKey: Int32 {
     case navigationShareIcon
     case navigationSearchIcon
     case navigationCompactSearchIcon
+    case navigationMoreIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
     
@@ -48,6 +49,8 @@ public enum PresentationResourceKey: Int32 {
     case itemListVerifiedPeerIcon
     case itemListCloudFetchIcon
     case itemListCloseIconImage
+    case itemListMakeVisibleIcon
+    case itemListMakeInvisibleIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth

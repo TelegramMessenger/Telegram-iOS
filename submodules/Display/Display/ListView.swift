@@ -60,6 +60,12 @@ public final class ListViewBackingView: UIView {
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.isHidden, let target = self.target {
+            if target.bounds.contains(point) {
+                if target.decelerationAnimator != nil {
+                    target.decelerationAnimator?.isPaused = true
+                    target.decelerationAnimator = nil
+                }
+            }
             if target.limitHitTestToNodes, !target.internalHitTest(point, with: event) {
                 return nil
             }
@@ -125,7 +131,7 @@ public enum GeneralScrollDirection {
 }
 
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
-    final let scroller: ListViewScroller
+    public final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
     public final var visualInsets: UIEdgeInsets?
@@ -683,6 +689,48 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if !scrollView.isTracking {
             self.didEndScrolling?()
         }
+    }
+    
+    fileprivate var decelerationAnimator: ConstantDisplayLinkAnimator?
+    private var accumulatedTransferVelocityOffset: CGFloat = 0.0
+    
+    public func transferVelocity(_ velocity: CGFloat) {
+        self.decelerationAnimator?.isPaused = true
+        let startTime = CACurrentMediaTime()
+        let decelerationRate: CGFloat = 0.998
+        self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let t = CACurrentMediaTime() - startTime
+            var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
+            strongSelf.accumulatedTransferVelocityOffset += currentVelocity
+            let signFactor: CGFloat = strongSelf.accumulatedTransferVelocityOffset >= 0.0 ? 1.0 : -1.0
+            let remainder = abs(strongSelf.accumulatedTransferVelocityOffset).remainder(dividingBy: UIScreenPixel)
+            //print("accumulated \(strongSelf.accumulatedTransferVelocityOffset), \(remainder), resulting accumulated \(strongSelf.accumulatedTransferVelocityOffset - remainder * signFactor) add delta \(strongSelf.accumulatedTransferVelocityOffset - remainder * signFactor)")
+            var currentOffset = strongSelf.scroller.contentOffset
+            let addedDela = strongSelf.accumulatedTransferVelocityOffset - remainder * signFactor
+            currentOffset.y += addedDela
+            strongSelf.accumulatedTransferVelocityOffset -= addedDela
+            let maxOffset = strongSelf.scroller.contentSize.height - strongSelf.scroller.bounds.height
+            if currentOffset.y >= maxOffset {
+                currentOffset.y = maxOffset
+                currentVelocity = 0.0
+            }
+            if currentOffset.y < 0.0 {
+                currentOffset.y = 0.0
+                currentVelocity = 0.0
+            }
+            
+            if abs(currentVelocity) < 0.1 {
+                strongSelf.decelerationAnimator?.isPaused = true
+                strongSelf.decelerationAnimator = nil
+            }
+            var contentOffset = strongSelf.scroller.contentOffset
+            contentOffset.y = floorToScreenPixels(currentOffset.y)
+            strongSelf.scroller.setContentOffset(contentOffset, animated: false)
+        })
+        self.decelerationAnimator?.isPaused = false
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {

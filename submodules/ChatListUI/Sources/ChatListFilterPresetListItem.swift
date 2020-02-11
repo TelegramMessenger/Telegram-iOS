@@ -18,26 +18,26 @@ struct ChatListFilterPresetListItemEditing: Equatable {
 
 final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let preset: ChatListFilterPreset
+    let preset: ChatListFilter
     let title: String
     let editing: ChatListFilterPresetListItemEditing
     let canBeReordered: Bool
     let canBeDeleted: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
-    let setItemWithRevealedOptions: (ChatListFilterPreset?, ChatListFilterPreset?) -> Void
+    let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
     let remove: () -> Void
     
     init(
         presentationData: ItemListPresentationData,
-        preset: ChatListFilterPreset,
+        preset: ChatListFilter,
         title: String,
         editing: ChatListFilterPresetListItemEditing,
         canBeReordered: Bool,
         canBeDeleted: Bool,
         sectionId: ItemListSectionId,
         action: @escaping () -> Void,
-        setItemWithRevealedOptions: @escaping (ChatListFilterPreset?, ChatListFilterPreset?) -> Void,
+        setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void,
         remove: @escaping () -> Void
     ) {
         self.presentationData = presentationData
@@ -409,13 +409,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
     
     override func revealOptionsInteractivelyOpened() {
         if let item = self.item {
-            item.setItemWithRevealedOptions(item.preset, nil)
+            item.setItemWithRevealedOptions(item.preset.id, nil)
         }
     }
     
     override func revealOptionsInteractivelyClosed() {
         if let item = self.item {
-            item.setItemWithRevealedOptions(nil, item.preset)
+            item.setItemWithRevealedOptions(nil, item.preset.id)
         }
     }
     

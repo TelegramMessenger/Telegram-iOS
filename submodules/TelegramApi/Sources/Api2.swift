@@ -490,6 +490,50 @@ public struct payments {
         }
     
     }
+    public enum BankCardData: TypeConstructorDescription {
+        case bankCardData(title: String, openUrls: [Api.BankCardOpenUrl])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .bankCardData(let title, let openUrls):
+                    if boxed {
+                        buffer.appendInt32(1042605427)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(openUrls.count))
+                    for item in openUrls {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .bankCardData(let title, let openUrls):
+                return ("bankCardData", [("title", title), ("openUrls", openUrls)])
+    }
+    }
+    
+        public static func parse_bankCardData(_ reader: BufferReader) -> BankCardData? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.BankCardOpenUrl]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BankCardOpenUrl.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.payments.BankCardData.bankCardData(title: _1!, openUrls: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
 }
 }
 public extension Api {

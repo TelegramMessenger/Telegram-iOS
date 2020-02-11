@@ -352,7 +352,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0 - buttonOffset, width: contentFrame.width, height: buttonHeight))
         
         let onlineSize = self.onlineButton.measure(CGSize(width: width, height: titleHeight))
-        let onlineFrame = CGRect(origin: CGPoint(x: ceil((layout.size.width - onlineSize.width) / 2.0), y: contentHeight - 45.0 - insets.bottom), size: onlineSize)
+        let onlineFrame = CGRect(origin: CGPoint(x: ceil((contentFrame.width - onlineSize.width) / 2.0), y: contentHeight - 45.0 - insets.bottom), size: onlineSize)
         transition.updateFrame(node: self.onlineButton, frame: onlineFrame)
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))

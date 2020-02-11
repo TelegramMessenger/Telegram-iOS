@@ -392,6 +392,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 })
                             ])])
                         strongSelf.presentController(actionSheet, nil)
+                    case .bankCard:
+                        break
                 }
             }
         }, openCheckoutOrReceipt: { _ in
@@ -659,7 +661,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
                 } else {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -681,7 +683,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }

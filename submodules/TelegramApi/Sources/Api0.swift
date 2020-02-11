@@ -551,6 +551,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1739392570] = { return Api.DocumentAttribute.parse_documentAttributeAudio($0) }
     dict[358154344] = { return Api.DocumentAttribute.parse_documentAttributeFilename($0) }
     dict[-1744710921] = { return Api.DocumentAttribute.parse_documentAttributeHasStickers($0) }
+    dict[-177732982] = { return Api.BankCardOpenUrl.parse_bankCardOpenUrl($0) }
     dict[307276766] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[935395612] = { return Api.ChatPhoto.parse_chatPhotoEmpty($0) }
     dict[1197267925] = { return Api.ChatPhoto.parse_chatPhoto($0) }
@@ -782,6 +783,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1672577397] = { return Api.MessageEntity.parse_messageEntityUnderline($0) }
     dict[-1090087980] = { return Api.MessageEntity.parse_messageEntityStrike($0) }
     dict[34469328] = { return Api.MessageEntity.parse_messageEntityBlockquote($0) }
+    dict[1981704948] = { return Api.MessageEntity.parse_messageEntityBankCard($0) }
     dict[483901197] = { return Api.InputPhoto.parse_inputPhotoEmpty($0) }
     dict[1001634122] = { return Api.InputPhoto.parse_inputPhoto($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
@@ -799,11 +801,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-94974410] = { return Api.EncryptedChat.parse_encryptedChat($0) }
     dict[332848423] = { return Api.EncryptedChat.parse_encryptedChatDiscarded($0) }
     dict[-901375139] = { return Api.PeerLocated.parse_peerLocated($0) }
+    dict[-118740917] = { return Api.PeerLocated.parse_peerSelfLocated($0) }
     dict[922273905] = { return Api.Document.parse_documentEmpty($0) }
     dict[-1683841855] = { return Api.Document.parse_document($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
     dict[-892779534] = { return Api.WebAuthorization.parse_webAuthorization($0) }
     dict[-805141448] = { return Api.ImportedContact.parse_importedContact($0) }
+    dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     return dict
 }()
 
@@ -1213,6 +1217,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DocumentAttribute:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.BankCardOpenUrl:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.Authorizations:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChatPhoto:
@@ -1408,6 +1414,8 @@ public struct Api {
             case let _1 as Api.WebAuthorization:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ImportedContact:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.BankCardData:
                 _1.serialize(buffer, boxed)
             default:
                 break

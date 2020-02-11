@@ -262,6 +262,11 @@
 "State.Updating" = "Updating...";
 "State.WaitingForNetwork" = "Waiting for network";
 
+"ChatState.Connecting" = "connecting...";
+"ChatState.ConnectingToProxy" = "connecting to proxy...";
+"ChatState.Updating" = "updating...";
+"ChatState.WaitingForNetwork" = "waiting for network...";
+
 // Presence
 "Presence.online" = "online";
 
@@ -5298,3 +5303,30 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.BubbleCorners.Apply" = "Set";
 
 "Conversation.LiveLocationYouAndOther" = "**You** and %@";
+
+"PeopleNearby.MakeVisible" = "Make Myself Visible";
+"PeopleNearby.MakeInvisible" = "Stop Showing Me";
+
+"PeopleNearby.ShowMorePeople_0" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_1" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_2" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_3_10" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_many" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_any" = "Show %@ More People";
+
+"PeopleNearby.VisibleUntil" = "visible until %@";
+
+"PeopleNearby.MakeVisibleTitle" = "Make Myself Visible";
+"PeopleNearby.MakeVisibleDescription" = "Users nearby will be able to view your profile and send you messages. This may help you find new friends, but could also attract excessive attention. You can stop sharing your profile at any time.\n\nYour phone number will remain hidden.";
+
+"PeopleNearby.DiscoverDescription" = "Exchange contact info with people nearby\nand find new friends.";
+
+"Time.TomorrowAt" = "tomorrow at %@";
+
+"PeerInfo.ButtonMessage" = "Message";
+"PeerInfo.ButtonDiscuss" = "Discuss";
+"PeerInfo.ButtonCall" = "Call";
+"PeerInfo.ButtonMute" = "Mute";
+"PeerInfo.ButtonUnmute" = "Unmute";
+"PeerInfo.ButtonMore" = "More";
+"PeerInfo.ButtonAddMember" = "Add Members";

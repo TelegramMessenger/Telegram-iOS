@@ -366,21 +366,9 @@ public final class ChatListNode: ListView {
     }
     
     private var currentLocation: ChatListNodeLocation?
-    var chatListFilter: ChatListFilterPreset? {
-        didSet {
-            if self.chatListFilter != oldValue {
-                self.chatListFilterValue.set(self.chatListFilter)
-                
-                if self.chatListFilter?.includeCategories != oldValue?.includeCategories || self.chatListFilter?.additionallyIncludePeers != oldValue?.additionallyIncludePeers {
-                    if let currentLocation = self.currentLocation {
-                        self.setChatListLocation(.initial(count: 50, filter: self.chatListFilter))
-                    }
-                }
-            }
-        }
-    }
-    private let chatListFilterValue = ValuePromise<ChatListFilterPreset?>(nil)
-    var chatListFilterSignal: Signal<ChatListFilterPreset?, NoError> {
+    let chatListFilter: ChatListFilter?
+    private let chatListFilterValue = Promise<ChatListFilter?>()
+    var chatListFilterSignal: Signal<ChatListFilter?, NoError> {
         return self.chatListFilterValue.get()
     }
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
@@ -425,9 +413,11 @@ public final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    public init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
+        self.chatListFilter = chatListFilter
+        self.chatListFilterValue.set(.single(chatListFilter))
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
@@ -541,7 +531,7 @@ public final class ChatListNode: ListView {
         
         let chatListViewUpdate = self.chatListLocation.get()
         |> distinctUntilChanged
-        |> mapToSignal { location -> Signal<(ChatListNodeViewUpdate, ChatListFilterPreset?), NoError> in
+        |> mapToSignal { location -> Signal<(ChatListNodeViewUpdate, ChatListFilter?), NoError> in
             return chatListViewForLocation(groupId: groupId, location: location, account: context.account)
             |> map { update in
                 return (update, location.filter)

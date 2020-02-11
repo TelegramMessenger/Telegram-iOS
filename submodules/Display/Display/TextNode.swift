@@ -771,7 +771,7 @@ public final class TextAccessibilityOverlayNode: ASDisplayNode {
 }
 
 public class TextNode: ASDisplayNode {
-    public private(set) var cachedLayout: TextNodeLayout?
+    public internal(set) var cachedLayout: TextNodeLayout?
     
     override public init() {
         super.init()

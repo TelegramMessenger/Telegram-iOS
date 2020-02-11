@@ -304,6 +304,9 @@ public func notificationSoundSelectionController(context: AccountContext, isModa
         playSoundDisposable.dispose()
     })
     controller.enableInteractiveDismiss = true
+    if isModal {
+        controller.navigationPresentation = .modal
+    }
     
     completeImpl = { [weak controller] in
         let sound = stateValue.with { state in

@@ -7,12 +7,69 @@ import SyncCore
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
+public enum PeerNearby {
+    case selfPeer(expires: Int32)
+    case peer(id: PeerId, expires: Int32, distance: Int32)
+    
+    var expires: Int32 {
+        switch self {
+            case let .selfPeer(expires), let .peer(_, expires, _):
+                return expires
+        }
+    }
+}
 
+public enum PeerNearbyVisibilityUpdate {
+    case visible(latitude: Double, longitude: Double)
+    case location(latitude: Double, longitude: Double)
+    case invisible
+}
 
-public struct PeerNearby {
-    public let id: PeerId
-    public let expires: Int32
-    public let distance: Int32
+public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
+    var flags: Int32 = 0
+    var geoPoint: Api.InputGeoPoint
+    var selfExpires: Int32?
+    
+    switch update {
+        case let .visible(latitude, longitude):
+            flags |= (1 << 0)
+            geoPoint = .inputGeoPoint(lat: latitude, long: longitude)
+            selfExpires = 0x7fffffff
+        case let .location(latitude, longitude):
+            geoPoint = .inputGeoPoint(lat: latitude, long: longitude)
+        case .invisible:
+            flags |= (1 << 0)
+            geoPoint = .inputGeoPointEmpty
+            selfExpires = 0
+    }
+    
+    let _ = (account.postbox.transaction { transaction in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
+            var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
+            if case .invisible = update {
+                settings.visibilityExpires = nil
+            } else if let expires = selfExpires {
+                settings.visibilityExpires = expires
+            }
+            return settings
+        })
+    }).start()
+
+    if background {
+        flags |= (1 << 1)
+    }
+        
+    return account.network.request(Api.functions.contacts.getLocated(flags: flags, geoPoint: geoPoint, selfExpires: selfExpires))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { updates -> Signal<Void, NoError> in
+        if let updates = updates {
+            account.stateManager.addUpdates(updates)
+        }
+        return .complete()
+    }
 }
 
 public final class PeersNearbyContext {
@@ -23,10 +80,10 @@ public final class PeersNearbyContext {
     
     private var entries: [PeerNearby]?
    
-    public init(network: Network, accountStateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
+    public init(network: Network, stateManager: AccountStateManager, coordinate: (latitude: Double, longitude: Double)) {
         let expiryExtension: Double = 10.0
         
-        let poll = network.request(Api.functions.contacts.getLocated(geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude)))
+        let poll = network.request(Api.functions.contacts.getLocated(flags: 0, geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude), selfExpires: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -39,23 +96,28 @@ public final class PeersNearbyContext {
                 case let .updates(updates, _, _, _, _):
                     for update in updates {
                         if case let .updatePeerLocated(peers) = update {
-                            for case let .peerLocated(peer, expires, distance) in peers {
-                                peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
+                            for peer in peers {
+                                switch peer {
+                                    case let .peerLocated(peer, expires, distance):
+                                        peersNearby.append(.peer(id: peer.peerId, expires: expires, distance: distance))
+                                    case let .peerSelfLocated(expires):
+                                        peersNearby.append(.selfPeer(expires: expires))
+                                }
                             }
                         }
                     }
                 default:
                     break
                 }
-                accountStateManager.addUpdates(updates)
+                stateManager.addUpdates(updates)
             }
             return .single(peersNearby)
             |> then(
-                accountStateManager.updatedPeersNearby()
+                stateManager.updatedPeersNearby()
                 |> castError(Void.self)
             )
         }
-        
+                
         let error: Signal<Void, Void> = .single(Void()) |> then(Signal.fail(Void()) |> suspendAwareDelay(25.0, queue: self.queue))
         let combined = combineLatest(poll, error)
         |> map { data, _ -> [PeerNearby] in
@@ -77,16 +139,35 @@ public final class PeersNearbyContext {
             let updatedEntries = updatedEntries.filter { Double($0.expires) + expiryExtension > timestamp }
             
             var existingPeerIds: [PeerId: Int] = [:]
+            var existingSelfPeer: Int?
             for i in 0 ..< entries.count {
-                existingPeerIds[entries[i].id] = i
+                if case let .peer(id, _, _) = entries[i] {
+                    existingPeerIds[id] = i
+                } else if case .selfPeer = entries[i] {
+                    existingSelfPeer = i
+                }
             }
             
+            var selfPeer: PeerNearby?
             for entry in updatedEntries {
-                if let index = existingPeerIds[entry.id] {
-                    entries[index] = entry
-                } else {
-                    entries.append(entry)
+                switch entry {
+                    case let .selfPeer:
+                        if let index = existingSelfPeer {
+                            entries[index] = entry
+                        } else {
+                            selfPeer = entry
+                        }
+                    case let .peer(id, _, _):
+                        if let index = existingPeerIds[id] {
+                            entries[index] = entry
+                        } else {
+                            entries.append(entry)
+                        }
                 }
+            }
+            
+            if let peer = selfPeer {
+                entries.insert(peer, at: 0)
             }
             
             strongSelf.entries = entries
@@ -186,6 +267,36 @@ public func updateChannelGeoLocation(postbox: Postbox, network: Network, channel
             } else {
                 return .single(result)
             }
+        }
+    }
+}
+
+public struct PeersNearbyState: PreferencesEntry, Equatable {
+    public var visibilityExpires: Int32?
+    
+    public static var `default` = PeersNearbyState(visibilityExpires: nil)
+    
+    public init(visibilityExpires: Int32?) {
+        self.visibilityExpires = visibilityExpires
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.visibilityExpires = decoder.decodeOptionalInt32ForKey("expires")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let expires = self.visibilityExpires {
+            encoder.encodeInt32(expires, forKey: "expires")
+        } else {
+            encoder.encodeNil(forKey: "expires")
+        }
+    }
+    
+    public func isEqual(to: PreferencesEntry) -> Bool {
+        if let to = to as? PeersNearbyState, self == to {
+            return true
+        } else {
+            return false
         }
     }
 }

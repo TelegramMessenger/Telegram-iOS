@@ -12,7 +12,7 @@ struct ChatListNodeView {
     let originalView: ChatListView
     let filteredEntries: [ChatListNodeEntry]
     let isLoading: Bool
-    let filter: ChatListFilterPreset?
+    let filter: ChatListFilter?
 }
 
 enum ChatListNodeViewTransitionReason {

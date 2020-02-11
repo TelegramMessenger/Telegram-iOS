@@ -13,7 +13,7 @@ import GalleryUI
 
 public enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)
-    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], Peer, Int32, GalleryItemIndexData?, MessageId?)
+    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], Peer?, Int32, GalleryItemIndexData?, MessageId?)
     
     public var representations: [ImageRepresentationWithReference] {
         switch self {
@@ -61,7 +61,7 @@ public final class AvatarGalleryControllerPresentationArguments {
     }
 }
 
-private func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry]{
+public func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry] {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
         initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), nil))
@@ -70,26 +70,57 @@ private func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry]{
 }
 
 public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
-    return requestPeerPhotos(account: account, peerId: peer.id)
-    |> map { photos -> [AvatarGalleryEntry] in
-        var result: [AvatarGalleryEntry] = []
-        let initialEntries = initialAvatarGalleryEntries(peer: peer)
-        if photos.isEmpty {
-            result = initialEntries
-        } else {
-            var index: Int32 = 0
-            for photo in photos {
-                let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                if result.isEmpty, let first = initialEntries.first {
-                    result.append(.image(photo.image.reference, first.representations, peer, photo.date, indexData, photo.messageId))
-                } else {
-                    result.append(.image(photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId))
+    let initialEntries = initialAvatarGalleryEntries(peer: peer)
+    return Signal<[AvatarGalleryEntry], NoError>.single(initialEntries)
+    |> then(
+        requestPeerPhotos(account: account, peerId: peer.id)
+        |> map { photos -> [AvatarGalleryEntry] in
+            var result: [AvatarGalleryEntry] = []
+            let initialEntries = initialAvatarGalleryEntries(peer: peer)
+            if photos.isEmpty {
+                result = initialEntries
+            } else {
+                var index: Int32 = 0
+                for photo in photos {
+                    let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.reference, first.representations, peer, photo.date, indexData, photo.messageId))
+                    } else {
+                        result.append(.image(photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId))
+                    }
+                    index += 1
                 }
-                index += 1
             }
+            return result
         }
-        return result
-    }
+    )
+}
+
+public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<[AvatarGalleryEntry], NoError> {
+    let initialEntries = [firstEntry]
+    return Signal<[AvatarGalleryEntry], NoError>.single(initialEntries)
+    |> then(
+        requestPeerPhotos(account: account, peerId: peer.id)
+        |> map { photos -> [AvatarGalleryEntry] in
+            var result: [AvatarGalleryEntry] = []
+            let initialEntries = [firstEntry]
+            if photos.isEmpty {
+                result = initialEntries
+            } else {
+                var index: Int32 = 0
+                for photo in photos {
+                    let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
+                    if result.isEmpty, let first = initialEntries.first {
+                        result.append(.image(photo.image.reference, first.representations, peer, photo.date, indexData, photo.messageId))
+                    } else {
+                        result.append(.image(photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId))
+                    }
+                    index += 1
+                }
+            }
+            return result
+        }
+    )
 }
 
 public class AvatarGalleryController: ViewController, StandalonePresentableController {
@@ -118,7 +149,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
-    private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
+    private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
     
     private let _hiddenMedia = Promise<AvatarGalleryEntry?>(nil)
@@ -232,7 +263,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.navigationItem.titleView = titleView
         }))
         
-        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
+        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode, _ in
             self?.galleryNode.updatePresentationState({
                 $0.withUpdatedFooterContentNode(footerContentNode)
             }, transition: .immediate)
