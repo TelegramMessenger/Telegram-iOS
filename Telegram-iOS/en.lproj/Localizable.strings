@@ -22,6 +22,10 @@
 "PUSH_CHANNEL_MESSAGE_POLL" = "%1$@|posted a poll %2$@";
 "PUSH_PINNED_POLL" = "%1$@|pinned a poll";
 
+"PUSH_MESSAGE_QUIZ" = "%1$@|sent you a quiz %2$@";
+"PUSH_CHANNEL_MESSAGE_QUIZ" = "%1$@|posted a quiz %2$@";
+"PUSH_PINNED_QUIZ" = "%1$@|pinned a quiz";
+
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@: %3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGE_PHOTO" = "%2$@|%1$@ sent a photo";
@@ -93,6 +97,7 @@
 "PUSH_MESSAGE_GEO" = "%1$@|sent you a map";
 "PUSH_MESSAGE_GEOLIVE" = "%1$@|started sharing their live location";
 "PUSH_MESSAGE_POLL" = "%1$@|sent you a poll";
+"PUSH_MESSAGE_QUIZ" = "%1$@|sent you a quiz";
 "PUSH_MESSAGE_GIF" = "%1$@|sent you a GIF";
 "PUSH_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_MESSAGE_INVOICE" = "%1$@|sent you an invoice for %2$@";
@@ -125,6 +130,7 @@
 "PUSH_CHANNEL_MESSAGE_GEO" = "%1$@|posted a map";
 "PUSH_CHANNEL_MESSAGE_GEOLIVE" = "%1$@|posted a live location";
 "PUSH_CHANNEL_MESSAGE_POLL" = "%1$@|posted a poll";
+"PUSH_CHANNEL_MESSAGE_QUIZ" = "%1$@|posted a quiz";
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@|posted a GIF";
 "PUSH_CHANNEL_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHANNEL_MESSAGE_FWD" = "%1$@|posted a forwarded message";
@@ -155,6 +161,7 @@
 "PUSH_CHAT_MESSAGE_GEO" = "%2$@|%1$@ sent a map";
 "PUSH_CHAT_MESSAGE_GEOLIVE" = "%2$@|%1$@ started sharing their live location";
 "PUSH_CHAT_MESSAGE_POLL" = "%2$@|%1$@ sent a poll %3$@ to the group";
+"PUSH_CHAT_MESSAGE_QUIZ" = "%2$@|%1$@ sent a quiz %3$@ to the group";
 "PUSH_CHAT_MESSAGE_GIF" = "%2$@|%1$@ sent a GIF";
 "PUSH_CHAT_MESSAGE_GAME" = "%2$@|%1$@ invited the group to play %3$@";
 "PUSH_CHAT_MESSAGE_INVOICE" = "%2$@|%1$@ sent an invoice for %3$@";
@@ -197,6 +204,7 @@
 "PUSH_PINNED_GEO" = "%1$@|pinned a map";
 "PUSH_PINNED_GEOLIVE" = "%1$@|pinned a live location";
 "PUSH_PINNED_POLL" = "|%1$@|pinned a poll %2$@";
+"PUSH_PINNED_QUIZ" = "|%1$@|pinned a quiz %2$@";
 "PUSH_PINNED_GAME" = "%1$@|pinned a game";
 "PUSH_PINNED_INVOICE" = "%1$@|pinned an invoice";
 "PUSH_PINNED_GIF" = "%1$@|pinned a GIF";
@@ -253,6 +261,11 @@
 "State.ConnectingToProxyInfo" = "tap here for settings";
 "State.Updating" = "Updating...";
 "State.WaitingForNetwork" = "Waiting for network";
+
+"ChatState.Connecting" = "connecting...";
+"ChatState.ConnectingToProxy" = "connecting to proxy...";
+"ChatState.Updating" = "updating...";
+"ChatState.WaitingForNetwork" = "waiting for network...";
 
 // Presence
 "Presence.online" = "online";
@@ -1927,6 +1940,7 @@
 "Notification.PinnedContactMessage" = "%@ pinned a contact";
 "Notification.PinnedDeletedMessage" = "%@ pinned deleted message";
 "Notification.PinnedPollMessage" = "%@ pinned a poll";
+"Notification.PinnedQuizMessage" = "%@ pinned a quiz";
 
 "Message.PinnedTextMessage" = "pinned \"%@\" ";
 "Message.PinnedPhotoMessage" = "pinned photo";
@@ -1937,7 +1951,6 @@
 "Message.PinnedStickerMessage" = "pinned sticker";
 "Message.PinnedLocationMessage" = "pinned location";
 "Message.PinnedContactMessage" = "pinned contact";
-"Message.PinnedPollMessage" = "pinned poll";
 
 "Notification.PinnedMessage" = "pinned message";
 
@@ -3793,6 +3806,7 @@ Unused sets are archived when you add more.";
 "MessagePoll.VotedCount_any" = "%@ votes";
 "AttachmentMenu.Poll" = "Poll";
 "Conversation.PinnedPoll" = "Pinned Poll";
+"Conversation.PinnedQuiz" = "Pinned Quiz";
 
 "CreatePoll.Title" = "New Poll";
 "CreatePoll.Create" = "Send";
@@ -5282,6 +5296,11 @@ Any member of this group will be able to see messages in the channel.";
 "Forward.ErrorPublicQuizDisabledInChannels" = "Sorry, public polls can’t be forwarded to channels.";
 
 "Map.PlacesInThisArea" = "Places In This Area";
+
+"Appearance.BubbleCornersSetting" = "Message Corners";
+"Appearance.BubbleCorners.Title" = "Message Corners";
+"Appearance.BubbleCorners.AdjustAdjacent" = "Adjust Adjacent Corners";
+"Appearance.BubbleCorners.Apply" = "Set";
 
 "Conversation.LiveLocationYouAndOther" = "**You** and %@";
 

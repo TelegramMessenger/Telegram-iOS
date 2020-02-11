@@ -57,6 +57,12 @@ public struct ValueBoxEncryptionParameters {
     }
 }
 
+public enum ValueBoxFilterResult {
+    case accept
+    case skip
+    case stop
+}
+
 public protocol ValueBox {
     func begin()
     func commit()
@@ -66,6 +72,7 @@ public protocol ValueBox {
     func endStats()
     
     func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int)
+    func filteredRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> ValueBoxFilterResult, limit: Int)
     func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> Bool, limit: Int)
     func scan(_ table: ValueBoxTable, values: (ValueBoxKey, ReadBuffer) -> Bool)
     func scan(_ table: ValueBoxTable, keys: (ValueBoxKey) -> Bool)

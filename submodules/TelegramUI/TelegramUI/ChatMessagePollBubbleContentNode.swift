@@ -539,7 +539,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             let shouldHaveRadioNode = optionResult == nil
             let isSelectable: Bool
-            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind {
+            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind, !Namespaces.Message.allScheduled.contains(message.id.namespace) {
                 isSelectable = true
             } else {
                 isSelectable = false
@@ -891,7 +891,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         if !hasSelection {
-            item.controllerInteraction.requestOpenMessagePollResults(item.message.id, pollId)
+            if !Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                item.controllerInteraction.requestOpenMessagePollResults(item.message.id, pollId)
+            }
         } else if !selectedOpaqueIdentifiers.isEmpty {
             item.controllerInteraction.requestSelectMessagePollOptions(item.message.id, selectedOpaqueIdentifiers)
         }
@@ -1018,7 +1020,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                if let poll = poll, poll.isClosed, case .poll = poll.kind {
+                if let poll = poll, poll.isClosed {
                     typeText = item.presentationData.strings.MessagePoll_LabelClosed
                 } else if let poll = poll {
                     switch poll.kind {
@@ -1155,7 +1157,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
                 
                 var canVote = false
-                if item.message.id.namespace == Namespaces.Message.Cloud, let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !poll.isClosed {
+                if (item.message.id.namespace == Namespaces.Message.Cloud || Namespaces.Message.allScheduled.contains(item.message.id.namespace)), let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !poll.isClosed {
                     var hasVoted = false
                     if let voters = poll.results.voters {
                         for voter in voters {
@@ -1168,9 +1170,6 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     if !hasVoted {
                         canVote = true
                     }
-                }
-                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-                    canVote = false
                 }
                 
                 return (boundingSize.width, { boundingWidth in
@@ -1349,10 +1348,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         
-        var disableAllActions = false
-        if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-            disableAllActions = true
-        }
+        let disableAllActions = false
         
         var hasSelection = false
         switch poll.kind {
@@ -1397,15 +1393,23 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             self.buttonSubmitInactiveTextNode.isHidden = hasSelectedOptions
             self.buttonSubmitActiveTextNode.isHidden = !hasSelectedOptions
             self.buttonNode.isHidden = !hasSelectedOptions
+            self.buttonNode.isUserInteractionEnabled = true
         } else {
             if case .public = poll.publicity, hasResults, !disableAllActions {
                 self.votersNode.isHidden = true
                 self.buttonViewResultsTextNode.isHidden = false
                 self.buttonNode.isHidden = false
+                
+                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                    self.buttonNode.isUserInteractionEnabled = false
+                } else {
+                    self.buttonNode.isUserInteractionEnabled = true
+                }
             } else {
                 self.votersNode.isHidden = false
                 self.buttonViewResultsTextNode.isHidden = true
                 self.buttonNode.isHidden = true
+                self.buttonNode.isUserInteractionEnabled = true
             }
             self.buttonSubmitInactiveTextNode.isHidden = true
             self.buttonSubmitActiveTextNode.isHidden = true
@@ -1624,10 +1628,11 @@ private final class MergedAvatarsNode: ASDisplayNode {
                     if self.disposables[peer.peerId] == nil {
                         if let signal = peerAvatarImage(account: context.account, peerReference: peerReference, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: mergedImageSize, height: mergedImageSize), synchronousLoad: synchronousLoad) {
                             let disposable = (signal
-                            |> deliverOnMainQueue).start(next: { [weak self] image in
+                            |> deliverOnMainQueue).start(next: { [weak self] imageVersions in
                                 guard let strongSelf = self else {
                                     return
                                 }
+                                let image = imageVersions?.0
                                 if let image = image {
                                     strongSelf.images[peer.peerId] = image
                                     strongSelf.setNeedsDisplay()

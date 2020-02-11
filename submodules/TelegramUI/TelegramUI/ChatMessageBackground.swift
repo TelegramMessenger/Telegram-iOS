@@ -226,3 +226,76 @@ class ChatMessageBackground: ASDisplayNode {
         self.outlineImageNode.image = outlineImage
     }
 }
+
+final class ChatMessageShadowNode: ASDisplayNode {
+    private let contentNode: ASImageNode
+    private var graphics: PrincipalThemeEssentialGraphics?
+    
+    override init() {
+        self.contentNode = ASImageNode()
+        self.contentNode.isLayerBacked = true
+        self.contentNode.displaysAsynchronously = false
+        self.contentNode.displayWithoutProcessing = true
+        
+        super.init()
+        
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        
+        self.isLayerBacked = true
+        
+        self.addSubnode(self.contentNode)
+    }
+    
+    func setType(type: ChatMessageBackgroundType, hasWallpaper: Bool, graphics: PrincipalThemeEssentialGraphics) {
+        let shadowImage: UIImage?
+        
+        if hasWallpaper {
+            switch type {
+            case .none:
+                shadowImage = nil
+            case let .incoming(mergeType):
+                switch mergeType {
+                case .None:
+                    shadowImage = graphics.chatMessageBackgroundIncomingShadowImage
+                case let .Top(side):
+                    if side {
+                        shadowImage = graphics.chatMessageBackgroundIncomingMergedTopSideShadowImage
+                    } else {
+                        shadowImage = graphics.chatMessageBackgroundIncomingMergedTopShadowImage
+                    }
+                case .Bottom:
+                    shadowImage = graphics.chatMessageBackgroundIncomingMergedBottomShadowImage
+                case .Both:
+                    shadowImage = graphics.chatMessageBackgroundIncomingMergedBothShadowImage
+                case .Side:
+                    shadowImage = graphics.chatMessageBackgroundIncomingMergedSideShadowImage
+                }
+            case let .outgoing(mergeType):
+                switch mergeType {
+                case .None:
+                    shadowImage = graphics.chatMessageBackgroundOutgoingShadowImage
+                case let .Top(side):
+                    if side {
+                        shadowImage = graphics.chatMessageBackgroundOutgoingMergedTopSideShadowImage
+                    } else {
+                        shadowImage = graphics.chatMessageBackgroundOutgoingMergedTopShadowImage
+                    }
+                case .Bottom:
+                    shadowImage = graphics.chatMessageBackgroundOutgoingMergedBottomShadowImage
+                case .Both:
+                    shadowImage = graphics.chatMessageBackgroundOutgoingMergedBothShadowImage
+                case .Side:
+                    shadowImage = graphics.chatMessageBackgroundOutgoingMergedSideShadowImage
+                }
+            }
+        } else {
+            shadowImage = nil
+        }
+        
+        self.contentNode.image = shadowImage
+    }
+    
+    func updateLayout(backgroundFrame: CGRect, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX - 10.0, y: backgroundFrame.minY - 10.0), size: CGSize(width: backgroundFrame.width + 20.0, height: backgroundFrame.height + 20.0)))
+    }
+}

@@ -42,6 +42,7 @@ static_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/TelegramIntents:TelegramIntents",
+        "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

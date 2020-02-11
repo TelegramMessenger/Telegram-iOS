@@ -132,7 +132,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     case sticker
                     case location
                     case contact
-                    case poll
+                    case poll(TelegramMediaPollKind)
                     case deleted
                 }
                 
@@ -188,8 +188,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             type = .location
                         } else if let _ = media as? TelegramMediaContact {
                             type = .contact
-                        } else if let _ = media as? TelegramMediaPoll {
-                            type = .poll
+                        } else if let poll = media as? TelegramMediaPoll {
+                            type = .poll(poll.kind)
                         }
                     }
                 } else {
@@ -229,8 +229,13 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedLocationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 case .contact:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
-                case .poll:
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                case let .poll(kind):
+                    switch kind {
+                    case .poll:
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    case .quiz:
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedQuizMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    }
                 case .deleted:
                     attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }

@@ -366,6 +366,11 @@ public final class ChatListNode: ListView {
     }
     
     private var currentLocation: ChatListNodeLocation?
+    let chatListFilter: ChatListFilter?
+    private let chatListFilterValue = Promise<ChatListFilter?>()
+    var chatListFilterSignal: Signal<ChatListFilter?, NoError> {
+        return self.chatListFilterValue.get()
+    }
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
@@ -408,9 +413,11 @@ public final class ChatListNode: ListView {
     
     private var hapticFeedback: HapticFeedback?
     
-    public init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId, chatListFilter: ChatListFilter? = nil, previewing: Bool, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
+        self.chatListFilter = chatListFilter
+        self.chatListFilterValue.set(.single(chatListFilter))
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
@@ -524,8 +531,11 @@ public final class ChatListNode: ListView {
         
         let chatListViewUpdate = self.chatListLocation.get()
         |> distinctUntilChanged
-        |> mapToSignal { location in
+        |> mapToSignal { location -> Signal<(ChatListNodeViewUpdate, ChatListFilter?), NoError> in
             return chatListViewForLocation(groupId: groupId, location: location, account: context.account)
+            |> map { update in
+                return (update, location.filter)
+            }
         }
         
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
@@ -575,7 +585,8 @@ public final class ChatListNode: ListView {
         let currentPeerId: PeerId = context.account.peerId
         
         let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get())
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, updateAndFilter, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+            let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
@@ -633,7 +644,7 @@ public final class ChatListNode: ListView {
                 }
             }
             
-            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries, isLoading: isLoading)
+            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries, isLoading: isLoading, filter: filter)
             let previousView = previousView.swap(processedView)
             let previousState = previousState.swap(state)
             
@@ -746,6 +757,11 @@ public final class ChatListNode: ListView {
                 searchMode = true
             }
             
+            if filter != previousView?.filter {
+                disableAnimations = true
+                updatedScrollPosition = nil
+            }
+            
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
             |> map({ mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
@@ -764,9 +780,9 @@ public final class ChatListNode: ListView {
                 if let range = range.loadedRange {
                     var location: ChatListNodeLocation?
                     if range.firstIndex < 5 && originalView.laterIndex != nil {
-                        location = .navigation(index: originalView.entries[originalView.entries.count - 1].index)
+                        location = .navigation(index: originalView.entries[originalView.entries.count - 1].index, filter: strongSelf.chatListFilter)
                     } else if range.firstIndex >= 5 && range.lastIndex >= originalView.entries.count - 5 && originalView.earlierIndex != nil {
-                        location = .navigation(index: originalView.entries[0].index)
+                        location = .navigation(index: originalView.entries[0].index, filter: strongSelf.chatListFilter)
                     }
                     
                     if let location = location, location != strongSelf.currentLocation {
@@ -822,10 +838,10 @@ public final class ChatListNode: ListView {
         
         let initialLocation: ChatListNodeLocation
         switch mode {
-            case .chatList:
-                initialLocation = .initial(count: 50)
-            case .peers:
-                initialLocation = .initial(count: 200)
+        case .chatList:
+            initialLocation = .initial(count: 50, filter: self.chatListFilter)
+        case .peers:
+            initialLocation = .initial(count: 200, filter: self.chatListFilter)
         }
         self.setChatListLocation(initialLocation)
         
@@ -1304,12 +1320,12 @@ public final class ChatListNode: ListView {
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound, scrollPosition: .top(0.0), animated: true)
+                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound, scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
                 self.setChatListLocation(location)
             }
         } else {
             let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                , scrollPosition: .top(0.0), animated: true)
+                , scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
             self.setChatListLocation(location)
         }
     }
@@ -1345,11 +1361,11 @@ public final class ChatListNode: ListView {
             
             if let index = index {
                 let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound
-                    , scrollPosition: .center(.top), animated: true)
+                    , scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
                 strongSelf.setChatListLocation(location)
             } else {
                 let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                    , scrollPosition: .top(0.0), animated: true)
+                    , scrollPosition: .top(0.0), animated: true, filter: strongSelf.chatListFilter)
                 strongSelf.setChatListLocation(location)
             }
         })
@@ -1405,7 +1421,7 @@ public final class ChatListNode: ListView {
                     guard let strongSelf = self, let index = index else {
                         return
                     }
-                    let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true)
+                    let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
                     strongSelf.setChatListLocation(location)
                     strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
                 })
@@ -1429,7 +1445,7 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if let target = target {
-                    let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                    let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: self.chatListFilter)
                     self.setChatListLocation(location)
                     self.peerSelected?(target.1, false, false)
                 }
@@ -1439,17 +1455,23 @@ public final class ChatListNode: ListView {
                 guard index < 10 else {
                     return
                 }
-                let _ = (chatListViewForLocation(groupId: self.groupId, location: .initial(count: 10), account: self.context.account)
+                let _ = (self.chatListFilterValue.get()
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { update in
-                    let entries = update.view.entries
-                    if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _) = entries[10 - index - 1] {
-                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
-                        self.setChatListLocation(location)
-                        self.peerSelected?(renderedPeer.peerId, false, false)
+                |> deliverOnMainQueue).start(next: { [weak self] filter in
+                    guard let self = self else {
+                        return
                     }
+                    let _ = (chatListViewForLocation(groupId: self.groupId, location: .initial(count: 10, filter: filter), account: self.context.account)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { update in
+                        let entries = update.view.entries
+                        if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _) = entries[10 - index - 1] {
+                            let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: filter)
+                            self.setChatListLocation(location)
+                            self.peerSelected?(renderedPeer.peerId, false, false)
+                        }
+                    })
                 })
-                break
         }
     }
     

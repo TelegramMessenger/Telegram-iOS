@@ -979,21 +979,49 @@ extension PresentationThemeChatList: Codable {
     }
 }
 
+extension PresentationThemeBubbleShadow: Codable {
+    enum CodingKeys: String, CodingKey {
+        case color
+        case radius
+        case verticalOffset
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            color: try decodeColor(values, .color),
+            radius: try CGFloat(Double(truncating: values.decode(Decimal.self, forKey: .radius) as NSNumber)),
+            verticalOffset: try CGFloat(Double(truncating: values.decode(Decimal.self, forKey: .verticalOffset) as NSNumber))
+        )
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try encodeColor(&values, self.color, .color)
+        try values.encode(Decimal(Double(self.radius)), forKey: .radius)
+        try values.encode(Decimal(Double(self.verticalOffset)), forKey: .verticalOffset)
+    }
+}
+
 extension PresentationThemeBubbleColorComponents: Codable {
     enum CodingKeys: String, CodingKey {
         case bg
         case gradientBg
         case highlightedBg
         case stroke
+        case shadow
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
-        self.init(fill: try decodeColor(values, .bg),
-                  gradientFill: try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: codingPath + ".bg"),
-                  highlightedFill: try decodeColor(values, .highlightedBg),
-                  stroke: try decodeColor(values, .stroke))
+        self.init(
+            fill: try decodeColor(values, .bg),
+            gradientFill: try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: codingPath + ".bg"),
+            highlightedFill: try decodeColor(values, .highlightedBg),
+            stroke: try decodeColor(values, .stroke),
+            shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
+        )
     }
     
     public func encode(to encoder: Encoder) throws {

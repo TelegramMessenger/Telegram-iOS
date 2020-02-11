@@ -5,7 +5,7 @@ import TelegramCore
 import SyncCore
 import UserNotifications
 import Intents
-import HockeySDK
+//import HockeySDK
 import Postbox
 import PushKit
 import AsyncDisplayKit
@@ -157,7 +157,7 @@ final class SharedApplicationContext {
     }
 }
 
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, BITHockeyManagerDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
+@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate/*, BITHockeyManagerDelegate*/, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
@@ -1338,7 +1338,7 @@ final class SharedApplicationContext {
             self.isActivePromise.set(true)
         }
         
-        BITHockeyBaseManager.setPresentAlert({ [weak self] alert in
+        /*BITHockeyBaseManager.setPresentAlert({ [weak self] alert in
             if let strongSelf = self, let alert = alert {
                 var actions: [TextAlertAction] = []
                 for action in alert.actions {
@@ -1376,7 +1376,7 @@ final class SharedApplicationContext {
             #else
             BITHockeyManager.shared().authenticator.authenticateInstallation()
             #endif
-        }
+        }*/
         
         if UIApplication.shared.isStatusBarHidden {
             UIApplication.shared.setStatusBarHidden(false, with: .none)

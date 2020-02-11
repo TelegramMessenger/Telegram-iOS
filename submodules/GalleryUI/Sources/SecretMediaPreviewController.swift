@@ -122,6 +122,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
 
 public final class SecretMediaPreviewController: ViewController {
     private let context: AccountContext
+    private let messageId: MessageId
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -150,6 +151,7 @@ public final class SecretMediaPreviewController: ViewController {
     
     public init(context: AccountContext, messageId: MessageId) {
         self.context = context
+        self.messageId = messageId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -158,8 +160,6 @@ public final class SecretMediaPreviewController: ViewController {
         self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
-        
-        
         
         self.disposable.set((context.account.postbox.messageView(messageId) |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
@@ -176,17 +176,6 @@ public final class SecretMediaPreviewController: ViewController {
                 return .chat(context.account.id, messageId, media)
             } else {
                 return nil
-            }
-        })
-        
-        self.screenCaptureEventsDisposable = (screenCaptureEvents()
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            if let strongSelf = self, strongSelf.traceVisibility() {
-                if messageId.peerId.namespace == Namespaces.Peer.CloudUser {
-                    let _ = enqueueMessages(account: context.account, peerId: messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil)]).start()
-                } else if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                    let _ = addSecretChatMessageScreenshot(account: context.account, peerId: messageId.peerId).start()
-                }
             }
         })
     }
@@ -347,6 +336,19 @@ public final class SecretMediaPreviewController: ViewController {
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        if self.screenCaptureEventsDisposable == nil {
+            self.screenCaptureEventsDisposable = (screenCaptureEvents()
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                if let strongSelf = self, strongSelf.traceVisibility() {
+                    if strongSelf.messageId.peerId.namespace == Namespaces.Peer.CloudUser {
+                        let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil)]).start()
+                    } else if strongSelf.messageId.peerId.namespace == Namespaces.Peer.SecretChat {
+                        let _ = addSecretChatMessageScreenshot(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId).start()
+                    }
+                }
+            })
+        }
         
         var nodeAnimatesItself = false
         

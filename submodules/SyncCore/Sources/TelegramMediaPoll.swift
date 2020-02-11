@@ -229,6 +229,8 @@ public final class TelegramMediaPoll: Media, Equatable {
                 updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
                     return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: correctOpaqueIdentifiers.contains(voters.opaqueIdentifier))
                 }), totalVoters: results.totalVoters, recentVoters: results.recentVoters)
+            } else if let updatedVoters = results.voters {
+                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters)
             } else {
                 updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters)
             }

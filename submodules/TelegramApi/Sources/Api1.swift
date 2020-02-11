@@ -5861,6 +5861,9 @@ public extension Api {
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
         case updateLoginToken
         case updateMessagePollVote(pollId: Int64, userId: Int32, options: [Buffer])
+        case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
+        case updateDialogFilterOrder(order: [Int32])
+        case updateDialogFilters
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6510,6 +6513,30 @@ public extension Api {
                         serializeBytes(item, buffer: buffer, boxed: false)
                     }
                     break
+                case .updateDialogFilter(let flags, let id, let filter):
+                    if boxed {
+                        buffer.appendInt32(654302845)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {filter!.serialize(buffer, true)}
+                    break
+                case .updateDialogFilterOrder(let order):
+                    if boxed {
+                        buffer.appendInt32(-1512627963)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(order.count))
+                    for item in order {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .updateDialogFilters:
+                    if boxed {
+                        buffer.appendInt32(889491791)
+                    }
+                    
+                    break
     }
     }
     
@@ -6669,6 +6696,12 @@ public extension Api {
                 return ("updateLoginToken", [])
                 case .updateMessagePollVote(let pollId, let userId, let options):
                 return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options)])
+                case .updateDialogFilter(let flags, let id, let filter):
+                return ("updateDialogFilter", [("flags", flags), ("id", id), ("filter", filter)])
+                case .updateDialogFilterOrder(let order):
+                return ("updateDialogFilterOrder", [("order", order)])
+                case .updateDialogFilters:
+                return ("updateDialogFilters", [])
     }
     }
     
@@ -7964,6 +7997,41 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_updateDialogFilter(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.DialogFilter?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.DialogFilter
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateDialogFilter(flags: _1!, id: _2!, filter: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateDialogFilterOrder(_ reader: BufferReader) -> Update? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateDialogFilterOrder(order: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateDialogFilters(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateDialogFilters
         }
     
     }
@@ -17005,6 +17073,58 @@ public extension Api {
         }
     
     }
+    public enum DialogFilter: TypeConstructorDescription {
+        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .dialogFilter(let flags, let id, let title, let includePeers):
+                    if boxed {
+                        buffer.appendInt32(351868460)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(includePeers.count))
+                    for item in includePeers {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialogFilter(let flags, let id, let title, let includePeers):
+                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers)])
+    }
+    }
+    
+        public static func parse_dialogFilter(_ reader: BufferReader) -> DialogFilter? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputPaymentCredentials: TypeConstructorDescription {
         case inputPaymentCredentialsSaved(id: String, tmpPassword: Buffer)
         case inputPaymentCredentials(flags: Int32, data: Api.DataJSON)
@@ -20638,17 +20758,10 @@ public extension Api {
     
     }
     public enum Theme: TypeConstructorDescription {
-        case themeDocumentNotModified
         case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .themeDocumentNotModified:
-                    if boxed {
-                        buffer.appendInt32(1211967244)
-                    }
-                    
-                    break
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                     if boxed {
                         buffer.appendInt32(42930452)
@@ -20667,16 +20780,11 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .themeDocumentNotModified:
-                return ("themeDocumentNotModified", [])
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                 return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("settings", settings), ("installsCount", installsCount)])
     }
     }
     
-        public static func parse_themeDocumentNotModified(_ reader: BufferReader) -> Theme? {
-            return Api.Theme.themeDocumentNotModified
-        }
         public static func parse_theme(_ reader: BufferReader) -> Theme? {
             var _1: Int32?
             _1 = reader.readInt32()

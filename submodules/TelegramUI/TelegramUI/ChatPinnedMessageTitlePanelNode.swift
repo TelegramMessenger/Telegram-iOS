@@ -211,8 +211,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         imageDimensions = representation.dimensions.cgSize
                     }
                     break
-                } else if let _ = media as? TelegramMediaPoll {
-                    titleString = strings.Conversation_PinnedPoll
+                } else if let poll = media as? TelegramMediaPoll {
+                    switch poll.kind {
+                    case .poll:
+                        titleString = strings.Conversation_PinnedPoll
+                    case .quiz:
+                        titleString = strings.Conversation_PinnedQuiz
+                    }
                 }
             }
             

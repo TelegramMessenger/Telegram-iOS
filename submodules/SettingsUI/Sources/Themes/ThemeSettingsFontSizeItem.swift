@@ -16,17 +16,19 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let fontSize: PresentationFontSize
     let disableLeadingInset: Bool
+    let displayIcons: Bool
     let force: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
         self.disableLeadingInset = disableLeadingInset
+        self.displayIcons = displayIcons
         self.force = force
         self.sectionId = sectionId
         self.updated = updated
@@ -164,7 +166,9 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
             sliderView.knobImage = generateKnobImage()
             
-            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
+            let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
+            
+            sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
         }
         self.view.insertSubview(sliderView, belowSubview: self.disabledOverlayNode.view)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -271,6 +275,9 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.rightIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 14.0 - image.size.width, y: 21.0), size: CGSize(width: image.size.width, height: image.size.height))
                     }
                     
+                    strongSelf.leftIconNode.isHidden = !item.displayIcons
+                    strongSelf.rightIconNode.isHidden = !item.displayIcons
+                    
                     if let sliderView = strongSelf.sliderView {
                         sliderView.isUserInteractionEnabled = item.enabled
                         sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
@@ -302,7 +309,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                             sliderView.value = value
                         }
                         
-                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
+                        let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
+                        sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + sliderInset, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - sliderInset * 2.0, height: 44.0))
                     }
                 }
             })

@@ -1,8 +1,13 @@
 import Foundation
 
-struct PeerIdAndNamespace: Hashable {
-    let peerId: PeerId
-    let namespace: MessageId.Namespace
+public struct PeerIdAndNamespace: Hashable {
+    public let peerId: PeerId
+    public let namespace: MessageId.Namespace
+    
+    public init(peerId: PeerId, namespace: MessageId.Namespace) {
+        self.peerId = peerId
+        self.namespace = namespace
+    }
 }
 
 private func canContainHoles(_ peerIdAndNamespace: PeerIdAndNamespace, seedConfiguration: SeedConfiguration) -> Bool {
@@ -1134,7 +1139,7 @@ final class HistoryViewLoadedState {
         return updated
     }
     
-    func completeAndSample(postbox: Postbox) -> HistoryViewLoadedSample {
+    func completeAndSample(postbox: Postbox, clipHoles: Bool) -> HistoryViewLoadedSample {
         if !self.spacesWithRemovals.isEmpty {
             for space in self.spacesWithRemovals {
                 self.fillSpace(space: space, postbox: postbox)
@@ -1165,7 +1170,7 @@ final class HistoryViewLoadedState {
                         entry = self.orderedEntriesBySpace[space]!.higherThanAnchor[index]
                     }
                     
-                    if !clipRanges.isEmpty {
+                    if clipHoles && !clipRanges.isEmpty {
                         let entryIndex = entry.index
                         for range in clipRanges {
                             if range.contains(entryIndex) {
@@ -1373,12 +1378,12 @@ enum HistoryViewState {
         }
     }
     
-    func sample(postbox: Postbox) -> HistoryViewSample {
+    func sample(postbox: Postbox, clipHoles: Bool) -> HistoryViewSample {
         switch self {
-            case let .loading(loadingState):
-                return .loading(loadingState.checkAndSample(postbox: postbox))
-            case let .loaded(loadedState):
-                return .loaded(loadedState.completeAndSample(postbox: postbox))
+        case let .loading(loadingState):
+            return .loading(loadingState.checkAndSample(postbox: postbox))
+        case let .loaded(loadedState):
+            return .loaded(loadedState.completeAndSample(postbox: postbox, clipHoles: clipHoles))
         }
     }
 }

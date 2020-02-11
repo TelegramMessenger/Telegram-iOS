@@ -258,6 +258,7 @@ final class MutableMessageHistoryView {
     let tag: MessageTags?
     let namespaces: MessageIdNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
+    private let clipHoles: Bool
     private let anchor: HistoryViewInputAnchor
     
     fileprivate var combinedReadStates: MessageHistoryViewReadState?
@@ -271,10 +272,11 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, clipHoles: Bool, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
+        self.clipHoles = clipHoles
         self.peerIds = peerIds
         self.combinedReadStates = combinedReadStates
         self.transientReadStates = transientReadStates
@@ -290,12 +292,12 @@ final class MutableMessageHistoryView {
             switch sampledState {
             case let .ready(anchor, holes):
                 self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, namespaces: namespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
-                self.sampledState = self.state.sample(postbox: postbox)
+                self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
             case .loadHole:
                 break
             }
         }
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         
         self.render(postbox: postbox)
     }
@@ -320,7 +322,7 @@ final class MutableMessageHistoryView {
                 break
             }
         }
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
     }
     
     func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
@@ -509,7 +511,7 @@ final class MutableMessageHistoryView {
                     break
                 }
             }
-            self.sampledState = self.state.sample(postbox: postbox)
+            self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         }
         
         for operationSet in operations {

@@ -355,6 +355,8 @@ public final class PendingMessageManager {
                     strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
                 }
                 
+                var messagesToUpload: [(PendingMessageContext, Message, PendingMessageUploadedContentType, Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)] = []
+                var messagesToForward: [PeerIdAndNamespace: [(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = [:]
                 for (messageContext, _) in strongSelf.messageContexts.values.compactMap({ messageContext -> (PendingMessageContext, Message)? in
                     if case let .collectingInfo(message) = messageContext.state {
                         return (messageContext, message)
@@ -365,15 +367,57 @@ public final class PendingMessageManager {
                     return lhs.1.index < rhs.1.index
                 }) {
                     if case let .collectingInfo(message) = messageContext.state {
-                        let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
-                        messageContext.contentType = contentType
-                        
-                        if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
-                            strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
-                        } else {
-                            messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                        let contentToUpload = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
+                        messageContext.contentType = contentToUpload.type
+                        switch contentToUpload {
+                        case let .immediate(result, type):
+                            var isForward = false
+                            switch result {
+                            case let .content(content):
+                                switch content.content {
+                                case let .forward(forwardInfo):
+                                    isForward = true
+                                    let peerIdAndNamespace = PeerIdAndNamespace(peerId: message.id.peerId, namespace: message.id.namespace)
+                                    if messagesToForward[peerIdAndNamespace] == nil {
+                                        messagesToForward[peerIdAndNamespace] = []
+                                    }
+                                    messagesToForward[peerIdAndNamespace]!.append((messageContext, message, forwardInfo))
+                                default:
+                                    break
+                                }
+                            default:
+                                break
+                            }
+                            if !isForward {
+                                messagesToUpload.append((messageContext, message, type, .single(result)))
+                            }
+                        case let .signal(signal, type):
+                            messagesToUpload.append((messageContext, message, type, signal))
                         }
                     }
+                }
+                
+                for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
+                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
+                        strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
+                    } else {
+                        messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                    }
+                }
+                
+                for (_, messages) in messagesToForward {
+                    for (context, _, _) in messages {
+                        context.state = .sending(groupId: nil)
+                    }
+                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, group: messages.map { data in
+                        let (_, message, forwardInfo) = data
+                        return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil))
+                    })
+                    |> map { next -> PendingMessageResult in
+                        return .progress(1.0)
+                    }
+                    messages[0].0.sendDisposable.set((sendMessage
+                    |> deliverOn(strongSelf.queue)).start())
                 }
             }
         }))
@@ -502,7 +546,8 @@ public final class PendingMessageManager {
                 }
             }
             return .complete()
-        }).start(next: { [weak self] next in
+        }
+        |> deliverOn(queue)).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
@@ -630,7 +675,9 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
-                    flags |= (1 << 9)
+                    if !messages.contains(where: { $0.0.groupingKey == nil }) {
+                        flags |= (1 << 9)
+                    }
                     
                     var forwardIds: [(MessageId, Int64)] = []
                     for (message, content) in messages {

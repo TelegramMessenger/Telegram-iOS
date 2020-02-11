@@ -68,6 +68,7 @@ public enum TapLongTapOrDoubleTapGestureRecognizerAction {
     case waitForSingleTap
     case waitForHold(timeout: Double, acceptTap: Bool)
     case fail
+    case keepWithSingleTap
 }
 
 public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
@@ -206,6 +207,8 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                 }
                 
                 switch tapAction {
+                    case .keepWithSingleTap:
+                        break
                     case .waitForSingleTap, .waitForDoubleTap:
                         self.timer?.invalidate()
                         let timer = Timer(timeInterval: 0.3, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.longTapEvent), userInfo: nil, repeats: false)
@@ -284,7 +287,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             }
             
             switch tapAction {
-                case .waitForSingleTap:
+                case .waitForSingleTap, .keepWithSingleTap:
                     if let (touchLocation, _) = self.touchLocationAndTimestamp {
                         self.lastRecognizedGestureAndLocation = (.tap, touchLocation)
                     }

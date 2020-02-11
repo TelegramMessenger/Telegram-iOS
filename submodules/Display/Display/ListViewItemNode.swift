@@ -110,6 +110,10 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
+    open var extractedBackgroundNode: ASDisplayNode? {
+        return nil
+    }
+    
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
     
@@ -555,12 +559,19 @@ open class ListViewItemNode: ASDisplayNode {
     public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
         self.frame = frame
         self.updateAbsoluteRect(frame, within: containerSize)
+        if let extractedBackgroundNode = self.extractedBackgroundNode {
+            extractedBackgroundNode.frame = frame.offsetBy(dx: 0.0, dy: -self.insets.top)
+        }
     }
     
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
     }
     
     open func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let extractedBackgroundNode = self.extractedBackgroundNode {
+            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
+            transition.animatePositionAdditive(node: extractedBackgroundNode, offset: CGPoint(x: 0.0, y: -value))
+        }
     }
     
     open func snapshotForReordering() -> UIView? {

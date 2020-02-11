@@ -928,7 +928,11 @@ extension PresentationThemeDecoding {
 
     fileprivate func unbox_(_ value: Any, as type: Decodable.Type) throws -> Any? {
         if type == Decimal.self || type == NSDecimalNumber.self {
-            return try self.unbox(value, as: Decimal.self)
+            if let value = value as? String {
+                return Decimal(string: value)
+            } else {
+                return try self.unbox(value, as: Decimal.self)
+            }
         } else if let stringKeyedDictType = type as? _YAMLStringDictionaryDecodableMarker.Type {
             return try self.unbox(value, as: stringKeyedDictType)
         } else {

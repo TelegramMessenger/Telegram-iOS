@@ -95,7 +95,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
+public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate, TabBarContainedController {
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -103,6 +103,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private let hideNetworkActivityStatus: Bool
     
     public let groupId: PeerGroupId
+    public let filter: ChatListFilter?
     public let previewing: Bool
     
     let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
@@ -141,12 +142,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
     }
     
-    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, previewing: Bool = false, enableDebugActions: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter? = nil, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, previewing: Bool = false, enableDebugActions: Bool) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
         self.groupId = groupId
+        self.filter = filter
         self.previewing = previewing
         
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
@@ -159,7 +161,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         let title: String
-        if case .root = self.groupId {
+        if let filter = self.filter {
+            title = filter.title ?? ""
+        } else if self.groupId == .root {
             title = self.presentationData.strings.DialogList_Title
             self.navigationBar?.item = nil
         } else {
@@ -170,7 +174,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.navigationItem.titleView = self.titleView
         
         if !previewing {
-            if case .root = groupId {
+            if self.groupId == .root && self.filter == nil {
                 self.tabBarItem.title = self.presentationData.strings.DialogList_Title
                 
                 let icon: UIImage?
@@ -257,16 +261,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         if !self.hideNetworkActivityStatus {
-            self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode, self.chatListDisplayNode.chatListNode.state).start(next: { [weak self] networkState, proxy, passcode, state in
+            self.titleDisposable = combineLatest(queue: .mainQueue(),
+                context.account.networkState,
+                hasProxy,
+                passcode,
+                self.chatListDisplayNode.chatListNode.state,
+                self.chatListDisplayNode.chatListNode.chatListFilterSignal
+            ).start(next: { [weak self] networkState, proxy, passcode, state, chatListFilter in
                 if let strongSelf = self {
                     let defaultTitle: String
-                    if case .root = strongSelf.groupId {
-                        defaultTitle = strongSelf.presentationData.strings.DialogList_Title
+                    if strongSelf.groupId == .root {
+                        if let chatListFilter = chatListFilter {
+                            let title: String = chatListFilter.title ?? ""
+                            defaultTitle = title
+                        } else {
+                            defaultTitle = strongSelf.presentationData.strings.DialogList_Title
+                        }
                     } else {
                         defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                     }
                     if state.editing {
-                        if case .root = strongSelf.groupId {
+                        if strongSelf.groupId == .root && strongSelf.filter == nil {
                             strongSelf.navigationItem.rightBarButtonItem = nil
                         }
                         
@@ -276,9 +291,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         var isRoot = false
                         if case .root = strongSelf.groupId {
                             isRoot = true
-                            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
-                            rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
-                            strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                            if strongSelf.filter == nil {
+                                let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
+                                rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
+                                strongSelf.navigationItem.rightBarButtonItem = rightBarButtonItem
+                            }
                         }
                         
                         let (hasProxy, connectsViaProxy) = proxy
@@ -301,7 +318,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             case .online:
                                 strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked)
                         }
-                        if case .root = groupId, checkProxy {
+                        if groupId == .root && filter == nil && checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil && strongSelf.navigationController?.topViewController === self {
                                 strongSelf.didShowProxyUnavailableTooltipController = true
                                 let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Proxy_TooltipUnavailable), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 60.0, dismissByTapOutside: true)
@@ -423,7 +440,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
             editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         }
-        if case .root = self.groupId {
+        if self.groupId == .root && self.filter == nil {
             self.navigationItem.leftBarButtonItem = editItem
             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
             rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
@@ -443,7 +460,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -1785,5 +1802,52 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         } else {
             return nil
         }
+    }
+    
+    public func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
+        if self.isNodeLoaded {
+            let _ = (self.context.account.postbox.transaction { transaction -> [ChatListFilter] in
+                let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
+                return settings.filters
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] presetList in
+                guard let strongSelf = self else {
+                    return
+                }
+                let controller = TabBarChatListFilterController(context: strongSelf.context, sourceNodes: sourceNodes, presetList: presetList, currentPreset: strongSelf.chatListDisplayNode.chatListNode.chatListFilter, setup: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.push(chatListFilterPresetListController(context: strongSelf.context, updated: { presets in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        /*if let currentPreset = strongSelf.chatListDisplayNode.chatListNode.chatListFilter {
+                            var found = false
+                            if let index = presets.index(where: { $0.id == currentPreset.id }) {
+                                found = true
+                                if currentPreset != presets[index] {
+                                    strongSelf.chatListDisplayNode.chatListNode.chatListFilter = presets[index]
+                                }
+                            }
+                            if !found {
+                                strongSelf.chatListDisplayNode.chatListNode.chatListFilter = nil
+                            }
+                        }*/
+                    }))
+                }, updatePreset: { value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.push(ChatListControllerImpl(context: strongSelf.context, groupId: .root, filter: value, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: false, enableDebugActions: false))
+                    //strongSelf.chatListDisplayNode.chatListNode.chatListFilter = value
+                })
+                strongSelf.context.sharedContext.mainWindow?.present(controller, on: .root)
+            })
+        }
+    }
+    
+    public func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
+        
     }
 }

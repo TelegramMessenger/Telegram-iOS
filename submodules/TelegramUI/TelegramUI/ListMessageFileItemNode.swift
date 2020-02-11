@@ -15,6 +15,7 @@ import AccountContext
 import RadialStatusNode
 import PhotoResources
 import MusicAlbumArtResources
+import UniversalMediaPlayer
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -124,6 +125,7 @@ private struct FetchControls {
 private enum FileIconImage: Equatable {
     case imageRepresentation(TelegramMediaFile, TelegramMediaImageRepresentation)
     case albumArt(TelegramMediaFile, SharedMediaPlaybackAlbumArt)
+    case roundVideo(TelegramMediaFile)
     
     static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
         switch lhs {
@@ -135,6 +137,12 @@ private enum FileIconImage: Equatable {
                 }
             case let .albumArt(file, value):
                 if case .albumArt(file, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .roundVideo(file):
+                if case .roundVideo(file) = rhs {
                     return true
                 } else {
                     return false
@@ -159,6 +167,10 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let statusButtonNode: HighlightTrackingButtonNode
     private let statusNode: RadialStatusNode
     
+    private var waveformNode: AudioWaveformNode?
+    private var waveformForegroundNode: AudioWaveformNode?
+    private var waveformScrubbingNode: MediaPlayerScrubbingNode?
+    
     private var currentIconImage: FileIconImage?
     private var currentMedia: Media?
     
@@ -167,6 +179,8 @@ final class ListMessageFileItemNode: ListMessageNode {
     private var fetchStatus: MediaResourceStatus?
     private var resourceStatus: FileMediaResourceMediaStatus?
     private let fetchDisposable = MetaDisposable()
+    private let playbackStatusDisposable = MetaDisposable()
+    private let playbackStatus = Promise<MediaPlayerStatus>()
     
     private var downloadStatusIconNode: ASImageNode
     private var linearProgressNode: ASDisplayNode
@@ -226,7 +240,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.downloadStatusIconNode.displayWithoutProcessing = true
         
         self.progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: .black, foregroundColor: .white, icon: nil))
-        self.progressNode.isLayerBacked = true
+        //self.progressNode.isLayerBacked = true
         
         self.linearProgressNode = ASDisplayNode()
         self.linearProgressNode.isLayerBacked = true
@@ -235,6 +249,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.progressNode)
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.descriptionProgressNode)
         self.addSubnode(self.extensionIconNode)
@@ -335,9 +350,13 @@ final class ListMessageFileItemNode: ListMessageNode {
             var iconImage: FileIconImage?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
+            var updatedPlaybackStatusSignal: Signal<MediaPlayerStatus, NoError>?
             var updatedFetchControls: FetchControls?
+            var waveform: AudioWaveform?
             
             var isAudio = false
+            var isVoice = false
+            var isInstantVideo = false
             
             let message = item.message
             
@@ -346,9 +365,12 @@ final class ListMessageFileItemNode: ListMessageNode {
                 if let file = media as? TelegramMediaFile {
                     selectedMedia = file
                     
+                    isInstantVideo = file.isInstantVideo
+                    
                     for attribute in file.attributes {
-                        if case let .Audio(voice, _, title, performer, _) = attribute {
+                        if case let .Audio(voice, _, title, performer, waveformValue) = attribute {
                             isAudio = true
+                            isVoice = voice
                             
                             titleText = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
                             
@@ -365,11 +387,21 @@ final class ListMessageFileItemNode: ListMessageNode {
                             
                             if !voice {
                                 iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                            } else {
+                                titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                                descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                                waveformValue?.withDataNoCopy { data in
+                                    waveform = AudioWaveform(bitstream: data, bitsPerSample: 5)
+                                }
                             }
                         }
                     }
                     
-                    if !isAudio {
+                    if isInstantVideo {
+                        titleText = NSAttributedString(string: item.strings.Message_VideoMessage, font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        iconImage = .roundVideo(file)
+                    } else if !isAudio {
                         let fileName: String = file.fileName ?? ""
                         titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                         
@@ -402,7 +434,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
             }
             
-            if isAudio {
+            if isAudio && !isVoice {
                 leftInset += 14.0
             }
             
@@ -435,9 +467,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false)
+                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true)
                     
-                    if isAudio {
+                    if isAudio || isInstantVideo {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal
                             |> map { status in
@@ -449,6 +481,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                                 }
                             }
                         }
+                    }
+                    if isVoice {
+                        updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false)
                     }
                 }
             }
@@ -472,6 +507,11 @@ final class ListMessageFileItemNode: ListMessageNode {
                         let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
                         let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
+                    case let .roundVideo(file):
+                        let iconSize = CGSize(width: 42.0, height: 42.0)
+                        let imageCorners = ImageCorners(topLeft: .Corner(iconSize.width / 2.0), topRight: .Corner(iconSize.width / 2.0), bottomLeft: .Corner(iconSize.width / 2.0), bottomRight: .Corner(iconSize.width / 2.0))
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: (file.dimensions ?? PixelDimensions(width: 320, height: 320)).cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                        iconImageApply = iconImageLayout(arguments)
                 }
             }
             
@@ -482,7 +522,8 @@ final class ListMessageFileItemNode: ListMessageNode {
                             updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
                         case let .albumArt(file, albumArt):
                             updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true)
-                        
+                        case let .roundVideo(file):
+                            updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true)
                     }
                 } else {
                     updateIconImageSignal = .complete()
@@ -581,6 +622,48 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     strongSelf.currentIconImage = iconImage
                     
+                    if isVoice {
+                        let waveformNode: AudioWaveformNode
+                        let waveformForegroundNode: AudioWaveformNode
+                        let waveformScrubbingNode: MediaPlayerScrubbingNode
+                        if let current = strongSelf.waveformNode {
+                            waveformNode = current
+                        } else {
+                            waveformNode = AudioWaveformNode()
+                            waveformNode.isLayerBacked = true
+                            strongSelf.waveformNode = waveformNode
+                            strongSelf.addSubnode(waveformNode)
+                        }
+                        if let current = strongSelf.waveformForegroundNode {
+                            waveformForegroundNode = current
+                        } else {
+                            waveformForegroundNode = AudioWaveformNode()
+                            waveformForegroundNode.isLayerBacked = true
+                            strongSelf.waveformForegroundNode = waveformForegroundNode
+                            strongSelf.addSubnode(waveformForegroundNode)
+                        }
+                        if let current = strongSelf.waveformScrubbingNode {
+                            waveformScrubbingNode = current
+                        } else {
+                            waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: waveformNode, foregroundContentNode: waveformForegroundNode))
+                            waveformScrubbingNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: 0.0, bottom: -10.0, right: 0.0)
+                            waveformScrubbingNode.seek = { timestamp in
+                                if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
+                                    context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
+                                }
+                            }
+                            waveformScrubbingNode.enableScrubbing = false
+                            waveformScrubbingNode.status = strongSelf.playbackStatus.get()
+                            strongSelf.waveformScrubbingNode = waveformScrubbingNode
+                            strongSelf.addSubnode(waveformScrubbingNode)
+                        }
+                        
+                        transition.updateFrame(node: waveformScrubbingNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 10.0), size: CGSize(width: params.width - leftInset - 16.0, height: 12.0)))
+                        
+                        waveformNode.setup(color: item.theme.list.controlSecondaryColor, waveform: waveform)
+                        waveformForegroundNode.setup(color: item.theme.list.itemAccentColor, waveform: waveform)
+                    }
+                    
                     if let iconImageApply = iconImageApply {
                         if let updateImageSignal = updateIconImageSignal {
                             strongSelf.iconImageNode.setSignal(updateImageSignal)
@@ -632,8 +715,22 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 11.0) / 2.0)), size: CGSize(width: 11.0, height: 11.0)))
                     
+                    let progressSize: CGFloat = 40.0
+                    transition.updateFrame(node: strongSelf.progressNode, frame: CGRect(origin: CGPoint(x: leftOffset + params.leftInset + floor((leftInset - params.leftInset - progressSize) / 2.0), y: floor((nodeLayout.contentSize.height - progressSize) / 2.0)), size: CGSize(width: progressSize, height: progressSize)))
+                    
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
+                    }
+                    
+                    if let updatedPlaybackStatusSignal = updatedPlaybackStatusSignal {
+                        strongSelf.playbackStatus.set(updatedPlaybackStatusSignal)
+                        /*strongSelf.playbackStatusDisposable.set((updatedPlaybackStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                            displayLinkDispatcher.dispatch {
+                                if let strongSelf = strongSelf {
+                                    strongSelf.playerStatus = status
+                                }
+                            }
+                        }))*/
                     }
                     
                     strongSelf.updateStatus(transition: transition)
@@ -648,25 +745,34 @@ final class ListMessageFileItemNode: ListMessageNode {
         }
         
         var isAudio = false
+        var isVoice = false
+        var isInstantVideo = false
         if let file = media as? TelegramMediaFile {
             isAudio = file.isMusic || file.isVoice
+            isVoice = file.isVoice
+            isInstantVideo = file.isInstantVideo
         }
         
+        self.progressNode.isHidden = !isVoice
+        
+        var enableScrubbing = false
         var musicIsPlaying: Bool?
         var statusState: RadialStatusNodeState = .none
-        if !isAudio {
+        if !isAudio && !isInstantVideo {
             self.updateProgressFrame(size: contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
         } else {
-            switch fetchStatus {
-                case let .Fetching(_, progress):
-                    let adjustedProgress = max(progress, 0.027)
-                    statusState = .cloudProgress(color: item.theme.list.itemAccentColor, strokeBackgroundColor: item.theme.list.itemAccentColor.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
-                case .Local:
-                    break
-                case .Remote:
-                    if let image = PresentationResourcesItemList.cloudFetchIcon(item.theme) {
-                        statusState = .customIcon(image)
-                    }
+            if !isVoice && !isInstantVideo {
+                switch fetchStatus {
+                    case let .Fetching(_, progress):
+                        let adjustedProgress = max(progress, 0.027)
+                        statusState = .cloudProgress(color: item.theme.list.itemAccentColor, strokeBackgroundColor: item.theme.list.itemAccentColor.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
+                    case .Local:
+                        break
+                    case .Remote:
+                        if let image = PresentationResourcesItemList.cloudFetchIcon(item.theme) {
+                            statusState = .customIcon(image)
+                        }
+                }
             }
             self.statusNode.transitionToState(statusState, completion: {})
             self.statusButtonNode.isUserInteractionEnabled = statusState != .none
@@ -691,6 +797,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             }
                     }
                 case let .playbackStatus(playbackStatus):
+                    enableScrubbing = true
                     switch playbackStatus {
                         case .playing:
                             musicIsPlaying = true
@@ -701,7 +808,8 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
             }
         }
-        if let musicIsPlaying = musicIsPlaying {
+        self.waveformScrubbingNode?.enableScrubbing = enableScrubbing
+        if let musicIsPlaying = musicIsPlaying, !isVoice, !isInstantVideo {
             if self.playbackOverlayNode == nil {
                 let playbackOverlayNode = ListMessagePlaybackOverlayNode()
                 playbackOverlayNode.frame = self.iconImageNode.frame

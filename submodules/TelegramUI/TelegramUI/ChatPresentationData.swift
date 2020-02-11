@@ -28,6 +28,7 @@ public final class ChatPresentationData {
     let nameDisplayOrder: PresentationPersonNameOrder
     let disableAnimations: Bool
     let largeEmoji: Bool
+    let chatBubbleCorners: PresentationChatBubbleCorners
     let animatedEmojiScale: CGFloat
     let isPreview: Bool
     
@@ -39,13 +40,14 @@ public final class ChatPresentationData {
     let messageFixedFont: UIFont
     let messageBlockQuoteFont: UIFont
     
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, chatBubbleCorners: PresentationChatBubbleCorners, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.disableAnimations = disableAnimations
+        self.chatBubbleCorners = chatBubbleCorners
         self.largeEmoji = largeEmoji
         self.isPreview = isPreview
         

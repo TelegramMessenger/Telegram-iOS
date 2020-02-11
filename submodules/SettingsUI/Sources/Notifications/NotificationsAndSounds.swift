@@ -17,6 +17,49 @@ import TelegramNotices
 import NotificationSoundSelectionUI
 import TelegramStringFormatting
 
+private struct CounterTagSettings: OptionSet {
+    var rawValue: Int32
+    
+    init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    init(summaryTags: PeerSummaryCounterTags) {
+        var result = CounterTagSettings()
+        if summaryTags.contains(.privateChat) {
+            result.insert(.regularChatsAndPrivateGroups)
+        }
+        if summaryTags.contains(.channel) {
+            result.insert(.channels)
+        }
+        if summaryTags.contains(.publicGroup) {
+            result.insert(.publicGroups)
+        }
+        self = result
+    }
+    
+    func toSumaryTags() -> PeerSummaryCounterTags {
+        var result = PeerSummaryCounterTags()
+        if self.contains(.regularChatsAndPrivateGroups) {
+            result.insert(.privateChat)
+            result.insert(.secretChat)
+            result.insert(.bot)
+            result.insert(.privateGroup)
+        }
+        if self.contains(.publicGroups) {
+            result.insert(.publicGroup)
+        }
+        if self.contains(.channels) {
+            result.insert(.channel)
+        }
+        return result
+    }
+    
+    static let regularChatsAndPrivateGroups = CounterTagSettings(rawValue: 1 << 0)
+    static let publicGroups = CounterTagSettings(rawValue: 1 << 1)
+    static let channels = CounterTagSettings(rawValue: 1 << 2)
+}
+
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
@@ -43,7 +86,7 @@ private final class NotificationsAndSoundsArguments {
     let updateInAppPreviews: (Bool) -> Void
     
     let updateDisplayNameOnLockscreen: (Bool) -> Void
-    let updateIncludeTag: (PeerSummaryCounterTags, Bool) -> Void
+    let updateIncludeTag: (CounterTagSettings, Bool) -> Void
     let updateTotalUnreadCountCategory: (Bool) -> Void
     
     let updateJoinedNotifications: (Bool) -> Void
@@ -56,7 +99,7 @@ private final class NotificationsAndSoundsArguments {
     
     let updateNotificationsFromAllAccounts: (Bool) -> Void
     
-    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void, updateNotificationsFromAllAccounts: @escaping (Bool) -> Void) {
+    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateIncludeTag: @escaping (CounterTagSettings, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void, updateNotificationsFromAllAccounts: @escaping (Bool) -> Void) {
         self.context = context
         self.presentController = presentController
         self.pushController = pushController
@@ -779,8 +822,11 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.displayNamesOnLockscreenInfo(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreenInfoWithLink))
     
     entries.append(.badgeHeader(presentationData.theme, presentationData.strings.Notifications_Badge.uppercased()))
-    entries.append(.includePublicGroups(presentationData.theme, presentationData.strings.Notifications_Badge_IncludePublicGroups, inAppSettings.totalUnreadCountIncludeTags.contains(.publicGroups)))
-    entries.append(.includeChannels(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeChannels, inAppSettings.totalUnreadCountIncludeTags.contains(.channels)))
+    
+    let counterTagSettings = CounterTagSettings(summaryTags: inAppSettings.totalUnreadCountIncludeTags)
+    
+    entries.append(.includePublicGroups(presentationData.theme, presentationData.strings.Notifications_Badge_IncludePublicGroups, counterTagSettings.contains(.publicGroups)))
+    entries.append(.includeChannels(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeChannels, counterTagSettings.contains(.channels)))
     entries.append(.unreadCountCategory(presentationData.theme, presentationData.strings.Notifications_Badge_CountUnreadMessages, inAppSettings.totalUnreadCountDisplayCategory == .messages))
     entries.append(.unreadCountCategoryInfo(presentationData.theme, inAppSettings.totalUnreadCountDisplayCategory == .chats ? presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOff : presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOn))
     entries.append(.joinedNotifications(presentationData.theme, presentationData.strings.NotificationSettings_ContactJoined, globalSettings.contactsJoined))
@@ -911,12 +957,14 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         }).start()
     }, updateIncludeTag: { tag, value in
         let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-            var settings = settings
+            var currentSettings = CounterTagSettings(summaryTags: settings.totalUnreadCountIncludeTags)
             if !value {
-                settings.totalUnreadCountIncludeTags.remove(tag)
+                currentSettings.remove(tag)
             } else {
-                settings.totalUnreadCountIncludeTags.insert(tag)
+                currentSettings.insert(tag)
             }
+            var settings = settings
+            settings.totalUnreadCountIncludeTags = currentSettings.toSumaryTags()
             return settings
         }).start()
     }, updateTotalUnreadCountCategory: { value in

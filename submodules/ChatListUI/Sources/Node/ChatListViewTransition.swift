@@ -6,11 +6,13 @@ import SwiftSignalKit
 import Display
 import MergeLists
 import SearchUI
+import TelegramUIPreferences
 
 struct ChatListNodeView {
     let originalView: ChatListView
     let filteredEntries: [ChatListNodeEntry]
     let isLoading: Bool
+    let filter: ChatListFilter?
 }
 
 enum ChatListNodeViewTransitionReason {
@@ -165,7 +167,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         
         var fromEmptyView = false
         if let fromView = fromView {
-            if fromView.filteredEntries.isEmpty {
+            if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
                 options.remove(.AnimateInsertion)
                 options.remove(.AnimateAlpha)
                 fromEmptyView = true

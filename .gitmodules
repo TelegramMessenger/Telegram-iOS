@@ -1,4 +1,4 @@
 
 [submodule "submodules/rlottie/rlottie"]
 	path = submodules/rlottie/rlottie
-	url = https://github.com/laktyushin/rlottie.git
+url=../rlottie.git
