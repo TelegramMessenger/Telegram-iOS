@@ -5,6 +5,9 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
     if view.disablesInteractiveTransitionGestureRecognizer {
         return true
     }
+    if let disablesInteractiveTransitionGestureRecognizerNow = view.disablesInteractiveTransitionGestureRecognizerNow, disablesInteractiveTransitionGestureRecognizerNow() {
+        return true
+    }
     
     if let point = point, let test = view.interactiveTransitionGestureRecognizerTest, test(point) {
         return true

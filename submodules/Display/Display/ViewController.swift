@@ -93,6 +93,8 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
+    var blocksInteractionUntilReady: Bool = false
+    
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
     public final var automaticallyControlPresentationContextLayout: Bool = true

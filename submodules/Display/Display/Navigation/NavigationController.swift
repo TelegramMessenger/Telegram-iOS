@@ -274,6 +274,18 @@ open class NavigationController: UINavigationController, ContainableController, 
                 return true
             }
         }
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                if container.hasNonReadyControllers() {
+                    return true
+                }
+            case let .split(splitContainer):
+                if splitContainer.hasNonReadyControllers() {
+                    return true
+                }
+            }
+        }
         return false
     }
     
@@ -1001,27 +1013,8 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func pushViewController(_ controller: ViewController, animated: Bool = true, completion: @escaping () -> Void) {
-        let navigateAction: () -> Void = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            if !controller.hasActiveInput {
-                //strongSelf.view.endEditing(true)
-            }
-            /*strongSelf.scheduleAfterLayout({
-                guard let strongSelf = self else {
-                    return
-                }*/
-                strongSelf.pushViewController(controller, animated: animated)
-                completion()
-            //})
-        }
-        
-        /*if let lastController = self.viewControllers.last as? ViewController, !lastController.attemptNavigation(navigateAction) {
-        } else {*/
-            navigateAction()
-        //}
+        self.pushViewController(controller, animated: animated)
+        completion()
     }
     
     open override func pushViewController(_ viewController: UIViewController, animated: Bool) {

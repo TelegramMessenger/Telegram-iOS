@@ -392,6 +392,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 })
                             ])])
                         strongSelf.presentController(actionSheet, nil)
+                    case .bankCard:
+                        break
                 }
             }
         }, openCheckoutOrReceipt: { _ in

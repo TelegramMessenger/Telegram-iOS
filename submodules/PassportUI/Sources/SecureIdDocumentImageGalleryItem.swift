@@ -210,8 +210,8 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
 }
 

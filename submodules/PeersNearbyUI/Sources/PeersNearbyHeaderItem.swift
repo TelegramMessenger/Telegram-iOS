@@ -6,7 +6,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
-import PeersNearbyIconNode
+import AnimatedStickerNode
+import AppBundle
 
 class PeersNearbyHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
@@ -60,7 +61,7 @@ private let titleFont = Font.regular(13.0)
 
 class PeersNearbyHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
-    private var iconNode: PeersNearbyIconNode?
+    private var animationNode: AnimatedStickerNode
     
     private var item: PeersNearbyHeaderItem?
     
@@ -70,24 +71,29 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.animationNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "Compass", ofType: "tgs") {
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct)
+            self.animationNode.visibility = true
+        }
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.animationNode)
     }
     
     func asyncLayout() -> (_ item: PeersNearbyHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 48.0 + params.leftInset
+            let leftInset: CGFloat = 32.0 + params.leftInset
             let topInset: CGFloat = 92.0
             
             let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize: CGSize
-            
-            contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
+            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -96,22 +102,13 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
-                    
-                    let iconNode: PeersNearbyIconNode
-                    if let node = strongSelf.iconNode {
-                        iconNode = node
-                        iconNode.updateTheme(item.theme)
-                    } else {
-                        iconNode = PeersNearbyIconNode(theme: item.theme)
-                        strongSelf.iconNode = iconNode
-                        strongSelf.addSubnode(iconNode)
-                    }
-                    
-                    let iconSize = CGSize(width: 60.0, height: 60.0)
-                    iconNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: 5.0), size: iconSize)
+                                        
+                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
+                    strongSelf.animationNode.updateLayout(size: iconSize)
                     
                     let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
                 }
             })
         }

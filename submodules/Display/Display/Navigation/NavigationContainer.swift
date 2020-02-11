@@ -133,6 +133,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }*/
     }
     
+    func hasNonReadyControllers() -> Bool {
+        if let pending = self.state.pending, !pending.isReady {
+            return true
+        }
+        return false
+    }
+    
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
@@ -181,10 +188,21 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 bottomController.viewWillAppear(true)
                 let bottomNode = bottomController.displayNode
                 
-                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self, topNode: topNode, topNavigationBar: topController.navigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] progress, transition, topFrame, bottomFrame in
+                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, container: self, topNode: topNode, topNavigationBar: topController.navigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
                     if let strongSelf = self {
                         if let top = strongSelf.state.top {
                             strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
+                            
+                            var updatedStatusBarStyle = strongSelf.statusBarStyle
+                            if let bottomController = bottomController, progress >= 0.3 {
+                                updatedStatusBarStyle = bottomController.statusBar.statusBarStyle
+                            } else {
+                                updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+                            }
+                            if strongSelf.statusBarStyle != updatedStatusBarStyle {
+                                strongSelf.statusBarStyle = updatedStatusBarStyle
+                                strongSelf.statusBarStyleUpdated?(.animated(duration: 0.3, curve: .easeInOut))
+                            }
                         }
                     }
                 })
@@ -337,7 +355,24 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             }
             self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
-            updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+            if let childTransition = self.state.transition, childTransition.coordinator.isInteractive {
+                switch childTransition.type {
+                case .push:
+                    if childTransition.coordinator.progress >= 0.3 {
+                        updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+                    } else {
+                        updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
+                    }
+                case .pop:
+                    if childTransition.coordinator.progress >= 0.3 {
+                        updatedStatusBarStyle = childTransition.previous.value.statusBar.statusBarStyle
+                    } else {
+                        updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+                    }
+                }
+            } else {
+                updatedStatusBarStyle = top.value.statusBar.statusBarStyle
+            }
         } else {
             updatedStatusBarStyle = .Ignore
         }
@@ -377,7 +412,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             toValue.value.setIgnoreAppearanceMethodInvocations(false)
             
-            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, container: self, topNode: topController.displayNode, topNavigationBar: topController.navigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
+            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, isInteractive: false, container: self, topNode: topController.displayNode, topNavigationBar: topController.navigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
                 guard let strongSelf = self else {
                     return
                 }

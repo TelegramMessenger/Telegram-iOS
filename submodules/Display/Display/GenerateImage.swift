@@ -238,6 +238,8 @@ public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UICol
     let cap: Int
     if intDiameter == 3 {
         cap = 1
+    } else if intDiameter == 2 {
+        cap = 3
     } else if intRadius == 1 {
         cap = 2
     } else {
@@ -264,6 +266,35 @@ public func generateVerticallyStretchableFilledCircleImage(radius: CGFloat, colo
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: radius + radius, height: radius + radius)))
         context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: radius), size: CGSize(width: radius + radius, height: radius + radius)))
     })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
+}
+
+public func generateSmallHorizontalStretchableFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: diameter + 1.0, height: diameter), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        if let subImage = generateImage(CGSize(width: diameter + 1.0, height: diameter), contextGenerator: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.black.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: diameter, height: diameter)))
+            context.fill(CGRect(origin: CGPoint(x: diameter / 2.0, y: 0.0), size: CGSize(width: 1.0, height: diameter)))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: diameter, height: diameter)))
+        }) {
+            if let backgroundColor = backgroundColor {
+                context.setFillColor(backgroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+            }
+            
+            if let color = color {
+                context.setFillColor(color.cgColor)
+            } else {
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+            }
+            
+            context.clip(to: CGRect(origin: CGPoint(), size: size), mask: subImage.cgImage!)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+    })?.stretchableImage(withLeftCapWidth: Int(diameter / 2), topCapHeight: Int(diameter / 2))
 }
 
 public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {

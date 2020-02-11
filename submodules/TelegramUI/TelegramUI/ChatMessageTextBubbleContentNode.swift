@@ -428,6 +428,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
                 return .timecode(timecode.time, timecode.text)
+            } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
+                return .bankCard(bankCard)
             } else {
                 return .none
             }
@@ -451,7 +453,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         TelegramTextAttributes.PeerTextMention,
                         TelegramTextAttributes.BotCommand,
                         TelegramTextAttributes.Hashtag,
-                        TelegramTextAttributes.Timecode
+                        TelegramTextAttributes.Timecode,
+                        TelegramTextAttributes.BankCard
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedString.Key(rawValue: name)] {

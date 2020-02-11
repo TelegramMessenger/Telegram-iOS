@@ -122,7 +122,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
-    private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
+    private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
     
     private let _hiddenMedia = Promise<AvatarGalleryEntry?>(nil)
@@ -236,7 +236,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.navigationItem.titleView = titleView
         }))
         
-        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
+        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode, _ in
             self?.galleryNode.updatePresentationState({
                 $0.withUpdatedFooterContentNode(footerContentNode)
             }, transition: .immediate)

@@ -676,6 +676,8 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
                 break
             case .Underline:
                 break
+            case .BankCard:
+                break
             case .Custom:
                 break
         }
@@ -723,6 +725,8 @@ private func decryptedEntities101(_ entities: [MessageTextEntity]?) -> [SecretAp
                 result.append(.messageEntityBlockquote(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
             case .Underline:
                 result.append(.messageEntityUnderline(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
+            case .BankCard:
+                break
             case .Custom:
                 break
         }

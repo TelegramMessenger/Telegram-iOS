@@ -92,8 +92,10 @@ static_library(
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/MessageUI.framework",
         "$SDKROOT/System/Library/Frameworks/LocalAuthentication.framework",
-        "$SDKROOT/System/Library/Frameworks/Photos.framework",
         "$SDKROOT/System/Library/Frameworks/QuickLook.framework",
         "$SDKROOT/System/Library/Frameworks/CoreTelephony.framework",
+    ],
+    weak_frameworks = [
+        "Photos",
     ],
 )

@@ -18,13 +18,14 @@ public final class ItemListAddressItem: ListViewItem, ItemListItem {
     let selected: Bool?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let displayDecorations: Bool
     let action: (() -> Void)?
     let longTapAction: (() -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     public let tag: Any?
     
-    public init(theme: PresentationTheme, label: String, text: String, imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, selected: Bool? = nil, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    public init(theme: PresentationTheme, label: String, text: String, imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, selected: Bool? = nil, sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
@@ -32,6 +33,7 @@ public final class ItemListAddressItem: ListViewItem, ItemListItem {
         self.selected = selected
         self.sectionId = sectionId
         self.style = style
+        self.displayDecorations = displayDecorations
         self.action = action
         self.longTapAction = longTapAction
         self.linkItemAction = linkItemAction
@@ -157,7 +159,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
                 updatedTheme = item.theme
             }
             
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let leftInset: CGFloat = 16.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
             let separatorHeight = UIScreenPixel
@@ -173,6 +175,10 @@ public class ItemListAddressItemNode: ListViewItemNode {
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
                     insets = itemListNeighborsGroupedInsets(neighbors)
+            }
+            
+            if !item.displayDecorations {
+                insets = UIEdgeInsets()
             }
             
             var leftOffset: CGFloat = 0.0
@@ -225,6 +231,11 @@ public class ItemListAddressItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
+                    
+                    strongSelf.topStripeNode.isHidden = !item.displayDecorations
+                    strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
+                    strongSelf.backgroundNode.isHidden = !item.displayDecorations
+                    strongSelf.highlightedBackgroundNode.isHidden = !item.displayDecorations
                     
                     let _ = labelApply()
                     let _ = textApply()
@@ -293,7 +304,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
                                 case .sameSection(false):
                                     strongSelf.topStripeNode.isHidden = true
                                 default:
-                                    strongSelf.topStripeNode.isHidden = false
+                                    strongSelf.topStripeNode.isHidden = !item.displayDecorations
                             }
                             let bottomStripeInset: CGFloat
                             let bottomStripeOffset: CGFloat

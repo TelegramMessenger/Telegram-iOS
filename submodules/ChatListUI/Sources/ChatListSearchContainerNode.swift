@@ -193,8 +193,10 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     }
                 }, setPeerIdWithRevealedOptions: setPeerIdWithRevealedOptions, deletePeer: deletePeer, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = peer.peer.peers[peer.peer.peerId] {
+                        if let chatPeer = peer.peer.peers[peer.peer.peerId], chatPeer.id.namespace != Namespaces.Peer.SecretChat {
                             peerContextAction(chatPeer, .recentSearch, node, gesture)
+                        } else {
+                            gesture?.cancel()
                         }
                     }
                 })
@@ -415,7 +417,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        if let chatPeer = chatPeer {
+                        if let chatPeer = chatPeer, chatPeer.id.namespace != Namespaces.Peer.SecretChat {
                             peerContextAction(chatPeer, .search, node, gesture)
                         } else {
                             gesture?.cancel()
@@ -725,7 +727,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     return (views, local)
                 }
             }
-            |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId: (Int32, Bool)]), NoError> in
+            |> mapToSignal { viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId: (Int32, Bool)]), NoError> in
                 return context.account.postbox.unreadMessageCountsView(items: viewsAndPeers.0.map {.peer($0.peerId)}) |> map { values in
                     var unread: [PeerId: (Int32, Bool)] = [:]
                     for peerView in viewsAndPeers.0 {
@@ -814,8 +816,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 )
             }
             
-            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get())
-            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData, searchState -> ([ChatListSearchEntry], Bool)? in
+            let resolvedMessage = .single(nil)
+            |> then(context.sharedContext.resolveUrl(account: context.account, url: query)
+            |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
+                if case let .channelMessage(peerId, messageId) = resolvedUrl {
+                    return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
+                } else {
+                    return .single(nil)
+                }
+            })
+            
+            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get(), resolvedMessage)
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData, searchState, resolvedMessage -> ([ChatListSearchEntry], Bool)? in
                 var entries: [ChatListSearchEntry] = []
                 let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                 var index = 0
@@ -946,6 +958,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         index += 1
                         numberOfGlobalPeers += 1
                     }
+                }
+                
+                if let message = resolvedMessage {
+                    var peer = RenderedPeer(message: message)
+                    if let group = message.peers[message.id.peerId] as? TelegramGroup, let migrationReference = group.migrationReference {
+                        if let channelPeer = message.peers[migrationReference.peerId] {
+                            peer = RenderedPeer(peer: channelPeer)
+                        }
+                    }
+                    entries.append(.message(message, peer, nil, presentationData))
+                    index += 1
                 }
                 
                 if !foundRemotePeers.2 {

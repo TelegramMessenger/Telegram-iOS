@@ -8,6 +8,7 @@ import AccountContext
 import SyncCore
 import Postbox
 import TelegramUIPreferences
+import TelegramCore
 
 final class TabBarChatListFilterController: ViewController {
     private var controllerNode: TabBarChatListFilterControllerNode {
@@ -21,17 +22,17 @@ final class TabBarChatListFilterController: ViewController {
     
     private let context: AccountContext
     private let sourceNodes: [ASDisplayNode]
-    private let presetList: [ChatListFilterPreset]
-    private let currentPreset: ChatListFilterPreset?
+    private let presetList: [ChatListFilter]
+    private let currentPreset: ChatListFilter?
     private let setup: () -> Void
-    private let updatePreset: (ChatListFilterPreset?) -> Void
+    private let updatePreset: (ChatListFilter?) -> Void
     
     private var presentationData: PresentationData
     private var didPlayPresentationAnimation = false
     
     private let hapticFeedback = HapticFeedback()
     
-    public init(context: AccountContext, sourceNodes: [ASDisplayNode], presetList: [ChatListFilterPreset], currentPreset: ChatListFilterPreset?, setup: @escaping () -> Void, updatePreset: @escaping (ChatListFilterPreset?) -> Void) {
+    public init(context: AccountContext, sourceNodes: [ASDisplayNode], presetList: [ChatListFilter], currentPreset: ChatListFilter?, setup: @escaping () -> Void, updatePreset: @escaping (ChatListFilter?) -> Void) {
         self.context = context
         self.sourceNodes = sourceNodes
         self.presetList = presetList
@@ -184,7 +185,7 @@ private final class AddFilterItemNode: ASDisplayNode, AbstractTabBarChatListFilt
 private final class FilterItemNode: ASDisplayNode, AbstractTabBarChatListFilterItemNode {
     private let context: AccountContext
     private let title: String
-    let preset: ChatListFilterPreset?
+    let preset: ChatListFilter?
     private let isCurrent: Bool
     private let presentationData: PresentationData
     private let action: () -> Bool
@@ -199,7 +200,7 @@ private final class FilterItemNode: ASDisplayNode, AbstractTabBarChatListFilterI
     private let badgeTitleNode: ImmediateTextNode
     private var badgeText: String = ""
     
-    init(context: AccountContext, title: String, preset: ChatListFilterPreset?, isCurrent: Bool, displaySeparator: Bool, presentationData: PresentationData, action: @escaping () -> Bool) {
+    init(context: AccountContext, title: String, preset: ChatListFilter?, isCurrent: Bool, displaySeparator: Bool, presentationData: PresentationData, action: @escaping () -> Bool) {
         self.context = context
         self.title = title
         self.preset = preset
@@ -324,7 +325,7 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
     let isReady = Promise<Bool>()
     private var didSetIsReady = false
     
-    init(context: AccountContext, presentationData: PresentationData, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode], presetList: [ChatListFilterPreset], currentPreset: ChatListFilterPreset?, setup: @escaping () -> Void, updatePreset: @escaping (ChatListFilterPreset?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, cancel: @escaping () -> Void, sourceNodes: [ASDisplayNode], presetList: [ChatListFilter], currentPreset: ChatListFilter?, setup: @escaping () -> Void, updatePreset: @escaping (ChatListFilter?) -> Void) {
         self.presentationData = presentationData
         self.cancel = cancel
         self.sourceNodes = sourceNodes
@@ -358,21 +359,10 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
             setup()
         }))
         
-        contentNodes.append(FilterItemNode(context: context, title: "All", preset: nil, isCurrent: currentPreset == nil, displaySeparator: !presetList.isEmpty, presentationData: presentationData, action: {
-            updatePreset(nil)
-            return false
-        }))
-        
         for i in 0 ..< presetList.count {
             let preset = presetList[i]
             
-            let title: String
-            switch preset.name {
-            case .unread:
-                title = "Unread"
-            case let .custom(value):
-                title = value
-            }
+            let title: String = preset.title ?? ""
             contentNodes.append(FilterItemNode(context: context, title: title, preset: preset, isCurrent: currentPreset == preset, displaySeparator: i != presetList.count - 1, presentationData: presentationData, action: {
                 updatePreset(preset)
                 return false
@@ -393,7 +383,7 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
         unreadCountItems.append(.total(nil))
         var additionalPeerIds = Set<PeerId>()
         for preset in presetList {
-            additionalPeerIds.formUnion(preset.additionallyIncludePeers)
+            additionalPeerIds.formUnion(preset.includePeers)
         }
         if !additionalPeerIds.isEmpty {
             for peerId in additionalPeerIds {
@@ -447,36 +437,34 @@ private final class TabBarChatListFilterControllerNode: ViewControllerTracingNod
                     let badgeString: String
                     if let preset = contentNode.preset {
                         var tags: [PeerSummaryCounterTags] = []
-                        if preset.includeCategories.contains(.privateChats) {
+                        if preset.categories.contains(.privateChats) {
                             tags.append(.privateChat)
                         }
-                        if preset.includeCategories.contains(.secretChats) {
+                        if preset.categories.contains(.secretChats) {
                             tags.append(.secretChat)
                         }
-                        if preset.includeCategories.contains(.privateGroups) {
+                        if preset.categories.contains(.privateGroups) {
                             tags.append(.privateGroup)
                         }
-                        if preset.includeCategories.contains(.bots) {
+                        if preset.categories.contains(.bots) {
                             tags.append(.bot)
                         }
-                        if preset.includeCategories.contains(.publicGroups) {
+                        if preset.categories.contains(.publicGroups) {
                             tags.append(.publicGroup)
                         }
-                        if preset.includeCategories.contains(.channels) {
+                        if preset.categories.contains(.channels) {
                             tags.append(.channel)
                         }
                         
                         var count = 0
                         if let totalState = totalState {
                             for tag in tags {
-                                if preset.includeCategories.contains(.muted) {
-                                }
                                 if let value = totalState.filteredCounters[tag] {
                                     count += Int(value.chatCount)
                                 }
                             }
                         }
-                        for peerId in preset.additionallyIncludePeers {
+                        for peerId in preset.includePeers {
                             if let (tag, peerCount) = peerTagAndCount[peerId] {
                                 if !tags.contains(tag) {
                                     count += peerCount

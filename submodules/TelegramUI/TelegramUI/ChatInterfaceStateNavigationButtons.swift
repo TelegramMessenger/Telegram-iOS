@@ -72,7 +72,12 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
+    if presentationInterfaceState.isScheduledMessages {
+        return nil
+    }
+    
     if case .standard(true) = presentationInterfaceState.mode {
+        return nil
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
             if presentationInterfaceState.isScheduledMessages {

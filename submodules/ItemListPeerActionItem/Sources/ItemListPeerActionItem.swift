@@ -12,6 +12,11 @@ public enum ItemListPeerActionItemHeight {
     case peerList
 }
 
+public enum ItemListPeerActionItemColor {
+    case accent
+    case destructive
+}
+
 public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let icon: UIImage?
@@ -19,16 +24,18 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     public let alwaysPlain: Bool
     let editing: Bool
     let height: ItemListPeerActionItemHeight
+    let color: ItemListPeerActionItemColor
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, editing: Bool, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
         self.alwaysPlain = alwaysPlain
         self.editing = editing
         self.height = height
+        self.color = color
         self.sectionId = sectionId
         self.action = action
     }
@@ -167,7 +174,15 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let textColor: UIColor
+            switch item.color {
+                case .accent:
+                    textColor = item.presentationData.theme.list.itemAccentColor
+                case .destructive:
+                    textColor = item.presentationData.theme.list.itemDestructiveColor
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
