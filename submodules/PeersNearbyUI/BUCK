@@ -28,6 +28,7 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/TelegramNotices:TelegramNotices",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
