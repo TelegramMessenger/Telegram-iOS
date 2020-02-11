@@ -91,12 +91,12 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         tapRecognizer.highlight = { [weak self] location in
             if let strongSelf = self {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.07, curve: .easeInOut)
-                if let location = location, location.x < 44.0 {
+                if let location = location, location.x < 44.0 && strongSelf.canGoToPreviousItem() {
                     transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 1.0)
                 } else {
                     transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 0.0)
                 }
-                if let location = location, location.x > strongSelf.frame.width - 44.0 {
+                if let location = location, location.x > strongSelf.frame.width - 44.0 && strongSelf.canGoToNextItem() {
                     transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 1.0)
                 } else {
                     transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 0.0)

@@ -255,6 +255,18 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
+        node.canGoToPreviousItem = { [weak self] in
+            if let strongSelf = self, let index = strongSelf.centralItemIndex, index > 0 {
+                return true
+            }
+            return false
+        }
+        node.canGoToNextItem = { [weak self] in
+            if let strongSelf = self, let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
+                return true
+            }
+            return false
+        }
         node.dismiss = self.dismiss
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
