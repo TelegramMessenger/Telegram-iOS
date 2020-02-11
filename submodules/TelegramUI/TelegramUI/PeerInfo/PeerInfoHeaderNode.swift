@@ -375,7 +375,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if strongSelf.items.count > 1 {
                         highlightedSide = false
                     }
-                } else if point.x > size.width * 4.0 / 5.0 {
+                } else {
                     if strongSelf.items.count > 1 {
                         highlightedSide = true
                     }
@@ -423,7 +423,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                             self.currentIndex = self.items.count - 1
                             self.updateItems(size: size, transition: .immediate, synchronous: true)
                         }
-                    } else if location.x > size.width * 4.0 / 5.0 {
+                    } else {
                         if self.currentIndex < self.items.count - 1 {
                             self.currentIndex += 1
                             self.updateItems(size: size, transition: .immediate)
@@ -986,13 +986,15 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                 } else {
                     nextRegularButtonOrigin = nextButtonOrigin
                 }
+                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
                     buttonNode.frame = buttonFrame
+                    buttonNode.alpha = 0.0
+                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
+                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
                 }
-                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
             }
             var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
             for (key, _) in self.buttonNodes {
@@ -1189,16 +1191,20 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
             var isEnabled = true
             switch key {
             case .firstName:
-                placeholder = "First Name"
+                placeholder = presentationData.strings.UserInfo_FirstNamePlaceholder
                 isEnabled = isContact
             case .lastName:
-                placeholder = "Last Name"
+                placeholder = presentationData.strings.UserInfo_LastNamePlaceholder
                 isEnabled = isContact
             case .title:
-                placeholder = "Title"
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    placeholder = presentationData.strings.GroupInfo_ChannelListNamePlaceholder
+                } else {
+                    placeholder = presentationData.strings.GroupInfo_GroupNamePlaceholder
+                }
                 isEnabled = canEditPeerInfo(peer: peer)
             case .description:
-                placeholder = "Description"
+                placeholder = presentationData.strings.Channel_Edit_AboutItem
                 isEnabled = canEditPeerInfo(peer: peer)
             }
             let itemHeight = itemNode.update(width: width, safeInset: safeInset, hasPrevious: hasPrevious, placeholder: placeholder, isEnabled: isEnabled, presentationData: presentationData, updateText: updateText)
@@ -1330,7 +1336,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.presentationData = presentationData
         
         if themeUpdated {
-            self.titleCredibilityIconNode.image = PresentationResourcesItemList.verifiedPeerIcon(presentationData.theme)
+            if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
+                self.titleCredibilityIconNode.image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
+                    context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                })
+                //self.titleCredibilityIconNode.image = PresentationResourcesItemList.verifiedPeerIcon(presentationData.theme)
+            }
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -1392,7 +1408,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.subtitleNode.attributedText = subtitleString
         }
         
-        let textSideInset: CGFloat = 16.0
+        let textSideInset: CGFloat = 44.0
         let expandedAvatarControlsHeight: CGFloat = 64.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height + expandedAvatarControlsHeight
         
@@ -1691,46 +1707,49 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let buttonIcon: PeerInfoHeaderButtonIcon
             switch buttonKey {
             case .message:
-                buttonText = "Message"
+                buttonText = presentationData.strings.PeerInfo_ButtonMessage
                 buttonIcon = .message
             case .discussion:
-                buttonText = "Discuss"
+                buttonText = presentationData.strings.PeerInfo_ButtonDiscuss
                 buttonIcon = .message
             case .call:
-                buttonText = "Call"
+                buttonText = presentationData.strings.PeerInfo_ButtonCall
                 buttonIcon = .call
             case .mute:
                 if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {
-                    buttonText = "Unmute"
+                    buttonText = presentationData.strings.PeerInfo_ButtonUnmute
                     buttonIcon = .unmute
                 } else {
-                    buttonText = "Mute"
+                    buttonText = presentationData.strings.PeerInfo_ButtonMute
                     buttonIcon = .mute
                 }
             case .more:
-                buttonText = "More"
+                buttonText = presentationData.strings.PeerInfo_ButtonMore
                 buttonIcon = .more
             case .addMember:
-                buttonText = "Add Member"
+                buttonText = presentationData.strings.PeerInfo_ButtonAddMember
                 buttonIcon = .addMember
             }
             buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isExpanded: self.isAvatarExpanded, presentationData: presentationData, transition: buttonTransition)
             transition.updateSublayerTransformScaleAdditive(node: buttonNode, scale: buttonsScale)
             
+            if wasAdded {
+                buttonNode.alpha = 0.0
+            }
             transition.updateAlpha(node: buttonNode, alpha: buttonsAlpha)
             
             let hiddenWhileExpanded: Bool
             switch self.keepExpandedButtons {
             case .message:
                 switch buttonKey {
-                case .mute, .addMember:
+                case .mute:
                     hiddenWhileExpanded = true
                 default:
                     hiddenWhileExpanded = false
                 }
             case .mute:
                 switch buttonKey {
-                case .message, .addMember:
+                case .message:
                     hiddenWhileExpanded = true
                 default:
                     hiddenWhileExpanded = false

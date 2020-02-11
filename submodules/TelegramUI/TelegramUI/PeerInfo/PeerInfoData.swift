@@ -63,7 +63,7 @@ final class PeerInfoScreenData {
     let globalNotificationSettings: GlobalNotificationSettings?
     let isContact: Bool
     let availablePanes: [PeerInfoPaneKey]
-    let groupsInCommon: [Peer]?
+    let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
     let members: PeerInfoMembersData?
     
@@ -75,7 +75,7 @@ final class PeerInfoScreenData {
         globalNotificationSettings: GlobalNotificationSettings?,
         isContact: Bool,
         availablePanes: [PeerInfoPaneKey],
-        groupsInCommon: [Peer]?,
+        groupsInCommon: GroupsInCommonContext?,
         linkedDiscussionPeer: Peer?,
         members: PeerInfoMembersData?
     ) {
@@ -105,7 +105,7 @@ private enum PeerInfoScreenInputData: Equatable {
     case group(groupId: PeerId)
 }
 
-func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId) -> Signal<[PeerInfoPaneKey], NoError> {
+private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId) -> Signal<[PeerInfoPaneKey]?, NoError> {
     let tags: [(MessageTags, PeerInfoPaneKey)] = [
         (.photoOrVideo, .media),
         (.file, .files),
@@ -113,34 +113,51 @@ func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId) -> Sig
         //(.voiceOrInstantVideo, .voice),
         (.webPage, .links)
     ]
-    return combineLatest(tags.map { tagAndKey -> Signal<PeerInfoPaneKey?, NoError> in
+    enum PaneState {
+        case loading
+        case empty
+        case present
+    }
+    let loadedOnce = Atomic<Bool>(value: false)
+    return combineLatest(queue: .mainQueue(), tags.map { tagAndKey -> Signal<(PeerInfoPaneKey, PaneState), NoError> in
         let (tag, key) = tagAndKey
         return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 20, clipHoles: false, fixedCombinedReadStates: nil, tagMask: tag)
-        |> map { (view, _, _) -> PeerInfoPaneKey? in
+        |> map { (view, _, _) -> (PeerInfoPaneKey, PaneState) in
             if view.entries.isEmpty {
-                return nil
+                if view.isLoading {
+                    return (key, .loading)
+                } else {
+                    return (key, .empty)
+                }
             } else {
-                return key
+                return (key, .present)
             }
         }
     })
-    |> map { keys -> [PeerInfoPaneKey] in
-        return keys.compactMap { $0 }
+    |> map { keysAndStates -> [PeerInfoPaneKey]? in
+        let loadedOnceValue = loadedOnce.with { $0 }
+        var result: [PeerInfoPaneKey] = []
+        var hasNonLoaded = false
+        for (key, state) in keysAndStates {
+            switch state {
+            case .present:
+                result.append(key)
+            case .empty:
+                break
+            case .loading:
+                hasNonLoaded = true
+            }
+        }
+        if !hasNonLoaded || loadedOnceValue {
+            if !loadedOnceValue {
+                let _ = loadedOnce.swap(true)
+            }
+            return result
+        } else {
+            return nil
+        }
     }
     |> distinctUntilChanged
-    /*return context.account.postbox.combinedView(keys: tags.map { (tag, _) -> PostboxViewKey in
-        return .historyTagInfo(peerId: peerId, tag: tag)
-    })
-    |> map { view -> [PeerInfoPaneKey] in
-        return tags.compactMap { (tag, key) -> PeerInfoPaneKey? in
-            if let info = view.views[.historyTagInfo(peerId: peerId, tag: tag)] as? HistoryTagInfoView, !info.isEmpty {
-                return key
-            } else {
-                return nil
-            }
-        }
-    }
-    |> distinctUntilChanged*/
 }
 
 struct PeerInfoStatusData: Equatable {
@@ -258,17 +275,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 members: nil
             ))
         case let .user(peerId, secretChatId, kind):
-            let groupsInCommonSignal: Signal<[Peer]?, NoError>
-            switch kind {
-            case .user:
-                groupsInCommonSignal = .single(nil)
-                |> then(
-                    groupsInCommon(account: context.account, peerId: peerId)
-                    |> map(Optional.init)
-                )
-            default:
-                groupsInCommonSignal = .single([])
+            let groupsInCommon: GroupsInCommonContext?
+            if case .user = kind {
+                groupsInCommon = GroupsInCommonContext(account: context.account, peerId: peerId)
+            } else {
+                groupsInCommon = nil
             }
+            
             enum StatusInputData: Equatable {
                 case none
                 case presence(TelegramUserPresence)
@@ -359,10 +372,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
                 context.account.postbox.combinedView(keys: combinedKeys),
-                status,
-                groupsInCommonSignal
+                status
             )
-            |> map { peerView, availablePanes, combinedView, status, groupsInCommon -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, combinedView, status -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
                     if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
@@ -371,13 +383,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var availablePanes = availablePanes
-                if let groupsInCommon = groupsInCommon {
-                    if !groupsInCommon.isEmpty {
-                        availablePanes.append(.groupsInCommon)
-                    }
-                } else if let cachedData = peerView.cachedData as? CachedUserData {
+                if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
-                        availablePanes.append(.groupsInCommon)
+                        availablePanes?.append(.groupsInCommon)
                     }
                 }
                 
@@ -388,7 +396,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
-                    availablePanes: availablePanes,
+                    availablePanes: availablePanes ?? [],
                     groupsInCommon: groupsInCommon,
                     linkedDiscussionPeer: nil,
                     members: nil
@@ -437,8 +445,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
-                    availablePanes: availablePanes,
-                    groupsInCommon: [],
+                    availablePanes: availablePanes ?? [],
+                    groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: nil
                 )
@@ -447,7 +455,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let status = context.account.viewTracker.peerView(groupId, updateData: false)
             |> map { peerView -> PeerInfoStatusData? in
                 guard let channel = peerView.peers[groupId] as? TelegramChannel else {
-                    return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false)
+                    return PeerInfoStatusData(text: strings.Group_Status, isActivity: false)
                 }
                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount != 0 {
                     return PeerInfoStatusData(text: strings.Conversation_StatusMembers(memberCount), isActivity: false)
@@ -494,7 +502,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 var availablePanes = availablePanes
                 if let membersData = membersData, case .longList = membersData {
-                    availablePanes.insert(.members, at: 0)
+                    if availablePanes != nil {
+                        availablePanes?.insert(.members, at: 0)
+                    } else {
+                        availablePanes = [.members]
+                    }
                 }
                 
                 return PeerInfoScreenData(
@@ -504,8 +516,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
-                    availablePanes: availablePanes,
-                    groupsInCommon: [],
+                    availablePanes: availablePanes ?? [],
+                    groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: membersData
                 )
@@ -612,8 +624,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInf
     if let user = peer as? TelegramUser {
         result.append(.message)
         var callsAvailable = false
-        if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport), let cachedUserData = cachedData as? CachedUserData {
-            callsAvailable = cachedUserData.callsAvailable
+        if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
+            if let cachedUserData = cachedData as? CachedUserData {
+                callsAvailable = cachedUserData.callsAvailable
+            }
+            callsAvailable = true
         }
         if callsAvailable {
             result.append(.call)

@@ -68,7 +68,7 @@ private final class NavigationButtonItemNode: ASTextNode {
                     imageNode.displayWithoutProcessing = true
                     imageNode.displaysAsynchronously = false
                     self.imageNode = imageNode
-                    if value.size == CGSize(width: 30.0, height: 30.0) {
+                    if false, value.size == CGSize(width: 30.0, height: 30.0) {
                         if self.imageRippleNode.supernode == nil {
                             self.addSubnode(self.imageRippleNode)
                             self.imageRippleNode.image = generateFilledCircleImage(diameter: 30.0, color: self.rippleColor)

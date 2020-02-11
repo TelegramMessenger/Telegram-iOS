@@ -62,9 +62,10 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
     private let openPeerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
+    private let groupsInCommonContext: GroupsInCommonContext
     
     private let listNode: ListView
-    private var peers: [Peer] = []
+    private var state: GroupsInCommonState?
     private var currentEntries: [GroupsInCommonListEntry] = []
     private var enqueuedTransactions: [GroupsInCommonListTransaction] = []
     
@@ -76,11 +77,14 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, peers: [Peer]) {
+    private var disposable: Disposable?
+    
+    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
         self.openPeerContextAction = openPeerContextAction
+        self.groupsInCommonContext = groupsInCommonContext
         
         self.listNode = ListView()
         
@@ -89,10 +93,29 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.listNode.preloadPages = true
         self.addSubnode(self.listNode)
         
-        self.peers = peers
+        self.disposable = (groupsInCommonContext.state
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.state = state
+            if let (_, _, presentationData) = strongSelf.currentParams {
+                strongSelf.updatePeers(state: state, presentationData: presentationData)
+            }
+        })
+        
+        self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self, let state = strongSelf.state, case .ready(true) = state.dataState else {
+                return
+            }
+            if case let .known(value) = offset, value < 100.0, case .ready(true) = state.dataState {
+                strongSelf.groupsInCommonContext.loadMore()
+            }
+        }
     }
     
     deinit {
+        self.disposable?.dispose()
     }
     
     func scrollToTop() -> Bool {
@@ -115,15 +138,17 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
-        if isFirstLayout {
-            self.updatePeers(peers: self.peers, presentationData: presentationData)
+        if isFirstLayout, let state = self.state {
+            self.updatePeers(state: state, presentationData: presentationData)
         }
     }
     
-    private func updatePeers(peers: [Peer], presentationData: PresentationData) {
+    private func updatePeers(state: GroupsInCommonState, presentationData: PresentationData) {
         var entries: [GroupsInCommonListEntry] = []
-        for peer in peers {
-            entries.append(GroupsInCommonListEntry(index: entries.count, peer: peer))
+        for peer in state.peers {
+            if let peer = peer.peer {
+                entries.append(GroupsInCommonListEntry(index: entries.count, peer: peer))
+            }
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
             self?.chatControllerInteraction.openPeer(peer.id, .default, nil)

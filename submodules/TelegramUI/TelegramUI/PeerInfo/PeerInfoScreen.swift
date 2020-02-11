@@ -575,14 +575,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     if let user = data.peer as? TelegramUser {
         if let phone = user.phone {
             let formattedPhone = formatPhoneNumber(phone)
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: "mobile", text: formattedPhone, textColor: .accent, action: {
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: presentationData.strings.ContactInfo_PhoneLabelMobile, text: formattedPhone, textColor: .accent, action: {
                 interaction.openPhone(phone)
             }, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.phone(formattedPhone), sourceNode)
             }))
         }
         if let username = user.username {
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 1, label: "username", text: "@\(username)", textColor: .accent, action: {
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 1, label: presentationData.strings.Profile_Username, text: "@\(username)", textColor: .accent, action: {
                 interaction.openUsername(username)
             }, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.link, sourceNode)
@@ -590,26 +590,26 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if let cachedData = data.cachedData as? CachedUserData {
             if user.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Profile_About, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledBioEntities : []), action: nil))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Channel_AboutItem, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledBioEntities : []), action: nil))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Profile_About, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
             }
         }
         if !data.isContact {
             if user.botInfo == nil {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: "Add Contact", action: {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_AddContact, action: {
                     interaction.openAddContact()
                 }))
             }
             if let cachedData = data.cachedData as? CachedUserData {
                 if cachedData.isBlocked {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? "Restart Bot" : "Unblock", action: {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
                         interaction.updateBlocked(false)
                     }))
                 } else {
                     if user.flags.contains(.isSupport) {
                     } else {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? "Stop Bot" : "Block User", color: .destructive, action: {
+                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
                             interaction.updateBlocked(true)
                         }))
                     }
@@ -655,9 +655,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if let cachedData = data.cachedData as? CachedChannelData {
             if channel.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Profile_About, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Profile_About, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
             }
             
             if case .broadcast = channel.info {
@@ -687,9 +687,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     } else if let group = data.peer as? TelegramGroup {
         if let cachedData = data.cachedData as? CachedGroupData {
             if group.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Profile_About, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_AboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Profile_About, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
             }
         }
     }
@@ -755,13 +755,13 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         let globalNotificationSettings: GlobalNotificationSettings = data.globalNotificationSettings ?? GlobalNotificationSettings.defaultSettings
         soundLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.privateChats.sound)
         
-        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: notificationsLabel, text: "Notifications", action: {
+        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 0, label: notificationsLabel, text: presentationData.strings.GroupInfo_Notifications, action: {
             interaction.editingOpenNotificationSettings()
         }))
-        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: soundLabel, text: "Sound", action: {
+        items[.notifications]!.append(PeerInfoScreenDisclosureItem(id: 1, label: soundLabel, text: presentationData.strings.GroupInfo_Sound, action: {
             interaction.editingOpenSoundSettings()
         }))
-        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: "Show Message Text", value: notificationSettings.displayPreviews != .hide, toggled: { value in
+        items[.notifications]!.append(PeerInfoScreenSwitchItem(id: 2, text: presentationData.strings.Notification_Exceptions_PreviewAlwaysOn, value: notificationSettings.displayPreviews != .hide, toggled: { value in
             interaction.editingToggleShowMessageText(value)
         }))
     }
@@ -1170,6 +1170,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 }
                             }))
                         }
+                        
+                        items.append( ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuMore, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
+                                strongSelf.expandTabs()
+                            }
+                        }))
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -1273,6 +1281,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 })
                             })))
                         }
+                        
+                        items.append(.separator)
+                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuMore, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
+                            strongSelf.expandTabs()
+                            f(.default)
+                        })))
                         
                         return items
                     }
@@ -1717,15 +1737,43 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func updateData(_ data: PeerInfoScreenData) {
+        var previousMemberCount: Int?
+        if let data = self.data {
+            if let members = data.members, case let .shortList(_, memberList) = members {
+                previousMemberCount = memberList.count
+            }
+        }
         self.data = data
         if let (layout, navigationHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady ? .animated(duration: 0.3, curve: .spring) : .immediate)
+            var updatedMemberCount: Int?
+            if let data = self.data {
+                if let members = data.members, case let .shortList(_, memberList) = members {
+                    updatedMemberCount = memberList.count
+                }
+            }
+            
+            var membersUpdated = false
+            if let previousMemberCount = previousMemberCount, let updatedMemberCount = updatedMemberCount, previousMemberCount > updatedMemberCount {
+                membersUpdated = true
+            }
+            
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && membersUpdated ? .animated(duration: 0.3, curve: .spring) : .immediate)
         }
     }
     
     func scrollToTop() {
         if !self.paneContainerNode.scrollToTop() {
             self.scrollNode.view.setContentOffset(CGPoint(), animated: true)
+        }
+    }
+    
+    private func expandTabs() {
+        if let (layout, navigationHeight) = self.validLayout {
+            let contentOffset = self.scrollNode.view.contentOffset
+            let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
+            if contentOffset.y < paneAreaExpansionFinalPoint - CGFloat.ulpOfOne {
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: true)
+            }
         }
     }
     
@@ -1855,41 +1903,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .call:
             self.requestCall()
         case .mute:
-            let peerId = self.peerId
-            let _ = (self.context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
-                let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-                let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
-                return (peerSettings, globalSettings)
+            let muteInterval: Int32?
+            if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
+                muteInterval = nil
+            } else {
+                muteInterval = Int32.max
             }
-            |> deliverOnMainQueue).start(next: { [weak self] peerSettings, globalSettings in
-                guard let strongSelf = self else {
-                    return
-                }
-                let soundSettings: NotificationSoundSettings?
-                if case .default = peerSettings.messageSound {
-                    soundSettings = NotificationSoundSettings(value: nil)
-                } else {
-                    soundSettings = NotificationSoundSettings(value: peerSettings.messageSound)
-                }
-                let muteSettingsController = notificationMuteSettingsController(presentationData: strongSelf.presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let soundController = notificationSoundSelectionController(context: strongSelf.context, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = updatePeerNotificationSoundInteractive(account: strongSelf.context.account, peerId: strongSelf.peerId, sound: sound).start()
-                    })
-                    strongSelf.controller?.present(soundController, in: .window(.root))
-                }, updateSettings: { value in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let _ = updatePeerMuteSetting(account: strongSelf.context.account, peerId: strongSelf.peerId, muteInterval: value).start()
-                })
-                strongSelf.controller?.present(muteSettingsController, in: .window(.root))
-            })
+            let _ = updatePeerMuteSetting(account: self.context.account, peerId: self.peerId, muteInterval: muteInterval).start()
         case .more:
             guard let data = self.data, let peer = data.peer else {
                 return
@@ -2212,6 +2232,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     let _ = updatePeerNotificationSoundInteractive(account: strongSelf.context.account, peerId: strongSelf.peerId, sound: sound).start()
                 })
+                soundController.navigationPresentation = .modal
                 strongSelf.controller?.push(soundController)
             }, updateSettings: { value in
                 guard let strongSelf = self else {
@@ -3419,10 +3440,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         for (sectionId, sectionItems) in editingItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
             validEditingSections.append(sectionId)
             
+            var wasAdded = false
             let sectionNode: PeerInfoScreenItemSectionContainerNode
             if let current = self.editingSections[sectionId] {
                 sectionNode = current
             } else {
+                wasAdded = true
                 sectionNode = PeerInfoScreenItemSectionContainerNode()
                 self.editingSections[sectionId] = sectionNode
                 self.scrollNode.addSubnode(sectionNode)
@@ -3430,13 +3453,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             let sectionHeight = sectionNode.update(width: layout.size.width, presentationData: self.presentationData, items: sectionItems, transition: transition)
             let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
-            if additive {
-                transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
-            } else {
-                transition.updateFrame(node: sectionNode, frame: sectionFrame)
-            }
             
-            transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 1.0 : 0.0)
+            if wasAdded {
+                sectionNode.frame = sectionFrame
+                sectionNode.alpha = self.state.isEditing ? 1.0 : 0.0
+            } else {
+                if additive {
+                    transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
+                } else {
+                    transition.updateFrame(node: sectionNode, frame: sectionFrame)
+                }
+                transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 1.0 : 0.0)
+            }
             if !sectionHeight.isZero && self.state.isEditing {
                 contentHeight += sectionHeight
                 contentHeight += sectionSpacing
@@ -3632,7 +3660,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                         switch currentPaneKey {
                         case .media, .files, .music, .links, .voice:
-                            navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .select, isForExpandedView: true))
+                            //navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .select, isForExpandedView: true))
+                            break
                         default:
                             break
                         }

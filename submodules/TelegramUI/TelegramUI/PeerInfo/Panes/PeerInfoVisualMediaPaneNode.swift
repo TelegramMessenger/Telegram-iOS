@@ -237,6 +237,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     
     func updateSelectionState(animated: Bool) {
         if let (item, media, _, mediaDimensions) = self.item, let theme = self.theme {
+            self.containerNode.isGestureEnabled = self.interaction.selectedMessageIds == nil
+            
             if let selectedIds = self.interaction.selectedMessageIds {
                 let selected = selectedIds.contains(item.message.id)
                 

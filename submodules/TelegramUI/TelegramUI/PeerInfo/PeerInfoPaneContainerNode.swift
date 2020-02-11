@@ -174,7 +174,6 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
                         self?.paneSelected(specifier.key)
                     })
                     self.paneNodes[specifier.key] = paneNode
-                    self.scrollNode.addSubnode(paneNode)
                 }
                 paneNode.updateText(specifier.title, isSelected: selectedPane == specifier.key, presentationData: presentationData)
             }
@@ -191,7 +190,7 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             }
         }
         
-        var tabSizes: [(CGSize, PeerInfoPaneTabsContainerPaneNode)] = []
+        var tabSizes: [(CGSize, PeerInfoPaneTabsContainerPaneNode, Bool)] = []
         var totalRawTabSize: CGFloat = 0.0
         
         var selectedFrame: CGRect?
@@ -199,20 +198,30 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             guard let paneNode = self.paneNodes[specifier.key] else {
                 continue
             }
+            let wasAdded = paneNode.supernode == nil
+            if wasAdded {
+                self.scrollNode.addSubnode(paneNode)
+            }
             let paneNodeWidth = paneNode.updateLayout(height: size.height)
             let paneNodeSize = CGSize(width: paneNodeWidth, height: size.height)
-            tabSizes.append((paneNodeSize, paneNode))
+            tabSizes.append((paneNodeSize, paneNode, wasAdded))
             totalRawTabSize += paneNodeSize.width
         }
         
         let spacing: CGFloat = 32.0
         if tabSizes.count == 1 {
             for i in 0 ..< tabSizes.count {
-                let (paneNodeSize, paneNode) = tabSizes[i]
+                let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
                 let leftOffset: CGFloat = 16.0
                 
                 let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
-                paneNode.frame = paneFrame
+                if wasAdded {
+                    paneNode.frame = paneFrame
+                    paneNode.alpha = 0.0
+                    transition.updateAlpha(node: paneNode, alpha: 1.0)
+                } else {
+                    transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+                }
                 let areaSideInset: CGFloat = 16.0
                 paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
                 paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
@@ -229,10 +238,16 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             
             var leftOffset = perTabSpacing
             for i in 0 ..< tabSizes.count {
-                let (paneNodeSize, paneNode) = tabSizes[i]
+                let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
                 
                 let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
-                paneNode.frame = paneFrame
+                if wasAdded {
+                    paneNode.frame = paneFrame
+                    paneNode.alpha = 0.0
+                    transition.updateAlpha(node: paneNode, alpha: 1.0)
+                } else {
+                    transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+                }
                 let areaSideInset = floor(perTabSpacing / 2.0)
                 paneNode.updateArea(size: paneFrame.size, sideInset: areaSideInset)
                 paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -areaSideInset, bottom: 0.0, right: -areaSideInset)
@@ -248,9 +263,15 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             let sideInset: CGFloat = 16.0
             var leftOffset: CGFloat = sideInset
             for i in 0 ..< tabSizes.count {
-                let (paneNodeSize, paneNode) = tabSizes[i]
+                let (paneNodeSize, paneNode, wasAdded) = tabSizes[i]
                 let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0)), size: paneNodeSize)
-                paneNode.frame = paneFrame
+                if wasAdded {
+                    paneNode.frame = paneFrame
+                    paneNode.alpha = 0.0
+                    transition.updateAlpha(node: paneNode, alpha: 1.0)
+                } else {
+                    transition.updateFrameAdditiveToCenter(node: paneNode, frame: paneFrame)
+                }
                 paneNode.updateArea(size: paneFrame.size, sideInset: spacing)
                 paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -spacing, bottom: 0.0, right: -spacing)
                 if paneList[i].key == selectedPane {
@@ -262,13 +283,21 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
         }
         
         if let selectedFrame = selectedFrame {
+            let wasAdded = self.selectedLineNode.isHidden
             self.selectedLineNode.isHidden = false
-            transition.updateFrame(node: self.selectedLineNode, frame: CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0)))
+            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0))
+            if wasAdded {
+                self.selectedLineNode.frame = lineFrame
+                self.selectedLineNode.alpha = 0.0
+                transition.updateAlpha(node: self.selectedLineNode, alpha: 1.0)
+            } else {
+                transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
+            }
             if focusOnSelectedPane {
                 if selectedPane == paneList.first?.key {
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
                 } else if selectedPane == paneList.last?.key {
-                    transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, y: 0.0), size: self.scrollNode.bounds.size))
+                    transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: max(0.0, self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width), y: 0.0), size: self.scrollNode.bounds.size))
                 } else {
                     let contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(selectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
                     transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size))
@@ -457,7 +486,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                 case .music:
                     paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .music)
                 case .groupsInCommon:
-                    paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: self.peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, peers: data?.groupsInCommon ?? [])
+                    paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: self.peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, groupsInCommonContext: data!.groupsInCommon!)
                 case .members:
                     if case let .longList(membersContext) = data?.members {
                         paneNode = PeerInfoMembersPaneNode(context: self.context, peerId: self.peerId, membersContext: membersContext, action: { [weak self] member, action in
