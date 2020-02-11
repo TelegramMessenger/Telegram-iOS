@@ -31,3 +31,20 @@ open class GalleryFooterContentNode: ASDisplayNode {
         completion()
     }
 }
+
+open class GalleryOverlayContentNode: ASDisplayNode {
+    var visibilityAlpha: CGFloat = 1.0
+    open func setVisibilityAlpha(_ alpha: CGFloat) {
+        self.visibilityAlpha = alpha
+    }
+    
+    open func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    }
+
+    open func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
+    }
+    
+    open func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        completion()
+    }
+}

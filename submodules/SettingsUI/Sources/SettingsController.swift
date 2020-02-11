@@ -17,7 +17,6 @@ import AccountContext
 import OverlayStatusController
 import AvatarNode
 import AlertUI
-import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import LegacyUI
@@ -1436,7 +1435,12 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         actionsDisposable.dispose()
     }
     
-    let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    let icon: UIImage?
+    if useSpecialTabBarIcons() {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/Holiday/IconSettings")
+    } else {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    }
     
     let notificationsFromAllAccounts = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     |> map { sharedData -> Bool in

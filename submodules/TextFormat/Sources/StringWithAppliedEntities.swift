@@ -209,6 +209,15 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
             
                 string.insert(NSAttributedString(string: paragraphBreak), at: paragraphRange.upperBound)
                 rangeOffset += paragraphBreak.count
+            case .BankCard:
+                string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
+                if underlineLinks && underlineAllLinks {
+                    string.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                }
+                if nsString == nil {
+                    nsString = text as NSString
+                }
+                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard), value: nsString!.substring(with: range), range: range)
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)

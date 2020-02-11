@@ -250,8 +250,8 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             self.updateThumbnailContainerNodeAlpha(transition)
         }
         
-        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, thumbnailPanelHeight: thumbnailPanelHeight, transition: transition)
-        
+        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, overlayContentNode: self.presentationState.overlayContentNode, thumbnailPanelHeight: thumbnailPanelHeight, transition: transition)
+    
         let previousContentHeight = self.scrollView.contentSize.height
         let previousVerticalOffset = self.scrollView.contentOffset.y
         
@@ -276,14 +276,14 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
                 self.navigationBar?.alpha = alpha
                 self.statusBar?.updateAlpha(alpha, transition: .animated(duration: 0.3, curve: .easeInOut))
-                self.footerNode.alpha = alpha
+                self.footerNode.setVisibilityAlpha(alpha)
                 self.updateThumbnailContainerNodeAlpha(.immediate)
             })
         } else {
             let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
             self.navigationBar?.alpha = alpha
             self.statusBar?.updateAlpha(alpha, transition: .immediate)
-            self.footerNode.alpha = alpha
+            self.footerNode.setVisibilityAlpha(alpha)
             self.updateThumbnailContainerNodeAlpha(.immediate)
         }
     }

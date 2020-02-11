@@ -1358,6 +1358,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             ])])
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
+                    case let .bankCard(number):
+                        guard let message = message else {
+                            return
+                        }
+                        let _ = (getBankCardInfo(account: strongSelf.context.account, cardNumber: number)
+                        |> deliverOnMainQueue).start(next: { [weak self] info in
+                            if let strongSelf = self, let info = info {
+                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                                var items: [ActionSheetItem] = []
+                                items.append(ActionSheetTextItem(title: info.title))
+                                if let url = info.url, let actionTitle = info.actionTitle {
+                                    items.append(ActionSheetButtonItem(title: actionTitle, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let strongSelf = self {
+                                            strongSelf.controllerInteraction?.openUrl(url, false, false, message)
+                                        }
+                                    }))
+                                }
+                                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])])
+                                strongSelf.present(actionSheet, in: .window(.root))
+                            }
+                        })
+                        strongSelf.chatDisplayNode.dismissInput()
                 }
             }
         }, openCheckoutOrReceipt: { [weak self] messageId in

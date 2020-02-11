@@ -3196,6 +3196,25 @@ public extension Api {
                     })
                 }
             
+                public static func toggleStickerSets(flags: Int32, stickersets: [Api.InputStickerSet]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1257951254)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stickersets.count))
+                    for item in stickersets {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.toggleStickerSets", parameters: [("flags", flags), ("stickersets", stickersets)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
                 public static func getPollVotes(flags: Int32, peer: Api.InputPeer, id: Int32, option: Buffer?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.VotesList>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1200736242)
@@ -3885,6 +3904,50 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getBankCardData(number: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.BankCardData>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(779736953)
+                    serializeString(number, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.getBankCardData", parameters: [("number", number)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.BankCardData? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.BankCardData?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.BankCardData
+                        }
+                        return result
+                    })
+                }
+            }
+            public struct stats {
+                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1421720550)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.BroadcastStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastStats
+                        }
+                        return result
+                    })
+                }
+            
+                public static func loadAsyncGraph(token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1749505346)
+                    serializeString(token, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.loadAsyncGraph", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsGraph? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.StatsGraph?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.StatsGraph
+                        }
+                        return result
+                    })
+                }
             }
             public struct auth {
                 public static func checkPhone(phoneNumber: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.CheckedPhone>) {
@@ -4558,11 +4621,13 @@ public extension Api {
                     })
                 }
             
-                public static func getLocated(geoPoint: Api.InputGeoPoint) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func getLocated(flags: Int32, geoPoint: Api.InputGeoPoint, selfExpires: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(171270230)
+                    buffer.appendInt32(-750207932)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
-                    return (FunctionDescription(name: "contacts.getLocated", parameters: [("geoPoint", geoPoint)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(selfExpires!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "contacts.getLocated", parameters: [("flags", flags), ("geoPoint", geoPoint), ("selfExpires", selfExpires)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -4811,40 +4876,6 @@ public extension Api {
                         var result: Api.help.AppUpdate?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.help.AppUpdate
-                        }
-                        return result
-                    })
-                }
-            
-                public static func editUserInfo(userId: Api.InputUser, message: String, entities: [Api.MessageEntity]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1723407216)
-                    userId.serialize(buffer, true)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities.count))
-                    for item in entities {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription(name: "help.editUserInfo", parameters: [("userId", userId), ("message", message), ("entities", entities)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.UserInfo? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.help.UserInfo?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.UserInfo
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getUserInfo(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.UserInfo>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(59377875)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "help.getUserInfo", parameters: [("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.UserInfo? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.help.UserInfo?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.help.UserInfo
                         }
                         return result
                     })

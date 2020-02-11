@@ -241,6 +241,20 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
         let node = self.items[index].node()
         node.toggleControlsVisibility = self.toggleControlsVisibility
+        node.goToPreviousItem = { [weak self] in
+            if let strongSelf = self {
+                if let index = strongSelf.centralItemIndex, index > 0 {
+                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index - 1))
+                }
+            }
+        }
+        node.goToNextItem = { [weak self] in
+            if let strongSelf = self {
+                if let index = strongSelf.centralItemIndex, index < strongSelf.items.count - 1 {
+                    strongSelf.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: index + 1))
+                }
+            }
+        }
         node.dismiss = self.dismiss
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
@@ -314,7 +328,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             
-            if centralItemIndex != items.count - 1 {
+            if centralItemIndex != self.items.count - 1 {
                 if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemIndex + 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex + 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: centralItemNode.frame.size.width + self.pageGap, dy: 0.0)

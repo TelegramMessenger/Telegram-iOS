@@ -105,4 +105,3 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
     }
 }
-

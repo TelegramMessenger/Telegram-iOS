@@ -26,6 +26,8 @@ static_library(
         "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
         "//submodules/Geocoding:Geocoding",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -442,7 +442,7 @@ class TabBarNode: ASDisplayNode {
                     if horizontal {
                         backgroundFrame = CGRect(origin: CGPoint(x: originX + 15.0, y: 3.0), size: backgroundSize)
                     } else {
-                        let contentWidth = node.contentWidth ?? node.frame.width
+                        let contentWidth: CGFloat = 25.0 //node.contentWidth ?? node.frame.width
                         backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) + contentWidth - backgroundSize.width - 5.0, y: self.centered ? 9.0 : 2.0), size: backgroundSize)
                     }
                     transition.updateFrame(node: container.badgeContainerNode, frame: backgroundFrame)

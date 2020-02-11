@@ -11957,6 +11957,82 @@ public extension Api {
         }
     
     }
+    public enum StatsGraph: TypeConstructorDescription {
+        case statsGraphAsync(token: String)
+        case statsGraphError(error: String)
+        case statsGraph(json: Api.DataJSON)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGraphAsync(let token):
+                    if boxed {
+                        buffer.appendInt32(1244130093)
+                    }
+                    serializeString(token, buffer: buffer, boxed: false)
+                    break
+                case .statsGraphError(let error):
+                    if boxed {
+                        buffer.appendInt32(-1092839390)
+                    }
+                    serializeString(error, buffer: buffer, boxed: false)
+                    break
+                case .statsGraph(let json):
+                    if boxed {
+                        buffer.appendInt32(-1057809608)
+                    }
+                    json.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGraphAsync(let token):
+                return ("statsGraphAsync", [("token", token)])
+                case .statsGraphError(let error):
+                return ("statsGraphError", [("error", error)])
+                case .statsGraph(let json):
+                return ("statsGraph", [("json", json)])
+    }
+    }
+    
+        public static func parse_statsGraphAsync(_ reader: BufferReader) -> StatsGraph? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsGraph.statsGraphAsync(token: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_statsGraphError(_ reader: BufferReader) -> StatsGraph? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsGraph.statsGraphError(error: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
+            var _1: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsGraph.statsGraph(json: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PageTableCell: TypeConstructorDescription {
         case pageTableCell(flags: Int32, text: Api.RichText?, colspan: Int32?, rowspan: Int32?)
     
@@ -13663,6 +13739,44 @@ public extension Api {
         }
     
     }
+    public enum StatsPercentValue: TypeConstructorDescription {
+        case statsPercentValue(part: Double, total: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsPercentValue(let part, let total):
+                    if boxed {
+                        buffer.appendInt32(-875679776)
+                    }
+                    serializeDouble(part, buffer: buffer, boxed: false)
+                    serializeDouble(total, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsPercentValue(let part, let total):
+                return ("statsPercentValue", [("part", part), ("total", total)])
+    }
+    }
+    
+        public static func parse_statsPercentValue(_ reader: BufferReader) -> StatsPercentValue? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            var _2: Double?
+            _2 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsPercentValue.statsPercentValue(part: _1!, total: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum ChannelLocation: TypeConstructorDescription {
         case channelLocationEmpty
         case channelLocation(geoPoint: Api.GeoPoint, address: String)
@@ -14435,6 +14549,44 @@ public extension Api {
         }
     
     }
+    public enum StatsDateRangeDays: TypeConstructorDescription {
+        case statsDateRangeDays(minDate: Int32, maxDate: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsDateRangeDays(let minDate, let maxDate):
+                    if boxed {
+                        buffer.appendInt32(-1237848657)
+                    }
+                    serializeInt32(minDate, buffer: buffer, boxed: false)
+                    serializeInt32(maxDate, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsDateRangeDays(let minDate, let maxDate):
+                return ("statsDateRangeDays", [("minDate", minDate), ("maxDate", maxDate)])
+    }
+    }
+    
+        public static func parse_statsDateRangeDays(_ reader: BufferReader) -> StatsDateRangeDays? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum MessageFwdAuthor: TypeConstructorDescription {
         case messageFwdAuthor(channelId: Int32)
     
@@ -15092,6 +15244,44 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.Updates.updateShortSentMessage(flags: _1!, id: _2!, pts: _3!, ptsCount: _4!, date: _5!, media: _6, entities: _7)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum StatsAbsValueAndPrev: TypeConstructorDescription {
+        case statsAbsValueAndPrev(current: Double, previous: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsAbsValueAndPrev(let current, let previous):
+                    if boxed {
+                        buffer.appendInt32(-884757282)
+                    }
+                    serializeDouble(current, buffer: buffer, boxed: false)
+                    serializeDouble(previous, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsAbsValueAndPrev(let current, let previous):
+                return ("statsAbsValueAndPrev", [("current", current), ("previous", previous)])
+    }
+    }
+    
+        public static func parse_statsAbsValueAndPrev(_ reader: BufferReader) -> StatsAbsValueAndPrev? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            var _2: Double?
+            _2 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsAbsValueAndPrev.statsAbsValueAndPrev(current: _1!, previous: _2!)
             }
             else {
                 return nil
@@ -20448,10 +20638,17 @@ public extension Api {
     
     }
     public enum Theme: TypeConstructorDescription {
+        case themeDocumentNotModified
         case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .themeDocumentNotModified:
+                    if boxed {
+                        buffer.appendInt32(1211967244)
+                    }
+                    
+                    break
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                     if boxed {
                         buffer.appendInt32(42930452)
@@ -20470,11 +20667,16 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .themeDocumentNotModified:
+                return ("themeDocumentNotModified", [])
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                 return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("settings", settings), ("installsCount", installsCount)])
     }
     }
     
+        public static func parse_themeDocumentNotModified(_ reader: BufferReader) -> Theme? {
+            return Api.Theme.themeDocumentNotModified
+        }
         public static func parse_theme(_ reader: BufferReader) -> Theme? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -20881,6 +21083,54 @@ public extension Api {
         }
     
     }
+    public enum StatsRowAbsValueAndPrev: TypeConstructorDescription {
+        case statsRowAbsValueAndPrev(id: String, title: String, shortTitle: String, values: Api.StatsAbsValueAndPrev)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
+                    if boxed {
+                        buffer.appendInt32(-581804346)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(shortTitle, buffer: buffer, boxed: false)
+                    values.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
+                return ("statsRowAbsValueAndPrev", [("id", id), ("title", title), ("shortTitle", shortTitle), ("values", values)])
+    }
+    }
+    
+        public static func parse_statsRowAbsValueAndPrev(_ reader: BufferReader) -> StatsRowAbsValueAndPrev? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.StatsAbsValueAndPrev?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StatsRowAbsValueAndPrev.statsRowAbsValueAndPrev(id: _1!, title: _2!, shortTitle: _3!, values: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum ChatOnlines: TypeConstructorDescription {
         case chatOnlines(onlines: Int32)
     
@@ -20982,6 +21232,7 @@ public extension Api {
         case messageEntityUnderline(offset: Int32, length: Int32)
         case messageEntityStrike(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
+        case messageEntityBankCard(offset: Int32, length: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21115,6 +21366,13 @@ public extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .messageEntityBankCard(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(1981704948)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21156,6 +21414,8 @@ public extension Api {
                 return ("messageEntityStrike", [("offset", offset), ("length", length)])
                 case .messageEntityBlockquote(let offset, let length):
                 return ("messageEntityBlockquote", [("offset", offset), ("length", length)])
+                case .messageEntityBankCard(let offset, let length):
+                return ("messageEntityBankCard", [("offset", offset), ("length", length)])
     }
     }
     
@@ -21420,6 +21680,20 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityBlockquote(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityBankCard(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityBankCard(offset: _1!, length: _2!)
             }
             else {
                 return nil
@@ -21727,6 +22001,7 @@ public extension Api {
     }
     public enum PeerLocated: TypeConstructorDescription {
         case peerLocated(peer: Api.Peer, expires: Int32, distance: Int32)
+        case peerSelfLocated(expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21738,6 +22013,12 @@ public extension Api {
                     serializeInt32(expires, buffer: buffer, boxed: false)
                     serializeInt32(distance, buffer: buffer, boxed: false)
                     break
+                case .peerSelfLocated(let expires):
+                    if boxed {
+                        buffer.appendInt32(-118740917)
+                    }
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21745,6 +22026,8 @@ public extension Api {
         switch self {
                 case .peerLocated(let peer, let expires, let distance):
                 return ("peerLocated", [("peer", peer), ("expires", expires), ("distance", distance)])
+                case .peerSelfLocated(let expires):
+                return ("peerSelfLocated", [("expires", expires)])
     }
     }
     
@@ -21762,6 +22045,17 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.PeerLocated.peerLocated(peer: _1!, expires: _2!, distance: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_peerSelfLocated(_ reader: BufferReader) -> PeerLocated? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PeerLocated.peerSelfLocated(expires: _1!)
             }
             else {
                 return nil

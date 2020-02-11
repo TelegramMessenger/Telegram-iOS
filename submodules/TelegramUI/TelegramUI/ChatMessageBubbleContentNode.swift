@@ -80,6 +80,7 @@ enum ChatMessageBubbleContentTapAction {
     case openMessage
     case timecode(Double, String)
     case tooltip(String, ASDisplayNode?, CGRect?)
+    case bankCard(String)
     case ignore
 }
 

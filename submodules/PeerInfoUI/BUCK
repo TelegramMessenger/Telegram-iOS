@@ -64,6 +64,7 @@ static_library(
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/StatisticsUI:StatisticsUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
