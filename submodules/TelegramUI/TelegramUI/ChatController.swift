@@ -365,8 +365,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
-        self.navigationBar?.customBackButtonText = ""
-        
         self.blocksBackgroundWhenInOverlay = true
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -5354,6 +5352,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if peer.id == strongSelf.context.account.peerId {
                             strongSelf.effectiveNavigationController?.pushViewController(PeerMediaCollectionController(context: strongSelf.context, peerId: strongSelf.context.account.peerId))
                         } else {
+                            var expandAvatar = expandAvatar
+                            if peer.smallProfileImage == nil {
+                                expandAvatar = false
+                            }
                             if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }

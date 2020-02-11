@@ -16,6 +16,7 @@ import ActivityIndicator
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
+    case discussion
     case call
     case mute
     case more
@@ -252,7 +253,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.leftHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
-            let topColor = UIColor(rgb: 0x000000, alpha: 0.5)
+            let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
             let bottomColor = UIColor(rgb: 0x000000, alpha: 0.0)
             
             var locations: [CGFloat] = [0.0, 1.0]
@@ -272,7 +273,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.rightHighlightNode.image = generateImage(CGSize(width: 88.0, height: 1.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             
-            let topColor = UIColor(rgb: 0x000000, alpha: 0.5)
+            let topColor = UIColor(rgb: 0x000000, alpha: 0.1)
             let bottomColor = UIColor(rgb: 0x000000, alpha: 0.0)
             
             var locations: [CGFloat] = [0.0, 1.0]
@@ -287,8 +288,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         self.stripContainerNode = ASDisplayNode()
         self.contentNode.addSubnode(self.stripContainerNode)
-        self.inactiveStripImage = generateStretchableFilledCircleImage(diameter: 3.0, color: UIColor(white: 1.0, alpha: 0.2))!
-        self.activeStripImage = generateStretchableFilledCircleImage(diameter: 3.0, color: .white)!
+        self.inactiveStripImage = generateSmallHorizontalStretchableFilledCircleImage(diameter: 2.0, color: UIColor(white: 1.0, alpha: 0.2))!
+        self.activeStripImage = generateSmallHorizontalStretchableFilledCircleImage(diameter: 2.0, color: .white)!
         
         self.highlightContainerNode = ASDisplayNode()
         self.highlightContainerNode.addSubnode(self.leftHighlightNode)
@@ -370,11 +371,11 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var highlightedSide: Bool?
             if let point = point {
                 if point.x < size.width * 1.0 / 5.0 {
-                    if strongSelf.currentIndex != 0 {
+                    if strongSelf.items.count > 1 {
                         highlightedSide = false
                     }
                 } else if point.x > size.width * 4.0 / 5.0 {
-                    if strongSelf.currentIndex < strongSelf.items.count - 1 || strongSelf.items.count > 1 {
+                    if strongSelf.items.count > 1 {
                         highlightedSide = true
                     }
                 }
@@ -416,6 +417,9 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if location.x < size.width * 1.0 / 5.0 {
                         if self.currentIndex != 0 {
                             self.currentIndex -= 1
+                            self.updateItems(size: size, transition: .immediate)
+                        } else if self.items.count > 1 {
+                            self.currentIndex = self.items.count - 1
                             self.updateItems(size: size, transition: .immediate)
                         }
                     } else if location.x > size.width * 4.0 / 5.0 {
@@ -559,6 +563,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             }
         }
         
+        let hadOneStripNode = self.stripNodes.count == 1
         if self.stripNodes.count != self.items.count {
             if self.stripNodes.count < self.items.count {
                 for _ in 0 ..< self.items.count - self.stripNodes.count {
@@ -591,9 +596,12 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 self.stripNodes[self.currentIndex].image = self.activeStripImage
             }
         }
+        if hadOneStripNode && self.stripNodes.count > 1 {
+            self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        }
         let stripInset: CGFloat = 5.0
         let stripSpacing: CGFloat = 4.0
-        let stripWidth: CGFloat = floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count))
+        let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
         var stripX: CGFloat = stripInset
         for i in 0 ..< self.stripNodes.count {
             if i == 0 && self.stripNodes.count == 1 {
@@ -601,7 +609,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             } else {
                 self.stripNodes[i].isHidden = false
             }
-            self.stripNodes[i].frame = CGRect(origin: CGPoint(x: stripX, y: 0.0), size: CGSize(width: stripWidth, height: 3.0))
+            self.stripNodes[i].frame = CGRect(origin: CGPoint(x: stripX, y: 0.0), size: CGSize(width: stripWidth, height: 2.0))
             stripX += stripWidth + stripSpacing
         }
         
@@ -1520,7 +1528,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         transition.updateFrameAdditive(node: self.avatarListNode.listContainerNode.controlsContainerNode, frame: CGRect(origin: CGPoint(x: -controlsClippingFrame.minX, y: -controlsClippingFrame.minY), size: CGSize(width: expandedAvatarListSize.width, height: expandedAvatarListSize.height)))
         
         transition.updateFrame(node: self.avatarListNode.listContainerNode.shadowNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: expandedAvatarListSize.width, height: navigationHeight + 20.0)))
-        transition.updateFrame(node: self.avatarListNode.listContainerNode.stripContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight + 2.0), size: CGSize(width: expandedAvatarListSize.width, height: 3.0)))
+        transition.updateFrame(node: self.avatarListNode.listContainerNode.stripContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight + 2.0), size: CGSize(width: expandedAvatarListSize.width, height: 2.0)))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.highlightContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: expandedAvatarListSize.width, height: expandedAvatarListSize.height)))
         transition.updateAlpha(node: self.avatarListNode.listContainerNode.controlsContainerNode, alpha: self.isAvatarExpanded ? (1.0 - transitionFraction) : 0.0)
         
@@ -1680,6 +1688,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             switch buttonKey {
             case .message:
                 buttonText = "Message"
+                buttonIcon = .message
+            case .discussion:
+                buttonText = "Discussion"
                 buttonIcon = .message
             case .call:
                 buttonText = "Call"

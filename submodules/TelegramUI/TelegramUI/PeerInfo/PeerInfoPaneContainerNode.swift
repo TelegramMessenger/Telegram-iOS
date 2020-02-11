@@ -51,6 +51,7 @@ enum PeerInfoPaneKey {
     case voice
     case music
     case groupsInCommon
+    case members
 }
 
 final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
@@ -449,6 +450,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                     paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .music)
                 case .groupsInCommon:
                     paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, peers: data?.groupsInCommon ?? [])
+                case .members:
+                    if case let .longList(membersContext) = data?.members {
+                        paneNode = PeerInfoMembersPaneNode(context: self.context, membersContext: membersContext)
+                    } else {
+                        preconditionFailure()
+                    }
                 }
                 
                 let disposable = MetaDisposable()
@@ -533,6 +540,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                 title = "Audio"
             case .groupsInCommon:
                 title = "Groups"
+            case .members:
+                title = "Members"
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, transition: transition)
