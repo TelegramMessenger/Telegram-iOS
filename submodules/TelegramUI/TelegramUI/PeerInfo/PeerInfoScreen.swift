@@ -2110,7 +2110,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openUsername(value: String) {
-        let shareController = ShareController(context: context, subject: .url("\(value)"))
+        let shareController = ShareController(context: self.context, subject: .url("https://t.me/\(value)"))
         self.view.endEditing(true)
         self.controller?.present(shareController, in: .window(.root))
     }
@@ -2645,7 +2645,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         case .link:
             if let addressName = peer.addressName {
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
-                    UIPasteboard.general.string = addressName
+                    UIPasteboard.general.string = "@" + addressName
                 })])
                 controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                     if let controller = self?.controller, let sourceNode = sourceNode {
