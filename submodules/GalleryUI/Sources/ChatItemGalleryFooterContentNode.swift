@@ -168,7 +168,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         self.dateNode.isHidden = true
                         self.backwardButton.isHidden = true
                         self.forwardButton.isHidden = true
-                        self.playbackControlButton.isHidden = true
+                        if status == .Local {
+                            self.playbackControlButton.isHidden = false
+                            self.playbackControlButton.setImage(playImage, for: [])
+                        } else {
+                            self.playbackControlButton.isHidden = true
+                        }
                         self.statusButtonNode.isHidden = false
                         self.statusNode.isHidden = false
                         

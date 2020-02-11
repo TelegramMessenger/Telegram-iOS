@@ -118,7 +118,7 @@ public final class GalleryFooterNode: ASDisplayNode {
         if let overlayResult = self.currentOverlayContentNode?.hitTest(point, with: event) {
             return overlayResult
         }
-        if !self.backgroundNode.frame.contains(point) {
+        if !self.backgroundNode.frame.contains(point) || self.visibilityAlpha < 1.0 {
             return nil
         }
         let result = super.hitTest(point, with: event)

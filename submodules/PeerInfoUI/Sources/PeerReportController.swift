@@ -18,26 +18,18 @@ public enum PeerReportSubject {
     case messages([MessageId])
 }
 
-private enum PeerReportOption {
+public enum PeerReportOption {
     case spam
     case violence
     case copyright
-    case pornoghraphy
+    case pornography
     case childAbuse
     case other
 }
 
-public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextController?, subject: PeerReportSubject, completion: @escaping (Bool) -> Void) {
+public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextController?, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], completion: @escaping (Bool) -> Void) {
     if let contextController = contextController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let options: [PeerReportOption] = [
-            .spam,
-            .violence,
-            .pornoghraphy,
-            .childAbuse,
-            .copyright,
-            .other
-        ]
         var items: [ContextMenuItem] = []
         for option in options {
             let title: String
@@ -47,7 +39,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 title = presentationData.strings.ReportPeer_ReasonSpam
             case .violence:
                 title = presentationData.strings.ReportPeer_ReasonViolence
-            case .pornoghraphy:
+            case .pornography:
                 title = presentationData.strings.ReportPeer_ReasonPornography
             case .childAbuse:
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
@@ -67,7 +59,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                     reportReason = .spam
                 case .violence:
                     reportReason = .violence
-                case .pornoghraphy:
+                case .pornography:
                     reportReason = .porno
                 case .childAbuse:
                     reportReason = .childAbuse
@@ -116,7 +108,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
     let options: [PeerReportOption] = [
         .spam,
         .violence,
-        .pornoghraphy,
+        .pornography,
         .childAbuse,
         .copyright,
         .other
@@ -131,7 +123,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 title = presentationData.strings.ReportPeer_ReasonSpam
             case .violence:
                 title = presentationData.strings.ReportPeer_ReasonViolence
-            case .pornoghraphy:
+            case .pornography:
                 title = presentationData.strings.ReportPeer_ReasonPornography
             case .childAbuse:
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
@@ -147,7 +139,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     reportReason = .spam
                 case .violence:
                     reportReason = .violence
-                case .pornoghraphy:
+                case .pornography:
                     reportReason = .porno
                 case .childAbuse:
                     reportReason = .childAbuse

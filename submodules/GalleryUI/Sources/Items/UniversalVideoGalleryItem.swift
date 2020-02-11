@@ -255,6 +255,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var _isVisible: Bool?
     private var initiallyActivated = false
     private var hideStatusNodeUntilCentrality = false
+    private var playOnContentOwnership = false
+    private var skipInitialPause = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -475,6 +477,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.ownsContentNodeUpdated = { [weak self] value in
                 if let strongSelf = self {
                     strongSelf.updateDisplayPlaceholder(!value)
+                    
+                    if strongSelf.playOnContentOwnership {
+                        strongSelf.playOnContentOwnership = false
+                        strongSelf.initiallyActivated = true
+                        strongSelf.skipInitialPause = true
+                        strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                    }
                 }
             }
             self.videoNode = videoNode
@@ -710,7 +719,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     private func shouldAutoplayOnCentrality() -> Bool {
-        if let item = self.item, let content = item.content as? NativeVideoContent, !self.initiallyActivated {
+//        !self.initiallyActivated
+        if let item = self.item, let content = item.content as? NativeVideoContent {
             var isLocal = false
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 isLocal = true
@@ -743,14 +753,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     self.hideStatusNodeUntilCentrality = false
                     self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
+
                     if videoNode.ownsContentNode {
                         if isAnimated {
                             videoNode.seek(0.0)
                             videoNode.play()
-                        }
-                        else if self.shouldAutoplayOnCentrality()  {
+                        } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                        }
+                    } else {
+                        if self.shouldAutoplayOnCentrality()  {
+                            self.playOnContentOwnership = true
                         }
                     }
                 } else {
@@ -774,8 +788,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if hadPreviousValue {
                     videoNode.canAttachContent = isVisible
                     if isVisible {
-                        videoNode.pause()
-                        videoNode.seek(0.0)
+                        if self.skipInitialPause {
+                            self.skipInitialPause = false
+                        } else {
+                            videoNode.pause()
+                            videoNode.seek(0.0)
+                        }
                     } else {
                         videoNode.continuePlayingWithoutSound()
                     }
@@ -1283,6 +1301,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
-        return .single((self.footerContentNode, self.overlayContentNode))
+        return .single((self.footerContentNode, nil))
     }
 }

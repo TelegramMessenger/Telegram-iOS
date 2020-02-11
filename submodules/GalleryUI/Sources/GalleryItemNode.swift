@@ -23,6 +23,8 @@ open class GalleryItemNode: ASDisplayNode {
     public var toggleControlsVisibility: () -> Void = { }
     public var goToPreviousItem: () -> Void = { }
     public var goToNextItem: () -> Void = { }
+    public var canGoToPreviousItem: () -> Bool = { return false }
+    public var canGoToNextItem: () -> Bool = { return false }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }

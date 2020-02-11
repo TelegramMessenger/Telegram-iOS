@@ -530,8 +530,7 @@ private final class MediaPlayerContext {
         } else {
             if case let .timecode(time) = seek {
                 self.seek(timestamp: Double(time), action: .play)
-            }
-            else if case .playing = self.state {
+            } else if case .playing = self.state {
             } else {
                 self.play()
             }
