@@ -18,7 +18,7 @@ public enum ExportAuthTransferTokenResult {
     case displayToken(AuthTransferExportedToken)
     case changeAccountAndRetry(UnauthorizedAccount)
     case loggedIn
-    case passwordRequested
+    case passwordRequested(UnauthorizedAccount)
 }
 
 public func exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, otherAccountUserIds: [Int32], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
@@ -42,8 +42,6 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
                         return nil
                     }
                     |> castError(ExportAuthTransferTokenError.self)
-                    
-                    return .single(nil)
                 }
             }
         } else {
@@ -52,7 +50,7 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
     }
     |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
         guard let result = result else {
-            return .single(.passwordRequested)
+            return .single(.passwordRequested(account))
         }
         switch result {
         case let .loginToken(expires, token):
@@ -66,7 +64,7 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
                     if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
-                        return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+                        return updatedAccount.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
                         |> mapError { error -> ExportAuthTransferTokenError in
                             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                                 return .limitExceeded
@@ -77,13 +75,11 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
                         |> mapToSignal { result -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in
                             switch result {
                             case let .password(password):
-                                return account.postbox.transaction { transaction -> Api.auth.LoginToken? in
-                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
+                                return updatedAccount.postbox.transaction { transaction -> Api.auth.LoginToken? in
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: updatedAccount.testingEnvironment, masterDatacenterId: updatedAccount.masterDatacenterId, contents: .passwordEntry(hint: password.hint ?? "", number: nil, code: nil, suggestReset: false, syncContacts: syncContacts)))
                                     return nil
                                 }
                                 |> castError(ExportAuthTransferTokenError.self)
-                                
-                                return .single(nil)
                             }
                         }
                     } else {
@@ -91,8 +87,11 @@ public func exportAuthTransferToken(accountManager: AccountManager, account: Una
                     }
                 }
                 |> mapToSignal { result -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
+                    guard let result = result else {
+                        return .single(.passwordRequested(updatedAccount))
+                    }
                     switch result {
-                    case let .loginTokenSuccess(authorization)?:
+                    case let .loginTokenSuccess(authorization):
                         switch authorization {
                         case let .authorization(_, _, user):
                             return updatedAccount.postbox.transaction { transaction -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
