@@ -10,6 +10,7 @@ private final class MultiScaleTextStateNode: ASDisplayNode {
     
     override init() {
         self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
         
         super.init()
         
@@ -44,18 +45,30 @@ final class MultiScaleTextNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(states: [AnyHashable: MultiScaleTextState]) -> [AnyHashable: MultiScaleTextLayout] {
+    func updateLayout(states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
         assert(Set(states.keys) == Set(self.stateNodes.keys))
+        assert(states[mainState] != nil)
         
         var result: [AnyHashable: MultiScaleTextLayout] = [:]
+        var mainLayout: MultiScaleTextLayout?
         for (key, state) in states {
             if let node = self.stateNodes[key] {
                 node.textNode.attributedText = state.attributedText
                 let nodeSize = node.textNode.updateLayout(state.constrainedSize)
                 let nodeLayout = MultiScaleTextLayout(size: nodeSize)
+                if key == mainState {
+                    mainLayout = nodeLayout
+                }
                 node.currentLayout = nodeLayout
-                node.textNode.frame = CGRect(origin: CGPoint(x: -nodeSize.width / 2.0, y: -nodeSize.height / 2.0), size: nodeSize)
                 result[key] = nodeLayout
+            }
+        }
+        if let mainLayout = mainLayout {
+            let mainBounds = CGRect(origin: CGPoint(x: -mainLayout.size.width / 2.0, y: -mainLayout.size.height / 2.0), size: mainLayout.size)
+            for (key, _) in states {
+                if let node = self.stateNodes[key], let nodeLayout = result[key] {
+                    node.textNode.frame = CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size)
+                }
             }
         }
         return result
