@@ -5861,9 +5861,6 @@ public extension Api {
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
         case updateLoginToken
         case updateMessagePollVote(pollId: Int64, userId: Int32, options: [Buffer])
-        case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
-        case updateDialogFilterOrder(order: [Int32])
-        case updateDialogFilters
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6513,30 +6510,6 @@ public extension Api {
                         serializeBytes(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .updateDialogFilter(let flags, let id, let filter):
-                    if boxed {
-                        buffer.appendInt32(654302845)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {filter!.serialize(buffer, true)}
-                    break
-                case .updateDialogFilterOrder(let order):
-                    if boxed {
-                        buffer.appendInt32(-1512627963)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(order.count))
-                    for item in order {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    break
-                case .updateDialogFilters:
-                    if boxed {
-                        buffer.appendInt32(889491791)
-                    }
-                    
-                    break
     }
     }
     
@@ -6696,12 +6669,6 @@ public extension Api {
                 return ("updateLoginToken", [])
                 case .updateMessagePollVote(let pollId, let userId, let options):
                 return ("updateMessagePollVote", [("pollId", pollId), ("userId", userId), ("options", options)])
-                case .updateDialogFilter(let flags, let id, let filter):
-                return ("updateDialogFilter", [("flags", flags), ("id", id), ("filter", filter)])
-                case .updateDialogFilterOrder(let order):
-                return ("updateDialogFilterOrder", [("order", order)])
-                case .updateDialogFilters:
-                return ("updateDialogFilters", [])
     }
     }
     
@@ -7997,41 +7964,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-        public static func parse_updateDialogFilter(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.DialogFilter?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.DialogFilter
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateDialogFilter(flags: _1!, id: _2!, filter: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateDialogFilterOrder(_ reader: BufferReader) -> Update? {
-            var _1: [Int32]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateDialogFilterOrder(order: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateDialogFilters(_ reader: BufferReader) -> Update? {
-            return Api.Update.updateDialogFilters
         }
     
     }
@@ -12025,82 +11957,6 @@ public extension Api {
         }
     
     }
-    public enum StatsGraph: TypeConstructorDescription {
-        case statsGraphAsync(token: String)
-        case statsGraphError(error: String)
-        case statsGraph(json: Api.DataJSON)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGraphAsync(let token):
-                    if boxed {
-                        buffer.appendInt32(1244130093)
-                    }
-                    serializeString(token, buffer: buffer, boxed: false)
-                    break
-                case .statsGraphError(let error):
-                    if boxed {
-                        buffer.appendInt32(-1092839390)
-                    }
-                    serializeString(error, buffer: buffer, boxed: false)
-                    break
-                case .statsGraph(let json):
-                    if boxed {
-                        buffer.appendInt32(-1057809608)
-                    }
-                    json.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGraphAsync(let token):
-                return ("statsGraphAsync", [("token", token)])
-                case .statsGraphError(let error):
-                return ("statsGraphError", [("error", error)])
-                case .statsGraph(let json):
-                return ("statsGraph", [("json", json)])
-    }
-    }
-    
-        public static func parse_statsGraphAsync(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphAsync(token: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraphError(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphError(error: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraph(json: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum PageTableCell: TypeConstructorDescription {
         case pageTableCell(flags: Int32, text: Api.RichText?, colspan: Int32?, rowspan: Int32?)
     
@@ -13807,44 +13663,6 @@ public extension Api {
         }
     
     }
-    public enum StatsPercentValue: TypeConstructorDescription {
-        case statsPercentValue(part: Double, total: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsPercentValue(let part, let total):
-                    if boxed {
-                        buffer.appendInt32(-875679776)
-                    }
-                    serializeDouble(part, buffer: buffer, boxed: false)
-                    serializeDouble(total, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsPercentValue(let part, let total):
-                return ("statsPercentValue", [("part", part), ("total", total)])
-    }
-    }
-    
-        public static func parse_statsPercentValue(_ reader: BufferReader) -> StatsPercentValue? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsPercentValue.statsPercentValue(part: _1!, total: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum ChannelLocation: TypeConstructorDescription {
         case channelLocationEmpty
         case channelLocation(geoPoint: Api.GeoPoint, address: String)
@@ -14617,44 +14435,6 @@ public extension Api {
         }
     
     }
-    public enum StatsDateRangeDays: TypeConstructorDescription {
-        case statsDateRangeDays(minDate: Int32, maxDate: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                    if boxed {
-                        buffer.appendInt32(-1237848657)
-                    }
-                    serializeInt32(minDate, buffer: buffer, boxed: false)
-                    serializeInt32(maxDate, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                return ("statsDateRangeDays", [("minDate", minDate), ("maxDate", maxDate)])
-    }
-    }
-    
-        public static func parse_statsDateRangeDays(_ reader: BufferReader) -> StatsDateRangeDays? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum MessageFwdAuthor: TypeConstructorDescription {
         case messageFwdAuthor(channelId: Int32)
     
@@ -15319,44 +15099,6 @@ public extension Api {
         }
     
     }
-    public enum StatsAbsValueAndPrev: TypeConstructorDescription {
-        case statsAbsValueAndPrev(current: Double, previous: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                    if boxed {
-                        buffer.appendInt32(-884757282)
-                    }
-                    serializeDouble(current, buffer: buffer, boxed: false)
-                    serializeDouble(previous, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                return ("statsAbsValueAndPrev", [("current", current), ("previous", previous)])
-    }
-    }
-    
-        public static func parse_statsAbsValueAndPrev(_ reader: BufferReader) -> StatsAbsValueAndPrev? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsAbsValueAndPrev.statsAbsValueAndPrev(current: _1!, previous: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum MessageMedia: TypeConstructorDescription {
         case messageMediaEmpty
         case messageMediaGeo(geo: Api.GeoPoint)
@@ -15950,6 +15692,44 @@ public extension Api {
         }
         public static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
             return Api.DocumentAttribute.documentAttributeHasStickers
+        }
+    
+    }
+    public enum BankCardOpenUrl: TypeConstructorDescription {
+        case bankCardOpenUrl(url: String, name: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .bankCardOpenUrl(let url, let name):
+                    if boxed {
+                        buffer.appendInt32(-177732982)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .bankCardOpenUrl(let url, let name):
+                return ("bankCardOpenUrl", [("url", url), ("name", name)])
+    }
+    }
+    
+        public static func parse_bankCardOpenUrl(_ reader: BufferReader) -> BankCardOpenUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BankCardOpenUrl.bankCardOpenUrl(url: _1!, name: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }
@@ -17066,58 +16846,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.ChatParticipants.chatParticipants(chatId: _1!, participants: _2!, version: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, includePeers: [Api.InputPeer])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers):
-                    if boxed {
-                        buffer.appendInt32(351868460)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(includePeers.count))
-                    for item in includePeers {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .dialogFilter(let flags, let id, let title, let includePeers):
-                return ("dialogFilter", [("flags", flags), ("id", id), ("title", title), ("includePeers", includePeers)])
-    }
-    }
-    
-        public static func parse_dialogFilter(_ reader: BufferReader) -> DialogFilter? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.InputPeer]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, includePeers: _4!)
             }
             else {
                 return nil
@@ -21184,54 +20912,6 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.UserProfilePhoto.userProfilePhoto(photoId: _1!, photoSmall: _2!, photoBig: _3!, dcId: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum StatsRowAbsValueAndPrev: TypeConstructorDescription {
-        case statsRowAbsValueAndPrev(id: String, title: String, shortTitle: String, values: Api.StatsAbsValueAndPrev)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
-                    if boxed {
-                        buffer.appendInt32(-581804346)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(shortTitle, buffer: buffer, boxed: false)
-                    values.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsRowAbsValueAndPrev(let id, let title, let shortTitle, let values):
-                return ("statsRowAbsValueAndPrev", [("id", id), ("title", title), ("shortTitle", shortTitle), ("values", values)])
-    }
-    }
-    
-        public static func parse_statsRowAbsValueAndPrev(_ reader: BufferReader) -> StatsRowAbsValueAndPrev? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StatsRowAbsValueAndPrev.statsRowAbsValueAndPrev(id: _1!, title: _2!, shortTitle: _3!, values: _4!)
             }
             else {
                 return nil
