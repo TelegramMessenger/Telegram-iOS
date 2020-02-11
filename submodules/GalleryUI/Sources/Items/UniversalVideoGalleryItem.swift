@@ -256,6 +256,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var initiallyActivated = false
     private var hideStatusNodeUntilCentrality = false
     private var playOnContentOwnership = false
+    private var skipInitialPause = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -480,6 +481,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if strongSelf.playOnContentOwnership {
                         strongSelf.playOnContentOwnership = false
                         strongSelf.initiallyActivated = true
+                        strongSelf.skipInitialPause = true
                         strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
                     }
                 }
@@ -786,8 +788,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if hadPreviousValue {
                     videoNode.canAttachContent = isVisible
                     if isVisible {
-                        videoNode.pause()
-                        videoNode.seek(0.0)
+                        if self.skipInitialPause {
+                            self.skipInitialPause = false
+                        } else {
+                            videoNode.pause()
+                            videoNode.seek(0.0)
+                        }
                     } else {
                         videoNode.continuePlayingWithoutSound()
                     }
