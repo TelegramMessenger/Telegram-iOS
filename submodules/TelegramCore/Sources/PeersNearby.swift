@@ -25,7 +25,7 @@ public enum PeerNearbyVisibilityUpdate {
     case invisible
 }
 
-public func peersNearbyUpdateVisibility(network: Network, stateManager: AccountStateManager, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
+public func peersNearbyUpdateVisibility(account: Account, update: PeerNearbyVisibilityUpdate, background: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0
     var geoPoint: Api.InputGeoPoint
     var selfExpires: Int32?
@@ -43,18 +43,30 @@ public func peersNearbyUpdateVisibility(network: Network, stateManager: AccountS
             selfExpires = 0
     }
     
+    let _ = (account.postbox.transaction { transaction in
+        transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
+            var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
+            if let expires = selfExpires {
+                settings.visibilityExpires = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + expires
+            } else if case .invisible = update {
+                settings.visibilityExpires = nil
+            }
+            return settings
+        })
+    }).start()
+
     if background {
         flags |= (1 << 1)
     }
         
-    return network.request(Api.functions.contacts.getLocated(flags: flags, geoPoint: geoPoint, selfExpires: selfExpires))
+    return account.network.request(Api.functions.contacts.getLocated(flags: flags, geoPoint: geoPoint, selfExpires: selfExpires))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
         return .single(nil)
     }
     |> mapToSignal { updates -> Signal<Void, NoError> in
         if let updates = updates {
-            stateManager.addUpdates(updates)
+            account.stateManager.addUpdates(updates)
         }
         return .complete()
     }
@@ -255,6 +267,36 @@ public func updateChannelGeoLocation(postbox: Postbox, network: Network, channel
             } else {
                 return .single(result)
             }
+        }
+    }
+}
+
+public struct PeersNearbyState: PreferencesEntry, Equatable {
+    public var visibilityExpires: Int32?
+    
+    public static var `default` = PeersNearbyState(visibilityExpires: nil)
+    
+    public init(visibilityExpires: Int32?) {
+        self.visibilityExpires = visibilityExpires
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.visibilityExpires = decoder.decodeOptionalInt32ForKey("expires")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let expires = self.visibilityExpires {
+            encoder.encodeInt32(expires, forKey: "expires")
+        } else {
+            encoder.encodeNil(forKey: "expires")
+        }
+    }
+    
+    public func isEqual(to: PreferencesEntry) -> Bool {
+        if let to = to as? PeersNearbyState, self == to {
+            return true
+        } else {
+            return false
         }
     }
 }

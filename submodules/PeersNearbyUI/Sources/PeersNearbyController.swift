@@ -24,6 +24,8 @@ import ContextUI
 import TelegramNotices
 import TelegramStringFormatting
 
+private let maxUsersDisplayedLimit: Int32 = 5
+
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)
     let expires: Int32
@@ -57,14 +59,16 @@ private final class PeersNearbyControllerArguments {
     let openChat: (Peer) -> Void
     let openCreateGroup: (Double, Double, String?) -> Void
     let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
+    let expandUsers: () -> Void
     
-    init(context: AccountContext, toggleVisibility: @escaping (Bool) -> Void, openProfile: @escaping (Peer) -> Void, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, toggleVisibility: @escaping (Bool) -> Void, openProfile: @escaping (Peer) -> Void, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, expandUsers: @escaping () -> Void) {
         self.context = context
         self.toggleVisibility = toggleVisibility
         self.openProfile = openProfile
         self.openChat = openChat
         self.openCreateGroup = openCreateGroup
         self.contextAction = contextAction
+        self.expandUsers = expandUsers
     }
 }
 
@@ -82,6 +86,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
     case empty(PresentationTheme, String)
     case visibility(PresentationTheme, String, Bool)
     case user(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PeerNearbyEntry)
+    case expand(PresentationTheme, String)
     
     case groupsHeader(PresentationTheme, String, Bool)
     case createGroup(PresentationTheme, String, Double?, Double?, String?)
@@ -94,7 +99,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         switch self {
             case .header:
                 return PeersNearbySection.header.rawValue
-            case .usersHeader, .empty, .visibility, .user:
+            case .usersHeader, .empty, .visibility, .user, .expand:
                 return PeersNearbySection.users.rawValue
             case .groupsHeader, .createGroup, .group:
                 return PeersNearbySection.groups.rawValue
@@ -115,12 +120,14 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 return 3
             case let .user(index, _, _, _, _, _):
                 return 4 + index
-            case .groupsHeader:
+            case .expand:
                 return 1000
-            case .createGroup:
+            case .groupsHeader:
                 return 1001
+            case .createGroup:
+                return 1002
             case let .group(index, _, _, _, _, _):
-                return 1002 + index
+                return 1003 + index
             case .channelsHeader:
                 return 2000
             case let .channel(index, _, _, _, _, _):
@@ -157,6 +164,12 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
 
             case let .user(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsDisplayOrder, lhsPeer):
                 if case let .user(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsDisplayOrder, rhsPeer) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayOrder == rhsDisplayOrder, arePeersNearbyEqual(lhsPeer, rhsPeer) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .expand(lhsTheme, lhsText):
+                if case let .expand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -224,14 +237,19 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 })
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
                 var text = strings.Map_DistanceAway(stringForDistance(peer.distance)).0
-                if peer.peer.0.id == arguments.context.account.peerId {
+                let isSelfPeer = peer.peer.0.id == arguments.context.account.peerId
+                if isSelfPeer {
                     text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires)).0
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
-                    arguments.openProfile(peer.peer.0)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: { node, gesture in
-                    arguments.contextAction(peer.peer.0, node, gesture)
-                }, hasTopGroupInset: false, tag: nil)
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
+                    if !isSelfPeer {
+                        arguments.openProfile(peer.peer.0)
+                    }
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil, hasTopGroupInset: false, tag: nil)
+            case let .expand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandUsers()
+                })
             case let .groupsHeader(theme, text, loading):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .createGroup(theme, title, latitude, longitude, address):
@@ -294,7 +312,7 @@ private struct PeersNearbyData: Equatable {
     }
 }
 
-private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationData: PresentationData, displayLoading: Bool) -> [PeersNearbyEntry] {
+private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationData: PresentationData, displayLoading: Bool, expanded: Bool) -> [PeersNearbyEntry] {
     var entries: [PeersNearbyEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.PeopleNearby_DiscoverDescription))
@@ -305,9 +323,21 @@ private func peersNearbyControllerEntries(data: PeersNearbyData?, presentationDa
     
     if let data = data, !data.users.isEmpty {
         var i: Int32 = 0
-        for user in data.users {
+        var users = data.users
+        var effectiveExpanded = expanded
+        if users.count > maxUsersDisplayedLimit && !expanded {
+            users = Array(users.prefix(Int(maxUsersDisplayedLimit)))
+        } else {
+            effectiveExpanded = true
+        }
+        
+        for user in users {
             entries.append(.user(i, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, user))
             i += 1
+        }
+        
+        if !effectiveExpanded {
+            entries.append(.expand(presentationData.theme, presentationData.strings.PeopleNearby_ShowMorePeople(Int32(data.users.count) - maxUsersDisplayedLimit)))
         }
     }
     
@@ -429,6 +459,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     let dataPromise = Promise<PeersNearbyData?>(nil)
     let addressPromise = Promise<String?>(nil)
     
+    let visibilityPromise = ValuePromise<Bool>(true)
+    let expandedPromise = ValuePromise<Bool>(false)
+    
     let coordinatePromise = Promise<CLLocationCoordinate2D?>(nil)
     coordinatePromise.set(.single(nil) |> then(currentLocationManagerCoordinate(manager: context.sharedContext.locationManager!, timeout: 5.0)))
     
@@ -440,12 +473,16 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                 let _ = (coordinatePromise.get()
                 |> deliverOnMainQueue).start(next: { coordinate in
                     if let coordinate = coordinate {
-                        let _ = peersNearbyUpdateVisibility(network: context.account.network, stateManager: context.account.stateManager, update: .visible(latitude: coordinate.latitude, longitude: coordinate.longitude), background: false).start()
+                        let _ = peersNearbyUpdateVisibility(account: context.account, update: .visible(latitude: coordinate.latitude, longitude: coordinate.longitude), background: false).start()
                     }
                 })
             })]), nil)
+            
+            visibilityPromise.set(true)
         } else {
-            let _ = peersNearbyUpdateVisibility(network: context.account.network, stateManager: context.account.stateManager, update: .invisible, background: false).start()
+            let _ = peersNearbyUpdateVisibility(account: context.account, update: .invisible, background: false).start()
+            
+            visibilityPromise.set(false)
         }
     }, openProfile: { peer in
         navigateToProfileImpl?(peer)
@@ -498,6 +535,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
             presentControllerImpl?(c, nil)
         }), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
+    }, expandUsers: {
+        expandedPromise.set(true)
     })
     
     let dataSignal: Signal<PeersNearbyData?, NoError> = coordinatePromise.get()
@@ -569,9 +608,9 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         |> delay(1.0, queue: Queue.mainQueue())
     )
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading)
+    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), displayLoading, visibilityPromise.get(), expandedPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, data, displayLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, displayLoading, visibility, expanded -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         
         var crossfade = false
@@ -583,7 +622,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PeopleNearby_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, presentationData: presentationData, displayLoading: displayLoading), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: peersNearbyControllerEntries(data: data, presentationData: presentationData, displayLoading: displayLoading, expanded: expanded), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: !crossfade)
         
         return (controllerState, (listState, arguments))
     }
@@ -596,7 +635,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: true) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
             (navigationController as? NavigationController)?.pushViewController(controller)
         }
     }

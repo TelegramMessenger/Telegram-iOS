@@ -1,4 +1,4 @@
-import Foundation
+/*import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
@@ -206,3 +206,4 @@ func chatListFilterPresetListController(context: AccountContext, updated: @escap
     
     return controller
 }
+*/
