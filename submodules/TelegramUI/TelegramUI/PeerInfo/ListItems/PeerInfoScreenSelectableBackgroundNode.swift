@@ -8,6 +8,8 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
     
     let bringToFrontForHighlight: () -> Void
     
+    private var isHighlighted: Bool = false
+    
     var pressed: (() -> Void)? {
         didSet {
             self.buttonNode.isUserInteractionEnabled = self.pressed != nil
@@ -30,21 +32,26 @@ final class PeerInfoScreenSelectableBackgroundNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.bringToFrontForHighlight()
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
-            }
+            self?.updateIsHighlighted(highlighted)
         }
     }
     
     @objc private func buttonPressed() {
         self.pressed?()
+    }
+    
+    func updateIsHighlighted(_ isHighlighted: Bool) {
+        if self.isHighlighted != isHighlighted {
+            self.isHighlighted = isHighlighted
+            if isHighlighted {
+                self.bringToFrontForHighlight()
+                self.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                self.backgroundNode.alpha = 1.0
+            } else {
+                self.backgroundNode.alpha = 0.0
+                self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+            }
+        }
     }
     
     func update(size: CGSize, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {

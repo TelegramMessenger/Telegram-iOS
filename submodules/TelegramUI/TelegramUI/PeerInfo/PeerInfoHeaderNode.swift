@@ -168,6 +168,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         
         super.init()
         
+        self.imageNode.contentAnimations = .subsequentUpdates
         self.addSubnode(self.imageNode)
         
         self.imageNode.imageUpdated = { [weak self] _ in
@@ -420,7 +421,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                             self.updateItems(size: size, transition: .immediate)
                         } else if self.items.count > 1 {
                             self.currentIndex = self.items.count - 1
-                            self.updateItems(size: size, transition: .immediate)
+                            self.updateItems(size: size, transition: .immediate, synchronous: true)
                         }
                     } else if location.x > size.width * 4.0 / 5.0 {
                         if self.currentIndex < self.items.count - 1 {
@@ -486,7 +487,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         if let peer = peer, !self.initializedList {
             self.initializedList = true
-            self.disposable.set((fetchedAvatarGalleryEntries(account: self.context.account, peer: peer)
+            self.disposable.set((peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] entries in
                 guard let strongSelf = self else {
                     return
@@ -1225,6 +1226,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
     private var presentationData: PresentationData?
     
+    private let keepExpandedButtons: PeerInfoScreenKeepExpandedButtons
+    
     private(set) var isAvatarExpanded: Bool
     
     let avatarListNode: PeerInfoAvatarListNode
@@ -1250,9 +1253,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
-    init(context: AccountContext, avatarInitiallyExpanded: Bool) {
+    init(context: AccountContext, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
+        self.keepExpandedButtons = keepExpandedButtons
         
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded)
         
@@ -1528,7 +1532,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         transition.updateFrameAdditive(node: self.avatarListNode.listContainerNode.controlsContainerNode, frame: CGRect(origin: CGPoint(x: -controlsClippingFrame.minX, y: -controlsClippingFrame.minY), size: CGSize(width: expandedAvatarListSize.width, height: expandedAvatarListSize.height)))
         
         transition.updateFrame(node: self.avatarListNode.listContainerNode.shadowNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: expandedAvatarListSize.width, height: navigationHeight + 20.0)))
-        transition.updateFrame(node: self.avatarListNode.listContainerNode.stripContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight + 2.0), size: CGSize(width: expandedAvatarListSize.width, height: 2.0)))
+        transition.updateFrame(node: self.avatarListNode.listContainerNode.stripContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusBarHeight < 25.0 ? (statusBarHeight + 2.0) : (statusBarHeight - 3.0)), size: CGSize(width: expandedAvatarListSize.width, height: 2.0)))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.highlightContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: expandedAvatarListSize.width, height: expandedAvatarListSize.height)))
         transition.updateAlpha(node: self.avatarListNode.listContainerNode.controlsContainerNode, alpha: self.isAvatarExpanded ? (1.0 - transitionFraction) : 0.0)
         
@@ -1690,7 +1694,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonText = "Message"
                 buttonIcon = .message
             case .discussion:
-                buttonText = "Discussion"
+                buttonText = "Discuss"
                 buttonIcon = .message
             case .call:
                 buttonText = "Call"
@@ -1716,11 +1720,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateAlpha(node: buttonNode, alpha: buttonsAlpha)
             
             let hiddenWhileExpanded: Bool
-            switch buttonKey {
+            switch self.keepExpandedButtons {
+            case .message:
+                switch buttonKey {
+                case .mute, .addMember:
+                    hiddenWhileExpanded = true
+                default:
+                    hiddenWhileExpanded = false
+                }
             case .mute:
-                hiddenWhileExpanded = true
-            default:
-                hiddenWhileExpanded = false
+                switch buttonKey {
+                case .message, .addMember:
+                    hiddenWhileExpanded = true
+                default:
+                    hiddenWhileExpanded = false
+                }
             }
             
             if self.isAvatarExpanded, hiddenWhileExpanded {

@@ -27,9 +27,34 @@ private final class PeerChannelMembersOnlineContext {
     }
 }
 
+private final class ProfileDataPreloadContext {
+    let subscribers = Bag<() -> Void>()
+    
+    let disposable: Disposable
+    var emptyTimer: SwiftSignalKit.Timer?
+    
+    init(disposable: Disposable) {
+        self.disposable = disposable
+    }
+}
+
+private final class ProfileDataPhotoPreloadContext {
+    let subscribers = Bag<(Any?) -> Void>()
+    
+    let disposable: Disposable
+    var value: Any?
+    var emptyTimer: SwiftSignalKit.Timer?
+    
+    init(disposable: Disposable) {
+        self.disposable = disposable
+    }
+}
+
 private final class PeerChannelMemberCategoriesContextsManagerImpl {
     fileprivate var contexts: [PeerId: PeerChannelMemberCategoriesContext] = [:]
     fileprivate var onlineContexts: [PeerId: PeerChannelMembersOnlineContext] = [:]
+    fileprivate var profileDataPreloadContexts: [PeerId: ProfileDataPreloadContext] = [:]
+    fileprivate var profileDataPhotoPreloadContexts: [PeerId: ProfileDataPhotoPreloadContext] = [:]
     
     func getContext(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
         if let current = self.contexts[peerId] {
@@ -119,6 +144,121 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
     func loadMore(peerId: PeerId, control: PeerChannelMemberCategoryControl) {
         if let context = self.contexts[peerId] {
             context.loadMore(control)
+        }
+    }
+    
+    func profileData(postbox: Postbox, network: Network, peerId: PeerId, customData: Signal<Never, NoError>?) -> Disposable {
+        let context: ProfileDataPreloadContext
+        if let current = self.profileDataPreloadContexts[peerId] {
+            context = current
+        } else {
+            let disposable = DisposableSet()
+            context = ProfileDataPreloadContext(disposable: disposable)
+            self.profileDataPreloadContexts[peerId] = context
+            
+            if let customData = customData {
+                disposable.add(customData.start())
+            }
+            
+            /*disposable.set(signal.start(next: { [weak context] value in
+                guard let context = context else {
+                    return
+                }
+                context.value = value
+                for f in context.subscribers.copyItems() {
+                    f(value)
+                }
+            }))*/
+        }
+        
+        if let emptyTimer = context.emptyTimer {
+            emptyTimer.invalidate()
+            context.emptyTimer = nil
+        }
+        
+        let index = context.subscribers.add({
+        })
+        //updated(context.value ?? 0)
+        
+        return ActionDisposable { [weak self, weak context] in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let current = strongSelf.profileDataPreloadContexts[peerId], let context = context, current === context {
+                    current.subscribers.remove(index)
+                    if current.subscribers.isEmpty {
+                        if current.emptyTimer == nil {
+                            let timer = SwiftSignalKit.Timer(timeout: 60.0, repeat: false, completion: { [weak context] in
+                                if let current = strongSelf.profileDataPreloadContexts[peerId], let context = context, current === context {
+                                    if current.subscribers.isEmpty {
+                                        strongSelf.profileDataPreloadContexts.removeValue(forKey: peerId)
+                                        current.disposable.dispose()
+                                    }
+                                }
+                            }, queue: Queue.mainQueue())
+                            current.emptyTimer = timer
+                            timer.start()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func profilePhotos(postbox: Postbox, network: Network, peerId: PeerId, fetch: Signal<Any, NoError>, updated: @escaping (Any?) -> Void) -> Disposable {
+        let context: ProfileDataPhotoPreloadContext
+        if let current = self.profileDataPhotoPreloadContexts[peerId] {
+            context = current
+        } else {
+            let disposable = MetaDisposable()
+            context = ProfileDataPhotoPreloadContext(disposable: disposable)
+            self.profileDataPhotoPreloadContexts[peerId] = context
+            
+            disposable.set(fetch.start(next: { [weak context] value in
+                guard let context = context else {
+                    return
+                }
+                context.value = value
+                for f in context.subscribers.copyItems() {
+                    f(value)
+                }
+            }))
+        }
+        
+        if let emptyTimer = context.emptyTimer {
+            emptyTimer.invalidate()
+            context.emptyTimer = nil
+        }
+        
+        let index = context.subscribers.add({ next in
+            updated(next)
+        })
+        updated(context.value)
+        
+        return ActionDisposable { [weak self, weak context] in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let current = strongSelf.profileDataPhotoPreloadContexts[peerId], let context = context, current === context {
+                    current.subscribers.remove(index)
+                    if current.subscribers.isEmpty {
+                        if current.emptyTimer == nil {
+                            let timer = SwiftSignalKit.Timer(timeout: 60.0, repeat: false, completion: { [weak context] in
+                                if let current = strongSelf.profileDataPhotoPreloadContexts[peerId], let context = context, current === context {
+                                    if current.subscribers.isEmpty {
+                                        strongSelf.profileDataPhotoPreloadContexts.removeValue(forKey: peerId)
+                                        current.disposable.dispose()
+                                    }
+                                }
+                            }, queue: Queue.mainQueue())
+                            current.emptyTimer = timer
+                            timer.start()
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -391,6 +531,37 @@ public final class PeerChannelMemberCategoriesContextsManager {
                 disposableAndControl?.0.dispose()
                 statusesDisposable.dispose()
             }
+        }
+        |> runOn(Queue.mainQueue())
+    }
+    
+    public func profileData(postbox: Postbox, network: Network, peerId: PeerId, customData: Signal<Never, NoError>?) -> Signal<Never, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let strongSelf = self else {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            let disposable = strongSelf.impl.syncWith({ impl -> Disposable in
+                return impl.profileData(postbox: postbox, network: network, peerId: peerId, customData: customData)
+            })
+            return disposable ?? EmptyDisposable
+        }
+        |> runOn(Queue.mainQueue())
+    }
+    
+    public func profilePhotos(postbox: Postbox, network: Network, peerId: PeerId, fetch: Signal<Any, NoError>) -> Signal<Any?, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let strongSelf = self else {
+                subscriber.putNext(0)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            let disposable = strongSelf.impl.syncWith({ impl -> Disposable in
+                return impl.profilePhotos(postbox: postbox, network: network, peerId: peerId, fetch: fetch, updated: { value in
+                    subscriber.putNext(value)
+                })
+            })
+            return disposable ?? EmptyDisposable
         }
         |> runOn(Queue.mainQueue())
     }

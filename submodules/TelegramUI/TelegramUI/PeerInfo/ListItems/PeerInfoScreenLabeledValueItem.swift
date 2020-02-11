@@ -1,6 +1,8 @@
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AccountContext
+import TextFormat
 
 enum PeerInfoScreenLabeledValueTextColor {
     case primary
@@ -9,7 +11,7 @@ enum PeerInfoScreenLabeledValueTextColor {
 
 enum PeerInfoScreenLabeledValueTextBehavior: Equatable {
     case singleLine
-    case multiLine(maxLines: Int)
+    case multiLine(maxLines: Int, enabledEntities: EnabledEntityTypes)
 }
 
 final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
@@ -19,14 +21,27 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let textColor: PeerInfoScreenLabeledValueTextColor
     let textBehavior: PeerInfoScreenLabeledValueTextBehavior
     let action: (() -> Void)?
+    let longTapAction: ((ASDisplayNode) -> Void)?
+    let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
-    init(id: AnyHashable, label: String, text: String, textColor: PeerInfoScreenLabeledValueTextColor = .primary, textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine, action: (() -> Void)?) {
+    init(
+        id: AnyHashable,
+        label: String,
+        text: String,
+        textColor: PeerInfoScreenLabeledValueTextColor = .primary,
+        textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine,
+        action: (() -> Void)?,
+        longTapAction: ((ASDisplayNode) -> Void)? = nil,
+        linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil
+    ) {
         self.id = id
         self.label = label
         self.text = text
         self.textColor = textColor
         self.textBehavior = textBehavior
         self.action = action
+        self.longTapAction = longTapAction
+        self.linkItemAction = linkItemAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -40,11 +55,15 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let textNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
     
+    private var linkHighlightingNode: LinkHighlightingNode?
+    
     private var item: PeerInfoScreenLabeledValueItem?
+    private var theme: PresentationTheme?
     
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        self.selectionNode.isUserInteractionEnabled = false
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.displaysAsynchronously = false
@@ -69,12 +88,65 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.textNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return .keepWithSingleTap
+            }
+            if let _ = strongSelf.linkItemAtPoint(point) {
+                return .waitForSingleTap
+            }
+            if item.longTapAction != nil {
+                return .waitForSingleTap
+            }
+            if item.action != nil {
+                return .keepWithSingleTap
+            }
+            return .fail
+        }
+        recognizer.highlight = { [weak self] point in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateTouchesAtPoint(point)
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap, .longTap:
+                    if let item = self.item {
+                        if let linkItem = self.linkItemAtPoint(location) {
+                            item.linkItemAction?(gesture == .tap ? .tap : .longTap, linkItem)
+                        } else if case .longTap = gesture {
+                            item.longTapAction?(self)
+                        } else if case .tap = gesture {
+                            item.action?()
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
+    }
+    
     override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenLabeledValueItem else {
             return 10.0
         }
         
         self.item = item
+        self.theme = presentationData.theme
         
         self.selectionNode.pressed = item.action
         
@@ -95,10 +167,25 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         switch item.textBehavior {
         case .singleLine:
             self.textNode.maximumNumberOfLines = 1
-        case let .multiLine(maxLines):
+            self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+        case let .multiLine(maxLines, enabledEntities):
             self.textNode.maximumNumberOfLines = maxLines
+            if enabledEntities.isEmpty {
+                self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+            } else {
+                let fontSize: CGFloat = 17.0
+                
+                var baseFont = Font.regular(fontSize)
+                var linkFont = baseFont
+                var boldFont = Font.medium(fontSize)
+                var italicFont = Font.italic(fontSize)
+                var boldItalicFont = Font.semiboldItalic(fontSize)
+                let titleFixedFont = Font.monospace(fontSize)
+                
+                let entities = generateTextEntities(item.text, enabledTypes: enabledEntities)
+                self.textNode.attributedText = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColorValue, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
+            }
         }
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
@@ -119,5 +206,70 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
         return height
+    }
+    
+    private func linkItemAtPoint(_ point: CGPoint) -> TextLinkItem? {
+        let textNodeFrame = self.textNode.frame
+        if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                return .url(url)
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                return .mention(peerName)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                return .hashtag(hashtag.peerName, hashtag.hashtag)
+            } else {
+                return nil
+            }
+        }
+        return nil
+    }
+    
+    private func updateTouchesAtPoint(_ point: CGPoint?) {
+        guard let item = self.item, let theme = self.theme else {
+            return
+        }
+        var rects: [CGRect]?
+        if let point = point {
+            let textNodeFrame = self.textNode.frame
+            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                let possibleNames: [String] = [
+                    TelegramTextAttributes.URL,
+                    TelegramTextAttributes.PeerMention,
+                    TelegramTextAttributes.PeerTextMention,
+                    TelegramTextAttributes.BotCommand,
+                    TelegramTextAttributes.Hashtag
+                ]
+                for name in possibleNames {
+                    if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
+                        rects = self.textNode.attributeRects(name: name, at: index)
+                        break
+                    }
+                }
+            }
+        }
+        
+        if let rects = rects {
+            let linkHighlightingNode: LinkHighlightingNode
+            if let current = self.linkHighlightingNode {
+                linkHighlightingNode = current
+            } else {
+                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
+                self.linkHighlightingNode = linkHighlightingNode
+                self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+            }
+            linkHighlightingNode.frame = self.textNode.frame
+            linkHighlightingNode.updateRects(rects)
+        } else if let linkHighlightingNode = self.linkHighlightingNode {
+            self.linkHighlightingNode = nil
+            linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                linkHighlightingNode?.removeFromSupernode()
+            })
+        }
+        
+        if point != nil && rects == nil && item.action != nil {
+            self.selectionNode.updateIsHighlighted(true)
+        } else {
+            self.selectionNode.updateIsHighlighted(false)
+        }
     }
 }
