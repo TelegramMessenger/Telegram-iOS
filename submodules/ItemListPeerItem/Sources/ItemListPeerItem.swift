@@ -208,9 +208,9 @@ private final class LoadingShimmerNode: ASDisplayNode {
 public struct ItemListPeerItemEditing: Equatable {
     public var editable: Bool
     public var editing: Bool
-    public var revealed: Bool
+    public var revealed: Bool?
     
-    public init(editable: Bool, editing: Bool, revealed: Bool) {
+    public init(editable: Bool, editing: Bool, revealed: Bool?) {
         self.editable = editable
         self.editing = editing
         self.revealed = revealed
@@ -1095,7 +1095,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
-                    strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
+                    if let revealed = item.editing.revealed {
+                        strongSelf.setRevealOptionsOpened(revealed, animated: animated)
+                    }
                 }
             })
         }

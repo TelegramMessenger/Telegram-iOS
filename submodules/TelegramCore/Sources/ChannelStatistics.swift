@@ -133,7 +133,8 @@ public struct ChannelStatsContextState: Equatable {
 }
 
 private func requestStats(network: Network, datacenterId: Int32, peer: Peer, dark: Bool = false) -> Signal<ChannelStats?, NoError> {
-    guard let inputChannel = apiInputChannel(peer) else {
+    return .never()
+    /*guard let inputChannel = apiInputChannel(peer) else {
         return .never()
     }
     
@@ -159,11 +160,12 @@ private func requestStats(network: Network, datacenterId: Int32, peer: Peer, dar
     }
     |> `catch` { _ -> Signal<ChannelStats?, NoError> in
         return .single(nil)
-    }
+    }*/
 }
 
 private func requestGraph(network: Network, datacenterId: Int32, token: String) -> Signal<ChannelStatsGraph?, NoError> {
-    let signal: Signal<Api.StatsGraph, MTRpcError>
+    return .never()
+    /*let signal: Signal<Api.StatsGraph, MTRpcError>
     if network.datacenterId != datacenterId {
         signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
         |> castError(MTRpcError.self)
@@ -180,7 +182,7 @@ private func requestGraph(network: Network, datacenterId: Int32, token: String) 
     }
     |> `catch` { _ -> Signal<ChannelStatsGraph?, NoError> in
         return .single(nil)
-    }
+    }*/
 }
 
 private final class ChannelStatsContextImpl {
@@ -361,7 +363,7 @@ public final class ChannelStatsContext {
     }
 }
 
-extension ChannelStatsGraph {
+/*extension ChannelStatsGraph {
     init(apiStatsGraph: Api.StatsGraph) {
         switch apiStatsGraph {
             case let .statsGraph(json):
@@ -422,3 +424,4 @@ extension ChannelStats {
         }
     }
 }
+*/

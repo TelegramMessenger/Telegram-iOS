@@ -3214,81 +3214,6 @@ public extension Api {
                         return result
                     })
                 }
-            
-                public static func getDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogFilter]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-241247891)
-                    
-                    return (FunctionDescription(name: "messages.getDialogFilters", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.DialogFilter]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.DialogFilter]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilter.self)
-                        }
-                        return result
-                    })
-                }
-            
-                public static func updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(450142282)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {filter!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.updateDialogFilter", parameters: [("flags", flags), ("id", id), ("filter", filter)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func updateDialogFiltersOrder(order: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-983318044)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(order.count))
-                    for item in order {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "messages.updateDialogFiltersOrder", parameters: [("order", order)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            }
-            public static func inputMediaDice() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.InputMedia>) {
-                let buffer = Buffer()
-                buffer.appendInt32(-1358977017)
-                
-                return (FunctionDescription(name: "inputMediaDice", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.InputMedia? in
-                    let reader = BufferReader(buffer)
-                    var result: Api.InputMedia?
-                    if let signature = reader.readInt32() {
-                        result = Api.parse(reader, signature: signature) as? Api.InputMedia
-                    }
-                    return result
-                })
-            }
-        
-            public static func messageMediaDice(value: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
-                let buffer = Buffer()
-                buffer.appendInt32(1670374507)
-                serializeInt32(value, buffer: buffer, boxed: false)
-                return (FunctionDescription(name: "messageMediaDice", parameters: [("value", value)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
-                    let reader = BufferReader(buffer)
-                    var result: Api.MessageMedia?
-                    if let signature = reader.readInt32() {
-                        result = Api.parse(reader, signature: signature) as? Api.MessageMedia
-                    }
-                    return result
-                })
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -3970,36 +3895,6 @@ public extension Api {
                         var result: Api.payments.BankCardData?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.BankCardData
-                        }
-                        return result
-                    })
-                }
-            }
-            public struct stats {
-                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1421720550)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    channel.serialize(buffer, true)
-                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.stats.BroadcastStats?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastStats
-                        }
-                        return result
-                    })
-                }
-            
-                public static func loadAsyncGraph(token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1749505346)
-                    serializeString(token, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stats.loadAsyncGraph", parameters: [("token", token)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsGraph? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.StatsGraph?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.StatsGraph
                         }
                         return result
                     })

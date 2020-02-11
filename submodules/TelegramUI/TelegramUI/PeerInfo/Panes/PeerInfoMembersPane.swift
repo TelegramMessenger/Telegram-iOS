@@ -19,6 +19,13 @@ private struct PeerMembersListTransaction {
     let updates: [ListViewUpdateItem]
 }
 
+enum PeerMembersListAction {
+    case open
+    case promote
+    case restrict
+    case remove
+}
+
 private struct PeerMembersListEntry: Comparable, Identifiable {
     var index: Int
     var member: PeerInfoMember
@@ -35,10 +42,43 @@ private struct PeerMembersListEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, enclosingPeer: Peer, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void) -> ListViewItem {
         let member = self.member
-        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: member.peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
-            openPeer(member.peer)
+        let label: String?
+        if let rank = member.rank {
+            label = rank
+        } else {
+            switch member.role {
+            case .creator:
+                label = presentationData.strings.GroupInfo_LabelOwner
+            case .admin:
+                label = presentationData.strings.GroupInfo_LabelAdmin
+            case .member:
+                label = nil
+            }
+        }
+        
+        let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: enclosingPeer, member: member)
+        
+        var options: [ItemListPeerItemRevealOption] = []
+        if actions.contains(.promote) && enclosingPeer is TelegramChannel{
+            options.append(ItemListPeerItemRevealOption(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: {
+                action(member, .promote)
+            }))
+        }
+        if actions.contains(.restrict) {
+            if enclosingPeer is TelegramChannel {
+                options.append(ItemListPeerItemRevealOption(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: {
+                    action(member, .restrict)
+                }))
+            }
+            options.append(ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
+                action(member, .remove)
+            }))
+        }
+        
+        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: member.peer, presence: member.presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: false), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: member.id != context.account.peerId, sectionId: 0, action: {
+            action(member, .open)
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, removePeer: { _ in
         }, contextAction: nil/*{ node, gesture in
@@ -47,12 +87,12 @@ private struct PeerMembersListEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toEntries: [PeerMembersListEntry], context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void) -> PeerMembersListTransaction {
+private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toEntries: [PeerMembersListEntry], context: AccountContext, presentationData: PresentationData, enclosingPeer: Peer, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void) -> PeerMembersListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, openPeer: openPeer), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: action), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: action), directionHint: nil) }
     
     return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -60,9 +100,11 @@ private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toE
 final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let membersContext: PeerInfoMembersContext
+    private let action: (PeerInfoMember, PeerMembersListAction) -> Void
     
     private let listNode: ListView
     private var currentEntries: [PeerMembersListEntry] = []
+    private var enclosingPeer: Peer?
     private var currentState: PeerInfoMembersState?
     private var canLoadMore: Bool = false
     private var enqueuedTransactions: [PeerMembersListTransaction] = []
@@ -77,9 +119,10 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, membersContext: PeerInfoMembersContext) {
+    init(context: AccountContext, peerId: PeerId, membersContext: PeerInfoMembersContext, action: @escaping (PeerInfoMember, PeerMembersListAction) -> Void) {
         self.context = context
         self.membersContext = membersContext
+        self.action = action
         
         self.listNode = ListView()
         
@@ -88,14 +131,19 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.listNode.preloadPages = true
         self.addSubnode(self.listNode)
         
-        self.disposable = (membersContext.state
-        |> deliverOnMainQueue).start(next: { [weak self] state in
-            guard let strongSelf = self else {
+        self.disposable = (combineLatest(queue: .mainQueue(),
+            membersContext.state,
+            context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] state, combinedView in
+            guard let strongSelf = self, let basicPeerView = combinedView.views[.basicPeer(peerId)] as? BasicPeerView, let enclosingPeer = basicPeerView.peer else {
                 return
             }
+            
+            strongSelf.enclosingPeer = enclosingPeer
             strongSelf.currentState = state
             if let (_, _, presentationData) = strongSelf.currentParams {
-                strongSelf.updateState(state: state, presentationData: presentationData)
+                strongSelf.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
             }
         })
         
@@ -132,19 +180,20 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
-        if isFirstLayout, let state = self.currentState {
-            self.updateState(state: state, presentationData: presentationData)
+        if isFirstLayout, let enclosingPeer = self.enclosingPeer, let state = self.currentState {
+            self.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
         }
     }
     
-    private func updateState(state: PeerInfoMembersState, presentationData: PresentationData) {
+    private func updateState(enclosingPeer: Peer, state: PeerInfoMembersState, presentationData: PresentationData) {
         var entries: [PeerMembersListEntry] = []
         for member in state.members {
             entries.append(PeerMembersListEntry(index: entries.count, member: member))
         }
-        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            
+        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, enclosingPeer: enclosingPeer, action: { [weak self] member, action in
+            self?.action(member, action)
         })
+        self.enclosingPeer = enclosingPeer
         self.currentEntries = entries
         self.enqueuedTransactions.append(transaction)
         self.dequeueTransaction()

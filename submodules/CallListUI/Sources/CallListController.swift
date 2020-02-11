@@ -154,7 +154,7 @@ public final class CallListController: ViewController {
                 let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
-                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages), avatarInitiallyExpanded: false) {
+                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages), avatarInitiallyExpanded: false, fromChat: false) {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })

@@ -127,6 +127,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             self?._ready.set(.single(Void()))
         }
         
+        self.imageNode.contentAnimations = .subsequentUpdates
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
         

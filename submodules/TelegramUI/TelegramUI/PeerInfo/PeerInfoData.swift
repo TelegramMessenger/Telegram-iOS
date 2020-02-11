@@ -8,6 +8,7 @@ import AccountContext
 import PeerPresenceStatusManager
 import TelegramStringFormatting
 import TelegramPresentationData
+import PeerAvatarGalleryUI
 
 enum PeerInfoUpdatingAvatar {
     case none
@@ -91,17 +92,17 @@ final class PeerInfoScreenData {
     }
 }
 
-enum PeerInfoScreenInputUserKind {
+private enum PeerInfoScreenInputUserKind {
     case user
     case bot
     case support
 }
 
-enum PeerInfoScreenInputData: Equatable {
+private enum PeerInfoScreenInputData: Equatable {
     case none
     case user(userId: PeerId, secretChatId: PeerId?, kind: PeerInfoScreenInputUserKind)
     case channel
-    case group(isSupergroup: Bool, membersContext: PeerInfoMembersContext)
+    case group(groupId: PeerId)
 }
 
 func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId) -> Signal<[PeerInfoPaneKey], NoError> {
@@ -148,11 +149,20 @@ struct PeerInfoStatusData: Equatable {
 }
 
 enum PeerInfoMembersData: Equatable {
-    case shortList([PeerInfoMember])
+    case shortList(membersContext: PeerInfoMembersContext, members: [PeerInfoMember])
     case longList(PeerInfoMembersContext)
+    
+    var membersContext: PeerInfoMembersContext {
+        switch self {
+        case let .shortList(shortList):
+            return shortList.membersContext
+        case let .longList(membersContext):
+            return membersContext
+        }
+    }
 }
 
-func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> Signal<PeerInfoScreenData, NoError> {
+private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId) -> Signal<PeerInfoScreenInputData, NoError> {
     return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
     |> map { view -> PeerInfoScreenInputData in
         guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
@@ -170,17 +180,68 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             return .user(userId: user.id, secretChatId: nil, kind: kind)
         } else if let channel = peer as? TelegramChannel {
             if case .group = channel.info {
-                return .group(isSupergroup: true, membersContext: PeerInfoMembersContext(context: context, peerId: channel.id))
+                return .group(groupId: channel.id)
             } else {
                 return .channel
             }
         } else if let group = peer as? TelegramGroup {
-            return .group(isSupergroup: false, membersContext: PeerInfoMembersContext(context: context, peerId: group.id))
+            return .group(groupId: group.id)
         } else {
             return .none
         }
     }
     |> distinctUntilChanged
+}
+
+private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
+    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+    |> map { view -> AvatarGalleryEntry? in
+        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
+            return nil
+        }
+        return initialAvatarGalleryEntries(peer: peer).first
+    }
+    |> distinctUntilChanged
+    |> mapToSignal { firstEntry -> Signal<[AvatarGalleryEntry], NoError> in
+        if let firstEntry = firstEntry {
+            return context.account.postbox.loadedPeerWithId(peerId)
+            |> mapToSignal { peer -> Signal<[AvatarGalleryEntry], NoError>in
+                return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
+            }
+        } else {
+            return .single([])
+        }
+    }
+    |> map { items -> Any in
+        return items
+    }
+}
+
+func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<[AvatarGalleryEntry], NoError> {
+    return context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId))
+    |> map { items -> [AvatarGalleryEntry] in
+        return items as? [AvatarGalleryEntry] ?? []
+    }
+}
+
+func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signal<Never, NoError> {
+    return peerInfoScreenInputData(context: context, peerId: peerId)
+    |> mapToSignal { inputData -> Signal<Never, NoError> in
+        switch inputData {
+        case .none:
+            return .complete()
+        case .user, .channel, .group:
+            return combineLatest(
+                context.peerChannelMemberCategoriesContextsManager.profileData(postbox: context.account.postbox, network: context.account.network, peerId: peerId, customData: peerInfoAvailableMediaPanes(context: context, peerId: peerId) |> ignoreValues),
+                context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId)) |> ignoreValues
+            )
+            |> ignoreValues
+        }
+    }
+}
+
+func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> Signal<PeerInfoScreenData, NoError> {
+    return peerInfoScreenInputData(context: context, peerId: peerId)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
         switch inputData {
         case .none:
@@ -382,10 +443,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     members: nil
                 )
             }
-        case let .group(_, membersContext):
-            let status = context.account.viewTracker.peerView(peerId, updateData: false)
+        case let .group(groupId):
+            let status = context.account.viewTracker.peerView(groupId, updateData: false)
             |> map { peerView -> PeerInfoStatusData? in
-                guard let channel = peerView.peers[peerId] as? TelegramChannel else {
+                guard let channel = peerView.peers[groupId] as? TelegramChannel else {
                     return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false)
                 }
                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount != 0 {
@@ -396,12 +457,14 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             |> distinctUntilChanged
             
+            let membersContext = PeerInfoMembersContext(context: context, peerId: groupId)
+            
             let membersData: Signal<PeerInfoMembersData?, NoError> = membersContext.state
             |> map { state -> PeerInfoMembersData? in
                 if state.members.count > 5 {
                     return .longList(membersContext)
                 } else {
-                    return .shortList(state.members)
+                    return .shortList(membersContext: membersContext, members: state.members)
                 }
             }
             |> distinctUntilChanged
@@ -409,9 +472,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
             var combinedKeys: [PostboxViewKey] = []
             combinedKeys.append(globalNotificationsKey)
-            return combineLatest(
-                context.account.viewTracker.peerView(peerId, updateData: true),
-                peerInfoAvailableMediaPanes(context: context, peerId: peerId),
+            return combineLatest(queue: .mainQueue(),
+                context.account.viewTracker.peerView(groupId, updateData: true),
+                peerInfoAvailableMediaPanes(context: context, peerId: groupId),
                 context.account.postbox.combinedView(keys: combinedKeys),
                 status,
                 membersData
@@ -435,7 +498,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 return PeerInfoScreenData(
-                    peer: peerView.peers[peerId],
+                    peer: peerView.peers[groupId],
                     cachedData: peerView.cachedData,
                     status: status,
                     notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
@@ -468,6 +531,80 @@ func canEditPeerInfo(peer: Peer?) -> Bool {
         }
     }
     return false
+}
+
+struct PeerInfoMemberActions: OptionSet {
+    var rawValue: Int32
+    
+    init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    static let restrict = PeerInfoMemberActions(rawValue: 1 << 0)
+    static let promote = PeerInfoMemberActions(rawValue: 1 << 1)
+}
+
+func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer, member: PeerInfoMember) -> PeerInfoMemberActions {
+    var result: PeerInfoMemberActions = []
+    
+    if member.id != accountPeerId {
+        if let channel = peer as? TelegramChannel {
+            if channel.flags.contains(.isCreator) {
+                result.insert(.restrict)
+                result.insert(.promote)
+            } else {
+                switch member {
+                case let .channelMember(channelMember):
+                    switch channelMember.participant {
+                    case .creator:
+                        break
+                    case let .member(member):
+                        if let adminInfo = member.adminInfo {
+                            if adminInfo.promotedBy == accountPeerId {
+                                result.insert(.restrict)
+                                if channel.hasPermission(.addAdmins) {
+                                    result.insert(.promote)
+                                }
+                            }
+                        } else {
+                            if channel.hasPermission(.banMembers) {
+                                result.insert(.restrict)
+                            }
+                        }
+                    }
+                case .legacyGroupMember:
+                    break
+                }
+            }
+        } else if let group = peer as? TelegramGroup {
+            switch group.role {
+            case .creator:
+                result.insert(.restrict)
+                result.insert(.promote)
+            case .admin:
+                switch member {
+                case let .legacyGroupMember(legacyGroupMember):
+                    if legacyGroupMember.invitedBy == accountPeerId {
+                        result.insert(.restrict)
+                        result.insert(.promote)
+                    }
+                case .channelMember:
+                    break
+                }
+            case .member:
+                switch member {
+                case let .legacyGroupMember(legacyGroupMember):
+                    if legacyGroupMember.invitedBy == accountPeerId {
+                        result.insert(.restrict)
+                    }
+                case .channelMember:
+                    break
+                }
+            }
+        }
+    }
+    
+    return result
 }
 
 func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInfoHeaderButtonKey] {

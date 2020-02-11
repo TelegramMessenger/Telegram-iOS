@@ -60,6 +60,8 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
     
+    private var isSelected: Bool = false
+    
     init(pressed: @escaping () -> Void) {
         self.pressed = pressed
         
@@ -74,9 +76,9 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+        /*self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted {
+                if highlighted && !strongSelf.isSelected {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                 } else {
@@ -84,7 +86,7 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
-        }
+        }*/
     }
     
     @objc private func buttonPressed() {
@@ -92,6 +94,7 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
     }
     
     func updateText(_ title: String, isSelected: Bool, presentationData: PresentationData) {
+        self.isSelected = isSelected
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: isSelected ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
     }
     
@@ -304,8 +307,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
     
     var chatControllerInteraction: ChatControllerInteraction?
     var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+    var requestPerformPeerMemberAction: ((PeerInfoMember, PeerMembersListAction) -> Void)?
     
     var currentPaneUpdated: (() -> Void)?
+    var requestExpandTabs: (() -> Bool)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     
@@ -336,7 +341,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                 return
             }
             if strongSelf.currentPaneKey == key {
-                strongSelf.currentPane?.node.scrollToTop()
+                if let requestExpandTabs = strongSelf.requestExpandTabs, requestExpandTabs() {
+                } else {
+                    strongSelf.currentPane?.node.scrollToTop()
+                }
                 return
             }
             if strongSelf.currentCandidatePaneKey == key {
@@ -449,10 +457,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
                 case .music:
                     paneNode = PeerInfoListPaneNode(context: self.context, chatControllerInteraction: self.chatControllerInteraction!, peerId: self.peerId, tagMask: .music)
                 case .groupsInCommon:
-                    paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, peers: data?.groupsInCommon ?? [])
+                    paneNode = PeerInfoGroupsInCommonPaneNode(context: self.context, peerId: self.peerId, chatControllerInteraction: self.chatControllerInteraction!, openPeerContextAction: self.openPeerContextAction!, peers: data?.groupsInCommon ?? [])
                 case .members:
                     if case let .longList(membersContext) = data?.members {
-                        paneNode = PeerInfoMembersPaneNode(context: self.context, membersContext: membersContext)
+                        paneNode = PeerInfoMembersPaneNode(context: self.context, peerId: self.peerId, membersContext: membersContext, action: { [weak self] member, action in
+                            self?.requestPerformPeerMemberAction?(member, action)
+                        })
                     } else {
                         preconditionFailure()
                     }

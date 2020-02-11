@@ -535,7 +535,7 @@ public class ContactsController: ViewController {
                             return
                         }
                         if let peer = peer {
-                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false) {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                 (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         } else {
