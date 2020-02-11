@@ -49,6 +49,8 @@ public enum PresentationResourceKey: Int32 {
     case itemListVerifiedPeerIcon
     case itemListCloudFetchIcon
     case itemListCloseIconImage
+    case itemListMakeVisibleIcon
+    case itemListMakeInvisibleIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth

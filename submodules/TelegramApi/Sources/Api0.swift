@@ -10,7 +10,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[461151667] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[-253335766] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[763976820] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-932174686] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -812,12 +812,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-94974410] = { return Api.EncryptedChat.parse_encryptedChat($0) }
     dict[332848423] = { return Api.EncryptedChat.parse_encryptedChatDiscarded($0) }
     dict[-901375139] = { return Api.PeerLocated.parse_peerLocated($0) }
+    dict[-118740917] = { return Api.PeerLocated.parse_peerSelfLocated($0) }
     dict[922273905] = { return Api.Document.parse_documentEmpty($0) }
     dict[-1683841855] = { return Api.Document.parse_document($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
     dict[-892779534] = { return Api.WebAuthorization.parse_webAuthorization($0) }
     dict[-805141448] = { return Api.ImportedContact.parse_importedContact($0) }
-    dict[-1165694006] = { return Api.payments.BankCardData.parse_bankCardData($0) }
+    dict[-419239361] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     return dict
 }()
 

@@ -505,8 +505,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._rightBarButtonItem.get()
     }
     
-    override func footerContent() -> Signal<GalleryFooterContentNode?, NoError> {
-        return .single(self.footerContentNode)
+    override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
+        return .single((self.footerContentNode, nil))
     }
     
     @objc func statusPressed() {

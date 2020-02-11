@@ -1295,8 +1295,13 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
             case let .updatePeerLocated(peers):
                 var peersNearby: [PeerNearby] = []
-                for case let .peerLocated(peer, expires, distance) in peers {
-                    peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
+                for peer in peers {
+                    switch peer {
+                        case let .peerLocated(peer, expires, distance):
+                            peersNearby.append(.peer(id: peer.peerId, expires: expires, distance: distance))
+                        case let .peerSelfLocated(expires):
+                            peersNearby.append(.selfPeer(expires: expires))
+                    }
                 }
                 updatedState.updatePeersNearby(peersNearby)
             case let .updateNewScheduledMessage(apiMessage):

@@ -22,10 +22,6 @@ import AppBundle
 import LocalizedPeerData
 import TelegramIntents
 
-public func useSpecialTabBarIcons() -> Bool {
-    return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
-}
-
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
         let scrollToItem: ListViewScrollToItem
@@ -182,8 +178,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 self.tabBarItem.title = self.presentationData.strings.DialogList_Title
                 
                 let icon: UIImage?
-                if (useSpecialTabBarIcons()) {
-                    icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconChats")
+                if useSpecialTabBarIcons() {
+                    icon = UIImage(bundleImageName: "Chat List/Tabs/Holiday/IconChats")
                 } else {
                     icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
                 }

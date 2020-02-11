@@ -332,7 +332,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
     private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
-    private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
+    private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
@@ -531,9 +531,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
             }
         }))
         
-        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
+        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode, overlayContentNode in
             self?.galleryNode.updatePresentationState({
-                $0.withUpdatedFooterContentNode(footerContentNode)
+                $0.withUpdatedFooterContentNode(footerContentNode).withUpdatedOverlayContentNode(overlayContentNode)
             }, transition: .immediate)
         }))
         

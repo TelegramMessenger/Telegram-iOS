@@ -226,10 +226,10 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let isRecentActions: Bool
     let isScheduledMessages: Bool
     let contactsPeerIds: Set<PeerId>
-    let animatedEmojiStickers: [String: StickerPackItem]
+    let animatedEmojiStickers: [String: [StickerPackItem]]
     let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: StickerPackItem] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions

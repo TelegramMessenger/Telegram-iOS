@@ -255,9 +255,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
         let (emoji, fitz) = item.message.text.basicEmoji
         if self.telegramFile == nil {
-            var emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file
-            if emojiFile == nil {
-                emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.file
+            var emojiFile: TelegramMediaFile?
+            
+            if emoji == "🎲" {
+                var pointsValue: Int
+                if let value = item.controllerInteraction.seenDicePointsValue[item.message.id] {
+                    pointsValue = value
+                } else {
+                    pointsValue = Int(arc4random_uniform(6))
+                    item.controllerInteraction.seenDicePointsValue[item.message.id] = pointsValue
+                }
+                if let diceEmojis = item.associatedData.animatedEmojiStickers[emoji] {
+                    emojiFile = diceEmojis[pointsValue].file
+                }
+            } else {
+                emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                if emojiFile == nil {
+                    emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                }
             }
             
             if self.emojiFile?.id != emojiFile?.id {
@@ -293,8 +308,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             self.animationNode.visibility = isPlaying && !alreadySeen
+  
             if self.didSetUpAnimationNode && alreadySeen {
-                self.animationNode.seekToStart()
+                if let emojiFile = self.emojiFile, emojiFile.resource is LocalFileReferenceMediaResource {
+                } else {
+                    self.animationNode.seekTo(.start)
+                }
             }
             
             if self.isPlaying && !self.didSetUpAnimationNode {
@@ -313,7 +332,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let emojiFile = self.emojiFile {
                     isEmoji = true
                     file = emojiFile
-                    playbackMode = .once
+                    if alreadySeen && emojiFile.resource is LocalFileReferenceMediaResource {
+                        playbackMode = .still(.end)
+                    } else {
+                        playbackMode = .once
+                    }
                     let (_, fitz) = item.message.text.basicEmoji
                     if let fitz = fitz {
                         fitzModifier = EmojiFitzModifier(emoji: fitz)
@@ -323,7 +346,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let file = file {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedSize = isEmoji ? dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    let mode: AnimatedStickerMode
+                    if file.resource is LocalFileReferenceMediaResource {
+                        mode = .direct
+                    } else {
+                        mode = .cached
+                    }
+                    self.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                 }
             }
         }
@@ -870,34 +899,59 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile != nil {
                     let _ = item.controllerInteraction.openMessage(item.message, .default)
                 } else if let _ = self.emojiFile {
-                    var startTime: Signal<Double, NoError>
-                    if self.animationNode.playIfNeeded() {
-                        startTime = .single(0.0)
+                    let (emoji, fitz) = item.message.text.basicEmoji
+                    if emoji == "🎲" {
+                        if !self.animationNode.isPlaying {
+                            var pointsValue = Int(arc4random_uniform(6))
+                            item.controllerInteraction.seenDicePointsValue[item.message.id] = pointsValue
+                            item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id)
+                            
+                            var emojiFile: TelegramMediaFile?
+                            if let diceEmojis = item.associatedData.animatedEmojiStickers[emoji] {
+                                emojiFile = diceEmojis[pointsValue].file
+                            }
+                            
+                            self.emojiFile = emojiFile
+                            if let emojiFile = emojiFile {
+                                let dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: nil, thumbnail: false))
+                                self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
+                            }
+                            self.isPlaying = false
+                            self.didSetUpAnimationNode = false
+                            self.updateVisibility()
+                            self.animationNode.playIfNeeded()
+                        }
                     } else {
-                        startTime = self.animationNode.status
+                        var startTime: Signal<Double, NoError>
+                        if self.animationNode.playIfNeeded() {
+                            startTime = .single(0.0)
+                        } else {
+                            startTime = self.animationNode.status
                             |> map { $0.timestamp }
                             |> take(1)
                             |> deliverOnMainQueue
-                    }
-                    
-                    if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
-                        let _ = startTime.start(next: { [weak self] time in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            let heartbeatHaptic: ChatMessageHeartbeatHaptic
-                            if let current = strongSelf.heartbeatHaptic {
-                                heartbeatHaptic = current
-                            } else {
-                                heartbeatHaptic = ChatMessageHeartbeatHaptic()
-                                heartbeatHaptic.enabled = true
-                                strongSelf.heartbeatHaptic = heartbeatHaptic
-                            }
-                            if !heartbeatHaptic.active {
-                                heartbeatHaptic.start(time: time)
-                            }
-                        })
+                        }
+                        
+                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
+                            let _ = startTime.start(next: { [weak self] time in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                let heartbeatHaptic: ChatMessageHeartbeatHaptic
+                                if let current = strongSelf.heartbeatHaptic {
+                                    heartbeatHaptic = current
+                                } else {
+                                    heartbeatHaptic = ChatMessageHeartbeatHaptic()
+                                    heartbeatHaptic.enabled = true
+                                    strongSelf.heartbeatHaptic = heartbeatHaptic
+                                }
+                                if !heartbeatHaptic.active {
+                                    heartbeatHaptic.start(time: time)
+                                }
+                            })
+                        }
                     }
                 }
                 return true

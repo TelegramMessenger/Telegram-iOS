@@ -5303,3 +5303,22 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.BubbleCorners.Apply" = "Set";
 
 "Conversation.LiveLocationYouAndOther" = "**You** and %@";
+
+"PeopleNearby.MakeVisible" = "Make Myself Visible";
+"PeopleNearby.MakeInvisible" = "Stop Showing Me";
+
+"PeopleNearby.ShowMorePeople_0" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_1" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_2" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_3_10" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_many" = "Show %@ More People";
+"PeopleNearby.ShowMorePeople_any" = "Show %@ More People";
+
+"PeopleNearby.VisibleUntil" = "visible until %@";
+
+"PeopleNearby.MakeVisibleTitle" = "Make Myself Visible";
+"PeopleNearby.MakeVisibleDescription" = "Allow people nearby to view your profile for 24 hours?\n\nYour phone number will remain hidden.";
+
+"PeopleNearby.DiscoverDescription" = "Exchange contact info with people nearby\nand find new friends.";
+
+"Time.TomorrowAt" = "tomorrow at %@";

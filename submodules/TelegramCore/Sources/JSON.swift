@@ -28,8 +28,7 @@ extension JSON {
                 }
             }
             self = .array(values)
-        }
-        else if let value = object as? String {
+        } else if let value = object as? String {
             self = .string(value)
         } else if let value = object as? Int {
             self = .number(Double(value))

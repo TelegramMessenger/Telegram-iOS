@@ -491,28 +491,26 @@ public struct payments {
     
     }
     public enum BankCardData: TypeConstructorDescription {
-        case bankCardData(flags: Int32, brand: String?, country: String?, organization: String?, url: String?, urlName: String?)
+        case bankCardData(flags: Int32, title: String, url: String?, urlName: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .bankCardData(let flags, let brand, let country, let organization, let url, let urlName):
+                case .bankCardData(let flags, let title, let url, let urlName):
                     if boxed {
-                        buffer.appendInt32(-1165694006)
+                        buffer.appendInt32(-419239361)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(brand!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(country!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(organization!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeString(urlName!, buffer: buffer, boxed: false)}
+                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(urlName!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .bankCardData(let flags, let brand, let country, let organization, let url, let urlName):
-                return ("bankCardData", [("flags", flags), ("brand", brand), ("country", country), ("organization", organization), ("url", url), ("urlName", urlName)])
+                case .bankCardData(let flags, let title, let url, let urlName):
+                return ("bankCardData", [("flags", flags), ("title", title), ("url", url), ("urlName", urlName)])
     }
     }
     
@@ -520,23 +518,17 @@ public struct payments {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            _2 = parseString(reader)
             var _3: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             var _4: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseString(reader) }
-            var _5: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_5 = parseString(reader) }
-            var _6: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.payments.BankCardData.bankCardData(flags: _1!, brand: _2, country: _3, organization: _4, url: _5, urlName: _6)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.payments.BankCardData.bankCardData(flags: _1!, title: _2!, url: _3, urlName: _4)
             }
             else {
                 return nil

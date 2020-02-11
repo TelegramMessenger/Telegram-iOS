@@ -4650,11 +4650,13 @@ public extension Api {
                     })
                 }
             
-                public static func getLocated(geoPoint: Api.InputGeoPoint) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func getLocated(flags: Int32, geoPoint: Api.InputGeoPoint, selfExpires: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(171270230)
+                    buffer.appendInt32(-750207932)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
-                    return (FunctionDescription(name: "contacts.getLocated", parameters: [("geoPoint", geoPoint)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(selfExpires!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "contacts.getLocated", parameters: [("flags", flags), ("geoPoint", geoPoint), ("selfExpires", selfExpires)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
