@@ -79,10 +79,13 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         self.scrollNode.view.scrollsToTop = false
         self.scrollNode.view.delaysContentTouches = false
         
+        let edgeWidth: CGFloat = 44.0
+        
         let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.contentTap(_:)))
         tapRecognizer.tapActionAtPoint = { [weak self] location in
             if let strongSelf = self {
-                if location.x < 44.0 || location.x > strongSelf.frame.width - 44.0 {
+                let pointInNode = strongSelf.scrollNode.view.convert(location, to: strongSelf.view)
+                if pointInNode.x < edgeWidth || pointInNode.x > strongSelf.frame.width - edgeWidth {
                     return .waitForSingleTap
                 }
             }
@@ -90,13 +93,14 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
         }
         tapRecognizer.highlight = { [weak self] location in
             if let strongSelf = self {
+                let pointInNode = location.flatMap { strongSelf.scrollNode.view.convert($0, to: strongSelf.view) }
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.07, curve: .easeInOut)
-                if let location = location, location.x < 44.0 && strongSelf.canGoToPreviousItem() {
+                if let location = pointInNode, location.x < edgeWidth && strongSelf.canGoToPreviousItem() {
                     transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 1.0)
                 } else {
                     transition.updateAlpha(node: strongSelf.leftFadeNode, alpha: 0.0)
                 }
-                if let location = location, location.x > strongSelf.frame.width - 44.0 && strongSelf.canGoToNextItem() {
+                if let location = pointInNode, location.x > strongSelf.frame.width - edgeWidth && strongSelf.canGoToNextItem() {
                     transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 1.0)
                 } else {
                     transition.updateAlpha(node: strongSelf.rightFadeNode, alpha: 0.0)
