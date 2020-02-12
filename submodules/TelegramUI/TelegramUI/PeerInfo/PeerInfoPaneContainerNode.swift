@@ -568,19 +568,19 @@ final class PeerInfoPaneContainerNode: ASDisplayNode {
             let title: String
             switch key {
             case .media:
-                title = "Media"
+                title = presentationData.strings.PeerInfo_PaneMedia
             case .files:
-                title = "Files"
+                title = presentationData.strings.PeerInfo_PaneFiles
             case .links:
-                title = "Links"
+                title = presentationData.strings.PeerInfo_PaneLinks
             case .voice:
-                title = "Voice Messages"
+                title = presentationData.strings.PeerInfo_PaneVoice
             case .music:
-                title = "Audio"
+                title = presentationData.strings.PeerInfo_PaneAudio
             case .groupsInCommon:
-                title = "Groups"
+                title = presentationData.strings.PeerInfo_PaneGroups
             case .members:
-                title = "Members"
+                title = presentationData.strings.PeerInfo_PaneMembers
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, transition: transition)

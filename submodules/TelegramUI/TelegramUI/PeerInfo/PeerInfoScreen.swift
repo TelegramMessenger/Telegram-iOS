@@ -1533,6 +1533,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
+                if strongSelf.headerNode.isAvatarExpanded {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                    
+                    strongSelf.headerNode.updateIsAvatarExpanded(false, transition: transition)
+                    strongSelf.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+                    
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                    }
+                }
+                
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                 strongSelf.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: strongSelf.paneContainerNode.frame.minY - navigationHeight), animated: true)
             }
@@ -1542,6 +1553,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self, let (_, navigationHeight) = strongSelf.validLayout else {
                 return false
             }
+            
+            if strongSelf.headerNode.isAvatarExpanded {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                
+                strongSelf.headerNode.updateIsAvatarExpanded(false, transition: transition)
+                strongSelf.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+                
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                }
+            }
+            
             let contentOffset = strongSelf.scrollNode.view.contentOffset
             let paneAreaExpansionFinalPoint: CGFloat = strongSelf.paneContainerNode.frame.minY - navigationHeight
             if contentOffset.y < paneAreaExpansionFinalPoint - CGFloat.ulpOfOne {
@@ -1829,6 +1852,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func expandTabs() {
+        if self.headerNode.isAvatarExpanded {
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+            
+            self.headerNode.updateIsAvatarExpanded(false, transition: transition)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+            }
+        }
+        
         if let (layout, navigationHeight) = self.validLayout {
             let contentOffset = self.scrollNode.view.contentOffset
             let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
@@ -3762,14 +3796,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
-    private var canUpdateAvatarExpansion = false
-    
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        self.canUpdateAvatarExpansion = true
+        self.canAddVelocity = true
     }
     
     private var previousVelocityM1: CGFloat = 0.0
     private var previousVelocity: CGFloat = 0.0
+    private var canAddVelocity: Bool = false
     
     private let velocityKey: String = encodeText("`wfsujdbmWfmpdjuz", -1)
     
@@ -3780,10 +3813,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.updateNavigation(transition: .immediate, additive: false)
         
         if !self.state.isEditing {
-            self.previousVelocityM1 = self.previousVelocity
-            if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
-                //print("previousVelocity \(CGFloat(value))")
-                self.previousVelocity = CGFloat(value)
+            if self.canAddVelocity {
+                self.previousVelocityM1 = self.previousVelocity
+                if let value = (scrollView.value(forKey: self.velocityKey) as? NSNumber)?.doubleValue {
+                    self.previousVelocity = CGFloat(value)
+                }
             }
             
             let offsetY = self.scrollNode.view.contentOffset.y
@@ -3868,14 +3902,23 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if targetContentOffset.pointee.y < 212.0 {
                 if targetContentOffset.pointee.y < 212.0 / 2.0 {
                     targetContentOffset.pointee.y = 0.0
+                    self.canAddVelocity = false
+                    self.previousVelocity = 0.0
+                    self.previousVelocityM1 = 0.0
                 } else {
                     targetContentOffset.pointee.y = 212.0
+                    self.canAddVelocity = false
+                    self.previousVelocity = 0.0
+                    self.previousVelocityM1 = 0.0
                 }
             }
             let paneAreaExpansionDistance: CGFloat = 32.0
             let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
             if targetContentOffset.pointee.y > paneAreaExpansionFinalPoint - paneAreaExpansionDistance && targetContentOffset.pointee.y < paneAreaExpansionFinalPoint {
                 targetContentOffset.pointee.y = paneAreaExpansionFinalPoint
+                self.canAddVelocity = false
+                self.previousVelocity = 0.0
+                self.previousVelocityM1 = 0.0
             }
         }
     }
