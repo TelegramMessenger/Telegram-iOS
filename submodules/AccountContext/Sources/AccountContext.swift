@@ -259,6 +259,7 @@ public enum DeviceContactInfoSubject {
 public enum PeerInfoControllerMode {
     case generic
     case calls(messages: [Message])
+    case nearbyPeer
 }
 
 public enum ContactListActionItemInlineIconPosition {

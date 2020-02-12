@@ -472,9 +472,10 @@ private final class PeerInfoInteraction {
     let editingOpenSoundSettings: () -> Void
     let editingToggleShowMessageText: (Bool) -> Void
     let requestDeleteContact: () -> Void
+    let openChat: () -> Void
     let openAddContact: () -> Void
     let updateBlocked: (Bool) -> Void
-    let openReport: () -> Void
+    let openReport: (Bool) -> Void
     let openShareBot: () -> Void
     let openAddBotToGroup: () -> Void
     let performBotCommand: (PeerInfoBotCommand) -> Void
@@ -499,9 +500,10 @@ private final class PeerInfoInteraction {
         editingOpenSoundSettings: @escaping () -> Void,
         editingToggleShowMessageText: @escaping (Bool) -> Void,
         requestDeleteContact: @escaping () -> Void,
+        openChat: @escaping () -> Void,
         openAddContact: @escaping () -> Void,
         updateBlocked: @escaping (Bool) -> Void,
-        openReport: @escaping () -> Void,
+        openReport: @escaping (Bool) -> Void,
         openShareBot: @escaping () -> Void,
         openAddBotToGroup: @escaping () -> Void,
         performBotCommand: @escaping (PeerInfoBotCommand) -> Void,
@@ -525,6 +527,7 @@ private final class PeerInfoInteraction {
         self.editingOpenSoundSettings = editingOpenSoundSettings
         self.editingToggleShowMessageText = editingToggleShowMessageText
         self.requestDeleteContact = requestDeleteContact
+        self.openChat = openChat
         self.openAddContact = openAddContact
         self.updateBlocked = updateBlocked
         self.openReport = openReport
@@ -549,7 +552,7 @@ private final class PeerInfoInteraction {
 
 private let enabledBioEntities: EnabledEntityTypes = [.url, .mention, .hashtag]
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeer: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -595,31 +598,42 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction))
             }
         }
-        if !data.isContact {
-            if user.botInfo == nil {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_AddContact, action: {
-                    interaction.openAddContact()
-                }))
-            }
-        }
-        if let cachedData = data.cachedData as? CachedUserData {
-            if cachedData.isBlocked {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
-                    interaction.updateBlocked(false)
-                }))
-            } else {
-                if user.flags.contains(.isSupport) || data.isContact {
-                } else {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                        interaction.updateBlocked(true)
+        if nearbyPeer {
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                interaction.openChat()
+            }))
+            
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
+                interaction.openReport(true)
+            }))
+        } else {
+            if !data.isContact {
+                if user.botInfo == nil {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_AddContact, action: {
+                        interaction.openAddContact()
                     }))
+                }
+            }
+        
+            if let cachedData = data.cachedData as? CachedUserData {
+                if cachedData.isBlocked {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                        interaction.updateBlocked(false)
+                    }))
+                } else {
+                    if user.flags.contains(.isSupport) || data.isContact {
+                    } else {
+                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                            interaction.updateBlocked(true)
+                        }))
+                    }
                 }
             }
         }
         
         if user.botInfo != nil, !user.isVerified {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.ReportPeer_Report, action: {
-                interaction.openReport()
+                interaction.openReport(false)
             }))
         }
     } else if let channel = data.peer as? TelegramChannel {
@@ -1018,6 +1032,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         selectedMessageIds: nil,
         updatingAvatar: nil
     )
+    private let nearbyPeer: Bool
     private var dataDisposable: Disposable?
     
     private let activeActionDisposable = MetaDisposable()
@@ -1035,11 +1050,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons, nearbyPeer: Bool) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.nearbyPeer = nearbyPeer
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
@@ -1068,14 +1084,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             requestDeleteContact: { [weak self] in
                 self?.requestDeleteContact()
             },
+            openChat: { [weak self] in
+                self?.openChat()
+            },
             openAddContact: { [weak self] in
                 self?.openAddContact()
             },
             updateBlocked: { [weak self] block in
                 self?.updateBlocked(block: block)
             },
-            openReport: { [weak self] in
-                self?.openReport()
+            openReport: { [weak self] user in
+                self?.openReport(user: user)
             },
             openShareBot: { [weak self] in
                 self?.openShareBot()
@@ -2020,7 +2039,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if canReport {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.ReportPeer_Report, color: .destructive, action: { [weak self] in
                         dismissAction()
-                        self?.openReport()
+                        self?.openReport(user: false)
                     }))
                 }
                 
@@ -2389,6 +2408,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(actionSheet, in: .window(.root))
     }
     
+    private func openChat() {
+        if let navigationController = self.controller?.navigationController as? NavigationController {
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.peerId)))
+        }
+    }
+    
     private func openAddContact() {
         let _ = (getUserPeer(postbox: self.context.account.postbox, peerId: self.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] peer, _ in
@@ -2471,12 +2496,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
     }
     
-    private func openReport() {
+    private func openReport(user: Bool) {
         guard let controller = self.controller else {
             return
         }
         self.view.endEditing(true)
-        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), present: { [weak controller] c, a in
+        
+        let options: [PeerReportOption]
+        if user {
+            options = [.spam, .violence, .pornography, .childAbuse]
+        } else {
+            options = [.spam, .violence, .pornography, .childAbuse, .copyright, .other]
+        }
+        controller.present(peerReportOptionsController(context: self.context, subject: .peer(self.peerId), options: options, present: { [weak controller] c, a in
             controller?.present(c, in: .window(.root), with: a)
         }, push: { [weak controller] c in
             controller?.push(c)
@@ -3452,7 +3484,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         contentHeight += sectionSpacing
         
         var validRegularSections: [AnyHashable] = []
-        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
+        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer) {
             validRegularSections.append(sectionId)
             
             let sectionNode: PeerInfoScreenItemSectionContainerNode
@@ -3884,6 +3916,7 @@ public final class PeerInfoScreen: ViewController {
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
     private let keepExpandedButtons: PeerInfoScreenKeepExpandedButtons
+    private let nearbyPeer: Bool
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -3899,11 +3932,12 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool = false, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons = .message) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool = false, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons = .message, nearbyPeer: Bool = false) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.keepExpandedButtons = keepExpandedButtons
+        self.nearbyPeer = nearbyPeer
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -3971,7 +4005,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, keepExpandedButtons: self.keepExpandedButtons)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, keepExpandedButtons: self.keepExpandedButtons, nearbyPeer: self.nearbyPeer)
         
         self._ready.set(self.controllerNode.ready.get())
         

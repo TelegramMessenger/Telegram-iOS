@@ -1263,7 +1263,11 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
             return channelInfoController(context: context, peerId: peer.id)
         }
     } else if peer is TelegramUser {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons)
+        var nearbyPeer = false
+        if case .nearbyPeer = mode {
+            nearbyPeer = true
+        }
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons, nearbyPeer: nearbyPeer)
     } else if peer is TelegramSecretChat {
         return userInfoController(context: context, peerId: peer.id, mode: mode)
     }

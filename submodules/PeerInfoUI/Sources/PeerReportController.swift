@@ -101,19 +101,10 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
     }
 }
 
-public func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
+public func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationData: presentationData))
-    
-    let options: [PeerReportOption] = [
-        .spam,
-        .violence,
-        .pornography,
-        .childAbuse,
-        .copyright,
-        .other
-    ]
-    
+        
     var items: [ActionSheetItem] = []
     for option in options {
         let title: String
