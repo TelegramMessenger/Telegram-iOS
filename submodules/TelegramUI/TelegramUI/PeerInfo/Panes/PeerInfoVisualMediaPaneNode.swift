@@ -431,11 +431,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private func updateHistory(view: MessageHistoryView, updateType: ViewUpdateType) {
         self.currentView = view
         
-        self.mediaItems.removeAll()
         switch updateType {
         case .FillHole:
             self.requestHistoryAroundVisiblePosition()
         default:
+            self.mediaItems.removeAll()
             for entry in view.entries.reversed() {
                 self.mediaItems.append(VisualMediaItem(message: entry.message))
             }
@@ -585,7 +585,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
         let rowCount: Int = self.mediaItems.count / itemsInRow + (self.mediaItems.count % itemsInRow == 0 ? 0 : 1)
         
-        let visibleRect = self.scrollNode.view.bounds
+        let visibleRect = self.scrollNode.view.bounds.insetBy(dx: 0.0, dy: -400.0)
         var minVisibleRow = Int(floor((visibleRect.minY - itemSpacing) / (itemSize + itemSpacing)))
         minVisibleRow = max(0, minVisibleRow)
         var maxVisibleRow = Int(ceil((visibleRect.maxY - itemSpacing) / (itemSize + itemSpacing)))
