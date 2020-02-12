@@ -466,13 +466,13 @@ private enum PeerInfoContextSubject {
 }
 
 private final class PeerInfoInteraction {
+    let openChat: () -> Void
     let openUsername: (String) -> Void
     let openPhone: (String) -> Void
     let editingOpenNotificationSettings: () -> Void
     let editingOpenSoundSettings: () -> Void
     let editingToggleShowMessageText: (Bool) -> Void
     let requestDeleteContact: () -> Void
-    let openChat: () -> Void
     let openAddContact: () -> Void
     let updateBlocked: (Bool) -> Void
     let openReport: (Bool) -> Void
@@ -1001,7 +1001,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private let context: AccountContext
     private let peerId: PeerId
+    
     private var presentationData: PresentationData
+    
     let scrollNode: ASScrollNode
     
     let headerNode: PeerInfoHeaderNode
