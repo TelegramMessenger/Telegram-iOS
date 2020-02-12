@@ -1360,6 +1360,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let titleNodeRawContainer: ASDisplayNode
     let titleNode: MultiScaleTextNode
     let titleCredibilityIconNode: ASImageNode
+    let titleExpandedCredibilityIconNode: ASImageNode
     let subtitleNodeContainer: ASDisplayNode
     let subtitleNodeRawContainer: ASDisplayNode
     let subtitleNode: MultiScaleTextNode
@@ -1391,7 +1392,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleCredibilityIconNode = ASImageNode()
         self.titleCredibilityIconNode.displaysAsynchronously = false
         self.titleCredibilityIconNode.displayWithoutProcessing = true
-        self.titleNode.addSubnode(self.titleCredibilityIconNode)
+        self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.addSubnode(self.titleCredibilityIconNode)
+        
+        self.titleExpandedCredibilityIconNode = ASImageNode()
+        self.titleExpandedCredibilityIconNode.displaysAsynchronously = false
+        self.titleExpandedCredibilityIconNode.displayWithoutProcessing = true
+        self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.addSubnode(self.titleExpandedCredibilityIconNode)
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
@@ -1461,7 +1467,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if themeUpdated {
             if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                self.titleCredibilityIconNode.image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                let image = generateImage(sourceImage.size, contextGenerator: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
                     context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
                     context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
@@ -1469,7 +1475,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-                //self.titleCredibilityIconNode.image = PresentationResourcesItemList.verifiedPeerIcon(presentationData.theme)
+                self.titleCredibilityIconNode.image = image
+                self.titleExpandedCredibilityIconNode.image = image
             }
         }
         
@@ -1571,11 +1578,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
+        let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
         
         if let image = self.titleCredibilityIconNode.image {
             transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
             self.titleCredibilityIconNode.isHidden = !isVerified
+            
+            transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
+            self.titleExpandedCredibilityIconNode.isHidden = !isVerified
         }
         
         let titleFrame: CGRect
@@ -1786,7 +1797,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             buttonSpacing = 16.0
         } else {
-            buttonSpacing = min(defaultMaxButtonSpacing, width - floor(CGFloat(buttonKeys.count) * defaultButtonSize / CGFloat(buttonKeys.count + 1)))
+            let normWidth = min(width, containerHeight)
+            let buttonSpacingValue = floor((normWidth - floor(CGFloat(buttonKeys.count) * defaultButtonSize)) / CGFloat(buttonKeys.count + 1))
+            buttonSpacing = min(buttonSpacingValue, 160.0)
         }
         
         let expandedButtonSize: CGFloat = 32.0

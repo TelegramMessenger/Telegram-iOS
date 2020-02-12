@@ -45,6 +45,10 @@ final class MultiScaleTextNode: ASDisplayNode {
         }
     }
     
+    func stateNode(forKey key: AnyHashable) -> ASDisplayNode? {
+        return self.stateNodes[key]?.textNode
+    }
+    
     func updateLayout(states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
         assert(Set(states.keys) == Set(self.stateNodes.keys))
         assert(states[mainState] != nil)
