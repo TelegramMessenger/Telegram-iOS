@@ -70,6 +70,9 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
         
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0)).offsetBy(dx: 10.0, dy: 1.0)
+        self.avatarNode.frame = self.containerNode.bounds
+        
         /*self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))*/
     }
@@ -98,27 +101,9 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        if constrainedSize.height.isLessThanOrEqualTo(32.0) {
-            return CGSize(width: 26.0, height: 26.0)
-        } else {
-            return CGSize(width: 37.0, height: 37.0)
-        }
+        return CGSize(width: 37.0, height: 37.0)
     }
     
     func onLayout() {
-        let bounds = self.bounds
-        if self.bounds.size.height.isLessThanOrEqualTo(26.0) {
-            if !self.avatarNode.bounds.size.equalTo(bounds.size) {
-                self.avatarNode.font = smallFont
-            }
-            self.containerNode.frame = bounds.offsetBy(dx: 8.0, dy: 0.0)
-            self.avatarNode.frame = bounds
-        } else {
-            if !self.avatarNode.bounds.size.equalTo(bounds.size) {
-                self.avatarNode.font = normalFont
-            }
-            self.containerNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
-            self.avatarNode.frame = bounds
-        }
     }
 }

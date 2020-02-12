@@ -466,6 +466,7 @@ private enum PeerInfoContextSubject {
 }
 
 private final class PeerInfoInteraction {
+    let openChat: () -> Void
     let openUsername: (String) -> Void
     let openPhone: (String) -> Void
     let editingOpenNotificationSettings: () -> Void
@@ -493,6 +494,7 @@ private final class PeerInfoInteraction {
     let performBioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     
     init(
+        openChat: @escaping () -> Void,
         openUsername: @escaping (String) -> Void,
         openPhone: @escaping (String) -> Void,
         editingOpenNotificationSettings: @escaping () -> Void,
@@ -519,6 +521,7 @@ private final class PeerInfoInteraction {
         openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode) -> Void,
         performBioLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void
     ) {
+        self.openChat = openChat
         self.openUsername = openUsername
         self.openPhone = openPhone
         self.editingOpenNotificationSettings = editingOpenNotificationSettings
@@ -549,7 +552,7 @@ private final class PeerInfoInteraction {
 
 private let enabledBioEntities: EnabledEntityTypes = [.url, .mention, .hashtag]
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, mainAction: PeerInfoScreenMainAction, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -597,9 +600,16 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if !data.isContact {
             if user.botInfo == nil {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_AddContact, action: {
-                    interaction.openAddContact()
-                }))
+                switch mainAction {
+                case .addContact:
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_AddContact, action: {
+                        interaction.openAddContact()
+                    }))
+                case .message:
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                        interaction.openChat()
+                    }))
+                }
             }
         }
         if let cachedData = data.cachedData as? CachedUserData {
@@ -987,7 +997,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private let context: AccountContext
     private let peerId: PeerId
+    private let mainAction: PeerInfoScreenMainAction
+    
     private var presentationData: PresentationData
+    
     let scrollNode: ASScrollNode
     
     let headerNode: PeerInfoHeaderNode
@@ -1035,10 +1048,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons, mainAction: PeerInfoScreenMainAction) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
+        self.mainAction = mainAction
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.scrollNode = ASScrollNode()
@@ -1050,6 +1064,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         super.init()
         
         self._interaction = PeerInfoInteraction(
+            openChat: { [weak self] in
+                self?.performButtonAction(key: .message)
+            },
             openUsername: { [weak self] value in
                 self?.openUsername(value: value)
             },
@@ -1911,7 +1928,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
-                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, suggestSendMessage: false) {
                             (strongSelf.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
                         }
                     }
@@ -2641,7 +2658,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openPeerInfo(peer: Peer) {
-        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, suggestSendMessage: false) {
             (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
         }
     }
@@ -3452,7 +3469,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         contentHeight += sectionSpacing
         
         var validRegularSections: [AnyHashable] = []
-        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
+        for (sectionId, sectionItems) in infoItems(data: self.data, mainAction: self.mainAction, context: self.context, presentationData: self.presentationData, interaction: self.interaction) {
             validRegularSections.append(sectionId)
             
             let sectionNode: PeerInfoScreenItemSectionContainerNode
@@ -3879,11 +3896,17 @@ public enum PeerInfoScreenKeepExpandedButtons {
     case mute
 }
 
+public enum PeerInfoScreenMainAction {
+    case addContact
+    case message
+}
+
 public final class PeerInfoScreen: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
     private let keepExpandedButtons: PeerInfoScreenKeepExpandedButtons
+    private let mainAction: PeerInfoScreenMainAction
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -3899,11 +3922,12 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool = false, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons = .message) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool = false, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons = .message, mainAction: PeerInfoScreenMainAction = .addContact) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.keepExpandedButtons = keepExpandedButtons
+        self.mainAction = mainAction
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -3971,7 +3995,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, keepExpandedButtons: self.keepExpandedButtons)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, keepExpandedButtons: self.keepExpandedButtons, mainAction: self.mainAction)
         
         self._ready.set(self.controllerNode.ready.get())
         
