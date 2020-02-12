@@ -599,7 +599,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     }))
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
-                    if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, suggestSendMessage: false), selectable {
+                    if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false), selectable {
                         arguments.pushController(infoController)
                     }
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -2342,7 +2342,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { peer, _ in
-                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, suggestSendMessage: false) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     arguments.pushController(infoController)
                 }
             }, pushController: { c in

@@ -1006,8 +1006,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         handleTextLinkActionImpl(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
     
-    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool, suggestSendMessage: Bool) -> ViewController? {
-        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: fromChat ? .mute : .message, mainAction: suggestSendMessage ? .message : .addContact)
+    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool) -> ViewController? {
+        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: fromChat ? .mute : .message)
         controller?.navigationPresentation = .modalInLargeLayout
         return controller
     }
@@ -1249,13 +1249,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
-private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons, mainAction: PeerInfoScreenMainAction) -> ViewController? {
+private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons) -> ViewController? {
     if let _ = peer as? TelegramGroup {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons, mainAction: mainAction)
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons)
     } else if let channel = peer as? TelegramChannel {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons, mainAction: mainAction)
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons)
     } else if peer is TelegramUser {
-        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons, mainAction: mainAction)
+        var nearbyPeer = false
+        if case .nearbyPeer = mode {
+            nearbyPeer = true
+        }
+        return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons, nearbyPeer: nearbyPeer)
     } else if peer is TelegramSecretChat {
         return userInfoController(context: context, peerId: peer.id, mode: mode)
     }

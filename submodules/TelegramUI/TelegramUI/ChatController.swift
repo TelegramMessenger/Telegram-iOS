@@ -5397,7 +5397,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if peer.smallProfileImage == nil {
                                 expandAvatar = false
                             }
-                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true, suggestSendMessage: false) {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
                         }
@@ -7154,7 +7154,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
-                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true, suggestSendMessage: false) {
+                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true) {
                                             strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                         }
                                     }
@@ -7571,7 +7571,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                             if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, suggestSendMessage: false) {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
