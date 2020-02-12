@@ -1816,7 +1816,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let buttonsVerticalOffset: CGFloat
         
         var buttonsAlphaTransition = transition
-        //
+        
         if self.navigationTransition != nil {
             if case let .animated(duration, curve) = transition, transitionFraction >= 1.0 - CGFloat.ulpOfOne {
                 buttonsAlphaTransition = .animated(duration: duration * 0.6, curve: curve)
