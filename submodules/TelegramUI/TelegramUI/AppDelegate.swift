@@ -25,10 +25,14 @@ import WatchBridge
 import LegacyDataImport
 import SettingsUI
 import AppBundle
+#if ENABLE_WALLET
 import WalletUI
+#endif
 import UrlHandling
+#if ENABLE_WALLET
 import WalletUrl
 import WalletCore
+#endif
 import OpenSSLEncryptionProvider
 import AppLock
 import PresentationDataUtils
@@ -681,6 +685,7 @@ final class SharedApplicationContext {
             })
         }
         
+        #if ENABLE_WALLET
         let tonKeychain: TonKeychain
         
         #if targetEnvironment(simulator)
@@ -741,6 +746,7 @@ final class SharedApplicationContext {
                 return EmptyDisposable
             }
         })
+        #endif
         #endif
         
         let sharedContextSignal = accountManagerSignal
@@ -1004,8 +1010,10 @@ final class SharedApplicationContext {
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings in
+                    #if ENABLE_WALLET
                     let tonContext = StoredTonContext(basePath: account.basePath, postbox: account.postbox, network: account.network, keychain: tonKeychain)
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings)
+                    #endif
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account/*, tonContext: tonContext*/, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
@@ -1706,10 +1714,13 @@ final class SharedApplicationContext {
                     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
-                } else if let _ = parseWalletUrl(url) {
+                }
+                #if ENABLE_WALLET
+                if let _ = parseWalletUrl(url) {
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
                     authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 }
+                #endif
             }
         })
     }

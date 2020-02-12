@@ -600,7 +600,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if hadOneStripNode && self.stripNodes.count > 1 {
             self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         }
-        let stripInset: CGFloat = 5.0
+        let stripInset: CGFloat = 8.0
         let stripSpacing: CGFloat = 4.0
         let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
         var stripX: CGFloat = stripInset
@@ -610,7 +610,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             } else {
                 self.stripNodes[i].isHidden = false
             }
-            self.stripNodes[i].frame = CGRect(origin: CGPoint(x: stripX, y: 0.0), size: CGSize(width: stripWidth, height: 2.0))
+            self.stripNodes[i].frame = CGRect(origin: CGPoint(x: stripX, y: 0.0), size: CGSize(width: stripWidth + 1.0, height: 2.0))
             stripX += stripWidth + stripSpacing
         }
         
@@ -1341,6 +1341,9 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     }
 }
 
+private let TitleNodeStateRegular = 0
+private let TitleNodeStateExpanded = 1
+
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
     private var presentationData: PresentationData?
@@ -1355,11 +1358,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let editingContentNode: PeerInfoHeaderEditingContentNode
     let titleNodeContainer: ASDisplayNode
     let titleNodeRawContainer: ASDisplayNode
-    let titleNode: ImmediateTextNode
+    let titleNode: MultiScaleTextNode
     let titleCredibilityIconNode: ASImageNode
+    let titleExpandedCredibilityIconNode: ASImageNode
     let subtitleNodeContainer: ASDisplayNode
     let subtitleNodeRawContainer: ASDisplayNode
-    let subtitleNode: ImmediateTextNode
+    let subtitleNode: MultiScaleTextNode
     private var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
     private let backgroundNode: ASDisplayNode
     private let expandedBackgroundNode: ASDisplayNode
@@ -1382,17 +1386,22 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.titleNodeContainer = ASDisplayNode()
         self.titleNodeRawContainer = ASDisplayNode()
-        self.titleNode = ImmediateTextNode()
+        self.titleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.titleNode.displaysAsynchronously = false
         
         self.titleCredibilityIconNode = ASImageNode()
         self.titleCredibilityIconNode.displaysAsynchronously = false
         self.titleCredibilityIconNode.displayWithoutProcessing = true
-        self.titleNode.addSubnode(self.titleCredibilityIconNode)
+        self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.addSubnode(self.titleCredibilityIconNode)
+        
+        self.titleExpandedCredibilityIconNode = ASImageNode()
+        self.titleExpandedCredibilityIconNode.displaysAsynchronously = false
+        self.titleExpandedCredibilityIconNode.displayWithoutProcessing = true
+        self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.addSubnode(self.titleExpandedCredibilityIconNode)
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
-        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.subtitleNode.displaysAsynchronously = false
         
         self.regularContentNode = PeerInfoHeaderRegularContentNode()
@@ -1458,7 +1467,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if themeUpdated {
             if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                self.titleCredibilityIconNode.image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                let image = generateImage(sourceImage.size, contextGenerator: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
                     context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
                     context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
@@ -1466,7 +1475,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-                //self.titleCredibilityIconNode.image = PresentationResourcesItemList.verifiedPeerIcon(presentationData.theme)
+                self.titleCredibilityIconNode.image = image
+                self.titleExpandedCredibilityIconNode.image = image
             }
         }
         
@@ -1506,15 +1516,22 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let defaultButtonSize: CGFloat = 40.0
         let defaultMaxButtonSpacing: CGFloat = 40.0
-        let expandedAvatarListHeight = min(width, containerHeight - 64.0)
+        let expandedAvatarControlsHeight: CGFloat = 61.0
+        let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
         let buttonKeys: [PeerInfoHeaderButtonKey] = peerInfoHeaderButtons(peer: peer, cachedData: cachedData)
         
+        var isVerified = false
+        let titleString: NSAttributedString
+        let subtitleString: NSAttributedString
+        if let peer = peer, peer.isVerified {
+            isVerified = true
+        }
+        
         if let peer = peer {
-            self.titleNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             
-            let subtitleString: NSAttributedString?
             if let statusData = statusData {
                 let subtitleColor: UIColor
                 if statusData.isActivity {
@@ -1524,37 +1541,61 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 subtitleString = NSAttributedString(string: statusData.text, font: Font.regular(15.0), textColor: subtitleColor)
             } else {
-                subtitleString = nil
+                subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             }
-            self.subtitleNode.attributedText = subtitleString
+        } else {
+            titleString = NSAttributedString(string: " ", font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
         }
         
         let textSideInset: CGFloat = 44.0
-        let expandedAvatarControlsHeight: CGFloat = 64.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height + expandedAvatarControlsHeight
+        
+        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isVerified ? 16.0 : 0.0), height: .greatestFiniteMagnitude)
+        
+        let titleNodeLayout = self.titleNode.updateLayout(states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributedText: titleString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height))
+        ], mainState: TitleNodeStateRegular)
+        
+        let subtitleNodeLayout = self.subtitleNode.updateLayout(states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributedText: subtitleString, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributedText: subtitleString, constrainedSize: CGSize(width: titleConstrainedSize.width - 82.0, height: titleConstrainedSize.height))
+        ], mainState: TitleNodeStateRegular)
+        
+        self.titleNode.update(stateFractions: [
+            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
+        ], transition: transition)
+        
+        self.subtitleNode.update(stateFractions: [
+            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
+        ], transition: transition)
         
         let avatarSize: CGFloat = 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
-        var isVerified = false
-        if let peer = peer, peer.isVerified {
-            isVerified = true
-        }
-        
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - textSideInset * 2.0 - (isVerified ? 16.0 : 0.0), height: .greatestFiniteMagnitude))
-        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: width - textSideInset * 2.0, height: .greatestFiniteMagnitude))
+        let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
+        let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
+        let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
         
         if let image = self.titleCredibilityIconNode.image {
             transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
             self.titleCredibilityIconNode.isHidden = !isVerified
+            
+            transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
+            self.titleExpandedCredibilityIconNode.isHidden = !isVerified
         }
         
         let titleFrame: CGRect
         let subtitleFrame: CGRect
         if self.isAvatarExpanded {
-            titleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - expandedAvatarControlsHeight + 12.0 + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: titleSize)
-            subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: titleFrame.maxY - 5.0), size: subtitleSize)
+            let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
+            let minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - expandedAvatarControlsHeight + 9.0 + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            titleFrame = CGRect(origin: CGPoint(x: minTitleFrame.midX - titleSize.width / 2.0, y: minTitleFrame.midY - titleSize.height / 2.0), size: titleSize)
+            subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 4.0), size: subtitleSize)
         } else {
             titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 10.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             subtitleFrame = CGRect(origin: CGPoint(x: floor((width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
@@ -1713,14 +1754,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let titleCenter = CGPoint(x: transitionFraction * transitionSourceTitleFrame.midX + (1.0 - transitionFraction) * titleFrame.midX, y: transitionFraction * transitionSourceTitleFrame.midY + (1.0 - transitionFraction) * titleFrame.midY)
                 let subtitleCenter = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX, y: transitionFraction * transitionSourceSubtitleFrame.midY + (1.0 - transitionFraction) * subtitleFrame.midY)
                 
-                let rawTitleFrame = CGRect(origin: CGPoint(x: titleCenter.x - titleFrame.size.width * titleScale / 2.0, y: titleCenter.y - titleFrame.size.height * titleScale / 2.0), size: CGSize(width: titleFrame.size.width * titleScale, height: titleFrame.size.height * titleScale))
+                let rawTitleFrame = CGRect(origin: CGPoint(x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0, y: titleCenter.y - titleFrame.size.height * neutralTitleScale / 2.0), size: CGSize(width: titleFrame.size.width * neutralTitleScale, height: titleFrame.size.height * neutralTitleScale))
                 self.titleNodeRawContainer.frame = rawTitleFrame
                 transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()))
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: -titleFrame.size.width * 1.0 / titleScale / 2.0, y: -titleFrame.size.height * 1.0 / titleScale / 2.0), size: titleFrame.size))
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 let rawSubtitleFrame = CGRect(origin: CGPoint(x: subtitleCenter.x - subtitleFrame.size.width / 2.0, y: subtitleCenter.y - subtitleFrame.size.height / 2.0), size: subtitleFrame.size)
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
-                transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: rawSubtitleFrame)
-                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: subtitleFrame.size))
+                transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()))
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
             } else {
@@ -1736,17 +1777,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 let rawTitleFrame = titleFrame
                 self.titleNodeRawContainer.frame = rawTitleFrame
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: titleFrame.size))
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 let rawSubtitleFrame = subtitleFrame
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
                 if self.isAvatarExpanded {
-                    transition.updateFrameAdditive(node: self.titleNodeContainer, frame: rawTitleFrame.offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset).offsetBy(dx: rawTitleFrame.width * 0.5 * (titleScale - 1.0), dy: rawTitleFrame.height * 0.5 * (titleScale - 1.0)))
-                    transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: rawSubtitleFrame.offsetBy(dx: 0.0, dy: titleOffset).offsetBy(dx: rawSubtitleFrame.width * 0.5 * (subtitleScale - 1.0), dy: rawSubtitleFrame.height * 0.5 * (subtitleScale - 1.0)))
+                    transition.updateFrameAdditive(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                    transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 } else {
-                    transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: rawTitleFrame.offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
-                    transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: rawSubtitleFrame.offsetBy(dx: 0.0, dy: titleOffset))
+                    transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                    transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 }
-                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: subtitleFrame.size))
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
             }
@@ -1756,7 +1797,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             buttonSpacing = 16.0
         } else {
-            buttonSpacing = min(defaultMaxButtonSpacing, width - floor(CGFloat(buttonKeys.count) * defaultButtonSize / CGFloat(buttonKeys.count + 1)))
+            let normWidth = min(width, containerHeight)
+            let buttonSpacingValue = floor((normWidth - floor(CGFloat(buttonKeys.count) * defaultButtonSize)) / CGFloat(buttonKeys.count + 1))
+            buttonSpacing = min(buttonSpacingValue, 160.0)
         }
         
         let expandedButtonSize: CGFloat = 32.0

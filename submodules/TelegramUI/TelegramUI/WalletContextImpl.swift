@@ -1,3 +1,5 @@
+#if ENABLE_WALLET
+
 import Foundation
 import UIKit
 import Display
@@ -278,3 +280,5 @@ final class WalletContextImpl: WalletContext {
         })
     }
 }
+
+#endif

@@ -219,7 +219,11 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         presentControllerImpl?(alertController, nil)
     })
     
+    #if ENABLE_WALLET
     let hasWallets = context.hasWallets
+    #else
+    let hasWallets: Signal<Bool, NoError> = .single(false)
+    #endif
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,

@@ -8,7 +8,10 @@ import SwiftSignalKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
+
+#if ENABLE_WALLET
 import WalletCore
+#endif
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -175,7 +178,9 @@ public enum ResolvedUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
+    #if ENABLE_WALLET
     case wallet(address: String, amount: Int64?, comment: String?)
+    #endif
     case settings(ResolvedUrlSettingsSection)
 }
 
@@ -380,10 +385,12 @@ public final class ContactSelectionControllerParams {
     }
 }
 
+#if ENABLE_WALLET
 public enum OpenWalletContext {
     case generic
     case send(address: String, amount: Int64?, comment: String?)
 }
+#endif
 
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
@@ -466,7 +473,9 @@ public protocol SharedAccountContext: class {
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
+    #if ENABLE_WALLET
     func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void)
+    #endif
     func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
@@ -479,6 +488,7 @@ public protocol SharedAccountContext: class {
     func beginNewAuth(testingEnvironment: Bool)
 }
 
+#if ENABLE_WALLET
 private final class TonInstanceData {
     var config: String?
     var blockchainName: String?
@@ -543,10 +553,15 @@ public final class TonContext {
     }
 }
 
+#endif
+
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
+    
+    #if ENABLE_WALLET
     var tonContext: StoredTonContext? { get }
+    #endif
     
     var liveLocationManager: LiveLocationManager? { get }
     var fetchManager: FetchManager { get }
@@ -554,8 +569,11 @@ public protocol AccountContext: class {
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
+    
+    #if ENABLE_WALLET
     var hasWallets: Signal<Bool, NoError> { get }
     var hasWalletAccess: Signal<Bool, NoError> { get }
+    #endif
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }

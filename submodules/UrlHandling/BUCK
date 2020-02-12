@@ -13,7 +13,7 @@ static_library(
         "//submodules/MtProtoKit:MtProtoKit#shared",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-	"//submodules/WalletUrl:WalletUrl",
+        #"//submodules/WalletUrl:WalletUrl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

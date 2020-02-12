@@ -16,8 +16,10 @@ import AccountContext
 import UrlEscaping
 import PassportUI
 import UrlHandling
+#if ENABLE_WALLET
 import WalletUI
 import WalletUrl
+#endif
 import OpenInExternalAppUI
 
 public struct ParsedSecureIdUrl {
@@ -144,6 +146,7 @@ func formattedConfirmationCode(_ code: Int) -> String {
 }
 
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+    #if ENABLE_WALLET
     if url.hasPrefix("ton://") {
         if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
             context.sharedContext.openWallet(context: context, walletContext: .send(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment)) { c in
@@ -153,6 +156,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         
         return
     }
+    #endif
     
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         context.sharedContext.applicationBindings.openUrl(url)
