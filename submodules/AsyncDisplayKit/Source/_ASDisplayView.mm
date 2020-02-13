@@ -10,7 +10,7 @@
 #import <AsyncDisplayKit/_ASDisplayView.h>
 #import "_ASDisplayViewAccessiblity.h"
 
-#import "_ASCoreAnimationExtras.h"
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
 #import "ASDisplayNodeInternal.h"
 #import <AsyncDisplayKit/ASDisplayNode+Convenience.h>

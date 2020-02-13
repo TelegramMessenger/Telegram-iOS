@@ -6,8 +6,16 @@ open class ASImageNode: ASDisplayNode {
     public var image: UIImage? {
         didSet {
             if self.isNodeLoaded {
-                self.contents = self.image?.cgImage
-                //(self.view as? ASImageNodeView)?.image = self.image
+                if let image = self.image {
+                    let capInsets = image.capInsets
+                    if capInsets.left.isZero && capInsets.top.isZero {
+                        ASDisplayNodeSetResizableContents(self, image)
+                    } else {
+                        self.contents = self.image?.cgImage
+                    }
+                } else {
+                    self.contents = nil
+                }
             }
         }
     }
@@ -16,15 +24,5 @@ open class ASImageNode: ASDisplayNode {
 
     override public init() {
         super.init()
-
-        /*self.setViewBlock({
-            return ASImageNodeView(frame: CGRect())
-        })*/
-    }
-
-    override open func didLoad() {
-        super.didLoad()
-
-        //(self.view as? ASImageNodeView)?.image = self.image
     }
 }

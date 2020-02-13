@@ -1,21 +1,5 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-'''apple_resource(
-    name = "WalletUIResources",
-    files = glob([
-        "Resources/**/*",
-    ], exclude = ["Resources/**/.*"]),
-    visibility = ["PUBLIC"],
-)'''
-
-'''apple_asset_catalog(
-    name = 'WalletUIAssets',
-    dirs = [
-        "WalletImages.xcassets",
-    ],
-    visibility = ["PUBLIC"],
-)'''
-
 filegroup(
     name = "WalletUIResources",
     srcs = glob([

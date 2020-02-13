@@ -19,7 +19,7 @@
 
 #import <AsyncDisplayKit/_ASAsyncTransaction.h>
 #import "_ASAsyncTransactionContainer+Private.h"
-#import "_ASCoreAnimationExtras.h"
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
 #import <AsyncDisplayKit/_ASDisplayView.h>
 #import "_ASPendingState.h"

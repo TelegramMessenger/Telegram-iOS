@@ -1,5 +1,7 @@
 build --strategy=Genrule=local
+build --strategy=SwiftCompile=standalone
 build --apple_platform_type=ios
 build --cxxopt='-std=c++14'
 build --copt='-w'
 build --swiftcopt='-Xcc' --swiftcopt='-w'
+build --features=swift.enable_batch_mode

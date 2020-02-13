@@ -7,7 +7,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import "_ASCoreAnimationExtras.h"
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
 #import "_ASPendingState.h"
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import "ASDisplayNodeInternal.h"

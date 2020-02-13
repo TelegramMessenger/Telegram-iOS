@@ -22,6 +22,13 @@ genrule(
     cmd = version_info_plist_source,
 )
 
+filegroup(
+    name = "Strings",
+    srcs = glob([
+        "Strings/**/*",
+    ], exclude = ["Strings/**/.*"]),
+)
+
 objc_library(
     name = "Main",
     srcs = [
@@ -34,6 +41,9 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    data = [
+        ":Strings",
+    ],
     deps = [
         "//submodules/GZip:GZip",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

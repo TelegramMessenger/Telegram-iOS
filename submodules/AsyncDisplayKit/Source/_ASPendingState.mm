@@ -9,7 +9,7 @@
 
 #import "_ASPendingState.h"
 
-#import "_ASCoreAnimationExtras.h"
+#import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer.h>
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
