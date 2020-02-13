@@ -1,4 +1,4 @@
-#import "NumberPluralizationForm.h"
+#import <NumberPluralizationForm/NumberPluralizationForm.h>
 
 NumberPluralizationForm numberPluralizationForm(unsigned int lc, int n) {
     switch (lc) {

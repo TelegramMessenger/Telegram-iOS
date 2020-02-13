@@ -1,14 +1,14 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "WalletCore",
-    module_name = "WalletCore",
+    name = "StringPluralization",
+    module_name = "StringPluralization",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
     deps = [
-	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/TonBinding:TonBinding",
+        "//submodules/NumberPluralizationForm:NumberPluralizationForm",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",

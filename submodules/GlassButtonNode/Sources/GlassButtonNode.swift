@@ -72,7 +72,7 @@ public final class GlassButtonNode: HighlightTrackingButtonNode {
     
     private let blurView: UIVisualEffectView
     private let iconNode: ASImageNode
-    private var labelNode: ASTextNode?
+    private var labelNode: ImmediateTextNode?
     
     public init(icon: UIImage, label: String?) {
         let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
@@ -90,7 +90,7 @@ public final class GlassButtonNode: HighlightTrackingButtonNode {
         self.filledImage = generateEmptyButtonImage(icon: icon, strokeColor: nil, fillColor: invertedFill, knockout: true, buttonSize: largeButtonSize)
         
         if let label = label {
-            let labelNode = ASTextNode()
+            let labelNode = ImmediateTextNode()
             let labelFont: UIFont
             if let image = regularImage, image.size.width < 70.0 {
                 labelFont = smallLabelFont
@@ -165,7 +165,7 @@ public final class GlassButtonNode: HighlightTrackingButtonNode {
         self.iconNode.frame = self.bounds
         
         if let labelNode = self.labelNode {
-            let labelSize = labelNode.measure(CGSize(width: 200.0, height: 100.0))
+            let labelSize = labelNode.updateLayout(CGSize(width: 200.0, height: 100.0))
             let offset: CGFloat
             if size.width < 70.0 {
                 offset = 65.0

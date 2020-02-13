@@ -1,8 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
 ton_headers = [
     "auto/tl/tonlib_api.h",
     "tl/TlObject.h",

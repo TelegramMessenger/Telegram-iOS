@@ -1,14 +1,14 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "WalletCore",
-    module_name = "WalletCore",
+    name = "GlassButtonNode",
+    module_name = "GlassButtonNode",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
     deps = [
-	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/TonBinding:TonBinding",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+    	"//submodules/Display:Display",
     ],
     visibility = [
         "//visibility:public",

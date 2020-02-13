@@ -22,7 +22,6 @@
 #import <AsyncDisplayKit/ASConfigurationInternal.h>
 
 #import <AsyncDisplayKit/ASControlNode.h>
-#import <AsyncDisplayKit/ASImageNode.h>
 #import <AsyncDisplayKit/ASEditableTextNode.h>
 
 #import <AsyncDisplayKit/ASScrollNode.h>

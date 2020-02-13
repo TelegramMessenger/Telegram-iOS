@@ -1,8 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
 openssl_headers = [
     "aes.h",
     "asn1.h",
@@ -170,6 +165,9 @@ objc_library(
     module_name = "openssl",
     enable_modules = True,
     hdrs = ["Public/openssl/" + x for x in openssl_headers],
+    includes = [
+        "Public",
+    ],
     deps = [
         ":openssl_lib",
     ],

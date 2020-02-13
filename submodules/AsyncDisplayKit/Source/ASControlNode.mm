@@ -11,8 +11,7 @@
 #import "ASControlNode+Private.h"
 #import <AsyncDisplayKit/ASControlNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
-#import <AsyncDisplayKit/ASImageNode.h>
-#import "ASInternalHelpers.h"
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASControlTargetAction.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASThread.h>
@@ -72,7 +71,6 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode);
 
 @implementation ASControlNode
 {
-  ASImageNode *_debugHighlightOverlay;
 }
 
 #pragma mark - Lifecycle
@@ -494,8 +492,8 @@ CGRect _ASControlNodeGetExpandedBounds(ASControlNode *controlNode) {
 }
 
 #pragma mark - Debug
-- (ASImageNode *)debugHighlightOverlay
+- (ASDisplayNode *)debugHighlightOverlay
 {
-  return _debugHighlightOverlay;
+  return nil;
 }
 @end

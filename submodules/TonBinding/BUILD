@@ -1,8 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
 objc_library(
     name = "TonBinding",
     module_name = "TonBinding",
@@ -16,6 +11,9 @@ objc_library(
     ]),
     copts = [
         "-std=c++14",
+    ],
+    includes = [
+        "Sources",
     ],
     deps = [
         "//submodules/SSignalKit/SSignalKit:SSignalKit",

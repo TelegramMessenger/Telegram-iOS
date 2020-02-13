@@ -10,7 +10,7 @@
 
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import "ASInternalHelpers.h"
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASThread.h>
 
 #import <objc/runtime.h>

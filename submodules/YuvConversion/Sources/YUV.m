@@ -1,4 +1,4 @@
-#import "YUV.h"
+#import <YuvConversion/YUV.h>
 #import <Accelerate/Accelerate.h>
 
 void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow) {

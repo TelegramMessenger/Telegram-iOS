@@ -9,7 +9,7 @@
 
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import "ASDisplayNodeInternal.h"
-#import "ASDisplayNode+FrameworkPrivate.h"
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Ancestry.h>
 
 #import <queue>

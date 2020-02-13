@@ -46,7 +46,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonBackgroundNode = ASImageNode()
         self.buttonBackgroundNode.isLayerBacked = true
-        self.buttonBackgroundNode.displayWithoutProcessing = true
         self.buttonBackgroundNode.displaysAsynchronously = false
         self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.backgroundColor)
         
@@ -58,7 +57,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.labelNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.image = icon
         

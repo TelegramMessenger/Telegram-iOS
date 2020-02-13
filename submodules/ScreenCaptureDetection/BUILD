@@ -1,14 +1,13 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "WalletCore",
-    module_name = "WalletCore",
+    name = "ScreenCaptureDetection",
+    module_name = "ScreenCaptureDetection",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
     deps = [
-	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/TonBinding:TonBinding",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
     visibility = [
         "//visibility:public",

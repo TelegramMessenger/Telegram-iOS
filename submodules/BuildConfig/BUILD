@@ -1,9 +1,4 @@
 load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
-load(
     "@bazel_skylib//rules:common_settings.bzl",
     "string_flag",
 )

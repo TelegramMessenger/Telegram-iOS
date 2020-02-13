@@ -1,8 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
 public_headers = glob([
   "Source/PublicHeaders/AsyncDisplayKit/*.h",
 ])
@@ -22,6 +17,9 @@ objc_library(
     hdrs = public_headers,
     defines = [
         "MINIMAL_ASDK",
+    ],
+    includes = [
+      "Source/PublicHeaders",
     ],
     sdk_frameworks = [
       "Foundation",

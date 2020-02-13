@@ -8,13 +8,13 @@ echo \
 '<plist version="1.0">' \
 '<dict>' \
 '    <key>CFBundleShortVersionString</key>' \
-'    <string>%s</string>' \
+'    <string>{}</string>' \
 '    <key>CFBundleVersion</key>' \
-'    <string>%s</string>' \
+'    <string>{}</string>' \
 '</dict>' \
 '</plist>' \
 > "$@"
-""" % ("1.0", "30")
+""".format("1.0", "30")
 
 genrule(
     name = "VersionInfoPlist",
@@ -51,7 +51,21 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/AppBundle:AppBundle",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        #"//submodules/WalletUI:WalletUI",
+        "//submodules/Camera:Camera",
+        "//submodules/QrCode:QrCode",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/GlassButtonNode:GlassButtonNode",
+        "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/LocalAuth:LocalAuth",
+        "//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
+        "//submodules/WalletUrl:WalletUrl",
+        "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
+        "//submodules/Markdown:Markdown",
+        "//submodules/StringPluralization:StringPluralization",
+        "//submodules/YuvConversion:YuvConversion",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/WalletUI:WalletUI",
     ],
 )
 

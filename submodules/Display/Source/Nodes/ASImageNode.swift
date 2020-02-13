@@ -15,6 +15,8 @@ open class ASImageNode: ASDisplayNode {
         }
     }
 
+    public var displayWithoutProcessing: Bool = true
+
     override public init() {
         super.init()
 

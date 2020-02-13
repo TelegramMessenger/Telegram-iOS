@@ -9,7 +9,7 @@
 
 #import <AsyncDisplayKit/ASScrollNode.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import "ASDisplayNode+FrameworkPrivate.h"
+#import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASLayout.h>

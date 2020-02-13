@@ -10,7 +10,7 @@
 #import "ASCGImageBuffer.h"
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASConfigurationInternal.h>
-#import "ASInternalHelpers.h"
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <UIKit/UIGraphics.h>
 #import <UIKit/UIImage.h>
 #import <objc/runtime.h>

@@ -1,8 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
-
 objc_library(
     name = "OpenSSLEncryptionProvider",
     srcs = glob([
