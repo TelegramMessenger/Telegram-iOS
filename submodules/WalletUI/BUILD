@@ -16,12 +16,28 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
     visibility = ["PUBLIC"],
 )'''
 
+filegroup(
+    name = "WalletUIResources",
+    srcs = glob([
+        "Resources/**/*",
+    ], exclude = ["Resources/**/.*"]),
+)
+
+filegroup(
+    name = "WalletUIAssets",
+    srcs = glob(["WalletImages.xcassets/**"]),
+)
+
 swift_library(
     name = "WalletUI",
     module_name = "WalletUI",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    data = [
+        ":WalletUIResources",
+        ":WalletUIAssets",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

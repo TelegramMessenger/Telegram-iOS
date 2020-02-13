@@ -2,15 +2,12 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-private final class ASImageNodeView: UIImageView {
-    
-}
-
 open class ASImageNode: ASDisplayNode {
     public var image: UIImage? {
         didSet {
             if self.isNodeLoaded {
-                (self.view as? ASImageNodeView)?.image = self.image
+                self.contents = self.image?.cgImage
+                //(self.view as? ASImageNodeView)?.image = self.image
             }
         }
     }
@@ -20,14 +17,14 @@ open class ASImageNode: ASDisplayNode {
     override public init() {
         super.init()
 
-        self.setViewBlock({
+        /*self.setViewBlock({
             return ASImageNodeView(frame: CGRect())
-        })
+        })*/
     }
 
     override open func didLoad() {
         super.didLoad()
 
-        (self.view as? ASImageNodeView)?.image = self.image
+        //(self.view as? ASImageNodeView)?.image = self.image
     }
 }

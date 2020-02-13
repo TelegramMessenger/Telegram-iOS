@@ -558,7 +558,7 @@ private func monthAtIndex(_ index: Int, strings: WalletStrings) -> String {
 final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     var theme: WalletTheme
     var strings: WalletStrings
-    let titleNode: ASTextNode
+    let titleNode: ImmediateTextNode
     let backgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
     
@@ -574,7 +574,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         self.separatorNode.isLayerBacked = true
         self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
         
         super.init()
@@ -609,7 +609,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: text, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
+        self.titleNode.truncationType = .end
     }
     
     func updateThemeAndStrings(theme: WalletTheme, strings: WalletStrings) {
@@ -626,7 +626,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))

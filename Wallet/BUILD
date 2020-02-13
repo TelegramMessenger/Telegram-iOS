@@ -32,7 +32,7 @@ objc_library(
 swift_library(
     name = "Lib",
     srcs = glob([
-        "SupportFiles/**/*.swift",
+        "Sources/**/*.swift",
     ]),
     deps = [
         "//submodules/GZip:GZip",
