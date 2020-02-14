@@ -66,17 +66,20 @@ private final class GroupsInCommonContextImpl {
                 |> mapToSignal { result -> Signal<([Peer], Int), NoError> in
                     let chats: [Api.Chat]
                     let count: Int?
-                    switch result {
-                    case .none:
+                    if let result = result {
+                        switch result {
+                        case let .chats(apiChats):
+                            chats = apiChats
+                            count = nil
+                        case let .chatsSlice(apiCount, apiChats):
+                            chats = apiChats
+                            count = Int(apiCount)
+                        }
+                    } else {
                         chats = []
                         count = nil
-                    case let .chats(apiChats):
-                        chats = apiChats
-                        count = nil
-                    case let .chatsSlice(apiCount, apiChats):
-                        chats = apiChats
-                        count = Int(apiCount)
                     }
+                    
                     
                     return postbox.transaction { transaction -> ([Peer], Int) in
                         var peers: [Peer] = []
