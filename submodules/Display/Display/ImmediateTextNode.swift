@@ -15,6 +15,7 @@ public class ImmediateTextNode: TextNode {
     public var insets: UIEdgeInsets = UIEdgeInsets()
     public var textShadowColor: UIColor?
     public var textStroke: (UIColor, CGFloat)?
+    public var cutout: TextNodeCutout?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -57,7 +58,7 @@ public class ImmediateTextNode: TextNode {
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke))
         let _ = apply()
         if layout.numberOfLines > 1 {
             self.trailingLineWidth = layout.trailingLineWidth
@@ -69,7 +70,7 @@ public class ImmediateTextNode: TextNode {
     
     public func updateLayoutInfo(_ constrainedSize: CGSize) -> ImmediateTextNodeLayoutInfo {
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets))
         let _ = apply()
         return ImmediateTextNodeLayoutInfo(size: layout.size, truncated: layout.truncated)
     }

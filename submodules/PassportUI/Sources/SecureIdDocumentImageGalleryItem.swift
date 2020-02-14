@@ -12,6 +12,12 @@ import PhotoResources
 import GalleryUI
 
 class SecureIdDocumentGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.itemId
+    }
+    
+    let itemId: AnyHashable
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -21,7 +27,8 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     let location: SecureIdDocumentGalleryEntryLocation
     let delete: () -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, itemId: AnyHashable, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+        self.itemId = itemId
         self.context = context
         self.theme = theme
         self.strings = strings

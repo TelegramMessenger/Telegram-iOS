@@ -253,6 +253,33 @@ private enum GalleryMessageHistoryView {
                 return [entry]
         }
     }
+    
+    var tagMask: MessageTags? {
+        switch self {
+        case .single:
+            return nil
+        case let .view(view):
+            return view.tagMask
+        }
+    }
+    
+    var hasEarlier: Bool {
+        switch self {
+        case .single:
+            return false
+        case let .view(view):
+            return view.earlierId != nil
+        }
+    }
+    
+    var hasLater: Bool {
+        switch self {
+        case .single:
+            return false
+        case let .view(view):
+            return view.laterId != nil
+        }
+    }
 }
 
 public enum GalleryControllerItemSource {
@@ -304,6 +331,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let context: AccountContext
     private var presentationData: PresentationData
     private let source: GalleryControllerItemSource
+    private let invertItemOrder: Bool
     
     private let streamVideos: Bool
     
@@ -324,6 +352,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let disposable = MetaDisposable()
     
     private var entries: [MessageHistoryEntry] = []
+    private var hasLeftEntries: Bool = false
+    private var hasRightEntries: Bool = false
+    private var tagMask: MessageTags?
     private var centralEntryStableId: UInt32?
     private var configuration: GalleryConfiguration?
     
@@ -346,9 +377,12 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
+    private let updateVisibleDisposable = MetaDisposable()
+    
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
+        self.invertItemOrder = invertItemOrder
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         self.actionInteraction = actionInteraction
@@ -444,13 +478,19 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             }
                         }
                         
+                        strongSelf.tagMask = view.tagMask
+                        
                         if invertItemOrder {
                             strongSelf.entries = entries.reversed()
+                            strongSelf.hasLeftEntries = view.hasLater
+                            strongSelf.hasRightEntries = view.hasEarlier
                             if let centralEntryStableId = centralEntryStableId {
                                 strongSelf.centralEntryStableId = centralEntryStableId
                             }
                         } else {
                             strongSelf.entries = entries
+                            strongSelf.hasLeftEntries = view.hasEarlier
+                            strongSelf.hasRightEntries = view.hasLater
                             strongSelf.centralEntryStableId = centralEntryStableId
                         }
                         if strongSelf.isViewLoaded {
@@ -774,6 +814,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
             self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
+        self.updateVisibleDisposable.dispose()
     }
     
     @objc private func donePressed() {
@@ -898,6 +939,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 var hiddenItem: (MessageId, Media)?
                 if let index = index {
                     let message = strongSelf.entries[index].message
+                    strongSelf.centralEntryStableId = message.stableId
                     if let (media, _) = mediaForMessage(message: message) {
                         hiddenItem = (message.id, media)
                     }
@@ -909,6 +951,69 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         strongSelf.centralItemRightBarButtonItems.set(node.rightBarButtonItems())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
+                    }
+                    
+                    switch strongSelf.source {
+                    case let .peerMessagesAtId(initialMessageId):
+                        var reloadAroundIndex: MessageIndex?
+                        if index <= 2 && strongSelf.hasLeftEntries {
+                            reloadAroundIndex = strongSelf.entries.first?.index
+                        } else if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
+                            reloadAroundIndex = strongSelf.entries.last?.index
+                        }
+                        if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
+                            let namespaces: MessageIdNamespaces
+                            if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                                namespaces = .just(Namespaces.Message.allScheduled)
+                            } else {
+                                namespaces = .not(Namespaces.Message.allScheduled)
+                            }
+                            let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(initialMessageId.peerId), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                                let mapped = GalleryMessageHistoryView.view(view)
+                                return .single(mapped)
+                            }
+                            |> take(1)
+                            
+                            strongSelf.updateVisibleDisposable.set((signal
+                            |> deliverOnMainQueue).start(next: { view in
+                                guard let strongSelf = self, let view = view else {
+                                    return
+                                }
+                                
+                                let entries = view.entries
+                                
+                                if strongSelf.invertItemOrder {
+                                    strongSelf.entries = entries.reversed()
+                                    strongSelf.hasLeftEntries = view.hasLater
+                                    strongSelf.hasRightEntries = view.hasEarlier
+                                } else {
+                                    strongSelf.entries = entries
+                                    strongSelf.hasLeftEntries = view.hasEarlier
+                                    strongSelf.hasRightEntries = view.hasLater
+                                }
+                                if strongSelf.isViewLoaded {
+                                    var items: [GalleryItem] = []
+                                    var centralItemIndex: Int?
+                                    for entry in strongSelf.entries {
+                                        var isCentral = false
+                                        if entry.message.stableId == strongSelf.centralEntryStableId {
+                                            isCentral = true
+                                        }
+                                        if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }) {
+                                            if isCentral {
+                                                centralItemIndex = items.count
+                                            }
+                                            items.append(item)
+                                        }
+                                    }
+                                    
+                                    strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                                }
+                            }))
+                        }
+                    default:
+                        break
                     }
                 }
                 if strongSelf.didSetReady {

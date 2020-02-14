@@ -1954,6 +1954,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, icon: { _ in nil }, action: { _, f in
                             f(.dismissWithoutContent)
                             self?.navigationButtonAction(.openChatInfo(expandAvatar: true))
+                        })),
+                        .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_Search, icon: { _ in nil }, action: { _, f in
+                            f(.dismissWithoutContent)
+                            self?.interfaceInteraction?.beginMessageSearch(.everything, "")
                         }))
                     ]
                     let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)

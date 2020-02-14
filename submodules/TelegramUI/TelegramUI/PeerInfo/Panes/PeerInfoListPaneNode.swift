@@ -77,6 +77,14 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         self.listNode.updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve))
+        if isScrollingLockedAtTop {
+            switch self.listNode.visibleContentOffset() {
+            case .known(0.0):
+                break
+            default:
+                self.listNode.scrollToEndOfHistory()
+            }
+        }
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
     }
     

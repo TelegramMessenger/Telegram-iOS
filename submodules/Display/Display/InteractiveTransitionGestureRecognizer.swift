@@ -31,12 +31,15 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
     }
 }
 
-class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
-    var validatedGesture = false
-    var firstLocation: CGPoint = CGPoint()
+public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
+    private let enableBothDirections: Bool
     private let canBegin: () -> Bool
     
-    init(target: Any?, action: Selector?, canBegin: @escaping () -> Bool) {
+    var validatedGesture = false
+    var firstLocation: CGPoint = CGPoint()
+    
+    public init(target: Any?, action: Selector?, enableBothDirections: Bool = false, canBegin: @escaping () -> Bool) {
+        self.enableBothDirections = enableBothDirections
         self.canBegin = canBegin
         
         super.init(target: target, action: action)
@@ -44,13 +47,13 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         self.maximumNumberOfTouches = 1
     }
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         validatedGesture = false
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         if !self.canBegin() {
             self.state = .failed
             return
@@ -68,17 +71,17 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
         
         let absTranslationX: CGFloat = abs(translation.x)
         let absTranslationY: CGFloat = abs(translation.y)
         
-        if !validatedGesture {
-            if self.firstLocation.x < 16.0 {
+        if !self.validatedGesture {
+            if !self.enableBothDirections && self.firstLocation.x < 16.0 {
                 validatedGesture = true
-            } else if translation.x < 0.0 {
+            } else if !self.enableBothDirections && translation.x < 0.0 {
                 self.state = .failed
             } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                 self.state = .failed

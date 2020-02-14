@@ -15,6 +15,10 @@ import StickerResources
 import AppBundle
 
 class ChatAnimationGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.message.stableId
+    }
+    
     let context: AccountContext
     let presentationData: PresentationData
     let message: Message

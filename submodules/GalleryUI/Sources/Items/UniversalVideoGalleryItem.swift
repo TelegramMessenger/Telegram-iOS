@@ -19,6 +19,10 @@ public enum UniversalVideoGalleryItemContentInfo {
 }
 
 public class UniversalVideoGalleryItem: GalleryItem {
+    public var id: AnyHashable {
+        return self.content.id
+    }
+    
     let context: AccountContext
     let presentationData: PresentationData
     let content: UniversalVideoContent

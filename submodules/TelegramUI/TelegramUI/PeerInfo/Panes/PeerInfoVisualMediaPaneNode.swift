@@ -106,6 +106,10 @@ private final class VisualMediaItemNode: ASDisplayNode {
         }
     }
     
+    func cancelPreviewGesture() {
+        self.containerNode.cancelGesture()
+    }
+    
     func update(size: CGSize, item: VisualMediaItem, theme: PresentationTheme, synchronousLoad: Bool) {
         if item === self.item?.0 && size == self.item?.2 {
             return
@@ -553,7 +557,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, synchronousLoad: synchronous)
         
         if isScrollingLockedAtTop {
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
+            if self.scrollNode.view.contentOffset.y > .ulpOfOne {
+                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
+            }
         }
         self.scrollNode.view.isScrollEnabled = !isScrollingLockedAtTop
     }
@@ -561,6 +567,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.decelerationAnimator?.isPaused = true
         self.decelerationAnimator = nil
+        
+        for (_, itemNode) in self.visibleMediaItems {
+            itemNode.cancelPreviewGesture()
+        }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

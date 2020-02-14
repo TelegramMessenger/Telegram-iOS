@@ -81,7 +81,7 @@ open class TransformImageNode: ASDisplayNode {
             let apply: () -> Void = {
                 if let strongSelf = self {
                     if strongSelf.contents == nil {
-                        if strongSelf.contentAnimations.contains(.firstUpdate) {
+                        if strongSelf.contentAnimations.contains(.firstUpdate) && !attemptSynchronously {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                         }
                     } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {

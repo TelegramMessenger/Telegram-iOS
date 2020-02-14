@@ -35,6 +35,12 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class InstantImageGalleryItem: GalleryItem {
+    var id: AnyHashable {
+        return self.itemId
+    }
+    
+    let itemId: AnyHashable
+    
     let context: AccountContext
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
@@ -44,7 +50,8 @@ class InstantImageGalleryItem: GalleryItem {
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, itemId: AnyHashable, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+        self.itemId = itemId
         self.context = context
         self.presentationData = presentationData
         self.imageReference = imageReference
