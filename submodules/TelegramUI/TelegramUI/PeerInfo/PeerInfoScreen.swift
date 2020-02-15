@@ -493,6 +493,7 @@ private final class PeerInfoInteraction {
     let openPeerInfoContextMenu: (PeerInfoContextSubject, ASDisplayNode) -> Void
     let performBioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let requestLayout: () -> Void
+    let openEncryptionKey: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -521,7 +522,8 @@ private final class PeerInfoInteraction {
         performMemberAction: @escaping (PeerInfoMember, PeerInfoMemberAction) -> Void,
         openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode) -> Void,
         performBioLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void,
-        requestLayout: @escaping () -> Void
+        requestLayout: @escaping () -> Void,
+        openEncryptionKey: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -550,6 +552,7 @@ private final class PeerInfoInteraction {
         self.openPeerInfoContextMenu = openPeerInfoContextMenu
         self.performBioLinkAction = performBioLinkAction
         self.requestLayout = requestLayout
+        self.openEncryptionKey = openEncryptionKey
     }
 }
 
@@ -640,6 +643,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
                 }
             }
+        }
+        
+        if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
+            items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 6, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
+                interaction.openEncryptionKey()
+            }))
         }
         
         if user.botInfo != nil, !user.isVerified {
@@ -1077,7 +1086,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons, nearbyPeer: Bool) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -1087,7 +1096,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
         
-        self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, keepExpandedButtons: keepExpandedButtons)
+        self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, peerId: peerId)
         
         super.init()
@@ -1173,6 +1182,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             },
             requestLayout: { [weak self] in
                 self?.requestLayout()
+            },
+            openEncryptionKey: { [weak self] in
+                self?.openEncryptionKey()
             }
         )
         
@@ -1556,7 +1568,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             controller.presentInGlobalOverlay(contextController)
         }
         
-        self.paneContainerNode.currentPaneUpdated = { [weak self] in
+        self.paneContainerNode.currentPaneUpdated = { [weak self] expand in
             guard let strongSelf = self else {
                 return
             }
@@ -1573,7 +1585,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
                 
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-                strongSelf.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: strongSelf.paneContainerNode.frame.minY - navigationHeight), animated: true)
+                if expand {
+                    strongSelf.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: strongSelf.paneContainerNode.frame.minY - navigationHeight), animated: true)
+                }
             }
         }
         
@@ -2239,6 +2253,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             controller.present(actionSheet, in: .window(.root))
         case .addMember:
             self.openAddMember()
+        case .search:
+            self.openChatWithMessageSearch()
         }
     }
     
@@ -2663,6 +2679,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, push: { [weak controller] c in
             controller?.push(c)
         }, completion: { _ in }), in: .window(.root))
+    }
+    
+    private func openEncryptionKey() {
+        guard let data = self.data, let peer = data.peer, let encryptionKeyFingerprint = data.encryptionKeyFingerprint else {
+            return
+        }
+        self.controller?.push(SecretChatKeyController(context: self.context, fingerprint: encryptionKeyFingerprint, peer: peer))
     }
     
     private func openShareBot() {
@@ -3917,6 +3940,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.canAddVelocity = true
         self.canOpenAvatarByDragging = self.headerNode.isAvatarExpanded
+        self.paneContainerNode.currentPane?.node.cancelPreviewGestures()
     }
     
     private var previousVelocityM1: CGFloat = 0.0
@@ -4078,16 +4102,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
 }
 
-public enum PeerInfoScreenKeepExpandedButtons {
-    case message
-    case mute
-}
-
 public final class PeerInfoScreen: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
-    private let keepExpandedButtons: PeerInfoScreenKeepExpandedButtons
+    private let isOpenedFromChat: Bool
     private let nearbyPeer: Bool
     
     private var presentationData: PresentationData
@@ -4104,11 +4123,11 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool = false, keepExpandedButtons: PeerInfoScreenKeepExpandedButtons = .message, nearbyPeer: Bool = false) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
-        self.keepExpandedButtons = keepExpandedButtons
+        self.isOpenedFromChat = isOpenedFromChat
         self.nearbyPeer = nearbyPeer
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -4177,7 +4196,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, keepExpandedButtons: self.keepExpandedButtons, nearbyPeer: self.nearbyPeer)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer)
         
         self._ready.set(self.controllerNode.ready.get())
         

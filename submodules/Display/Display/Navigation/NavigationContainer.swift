@@ -111,11 +111,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     override func didLoad() {
         super.didLoad()
         
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), canBegin: { [weak self] in
-            guard let strongSelf = self else {
-                return false
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] in
+            guard let strongSelf = self, strongSelf.controllers.count > 1 else {
+                return []
             }
-            return strongSelf.controllers.count > 1
+            return .right
         })
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false

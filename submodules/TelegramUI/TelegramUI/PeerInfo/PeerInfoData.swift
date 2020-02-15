@@ -66,6 +66,7 @@ final class PeerInfoScreenData {
     let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
     let members: PeerInfoMembersData?
+    let encryptionKeyFingerprint: SecretChatKeyFingerprint?
     
     init(
         peer: Peer?,
@@ -77,7 +78,8 @@ final class PeerInfoScreenData {
         availablePanes: [PeerInfoPaneKey],
         groupsInCommon: GroupsInCommonContext?,
         linkedDiscussionPeer: Peer?,
-        members: PeerInfoMembersData?
+        members: PeerInfoMembersData?,
+        encryptionKeyFingerprint: SecretChatKeyFingerprint?
     ) {
         self.peer = peer
         self.cachedData = cachedData
@@ -89,6 +91,7 @@ final class PeerInfoScreenData {
         self.groupsInCommon = groupsInCommon
         self.linkedDiscussionPeer = linkedDiscussionPeer
         self.members = members
+        self.encryptionKeyFingerprint = encryptionKeyFingerprint
     }
 }
 
@@ -203,6 +206,8 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId) ->
             }
         } else if let group = peer as? TelegramGroup {
             return .group(groupId: group.id)
+        } else if let secretChat = peer as? TelegramSecretChat {
+            return .user(userId: secretChat.regularPeerId, secretChatId: peer.id, kind: .user)
         } else {
             return .none
         }
@@ -272,12 +277,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 availablePanes: [],
                 groupsInCommon: nil,
                 linkedDiscussionPeer: nil,
-                members: nil
+                members: nil,
+                encryptionKeyFingerprint: nil
             ))
-        case let .user(peerId, secretChatId, kind):
+        case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
             if case .user = kind {
-                groupsInCommon = GroupsInCommonContext(account: context.account, peerId: peerId)
+                groupsInCommon = GroupsInCommonContext(account: context.account, peerId: userPeerId)
             } else {
                 groupsInCommon = nil
             }
@@ -306,9 +312,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                     subscriber.putNext(data)
                 }
-                let disposable = (context.account.viewTracker.peerView(peerId, updateData: false)
+                let disposable = (context.account.viewTracker.peerView(userPeerId, updateData: false)
                 |> map { view -> StatusInputData in
-                    guard let user = view.peers[peerId] as? TelegramUser else {
+                    guard let user = view.peers[userPeerId] as? TelegramUser else {
                         return .none
                     }
                     if user.isDeleted {
@@ -320,7 +326,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     if user.botInfo != nil {
                         return .bot
                     }
-                    guard let presence = view.peerPresences[peerId] as? TelegramUserPresence else {
+                    guard let presence = view.peerPresences[userPeerId] as? TelegramUserPresence else {
                         return .none
                     }
                     return .presence(presence)
@@ -366,10 +372,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             var combinedKeys: [PostboxViewKey] = []
             combinedKeys.append(globalNotificationsKey)
             if let secretChatId = secretChatId {
-                combinedKeys.append(.peerChatState(peerId: peerId))
+                combinedKeys.append(.peerChatState(peerId: secretChatId))
             }
             return combineLatest(
-                context.account.viewTracker.peerView(peerId, updateData: true),
+                context.account.viewTracker.peerView(userPeerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
                 context.account.postbox.combinedView(keys: combinedKeys),
                 status
@@ -382,6 +388,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 
+                var encryptionKeyFingerprint: SecretChatKeyFingerprint?
+                if let secretChatId = secretChatId, let peerChatStateView = combinedView.views[.peerChatState(peerId: secretChatId)] as? PeerChatStateView {
+                    if let peerChatState = peerChatStateView.chatState as? SecretChatKeyState {
+                        encryptionKeyFingerprint = peerChatState.keyFingerprint
+                    }
+                }
+                
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
@@ -390,7 +403,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 return PeerInfoScreenData(
-                    peer: peerView.peers[peerId],
+                    peer: peerView.peers[userPeerId],
                     cachedData: peerView.cachedData,
                     status: status,
                     notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
@@ -399,7 +412,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: groupsInCommon,
                     linkedDiscussionPeer: nil,
-                    members: nil
+                    members: nil,
+                    encryptionKeyFingerprint: encryptionKeyFingerprint
                 )
             }
         case .channel:
@@ -448,7 +462,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
-                    members: nil
+                    members: nil,
+                    encryptionKeyFingerprint: nil
                 )
             }
         case let .group(groupId):
@@ -519,7 +534,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes: availablePanes ?? [],
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
-                    members: membersData
+                    members: membersData,
+                    encryptionKeyFingerprint: nil
                 )
             }
         }
@@ -619,10 +635,12 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer, member: 
     return result
 }
 
-func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInfoHeaderButtonKey] {
+func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
-        result.append(.message)
+        if !isOpenedFromChat {
+            result.append(.message)
+        }
         var callsAvailable = false
         if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
             if let cachedUserData = cachedData as? CachedUserData {
@@ -634,6 +652,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInf
             result.append(.call)
         }
         result.append(.mute)
+        if isOpenedFromChat {
+            result.append(.search)
+        }
         result.append(.more)
     } else if let channel = peer as? TelegramChannel {
         switch channel.info {
@@ -650,6 +671,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInf
         }
         
         result.append(.mute)
+        result.append(.search)
         result.append(.more)
     } else if let group = peer as? TelegramGroup {
         var canEditGroupInfo = false
@@ -681,6 +703,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?) -> [PeerInf
         }
         
         result.append(.mute)
+        result.append(.search)
         result.append(.more)
     }
     return result

@@ -14,6 +14,24 @@ private let timezoneOffset: Int32 = {
     return Int32(timeinfoNow.tm_gmtoff)
 }()
 
+func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
+    var time: time_t = time_t(timestamp + timezoneOffset)
+    var timeinfo: tm = tm()
+    localtime_r(&time, &timeinfo)
+    
+    let roundedTimestamp = timeinfo.tm_year * 100 + timeinfo.tm_mon
+    
+    return Int64(roundedTimestamp)
+}
+
+func listMessageDateHeaderInfo(timestamp: Int32) -> (year: Int32, month: Int32) {
+    var time: time_t = time_t(timestamp + timezoneOffset)
+    var timeinfo: tm = tm()
+    localtime_r(&time, &timeinfo)
+    
+    return (timeinfo.tm_year, timeinfo.tm_mon)
+}
+
 final class ListMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
     private let roundedTimestamp: Int32

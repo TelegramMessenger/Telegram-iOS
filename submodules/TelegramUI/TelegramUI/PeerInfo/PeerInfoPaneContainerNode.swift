@@ -16,6 +16,7 @@ protocol PeerInfoPaneNode: ASDisplayNode {
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
+    func cancelPreviewGestures()
     func findLoadedMessage(id: MessageId) -> Message?
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     func addToTransitionSurface(view: UIView)
@@ -449,7 +450,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     var requestPerformPeerMemberAction: ((PeerInfoMember, PeerMembersListAction) -> Void)?
     
-    var currentPaneUpdated: (() -> Void)?
+    var currentPaneUpdated: ((Bool) -> Void)?
     var requestExpandTabs: (() -> Bool)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
@@ -492,6 +493,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 
                 if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
                     strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.4, curve: .spring))
+                    
+                    strongSelf.currentPaneUpdated?(true)
                 }
             } else if strongSelf.pendingSwitchToPaneKey != key {
                 strongSelf.pendingSwitchToPaneKey = key
@@ -506,11 +509,14 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     override func didLoad() {
         super.didLoad()
         
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), enableBothDirections: true, canBegin: { [weak self] in
-            guard let strongSelf = self else {
-                return false
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] in
+            guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let availablePanes = strongSelf.currentParams?.data?.availablePanes, let index = availablePanes.index(of: currentPaneKey) else {
+                return []
             }
-            return strongSelf.currentPanes.count > 1
+            if index == 0 {
+                return .left
+            }
+            return [.left, .right]
         })
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false
@@ -559,6 +565,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         directionIsToRight = translation.x > size.width / 2.0
                     }
                 }
+                var updated = false
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = currentIndex
                     if directionIsToRight {
@@ -569,10 +576,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     let switchToKey = availablePanes[updatedIndex]
                     if switchToKey != self.currentPaneKey && self.currentPanes[switchToKey] != nil{
                         self.currentPaneKey = switchToKey
+                        updated = true
                     }
                 }
                 self.transitionFraction = 0.0
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.35, curve: .spring))
+                self.currentPaneUpdated?(false)
             }
         default:
             break
@@ -853,7 +862,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             }
         }
         if let previousCurrentPaneKey = previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey {
-            self.currentPaneUpdated?()
+            self.currentPaneUpdated?(true)
         }
     }
 }

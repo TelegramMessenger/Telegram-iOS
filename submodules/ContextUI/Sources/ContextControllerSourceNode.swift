@@ -16,6 +16,8 @@ public final class ContextControllerSourceNode: ASDisplayNode {
     
     public func cancelGesture() {
         self.contextGesture?.cancel()
+        self.contextGesture?.isEnabled = false
+        self.contextGesture?.isEnabled = self.isGestureEnabled
     }
     
     override public func didLoad() {

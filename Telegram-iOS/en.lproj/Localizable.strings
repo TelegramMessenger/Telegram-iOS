@@ -5330,6 +5330,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonUnmute" = "Unmute";
 "PeerInfo.ButtonMore" = "More";
 "PeerInfo.ButtonAddMember" = "Add Members";
+"PeerInfo.ButtonSearch" = "Search";
 
 "PeerInfo.PaneMedia" = "Media";
 "PeerInfo.PaneFiles" = "Files";
@@ -5340,3 +5341,5 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.PaneMembers" = "Members";
 
 "PeerInfo.AddToContacts" = "Add to Contacts";
+
+"PeerInfo.BioExpand" = "more";

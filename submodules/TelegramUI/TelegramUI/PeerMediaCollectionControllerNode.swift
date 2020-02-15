@@ -29,7 +29,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             }
             return node
         case .file:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -40,7 +40,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .music:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -51,7 +51,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: Ac
             node.preloadPages = true
             return node
         case .webpage:
-            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, subject: messageId.flatMap { .message($0) }, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false, displayHeaders: .all))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {

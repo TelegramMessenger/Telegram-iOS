@@ -200,7 +200,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             textColorValue = presentationData.theme.list.itemAccentColor
         }
         
-        self.expandNode.attributedText = NSAttributedString(string: "more", font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
         let expandSize = self.expandNode.updateLayout(CGSize(width: width, height: 100.0))
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -211,7 +211,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.textNode.maximumNumberOfLines = 1
             self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
         case let .multiLine(maxLines, enabledEntities):
-            self.textNode.maximumNumberOfLines = self.isExpanded ? maxLines : 2
+            self.textNode.maximumNumberOfLines = self.isExpanded ? maxLines : 3
             self.textNode.cutout = self.isExpanded ? nil : TextNodeCutout(bottomRight: CGSize(width: expandSize.width + 4.0, height: expandSize.height))
             if enabledEntities.isEmpty {
                 self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)

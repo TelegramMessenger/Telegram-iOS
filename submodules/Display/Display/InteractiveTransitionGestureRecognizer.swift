@@ -31,16 +31,26 @@ private func hasHorizontalGestures(_ view: UIView, point: CGPoint?) -> Bool {
     }
 }
 
+public struct InteractiveTransitionGestureRecognizerDirections: OptionSet {
+    public var rawValue: Int
+    
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+    
+    public static let left = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 0)
+    public static let right = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 1)
+}
+
 public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
-    private let enableBothDirections: Bool
-    private let canBegin: () -> Bool
+    private let allowedDirections: () -> InteractiveTransitionGestureRecognizerDirections
     
-    var validatedGesture = false
-    var firstLocation: CGPoint = CGPoint()
+    private var validatedGesture = false
+    private var firstLocation: CGPoint = CGPoint()
+    private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
     
-    public init(target: Any?, action: Selector?, enableBothDirections: Bool = false, canBegin: @escaping () -> Bool) {
-        self.enableBothDirections = enableBothDirections
-        self.canBegin = canBegin
+    public init(target: Any?, action: Selector?, allowedDirections: @escaping () -> InteractiveTransitionGestureRecognizerDirections) {
+        self.allowedDirections = allowedDirections
         
         super.init(target: target, action: action)
         
@@ -50,11 +60,13 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     override public func reset() {
         super.reset()
         
-        validatedGesture = false
+        self.validatedGesture = false
+        self.currentAllowedDirections = []
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        if !self.canBegin() {
+        self.currentAllowedDirections = self.allowedDirections()
+        if self.currentAllowedDirections.isEmpty {
             self.state = .failed
             return
         }
@@ -79,14 +91,16 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let absTranslationY: CGFloat = abs(translation.y)
         
         if !self.validatedGesture {
-            if !self.enableBothDirections && self.firstLocation.x < 16.0 {
-                validatedGesture = true
-            } else if !self.enableBothDirections && translation.x < 0.0 {
+            if self.currentAllowedDirections.contains(.left) && self.firstLocation.x < 16.0 {
+                self.validatedGesture = true
+            } else if !self.currentAllowedDirections.contains(.left) && translation.x < 0.0 {
+                self.state = .failed
+            } else if !self.currentAllowedDirections.contains(.right) && translation.x > 0.0 {
                 self.state = .failed
             } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                 self.state = .failed
             } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
-                validatedGesture = true
+                self.validatedGesture = true
             }
         }
         

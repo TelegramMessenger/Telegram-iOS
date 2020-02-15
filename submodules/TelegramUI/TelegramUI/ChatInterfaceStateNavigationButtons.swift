@@ -73,7 +73,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     }
     
     if presentationInterfaceState.isScheduledMessages {
-        return nil
+        return chatInfoNavigationButton
     }
     
     if case .standard(true) = presentationInterfaceState.mode {
