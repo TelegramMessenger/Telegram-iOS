@@ -5338,3 +5338,5 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.PaneAudio" = "Audio";
 "PeerInfo.PaneGroups" = "Groups";
 "PeerInfo.PaneMembers" = "Members";
+
+"PeerInfo.AddToContacts" = "Add to Contacts";

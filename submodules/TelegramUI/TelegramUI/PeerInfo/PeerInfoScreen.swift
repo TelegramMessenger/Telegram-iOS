@@ -620,7 +620,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         } else {
             if !data.isContact {
                 if user.botInfo == nil {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.Conversation_AddToContacts, action: {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.PeerInfo_AddToContacts, action: {
                         interaction.openAddContact()
                     }))
                 }
