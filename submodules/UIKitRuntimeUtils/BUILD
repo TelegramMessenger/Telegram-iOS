@@ -1,7 +1,3 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "objc_library",
-)
 
 objc_library(
     name = "UIKitRuntimeUtils",
@@ -14,7 +10,7 @@ objc_library(
         "Source/UIKitRuntimeUtils/*.h",
     ]),
     includes = [
-      "Source",
+      #"Source",
     ],
     deps = [
       "//submodules/AsyncDisplayKit:AsyncDisplayKit",

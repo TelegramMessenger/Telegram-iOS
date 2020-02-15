@@ -1,4 +1,4 @@
-load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application")
+load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_framework")
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 version_info_plist_source = """
@@ -34,6 +34,15 @@ objc_library(
     srcs = [
         "Sources/main.m"
     ],
+)
+
+ios_framework(
+  name = "AsyncDisplayKitFramework",
+  deps = ["//submodules/AsyncDisplayKit:AsyncDisplayKit"],
+  bundle_id = "org.telegram.Telegram.AsyncDisplayKit",
+  infoplists = [
+    ":AsyncDisplayKitInfo.plist"
+  ],
 )
 
 swift_library(
@@ -81,9 +90,10 @@ swift_library(
 
 ios_application(
     name = "Wallet",
-    bundle_id = "org.telegram-iOS.Wallet",
+    bundle_id = "org.ton.TonWallet-iOS",
     families = ["iphone", "ipad"],
     minimum_os_version = "9.0",
+    provisioning_profile = "Wallet.mobileprovision",
     infoplists = [
         ":Info.plist",
         ":VersionInfoPlist",
@@ -91,5 +101,6 @@ ios_application(
     deps = [
         ":Main",
         ":Lib",
+        ":AsyncDisplayKitFramework",
     ],
 )
