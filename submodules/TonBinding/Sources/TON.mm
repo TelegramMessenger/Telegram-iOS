@@ -709,8 +709,6 @@ typedef enum {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
-        __weak TON *weakSelf = self;
-        SQueue *queue = _queue;
         _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
             if (object->get_id() == tonlib_api::error::ID) {
                 auto error = tonlib_api::move_object_as<tonlib_api::error>(object);

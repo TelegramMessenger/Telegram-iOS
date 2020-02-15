@@ -828,6 +828,6 @@ struct MergedLocalWalletConfiguration: Codable, Equatable {
 
 private extension MergedLocalWalletConfiguration {
     static var `default`: MergedLocalWalletConfiguration {
-        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet"), resolved: nil)
+        return MergedLocalWalletConfiguration(configuration: LocalWalletConfiguration(source: .url("https://test.ton.org/config.json"), blockchainName: "testnet2"), resolved: nil)
     }
 }

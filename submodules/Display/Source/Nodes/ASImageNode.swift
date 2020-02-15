@@ -5,17 +5,15 @@ import AsyncDisplayKit
 open class ASImageNode: ASDisplayNode {
     public var image: UIImage? {
         didSet {
-            if self.isNodeLoaded {
-                if let image = self.image {
-                    let capInsets = image.capInsets
-                    if capInsets.left.isZero && capInsets.top.isZero {
-                        ASDisplayNodeSetResizableContents(self, image)
-                    } else {
-                        self.contents = self.image?.cgImage
-                    }
+            if let image = self.image {
+                let capInsets = image.capInsets
+                if capInsets.left.isZero && capInsets.top.isZero {
+                    self.contents = self.image?.cgImage
                 } else {
-                    self.contents = nil
+                    ASDisplayNodeSetResizableContents(self, image)
                 }
+            } else {
+                self.contents = nil
             }
         }
     }

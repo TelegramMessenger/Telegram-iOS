@@ -172,7 +172,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     }
     
     override func updateLayout(_ constrainedSize: CGSize) -> CGSize {
-        let superSize = super.calculateSizeThatFits(constrainedSize)
+        let superSize = super.updateLayout(constrainedSize)
         
         if let node = self.node {
             let nodeSize = node.measure(constrainedSize)

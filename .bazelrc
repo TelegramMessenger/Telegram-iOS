@@ -3,5 +3,11 @@ build --strategy=SwiftCompile=standalone
 build --apple_platform_type=ios
 build --cxxopt='-std=c++14'
 build --copt='-w'
-build --swiftcopt='-Xcc' --swiftcopt='-w'
-build --features=swift.enable_batch_mode
+build --swiftcopt='-Xcc'
+build --swiftcopt='-w'
+#build --features=swift.enable_batch_mode
+build --features=swift.use_global_module_cache
+build --spawn_strategy=local
+build --swiftcopt=-wmo
+build --swiftcopt='-num-threads'
+build --swiftcopt='16'
