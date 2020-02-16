@@ -417,12 +417,12 @@ private final class FloatingHeaderNode: ASDisplayNode {
         }
         
         if self.currentParams?.theme !== theme {
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 27.0, color: theme.rootController.navigationBar.backgroundColor)
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 27.0, color: mediaBadgeBackgroundColor)
         }
         
         self.currentParams = (constrainedWidth, year, month, theme)
         
-        self.labelNode.attributedText = NSAttributedString(string: stringForMonth(strings: strings, month: month, ofYear: year).uppercased(), font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
+        self.labelNode.attributedText = NSAttributedString(string: stringForMonth(strings: strings, month: month, ofYear: year), font: Font.regular(14.0), textColor: .white)
         let labelSize = self.labelNode.updateLayout(CGSize(width: constrainedWidth, height: .greatestFiniteMagnitude))
         
         let sideInset: CGFloat = 10.0
@@ -664,11 +664,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
+        let availableWidth = size.width - sideInset * 2.0
+        
         let itemSpacing: CGFloat = 1.0
-        let itemsInRow: Int = max(3, min(6, Int(size.width / 100.0)))
-        let itemSize: CGFloat = floor(size.width / CGFloat(itemsInRow))
+        let itemsInRow: Int = max(3, min(6, Int(availableWidth / 140.0)))
+        let itemSize: CGFloat = floor(availableWidth / CGFloat(itemsInRow))
         
         let rowCount: Int = self.mediaItems.count / itemsInRow + (self.mediaItems.count % itemsInRow == 0 ? 0 : 1)
+        
         let contentHeight = CGFloat(rowCount + 1) * itemSpacing + CGFloat(rowCount) * itemSize + bottomInset
         
         self.scrollNode.view.contentSize = CGSize(width: size.width, height: contentHeight)

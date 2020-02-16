@@ -558,13 +558,14 @@ private final class PeerInfoInteraction {
 
 private let enabledBioEntities: EnabledEntityTypes = [.url, .mention, .hashtag]
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeer: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeer: Bool, callMessages: [Message]) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
     
     enum Section: Int, CaseIterable {
         case groupLocation
+        case calls
         case peerInfo
         case peerMembers
     }
@@ -582,6 +583,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     if let user = data.peer as? TelegramUser {
+        if !callMessages.isEmpty {
+            items[.calls]!.append(PeerInfoScreenCallListItem(id: 20, messages: callMessages))
+        }
+        
         if let phone = user.phone {
             let formattedPhone = formatPhoneNumber(phone)
             items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: presentationData.strings.ContactInfo_PhoneLabelMobile, text: formattedPhone, textColor: .accent, action: {
@@ -1033,6 +1038,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private let context: AccountContext
     private let peerId: PeerId
+    private let isOpenedFromChat: Bool
+    private let callMessages: [Message]
     
     private var presentationData: PresentationData
     
@@ -1086,12 +1093,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool) {
+    init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message]) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
+        self.isOpenedFromChat = isOpenedFromChat
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeer = nearbyPeer
+        self.callMessages = callMessages
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
@@ -2128,10 +2137,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 actionSheet?.dismissAnimated()
             }
             var items: [ActionSheetItem] = []
-            items.append(ActionSheetButtonItem(title: presentationData.strings.ChatSearch_SearchPlaceholder, color: .accent, action: { [weak self] in
-                dismissAction()
-                self?.openChatWithMessageSearch()
-            }))
+            if !peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat).contains(.search) || self.headerNode.isAvatarExpanded {
+                items.append(ActionSheetButtonItem(title: presentationData.strings.ChatSearch_SearchPlaceholder, color: .accent, action: { [weak self] in
+                    dismissAction()
+                    self?.openChatWithMessageSearch()
+                }))
+            }
             if let user = peer as? TelegramUser {
                 if let botInfo = user.botInfo {
                     if botInfo.flags.contains(.worksWithGroups) {
@@ -3661,7 +3672,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         contentHeight += sectionSpacing
         
         var validRegularSections: [AnyHashable] = []
-        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer) {
+        for (sectionId, sectionItems) in infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages) {
             validRegularSections.append(sectionId)
             
             let sectionNode: PeerInfoScreenItemSectionContainerNode
@@ -4108,6 +4119,7 @@ public final class PeerInfoScreen: ViewController {
     private let avatarInitiallyExpanded: Bool
     private let isOpenedFromChat: Bool
     private let nearbyPeer: Bool
+    private let callMessages: [Message]
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -4123,12 +4135,13 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool) {
+    public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeer: Bool, callMessages: [Message]) {
         self.context = context
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.nearbyPeer = nearbyPeer
+        self.callMessages = callMessages
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -4196,7 +4209,7 @@ public final class PeerInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeer: self.nearbyPeer, callMessages: self.callMessages)
         
         self._ready.set(self.controllerNode.ready.get())
         

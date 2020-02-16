@@ -91,7 +91,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let absTranslationY: CGFloat = abs(translation.y)
         
         if !self.validatedGesture {
-            if self.currentAllowedDirections.contains(.left) && self.firstLocation.x < 16.0 {
+            if self.currentAllowedDirections.contains(.right) && self.firstLocation.x < 16.0 {
                 self.validatedGesture = true
             } else if !self.currentAllowedDirections.contains(.left) && translation.x < 0.0 {
                 self.state = .failed
