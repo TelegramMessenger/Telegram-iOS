@@ -2935,8 +2935,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }))
         case .link:
             if let addressName = peer.addressName {
+                let text: String
+                if peer is TelegramChannel {
+                    text = "https://t.me/\(addressName)"
+                } else {
+                    text = "@" + addressName
+                }
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
-                    UIPasteboard.general.string = "@" + addressName
+                    UIPasteboard.general.string = text
                 })])
                 controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                     if let controller = self?.controller, let sourceNode = sourceNode {
