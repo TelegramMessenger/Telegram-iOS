@@ -2203,6 +2203,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         dismissAction()
                         self?.openStartSecretChat()
                     }))
+                    if data.isContact {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_BlockUser, color: .destructive, action: { [weak self] in
+                            dismissAction()
+                            self?.updateBlocked(block: true)
+                        }))
+                    }
                 }
             } else if let channel = peer as? TelegramChannel {
                 var canReport = true
