@@ -1654,6 +1654,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
                 return
             }
+            if strongSelf.hapticFeedback == nil {
+                strongSelf.hapticFeedback = HapticFeedback()
+            }
+            strongSelf.hapticFeedback?.tap()
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
             let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, centralEntryIndex: centralEntry.flatMap { entries.index(of: $0) }, replaceRootController: { controller, ready in
