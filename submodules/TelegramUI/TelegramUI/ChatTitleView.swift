@@ -176,6 +176,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     var pressed: (() -> Void)?
+    var longPressed: (() -> Void)?
     
     var titleContent: ChatTitleContent? {
         didSet {
@@ -533,6 +534,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 }
             }
         }
+        self.button.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -664,8 +666,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    @objc func buttonPressed() {
+    @objc private func buttonPressed() {
         self.pressed?()
+    }
+    
+    @objc private func longPressGesture(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            self.longPressed?()
+        default:
+            break
+        }
     }
     
     func animateLayoutTransition() {

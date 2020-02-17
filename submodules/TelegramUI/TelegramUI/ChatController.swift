@@ -1938,6 +1938,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }
+        self.chatTitleView?.longPressed = { [weak self] in
+            self?.interfaceInteraction?.beginMessageSearch(.everything, "")
+        }
         
         let chatInfoButtonItem: UIBarButtonItem
         switch chatLocation {
